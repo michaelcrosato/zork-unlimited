@@ -1,0 +1,231 @@
+id: bug_0585
+title: "Return the exact pure Station June handoff as a bound V1 modal"
+pack: overworld (pure MCP Albany Station departure)
+reported_by: >
+  Valid ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-3da05f64-20260821T110413Z on exact clean
+  3da05f6481aece49d088b9132271ae79d97fae15; every report, run-evidence,
+  provider-event, rollout, and capture hash matched its fleet-manifest attestation
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-3da05f64-20260821T110413Z
+    stamp: 20260821T111734Z
+    tested_commit: 3da05f6481aece49d088b9132271ae79d97fae15
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017
+    model: gpt-5.6-terra
+    provider: codex
+    launcher_kind: official_npm_shim
+    codex_cli_version: 0.146.0
+    play_mode: pure
+    start_surface: fresh_overworld
+    authority_certified: false
+    valid: true
+    passed: false
+    no_retry_or_recovery: true
+    artifact_hashes:
+      manifest_sha256: 7ff590a0a0741a724f6c09ae58c2f54467e1ddb29aa59d0c88ff79f492189cb0
+      summary_sha256: 265ba0f3bf12f2369752b565753ce18985cb8b01f41c1c47b231dc629bea2362
+      starting_slice_pilot_sha256: efa0a0471b8c8b223b9805186a5f8011863fa40b33a05f8241ee2f9a3d964e07
+      authority_proof_sha256: 5098ddb038251676586387614a3cf29f61cc0b9ebe5e088278f2e463f38f0078
+    reports:
+      - seed: 821110413000
+        report_sha256: 633da3e4affa43416a8fa874195c4092d3c001c71e52ed2550cb22659a1b3473
+        run_evidence_sha256: d0e4649d9eef51d0c40f4cd18a919409723c8238c90a22b6f3192e922a2bc0f7
+        provider_events_sha256: 7213e39f65a642630cd68edbdbb8f56dd05fda7101ab141b70097f928ce41442
+        provider_rollout_sha256: 32181f5807c728b99c0db9d70317039ab7cb998cbc610562526ea173d08d892f
+        provider_capture_sha256: c9c4225ee9e230aa317566bcdd3abe5060124df3cda012aa3eff8018b4cc4e39
+      - seed: 821110413001
+        report_sha256: f50f7d1ba741e231cf16bae5cd83c6061866cac43e1d5119376ac639ec507350
+        run_evidence_sha256: c6ce0ac2496b58805494a60911b8540ae2473a75339693ee76bba9c928ae019c
+        provider_events_sha256: 0cffcaffe70a57347434eaf265c1a14cc0d36abb75455af68d0e0f348d389651
+        provider_rollout_sha256: e08e82c3d64a105e0e1a1450dca56546a34470a07246aaf01c96dde05076cc5c
+        provider_capture_sha256: 9cb56c33da0fb1b240e59af31b4004717a93f4df8084c2f0118a91999214bfea
+      - seed: 821110413002
+        report_sha256: 9c0287fe8770f89939375e514d2264c9b08d5e2c07e4889a764d7f9c2805a27c
+        run_evidence_sha256: ce82966c6b38834b8e0fd1e15dc312dc27c84c32fb9840e45a977e43bb837b82
+        provider_events_sha256: 326e7c7cd4e03b3728e3e90a480d6169c2f7958b477d0bb9b16289c481d0f326
+        provider_rollout_sha256: cd469c74a250a75cae331d5c836127a2ac8e47aaafc28a9ca683ce6ac5578a7d
+        provider_capture_sha256: 150426d9758b9fd52f70bf5eea1244f3a599662c7da837d5c18954f74ef3ce97
+      - seed: 821110413003
+        report_sha256: 3155e88bdbe5f36b6449697d56f492d15b80e46ce71f8a6f42226d4355c43165
+        run_evidence_sha256: 78ba4827e570cacc38fa7aec328bfb449a3f173954759207832fe1760282fcf4
+        provider_events_sha256: 0e71ef59c7e75b3c1d257994afbe027a7e9215a3c2abbc747140eb134cd81dd7
+        provider_rollout_sha256: 97ffed040cbc340e1a1e89131cd08169a2c0bb082cad631a2f253cfd0478b047
+        provider_capture_sha256: 0a141b5883f4e8796edb79a9b82421bcc5075dc3a087a367b20f2befbad39ee6
+      - seed: 821110413004
+        report_sha256: dee9cbad35dba52825e726deeeee6f9fc2e0435697fc83b472bacac2f9a06b78
+        run_evidence_sha256: 1b2a3430863e8f1feddee08e82ab53bfad2a7571912369821c6b207b2beab9e2
+        provider_events_sha256: 5920adb679242aa502e1fbdbe4faf8bf9ebe4ff47627d037688e52e0e8ae66ae
+        provider_rollout_sha256: 7983906f6ebdc41ce0442c5d0d9d42d82c65026fff120521e10985ef1881fcfe
+        provider_capture_sha256: e7138cbd54a4d3f5b1101e62239aec614556c62d0fe9e01c5e0ee717f96d4bc8
+      - seed: 821110413005
+        report_sha256: bf6d9d1f109b36475382bd4059079dd688044c567b89ed2e72fa793e845d6e41
+        run_evidence_sha256: d5c4dae5795f4960e4d8841490a0be5ea38b7cfe0fac8574e9af6448ab31e3dc
+        provider_events_sha256: 8d64949ed27589ef9ddd743cabcce886b2dff767362cac0e02c96be0c7d84d31
+        provider_rollout_sha256: a68ba6e8549a8beca9c3dcd2b0d278c8b286226216a31f5ef1d1700222211f3f
+        provider_capture_sha256: 553dc5eece379808b9222e23e4eb3eca211f81f6547da0aefb27794eda4b7533
+      - seed: 821110413006
+        report_sha256: dd2e956661809171e50f756edbad510465bd4752601de7105060a84ead309a3a
+        run_evidence_sha256: e5f6862af030bb36f01afc0859f34151753714583abe596887e87dcdb2311e7e
+        provider_events_sha256: 75f25d2155ee2159efea8565875eed6bfbea5e93cbc8b9d775479c8f1605ac4f
+        provider_rollout_sha256: e55df307551336d7b69554a6193037bccf4d97f9a280566cb7ae4af928671df1
+        provider_capture_sha256: 570eb427fa9f10999119f318592749ecf98c8927a38981ce76373f3cc932b236
+      - seed: 821110413007
+        report_sha256: 48c42e57b7b1580e88d40e4ba674fe577cfa66cd1063c66a29f2c1fd2423dd56
+        run_evidence_sha256: ff7def73cd6f04b1ff5190ef17acba637eaa7044f4e64dbe6379af61b552bc0f
+        provider_events_sha256: 49e14636dd00b6fa279203c5dbc91756f06bb9c72fb60c814c5b0916faca8417
+        provider_rollout_sha256: ec1ec14751f7b7141876f1d085067548b9574b4d9d600cb6c4c3c79a9cd55dce
+        provider_capture_sha256: 0187ee7d8f1f61ed145c7cd41f4c613281f069d12b381a2bfabd09404ef370ff
+      - seed: 821110413008
+        report_sha256: f690d4bcecd313f400badf578bf66eae04bc3059f00799a5f4eebb64d43e4e87
+        run_evidence_sha256: 63fd88739d31aeae31e485399a87f7aea0ebc7c6baf293eb9915b5b026a86c44
+        provider_events_sha256: 6832790f69b939f67559da3453029fa1e605d55ca44a061fe869940be322162b
+        provider_rollout_sha256: 18d1edb045574c874496716bba355d1ce807d4806db75ef0f216e5f8997e02bb
+        provider_capture_sha256: 6282069c1f187a3c4d643bf79ff5b0460763d797e50d629a3d53e387134a5999
+      - seed: 821110413009
+        report_sha256: 70a89ed878cb74ab1b21a3695c18f1758883226678f42fb2ae0f1f55aef0cb80
+        run_evidence_sha256: fdc50b6af8776a52095fbb1669f85d88196b64b2fc0708c9e713231c8fd47f04
+        provider_events_sha256: 5cfc9c16f7afcf11b58467e6978e67fe74ba723815c17264c8b5c5ce80d1dd39
+        provider_rollout_sha256: 1e20ed9f19dcad073a0602884ed1369d710a80bafcaae6f5fb6fb49e365a20d6
+        provider_capture_sha256: e47168bc1ad44dbb5bf9159162c20ab8038d4b6b45eb79da4f67aedf62f34807
+    artifact_bytes:
+      manifest: 37989
+      summary: 2005
+      starting_slice_pilot: 2161
+      authority_proof: 2437
+      reports_total: 64862
+      rollouts_total: 8302630
+    outcome_metrics:
+      completed: 10
+      stuck: 0
+      completion_decision_p50: 23
+      clarity_total: 39
+      enjoyment_total: 40
+      continued_after_initial_goal: 8
+      strategies: "hunt 1, lure 4, drive 3, fortify 2"
+      severity_s1_reports: 4
+      repeated_blocking_cluster: false
+      failed_gates: "clarity average >= 4.2; enjoyment average >= 4.2"
+    reveal_boundary: >
+      Nine players used the existing V1 reveal at 1,032–1,034 bytes and one used
+      an exact-detail canonical response. Preserve V6 relevance disclosure and
+      the reveal V1; neither is the correction target.
+    june_measurements:
+      calls: "8/10, all immediately followed by the mandatory ally choice"
+      observed_support_order: "7 June-first after reveal; seed 821110413000 chose relief first, then June"
+      canonical_response_utf8_bytes: "7 x 8,873 plus 1 x 9,080; total 71,191"
+      canonical_keys: >
+        ok, session_id, snapshot_hash, journey, journeyDecision, legend_delta,
+        result, context, overworld_session_id
+      canonical_legend_delta: "departure_recap in all eight responses"
+      reconstructed_v1_utf8_bytes: "3,908 each; total 31,264"
+      reconstructed_savings: "39,927 bytes; 56.08%"
+      bounded_state_audit: >
+        A local counterfactual serialization across June-first, preparation-first,
+        relief-first, and preparation-plus-relief states, two civic profiles, and
+        the max-time unsponsored Road-Warden tie was 3,908 bytes whenever the
+        departure_recap patch was present. A pre-disclosed no-patch variant was
+        3,243 bytes. The focused end-to-end witness is preparation-first.
+    rejected_broader_shape:
+      support_selections: "9/10 players, thirteen mutations: 8 ally, 4 wagon, 1 preparation"
+      canonical_response_utf8_bytes: "6,268–6,746; total 85,882"
+      reason: >
+        A partial support-commit patch lacks authenticated merge proof for time,
+        character, services, journal, discovery, and selected support.
+
+symptom: >
+  The exact pure talk action on the revealed Station V6 field-team row opened
+  one mandatory June ally modal but repeated the entire compact overworld
+  context. Eight authenticated responses totaled 71,191 bytes even though each
+  player's next mutation was the modal's visible ally choice.
+
+root_cause: >
+  Pure mode forwarded the canonical contact response unchanged. Unlike the
+  Station board reveal, the June story-modal transition had no typed response
+  member bound to the player's retained snapshot. Narrowing on character id or
+  reveal receipt alone would be unsafe: the receipt can coexist with a different
+  active support modal, and later June talks must retain canonical behavior.
+  Dropping the canonical departure_recap legend patch would also orphan the
+  tuple definition after the manager marked it disclosed.
+
+fix: >
+  Only pure talk_overworld_session_contact calls normalized to the exact June
+  character are candidates. Before requiring a hash, the server exports the
+  session and verifies the exact persisted Wolf-Winter Station reveal receipt,
+  then makes a non-consuming full read. That read must show Station board V6,
+  exactly one open field_team row whose action is the exact June talk tool and
+  handle, and journey.storyChoice null. Only this eligible state requires the
+  latest expected_snapshot_hash; missing or stale bases reject before mutation.
+  After the canonical talk and evidence hook succeed, the exact ally story id,
+  unique three-option id set, substantive-dialogue decision, compact result,
+  canonical context presence, same raw parent, and distinct new hash authorize
+  V1. The response carries outer overworld_session_id/new snapshot_hash, full
+  compact journey/storyChoice, journeyDecision, complete canonical legend_delta
+  when present,
+  compact result, and station_dispatch_modal:{version,base_snapshot_hash}; it
+  omits raw session_id and repeated context. Any unexpected post-shape preserves
+  the already-successful complete canonical response.
+
+deterministic_witnesses:
+  - "the exact contact_id alias normalizes into the same eligible June V1 member"
+  - "missing and stale expected_snapshot_hash reject before mutation; an unchanged read proves the exact base hash remains current"
+  - "the ready-board guard requires V6, wolf_winter, exactly one open field_team row, null selected title, exact talk tool/June handle, and no active storyChoice"
+  - "the current V1 response has exactly outer parent/new hash, full compact journey and mandatory ally storyChoice, substantive journeyDecision, compact result, complete departure_recap legend patch, and the version/base marker"
+  - "the three June option ids are exact and unique; duplicate, missing, extra, or unknown ids preserve canonical success"
+  - "the current deterministic V1 envelope is exactly 3,908 UTF-8 bytes under a 4,000-byte regression budget"
+  - "read-only inspection uses the V1 new hash, returns the ally story plus retained departure_recap, and leaves the snapshot unchanged"
+  - "repeating the stale June board action while the ally modal is active rejects without mutation"
+  - "the following exact ally choice uses the V1 new hash and returns full canonical context, raw session_id, and no station_dispatch_modal"
+  - "a post-choice June talk without expected_snapshot_hash remains canonical full success with raw session/context and a new hash"
+  - "a full-mode June talk remains an exact 8,930-byte canonical compact response with session_id, context, and departure_recap legend but no pure marker or outer handle"
+  - "known non-June literal talk wire types exclude V1; exact June, contact_id alias, and broad callers conservatively include V1 plus canonical fallback"
+  - "pure prompt is 15,720 bytes; unchanged catalogue 16,773 plus fresh context 2,042 yields 34,535, below the sealed 34,868 budget"
+  - "first-Station aggregate is 38,162, below sealed V6's 38,495; tool catalogue bytes and every entry digest remain unchanged"
+
+mechanics_unchanged:
+  - "compact context v49, Station board V6, reveal V1, receipt id/schema/persistence, and board purposes/actions"
+  - "quest, story, option, character, support, action, road, and approach ids"
+  - "June dialogue, three ally terms, minutes, costs, promises, companion state, checks, effects, RNG, outcomes, and later interventions"
+  - "preparation and relief-wagon support choices, full support commit responses, support order, and selected terms"
+  - "four Wolf-Winter strategies, legal launches, journey checkpoints, Continue/End, saves, UI, terminal, and CLI"
+  - "canonical full/non-pure tools, manager responses, export/restore, generic contacts, and full following ally choice"
+
+nonclaims:
+  - "The valid pilot failed only clarity and enjoyment gates; it diagnoses repeated transport but does not prove the correction improves either rating, continuation, completion speed, strategy mix, or certification."
+  - "The response-size relationship is structural amplification correlated with density reports, not causal proof of the failed ratings."
+  - "The 3,908-byte envelopes replay exact pilot fields but were not returned by the tested build; 4,000 bytes is a regression budget, not a global runtime cap."
+  - "The four-state/profile/time size audit is a bounded counterfactual serialization, not an exhaustive proof of every future legal journey or content shape."
+  - "The complete departure_recap legend is intentionally retained because the following full response uses that tuple after disclosure; it is not unnecessary context."
+  - "The broader support mutations remain full because this cycle establishes no safe partial merge for their multi-field state changes."
+  - "V6's relevance overview and reveal V1 remain unchanged; their retained use is not a causal quality-lift claim."
+  - "No Gallowmere content, behavior, checkpoint, conclusion, or expansion is in scope or claimed."
+  - "No Continue/End wording, availability, counting, or other retention-metric mechanism changes."
+  - "authority_certified is false; official launcher and exact hashes authenticate this cohort without turning ten AI players into certification or human validation."
+  - "This is a pure compact-MCP transport correction, not a browser, terminal, CLI, or human UI redesign."
+
+production:
+  - blind-tester/prompt-overworld.md
+  - docs/DECISION_LOG.md
+  - docs/STARTING_SLICE.md
+  - src/mcp/server.ts
+
+tests:
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/mcp_server_registration.test.ts
+  - tests/regression/overworld_optional_departure_interactions.test.ts
+  - tests/starting_slice/station_dispatch_board.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/regression/blind_pure_prompt_contract.test.ts tests/starting_slice/station_dispatch_board.test.ts tests/regression/mcp_server_registration.test.ts
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts
+  - npx vitest run tests/regression/overworld_optional_departure_interactions.test.ts
+  - git diff --check

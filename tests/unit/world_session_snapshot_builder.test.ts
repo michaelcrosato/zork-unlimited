@@ -95,6 +95,7 @@ describe("overworld session snapshot builder", () => {
       startedQuestIds: new Set(["quest:b"]),
       completedQuestIds: new Set(["quest:a"]),
       questOutcomes: new Map([["quest:a", "ending:a"]]),
+      stationDispatchSupportReveals: new Map(),
       exploredSiteIds: new Set(["site:b"]),
       regionRenown: new Map([
         ["hudson", 2],

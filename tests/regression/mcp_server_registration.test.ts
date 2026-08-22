@@ -326,16 +326,20 @@ describe("MCP server registration", () => {
   });
 
   it("keeps overworld ToolSearch schema source terse", () => {
+    const serverSource = readFileSync("src/mcp/server.ts", "utf8");
     const overworldSchemaSource = OVERWORLD_SCHEMA_TOOLS.map((toolName) =>
       registeredToolBlock(toolName),
     ).join("\n");
 
     // The game-native passage action, optional quest approach, and exact authored
     // job option add bounded schema blocks; retain a tight ceiling around them.
+    expect(overworldSchemaSource.length).toBe(9192);
     expect(overworldSchemaSource.length).toBeLessThanOrEqual(9250);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
+    expect(serverSource).toContain('"Legacy support detail."');
+    expect(serverSource).not.toContain("Optional Station support purposes and action handles.");
   });
 
   it("keeps public RPG utility ToolSearch schema source terse", () => {

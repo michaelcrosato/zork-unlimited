@@ -663,7 +663,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       expect(miss.journal.join("\n")).toMatch(/no retry[^]*emergency/i);
     }
     expect(fullMiss.journal.join("\n")).toMatch(/Cade still refuses aid/i);
-    expect(controlMiss.journal.join("\n")).toMatch(/aid refused/i);
+    expect(controlMiss.journal.join("\n")).toMatch(/Cade-aid refusal recorded/i);
 
     fullMiss = act(fullMiss, "use_albany_relief_seals_on_authority_emergency_bind");
     controlMiss = act(controlMiss, "use_albany_relief_seals_on_authority_emergency_bind");

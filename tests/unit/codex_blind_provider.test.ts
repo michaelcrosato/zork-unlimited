@@ -14,6 +14,7 @@ const {
   classifyCodexGameplayWrapper,
   CODEX_GAMEPLAY_WRAPPER_FAILURES,
   CODEX_PURE_PLAYER_TOOLS,
+  CODEX_GAME_DIRECT_MCP_CONTRACT,
   CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS,
   CODEX_SPARK_DIRECT_MCP_CONTRACT,
   inspectCodexGameplayResultForwarding,
@@ -596,6 +597,23 @@ function sparkDirectMcpRollout(
     },
   ];
   rows.splice(userEventIndex + 1, 0, ...directRows);
+  return rows;
+}
+
+function terraDirectMcpRollout(
+  result: Record<string, unknown> = { content: [] },
+): ReturnType<typeof sparkDirectMcpRollout> {
+  const rows = sparkDirectMcpRollout(result);
+  const context = rows.find((row) => row.type === "turn_context")?.payload;
+  if (!context) throw new Error("missing Terra direct turn context fixture");
+  context.model = "gpt-5.6-terra";
+  context.multi_agent_version = "disabled";
+  context.comp_hash = "3000";
+  context.summary = "auto";
+  delete context.multi_agent_mode;
+  const collaboration = context.collaboration_mode as Record<string, unknown>;
+  const settings = collaboration.settings as Record<string, unknown>;
+  settings.model = "gpt-5.6-terra";
   return rows;
 }
 
@@ -2304,6 +2322,21 @@ describe("Codex pure blind provider envelope", () => {
     expect(inspectCodexPureEvidence(publicRows, reasoningRows)).toMatchObject({ ok: true });
     const reasoning = reasoningRows.find((row) => row.payload?.type === "reasoning");
     if (!reasoning?.payload) throw new Error("missing reasoning fixture");
+    for (const [label, summary] of [
+      ["missing reasoning summary array", undefined],
+      ["nonempty reasoning summary array", [{ type: "summary_text", text: "leaked" }]],
+    ] as const) {
+      const changedReasoning = structuredClone(reasoningRows) as Array<{
+        payload?: Record<string, unknown>;
+      }>;
+      const changed = changedReasoning.find((row) => row.payload?.type === "reasoning")?.payload;
+      if (!changed) throw new Error(`missing ${label} fixture`);
+      if (summary === undefined) delete changed.summary;
+      else changed.summary = summary;
+      expect(inspectCodexPureEvidence(publicRows, changedReasoning), label).toMatchObject({
+        ok: false,
+      });
+    }
     reasoning.payload.tool_input = "hidden";
     expect(inspectCodexPureEvidence(publicRows, reasoningRows)).toMatchObject({ ok: false });
   });
@@ -3343,6 +3376,189 @@ describe("Codex pure blind provider envelope", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("Terra game-direct MCP transport", () => {
+  const direct = { transportContract: CODEX_GAME_DIRECT_MCP_CONTRACT, cliVersion: "0.146.0" };
+
+  it("accepts only the pinned projected Terra disabled profile and exact runtime authority", () => {
+    const rows = terraDirectMcpRollout();
+    expect(inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-terra", direct)).toMatchObject({
+      ok: true,
+    });
+
+    const changed = structuredClone(rows);
+    const session = changed.find((row) => row.type === "session_meta")?.payload;
+    if (!session) throw new Error("missing Terra direct session fixture");
+    session.base_instructions = { text: `${CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS} drift` };
+    expect(inspectCodexPureEvidence(validRows(), changed, "gpt-5.6-terra", direct)).toMatchObject({
+      ok: false,
+    });
+
+    for (const compHash of ["3001", undefined]) {
+      const changedHash = structuredClone(rows);
+      const context = changedHash.find((row) => row.type === "turn_context")?.payload;
+      if (!context) throw new Error("missing Terra direct turn-context fixture");
+      if (compHash === undefined) delete context.comp_hash;
+      else context.comp_hash = compHash;
+      expect(
+        inspectCodexPureEvidence(validRows(), changedHash, "gpt-5.6-terra", direct),
+      ).toMatchObject({ ok: false });
+    }
+
+    for (const summary of ["none", "detailed", undefined]) {
+      const changedSummary = structuredClone(rows);
+      const context = changedSummary.find((row) => row.type === "turn_context")?.payload;
+      if (!context) throw new Error("missing Terra direct turn-context fixture");
+      if (summary === undefined) delete context.summary;
+      else context.summary = summary;
+      expect(
+        inspectCodexPureEvidence(validRows(), changedSummary, "gpt-5.6-terra", direct),
+      ).toMatchObject({ ok: false });
+    }
+  });
+
+  it("rejects Terra v2 team/mode contamination and any non-disabled direct profile", () => {
+    const baseline = terraDirectMcpRollout();
+    const globalPreludeIndex = baseline.findIndex(
+      (row) =>
+        row.type === "response_item" &&
+        row.payload?.type === "message" &&
+        row.payload.role === "user" &&
+        (row.payload.content as Array<{ text?: string }> | undefined)?.[0]?.text ===
+          GLOBAL_AGENTS_BLOCK,
+    );
+    if (globalPreludeIndex < 0) throw new Error("missing Terra direct global prelude fixture");
+    const metadata = { internal_chat_message_metadata_passthrough: { turn_id: "turn-1" } };
+    const developerMessage = (id: string, text: string) => ({
+      type: "response_item",
+      payload: {
+        type: "message",
+        id,
+        role: "developer",
+        content: [{ type: "input_text", text }],
+        ...metadata,
+      },
+    });
+    const mutations: Array<[string, (rows: ReturnType<typeof terraDirectMcpRollout>) => void]> = [
+      [
+        "a v2 team prelude",
+        (rows) => rows.splice(globalPreludeIndex, 0, developerMessage("terra-team", V2_TEAM_BLOCK)),
+      ],
+      [
+        "a v2 mode prelude",
+        (rows) =>
+          rows.splice(globalPreludeIndex, 0, developerMessage("terra-mode", V2_0146_MODE_BLOCK)),
+      ],
+      [
+        "the exact team/mode/global ordering from the failed canary",
+        (rows) =>
+          rows.splice(
+            globalPreludeIndex,
+            0,
+            developerMessage("terra-team", V2_TEAM_BLOCK),
+            developerMessage("terra-mode", V2_0146_MODE_BLOCK),
+          ),
+      ],
+      [
+        "the v2 turn profile from the failed canary",
+        (rows) => {
+          const context = rows.find((row) => row.type === "turn_context")?.payload;
+          if (!context) throw new Error("missing Terra direct turn context fixture");
+          context.multi_agent_version = "v2";
+        },
+      ],
+      [
+        "an explicit multi-agent mode",
+        (rows) => {
+          const context = rows.find((row) => row.type === "turn_context")?.payload;
+          if (!context) throw new Error("missing Terra direct turn context fixture");
+          context.multi_agent_mode = "explicitRequestOnly";
+        },
+      ],
+    ];
+
+    for (const [label, mutate] of mutations) {
+      const rows = structuredClone(baseline);
+      mutate(rows);
+      expect(
+        inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-terra", direct),
+        label,
+      ).toMatchObject({ ok: false });
+    }
+  });
+
+  it("keeps strict Terra v2 and game-direct Terra disabled profiles transport-scoped", () => {
+    const strict = { transportContract: "strict-code-mode-v2", cliVersion: "0.146.0" };
+    const strictRows = codex0146TerraRollout(forwardingRollout(undefined, { content: [] }));
+    expect(
+      inspectCodexPureEvidence(singleCodeModeWarningRows(), strictRows, "gpt-5.6-terra", strict),
+    ).toMatchObject({ ok: true });
+    expect(
+      inspectCodexPureEvidence(validRows(), strictRows, "gpt-5.6-terra", direct),
+    ).toMatchObject({
+      ok: false,
+    });
+
+    const directRows = terraDirectMcpRollout();
+    expect(
+      inspectCodexPureEvidence(singleCodeModeWarningRows(), directRows, "gpt-5.6-terra", strict),
+    ).toMatchObject({ ok: false });
+  });
+
+  it("rejects a completed failed fresh start in the live prefix", () => {
+    expect(
+      inspectCodexGameplayResultForwardingPrefix(terraDirectMcpRollout(TOOL_ERROR_RESULT), direct),
+    ).toEqual({
+      ok: false,
+      reason:
+        "Codex gameplay-result forwarding audit failed: direct MCP fresh start completed with an error",
+    });
+  });
+
+  it.each(["gpt-5.6-sol", "gpt-5.6-luna", SPARK_MODEL])(
+    "rejects the Terra direct contract when requested as %s",
+    (model) => {
+      expect(inspectCodexPureEvidence(validRows(), terraDirectMcpRollout(), model, direct)).toEqual(
+        {
+          ok: false,
+          reason: "Codex pure run has an unsupported transport for its requested model",
+        },
+      );
+    },
+  );
+
+  it.each([
+    [
+      "reordered native completion/result rows",
+      (rows: ReturnType<typeof terraDirectMcpRollout>) => {
+        const callIndex = rows.findIndex((row) => row.payload?.type === "function_call");
+        [rows[callIndex + 1], rows[callIndex + 2]] = [rows[callIndex + 2]!, rows[callIndex + 1]!];
+      },
+    ],
+    [
+      "noncanonical native arguments",
+      (rows: ReturnType<typeof terraDirectMcpRollout>) => {
+        const call = rows.find((row) => row.payload?.type === "function_call")?.payload;
+        if (!call) throw new Error("missing Terra direct call fixture");
+        call.arguments = "{ }";
+      },
+    ],
+    [
+      "a forbidden direct namespace",
+      (rows: ReturnType<typeof terraDirectMcpRollout>) => {
+        const call = rows.find((row) => row.payload?.type === "function_call")?.payload;
+        if (!call) throw new Error("missing Terra direct call fixture");
+        call.namespace = "mcp__filesystem";
+      },
+    ],
+  ])("rejects $0", (_label, mutate) => {
+    const rows = terraDirectMcpRollout();
+    mutate(rows);
+    expect(inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-terra", direct)).toMatchObject({
+      ok: false,
+    });
   });
 });
 

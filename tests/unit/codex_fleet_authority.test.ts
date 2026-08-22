@@ -41,6 +41,7 @@ const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const HISTORICAL_STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v1";
 const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v2";
 const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1";
+const GAME_DIRECT_MCP_TRANSPORT_CONTRACT = "game-direct-mcp-v1";
 const SPARK_PLAYER_BASE_INSTRUCTIONS =
   "You are an autonomous first-time player of an AdventureForge text TTRPG. Follow the user play request. Use only preloaded AdventureForge gameplay functions and exact current player-visible values. Never use coding, planning, search, or MCP resource tools.";
 const CODE_MODE_WARNING_PREFIX =
@@ -478,6 +479,23 @@ function sparkDirectMcpRollout(report = REPORT): unknown[] {
   return rows;
 }
 
+function terraDirectMcpRollout(report = REPORT): unknown[] {
+  const rows = sparkDirectMcpRollout(report) as Array<{
+    type?: string;
+    payload?: Record<string, unknown>;
+  }>;
+  const context = rows.find((row) => row.type === "turn_context")!.payload!;
+  context.model = "gpt-5.6-terra";
+  const collaboration = context.collaboration_mode as Record<string, unknown>;
+  const settings = collaboration.settings as Record<string, unknown>;
+  settings.model = "gpt-5.6-terra";
+  context.multi_agent_version = "disabled";
+  context.comp_hash = "3000";
+  context.summary = "auto";
+  delete context.multi_agent_mode;
+  return rows;
+}
+
 function historicalStrictTerraRollout(report = REPORT): unknown[] {
   const rows = rollout(report);
   const wrapper = rows.find(
@@ -542,6 +560,14 @@ function sparkDirectCaptureReceipt(rows: unknown[]): string {
   receipt.schema_version = 4;
   delete receipt.code_mode_contract;
   receipt.transport_contract = SPARK_DIRECT_MCP_TRANSPORT_CONTRACT;
+  return `${JSON.stringify(receipt)}\n`;
+}
+
+function gameDirectCaptureReceipt(rows: unknown[]): string {
+  const receipt = JSON.parse(captureReceipt(rows, true)) as Record<string, unknown>;
+  receipt.schema_version = 5;
+  delete receipt.code_mode_contract;
+  receipt.transport_contract = GAME_DIRECT_MCP_TRANSPORT_CONTRACT;
   return `${JSON.stringify(receipt)}\n`;
 }
 
@@ -611,6 +637,7 @@ The journey felt reactive and worth replaying.
 \`\`\`json exit-interview
 ${JSON.stringify({
   schema_version: 2,
+  issue_consistency_version: 1,
   play_mode: "pure",
   start_surface: "fresh_overworld",
   retention_eligible: true,
@@ -807,6 +834,119 @@ describe("Codex certified fleet rollout authority", () => {
         },
       },
     });
+  });
+
+  it("propagates an exact v5 Terra game-direct lifecycle without a wrapper label", () => {
+    const rows = terraDirectMcpRollout();
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(rows),
+        capture: gameDirectCaptureReceipt(rows),
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({
+      ok: true,
+      facts: {
+        sessionId: SESSION,
+        actualModel: "gpt-5.6-terra",
+        turnId: TURN,
+        cwd: "C:\\private\\player",
+        codeModeContract: null,
+        transportContract: GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
+        usage: {
+          input_tokens: 10,
+          cached_input_tokens: 2,
+          output_tokens: 3,
+          reasoning_output_tokens: 0,
+        },
+      },
+    });
+  });
+
+  it.each([
+    [
+      "an altered player base instruction",
+      (rows: unknown[]) => {
+        const session = (rows as Array<{ type?: string; payload?: Record<string, unknown> }>).find(
+          (row) => row.type === "session_meta",
+        )!.payload!;
+        session.base_instructions = { text: `${SPARK_PLAYER_BASE_INSTRUCTIONS} altered` };
+      },
+    ],
+    [
+      "a missing Terra compatibility hash",
+      (rows: unknown[]) => {
+        const context = (rows as Array<{ type?: string; payload?: Record<string, unknown> }>).find(
+          (row) => row.type === "turn_context",
+        )!.payload!;
+        delete context.comp_hash;
+      },
+    ],
+    [
+      "a drifted Terra compatibility hash",
+      (rows: unknown[]) => {
+        const context = (rows as Array<{ type?: string; payload?: Record<string, unknown> }>).find(
+          (row) => row.type === "turn_context",
+        )!.payload!;
+        context.comp_hash = "3001";
+      },
+    ],
+    [
+      "a missing Codex 0.146 summary compatibility sentinel",
+      (rows: unknown[]) => {
+        const context = (rows as Array<{ type?: string; payload?: Record<string, unknown> }>).find(
+          (row) => row.type === "turn_context",
+        )!.payload!;
+        delete context.summary;
+      },
+    ],
+    [
+      "a drifted Codex 0.146 summary compatibility sentinel",
+      (rows: unknown[]) => {
+        const context = (rows as Array<{ type?: string; payload?: Record<string, unknown> }>).find(
+          (row) => row.type === "turn_context",
+        )!.payload!;
+        context.summary = "none";
+      },
+    ],
+    [
+      "a reordered native result triplet",
+      (rows: unknown[]) => {
+        const typedRows = rows as Array<{ type?: string; payload?: Record<string, unknown> }>;
+        const callIndex = typedRows.findIndex(
+          (row) => row.type === "response_item" && row.payload?.type === "function_call",
+        );
+        [typedRows[callIndex + 1], typedRows[callIndex + 2]] = [
+          typedRows[callIndex + 2]!,
+          typedRows[callIndex + 1]!,
+        ];
+      },
+    ],
+    [
+      "a forbidden native namespace",
+      (rows: unknown[]) => {
+        const call = (rows as Array<{ type?: string; payload?: Record<string, unknown> }>).find(
+          (row) => row.type === "response_item" && row.payload?.type === "function_call",
+        )!.payload!;
+        call.namespace = "mcp__filesystem";
+      },
+    ],
+  ])("rejects Terra game-direct evidence with $0", (_label, mutate) => {
+    const rows = terraDirectMcpRollout();
+    mutate(rows);
+    const receipt = JSON.parse(gameDirectCaptureReceipt(rows)) as Record<string, unknown>;
+    receipt.copied_rollout_sha256 = createHash("sha256").update(jsonl(rows)).digest("hex");
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(rows),
+        capture: `${JSON.stringify(receipt)}\n`,
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({ ok: false, reason: expect.any(String) });
   });
 
   it("propagates the exact Codex 0.146 session version through fleet authority", () => {
@@ -1200,6 +1340,37 @@ describe("Codex certified fleet rollout authority", () => {
         model: "gpt-5.6-terra",
       }),
     ).toMatchObject({ ok: false, reason: expect.stringMatching(/requested model differs/i) });
+  });
+
+  it("keeps historical fleet artifacts readable while current certification opts into issue consistency", () => {
+    const fixture = unboundVerifiedArtifactFixture();
+    const historicalReport = fixture.artifacts.report
+      .toString("utf8")
+      .replace(/\s*"issue_consistency_version"\s*:\s*1\s*,/u, "");
+    const primaryEnvelope = JSON.parse(
+      fixture.artifacts.primaryEnvelope.toString("utf8"),
+    ) as Record<string, unknown>;
+    primaryEnvelope.result = historicalReport;
+    const rolloutRows = rollout(historicalReport);
+    const historicalArtifacts = {
+      ...fixture.artifacts,
+      report: Buffer.from(historicalReport),
+      primaryEnvelope: Buffer.from(`${JSON.stringify(primaryEnvelope)}\n`),
+      providerEvents: Buffer.from(jsonl(publicEvents(historicalReport))),
+      providerRollout: Buffer.from(jsonl(rolloutRows)),
+      providerCapture: Buffer.from(captureReceipt(rolloutRows)),
+    };
+
+    expect(validatePureFleetRunArtifactBytes(historicalArtifacts, fixture.expected).ok).toBe(true);
+    expect(
+      validatePureFleetRunArtifactBytes(historicalArtifacts, {
+        ...fixture.expected,
+        requireStructuredIssueConsistency: true,
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/issue_consistency_version 1/u),
+    });
   });
 
   it("authenticates exact terminal Spark report bytes through current v2 fleet artifacts", () => {

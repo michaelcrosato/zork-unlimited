@@ -79,7 +79,7 @@ const ROUTES = {
     finalAlarm: 4,
     endingId: "ending_pack_diverted_cattle_scattered",
     returnSummary:
-      "You reached Cade by the exposed ridge: faster and better sighted for the first lure cast, with the cattle already alarmed by the visible descent.",
+      "You reached Cade by the exposed ridge: faster and better sighted across the whole byre, with the cattle already alarmed by the visible descent.",
   },
   stockway: {
     approachId: "albany:wolf_approach_sheltered_stockway",
@@ -107,7 +107,7 @@ const ROUTES = {
     finalAlarm: 3,
     endingId: "ending_pack_diverted",
     returnSummary:
-      "You reached Cade by the sheltered stockway: slower and less tiring, with the herd calm but the first lure crosswind concealed.",
+      "You reached Cade by the sheltered stockway: slower and less tiring, with the herd calm and the byre's weather and sight lines concealed.",
   },
 } as const;
 

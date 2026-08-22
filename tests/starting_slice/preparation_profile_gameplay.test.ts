@@ -31,6 +31,7 @@ import { applyOpeningReliefAllocationOption } from "../../src/world/opening_reli
 import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oath.js";
 import { applyOverworldQuestLaunchOption } from "../../src/world/quest_launch.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
@@ -80,6 +81,11 @@ const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const ORDINARY_PREPARATION_FLAG = "opening_condition_sound_lower_frame";
+const ORDINARY_PREPARATION_SEED = seedForSeededOpeningFlag(
+  pack.meta.seeded_opening_flags,
+  ORDINARY_PREPARATION_FLAG,
+);
 
 const WORKS = "albany:prep_works_fortification";
 const DROVER = "albany:prep_drover_route";
@@ -237,7 +243,12 @@ function profileState(profileId: string, registrationId: string): GameState {
     character: profile.character,
     profileId,
   }).characterAfter;
-  return initStateForRpgPack(index, 505, { character: prepared, imports });
+  const state = initStateForRpgPack(index, ORDINARY_PREPARATION_SEED, {
+    character: prepared,
+    imports,
+  });
+  expect(state.flags[ORDINARY_PREPARATION_FLAG]).toBe(true);
+  return state;
 }
 
 function droverScenarioState(args: {
@@ -273,7 +284,9 @@ function droverScenarioState(args: {
     character,
     resources: { minutes: 0, supplies: 10, fatigue: 0 },
   }).characterAfter;
-  return initStateForRpgPack(index, 505, { character, imports });
+  const state = initStateForRpgPack(index, ORDINARY_PREPARATION_SEED, { character, imports });
+  expect(state.flags[ORDINARY_PREPARATION_FLAG]).toBe(true);
+  return state;
 }
 
 function droverRecoveryMechanics(state: GameState): GameState {
@@ -604,7 +617,8 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(generalist.vars.cattle_alarm).toBe(1);
     expect(actionIds(generalist)).not.toContain("splice_paling_rail");
 
-    let publicState = initStateForRpgPack(index, 505);
+    let publicState = initStateForRpgPack(index, ORDINARY_PREPARATION_SEED);
+    expect(publicState.flags[ORDINARY_PREPARATION_FLAG]).toBe(true);
     publicState = reachPaling(publicState);
     const publicRail = buildRpgObservation(index, publicState).available_actions.find(
       (option) => option.id === "wedge_paling_rail",

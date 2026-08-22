@@ -1,0 +1,245 @@
+id: bug_0591
+title: "Defer Road-Warden branch terms until their existing read boundaries"
+pack: content/world/new_york_overworld.json
+reported_by: >
+  Valid failed ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-360ada1e-20260822T095519Z, the accepted feedback
+  compile 20260822T090736Z, and the exact-build provisional diagnostic compile
+  20260822T103030Z; all hashes below retain custody of predecessor evidence and
+  do not validate the replacement
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-360ada1e-20260822T095519Z
+    stamp: 20260822T100006Z
+    tested_commit: 360ada1eeb71dfa47bcbb223de524befa6fb3975
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b
+    model: gpt-5.6-terra
+    provider: codex
+    reasoning_effort: xhigh
+    codex_cli_version: 0.146.0
+    codex_client_authority_sha256: a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8
+    play_mode: pure
+    start_surface: fresh_overworld
+    no_retry_or_recovery: true
+    attempts: "10 launched, 10 measured, exactly one verified attempt per seed"
+    valid: true
+    passed: false
+    authority_certified: false
+    artifact_hashes:
+      manifest_jsonl_sha256: 7bcfc7841b5642adb587bad15d060e8db8c628deb47d725f3e442d9d03b58adc
+      summary_sha256: 1d37e178fae74171b23f728947f229498f43f49a5e9baa5bfbbe124b4b54e776
+      starting_slice_pilot_sha256: 579bc58ac7859e2af16f52860d765f9b83a2773458a811d7ee3c2987f2a86d8c
+      authority_proof_sha256: 5098ddb038251676586387614a3cf29f61cc0b9ebe5e088278f2e463f38f0078
+    artifact_bytes:
+      manifest_jsonl: 37464
+      summary: 2005
+      starting_slice_pilot: 2161
+      authority_proof: 2437
+    outcome_metrics:
+      completed: 10
+      stuck: 0
+      completion_decision_p50: 24
+      clarity_total: 39
+      enjoyment_total: 40
+      continued_after_initial_goal: 7
+      strategies: "HUNT 1, LURE 6, DRIVE 0, FORTIFY 3"
+      in_scope_issue_reports: 3
+      blocking_issue_clusters: 0
+      failed_gates: "clarity average >= 4.2; enjoyment average >= 4.2"
+    direct_report_custody:
+      - seed: 822095519000
+        relevance: "only clarity 3/5 report; exact receipt exposed; Station support reveal skipped"
+        report_sha256: 2121e6fd7f6c7fa7bc2a10072f3f1d7d344ad60315f920694d64ae30bdea0e20
+        run_sidecar_sha256: 9182ab6818910e2f8e23cf107f826d083cf18a3a0cc3e9468a4a423a88109791
+        run_evidence_sha256: 49f92f7e2e81ecc8ead7ab2a9e672c45defafc0594dfc8f725036e8a666e3fac
+        primary_envelope_sha256: cd8bec3a366c4af6102d40942aca0b212d13237fb035cb5b645dc5f9a59e3ec0
+        provider_events_sha256: 51a9661b1bc37ecd654fbc0976660284dd7cf91a85949d0bffd52f2a3b62f2c6
+        provider_rollout_sha256: 4d0d72044f449e6aa2b1f8c5e964a6477be7242ea7ce777cb90de78ea9fb77da
+        provider_capture_sha256: ce639d555d0e58b117ec301c7766377d7adab986f08c03027f5314b4c39e3c0c
+      - seed: 822095519002
+        relevance: "direct Road-Warden confirmation-receipt S1"
+        report_sha256: 5126c90900281da1df287ec9896d280817c05718fe8bd90cc0b1e49945422a42
+        run_sidecar_sha256: 6807a28959beb11b2dbfc66a1a48299b2556bcb711d2bf5ed8f3c49d676cc7a9
+        run_evidence_sha256: da7718f4960222b537bda81b124fc5a2fc4754fc00cc434bb6f08da8d31463ec
+        primary_envelope_sha256: beb0b43a3daefc89dfc6ba208eeec644ec88e8109ac2f59a84207c78de5998a6
+        provider_events_sha256: 59870ac424db6263e918ec7a60b0cc01b05f922144a095ebeefeac391b3731b3
+        provider_rollout_sha256: 311ed5468626ebcc69b8cea5d99d27d6af9a19ffe2e2204b6ef9a5bb14d58fb3
+        provider_capture_sha256: 47f1b18ea23894743f9203cd974dfe77d7d5c2936109a5915236226f23653929
+      - seed: 822095519003
+        relevance: "adjacent Station support-disclosure S1 plus out-of-scope Gallowmere S1"
+        report_sha256: 2aa99a0d22b109692d7f07cadb3aab9d685fd871fb7d8d7d0adf7c685a8d8bac
+        run_sidecar_sha256: 6469215d14207747d9fb07aacb78f9ace65565b21aa3cc8f0641f841e1581edf
+        run_evidence_sha256: a81b42a9fc836c1c6163fb5f0e48ee1ebbbff8085c2b32aaeeff8bf242d0153b
+        primary_envelope_sha256: 0925f3d5d90cdf1913ca773148a1c8d057d60e984f22ddc0b0cfcff5084206d2
+        provider_events_sha256: 02cad638aff7fff237af91c25a6f3eafb32fa88ad5950db49f4ded22545797d1
+        provider_rollout_sha256: f7bd1ab10953be7bf417d72836d8b97d0523c50493d4e1beac8e7259c0601e18
+        provider_capture_sha256: 39cb62fe70e67c8f8b729314d7431742ed70fba9eabe0987e7ac1e488481f2fd
+      - seed: 822095519005
+        relevance: "adjacent Station board-label S1; custom oath/source path"
+        report_sha256: 7764ea1597749ba6190275ab2850838d7287200e010bc76864d15ed87a115bbb
+        run_sidecar_sha256: 2f53e58d792f4c2452411fd131641687447ebd39011b13741eb84b5b4dc2d0f9
+        run_evidence_sha256: ed3dfa85c870d58581f147b0342c410e4cd3b93e2810b62d01cb99103e58790d
+        primary_envelope_sha256: f0092bf140b8cf6531f2dd22c21f1d482b79ed3f915cbfe248104efa02b3cfb3
+        provider_events_sha256: 729d25825919cf4d93117f8577cd7f8a2e2b53ca06ab33319d2a3d2ea929e3ae
+        provider_rollout_sha256: 76ea7e9527362def6a1cb6356e4f1e846639e592af1e236dc070e1f6824a0db1
+        provider_capture_sha256: a243e8258fdadb26426414836ae0268c4e1584e08dc297d2ea55f37ad353ea29
+  compiler:
+    diagnostic_predecessor:
+      run: 20260822T065131Z
+      candidate_commit: e14e4208b2e1fa9eac03a66ce83bba7d727eac00
+      recommended_hotspot_id: ea53b6c1
+      recommended_scope: "Gallowmere kill-site retry consequence; outside bounded slice"
+      report_manifest_sha256: 000353629ced7c3a91218cbf2810eb7a1e2345f90b49966bdc77ade3fbab8e94
+      hotspots_sha256: 303b942a94f68f3212b4193c30b6bfd3564200dec1a50961cccb9678b7487bb3
+    accepted:
+      run: 20260822T090736Z
+      candidate_commit: fa1a1fd630cf40da5ff64b4e9783fd83184d67be
+      recommended_hotspot_id: ea53b6c1
+      recommended_scope: "Gallowmere kill-site retry consequence; outside bounded slice"
+      report_manifest_sha256: 7485e4e4d5f3029b78b32fdf4cfc042faf8ec37072f55c34678c8cc32be3dfe6
+      hotspots_sha256: fa201e8a3cd749cc5e91c71698393805b7381f1a3814952384a9a60e03fb4aed
+      in_scope_dispatch_hotspot_ids:
+        - f731f093
+        - 5afe1374
+        - 1a66396e
+        - ed638a76
+        - d386e06d
+        - 64db6ba6
+    exact_build_diagnostic:
+      run: 20260822T103030Z
+      candidate_commit: 360ada1eeb71dfa47bcbb223de524befa6fb3975
+      status: "provisional ignored compile; not accepted assessor authority this cycle"
+      verified_reports: 11
+      actionable_reports: 11
+      recommended_hotspot_id: fbba1f54
+      recommended_scope: "broad Albany dispatch-chain density"
+      exact_receipt_hotspot_id: 9e766750
+      exact_receipt_hotspot_rank: 7
+      report_manifest_sha256: c05489cc07e4456dc96be9165fea83dd4ebad05f687d24060677cfe0e9399d98
+      hotspots_sha256: 28b8ad09fd66e4c4d0f128192dd57944bc2f1eb29bd65df14423bb476098df79
+      hotspots_markdown_sha256: df85b1dfacd0f2be08ef3ab949ff91c5e1c736b875a1c2684df7466e3589cc13
+      retention_sha256: f022bb6b766f6ff9d5093d7e705b8199ab2088cba3a4311afceaa5ce980a60b3
+      frozen_cycle_selection: null
+  exposure:
+    road_warden_background: "8/10 authenticated chronologies"
+    exact_ready_made_receipt: "7/10; seeds 000, 001, 002, 004, 006, 007, 008"
+    exact_receipt_direct_s1_rate: "1/7"
+    station_board: "10/10; one direct S1"
+    station_support_reveal: "9/10; one direct S1"
+    cade_first_root: "10/10; no fresh direct Cade S1"
+    receipt_response_bytes: "all seven exact responses were 9,181 UTF-8 bytes and contained the preview once"
+    exact_predecessor_alias_counts: "HUNT 1, LURE 1, DRIVE 0, FORTIFY 0 in each selected response"
+    counter_signal: >
+      Seed 822095519000 was the sole clarity 3/5 report, selected the exact receipt,
+      skipped Station support reveal and selection, and still named route,
+      support, and conditional-plan terminology as its worst moment.
+
+symptom: >
+  The selected Road-Warden Aid Route confirmation repeated the complete Aid-Only
+  and Hayden branch manual after the dispatch was already chosen. It introduced
+  LURE and HUNT aliases plus public-brace, frost-split, loose-rail, yearling,
+  bare-spear, and Works exclusions before Cade's existing plan and steading
+  surfaces made those conditions actionable.
+
+root_cause: >
+  bug_0586 translated implementation vocabulary but deliberately retained every
+  exact branch term in the selected doctrine preview and explicitly made no
+  progressive-disclosure change. The doctrine trigger already supplies exact
+  read-only option detail, and Wolf-Winter already supplies the full Hayden
+  branch before the paling commitment, so the selected receipt duplicated a
+  future decision manual instead of confirming the chosen dispatch.
+
+fix: >
+  Rewrite only opening_registration.doctrines[id=albany:doctrine_road_warden_aid_route].preview.
+  Keep the defense-4 result, state the Aid-Only clean/foul final ordinary
+  cattle-alarm boundary without a plan alias, and say that Hayden matters only
+  when holding Cade's ground and that exact brace terms appear at the steading
+  before commitment. Leave trigger_category and every other scalar byte-identical.
+
+source_hash_boundary:
+  predecessor_content_hash: aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b
+  replacement_content_hash: 977ef1ef3be9f1767be8a9c6629196e4f46045de92edf42319653be40dd6154b
+  predecessor_file_sha256: c6ce8ffc18d8e5e3844b1c74ef1b745c067b719478160459e3f932775913b801
+  replacement_file_sha256: 3288f9683609149f45b1cff9aca7b18b661ccb01ec9cf971d4bf2b1b9cdca858
+  predecessor_git_blob: 0960d53ed733f9bf253bccc51e16256aee1f1022
+  replacement_git_blob: 4ddcedcb30c4602e387b00c5a43c74c30548cc52
+  predecessor_file_bytes: 3438040
+  replacement_file_bytes: 3437894
+
+deterministic_witnesses:
+  - "the exact predecessor preview is 432 ASCII bytes and 79 words"
+  - "the exact replacement preview is 286 ASCII bytes and 48 words"
+  - "the only world-file substitution removes exactly 146 bytes"
+  - "trigger_category remains exactly 132 characters and 21 words; its complete inspected receipt remains at the existing 32-word cap"
+  - "the seven authenticated 9,181-byte ready-dispatch envelopes reconstruct at exactly 9,035 UTF-8 bytes under the unchanged 9,250-byte cap"
+  - "the pure Road-Warden registration response remains exactly 6,330 UTF-8 bytes under its unchanged 6,400-byte cap"
+  - "selected consequence excludes uppercase HUNT/LURE/DRIVE/FORTIFY and the public-brace, frost-split, yearling, bare-spear, and Works branch terms"
+  - "read-only option inspection retains the exact Benefit literal with LURE, frost-split rail, and HUNT"
+  - "the byre-yard variants retain the complete Hayden conditions before the paling_gap commitment"
+  - "ready-made selection still advances from accepted decision 3 to 5 and manual oath/source selection remains state-identical"
+
+mechanics_unchanged:
+  - "Fieldcraft rank 4, Wolf-Winter starting defense 4 instead of 3, import condition, and direct-start defense 3"
+  - "Aid-Only suppresses only the final ordinary +1 cattle alarm after a clean first LURE cast; a fouled opening retains it"
+  - "Hayden's HUNT-only attempted public wedge, frozen split, unbound rail, yearling death, bare-spear north, and Works/skip/bind exclusions"
+  - "profile, doctrine, oath, source, preparation, allocation, ally, road, quest, strategy, action, and outcome ids and authored order"
+  - "costs, time, funds, skills, checks, rolls, effects, promises, relationships, equipment, knowledge, journals, and accepted decisions"
+  - "Station board V6, reveal V1, June modal V1, support breadth/order, both roads, four strategies, Albany return, Continue/End, and Gallowmere"
+  - "save, MCP, terminal, UI, validator, feedback, certification, and content-integrity schemas and limits"
+
+counterevidence:
+  - >
+    All ten players completed Wolf-Winter, none was stuck, continuation and
+    strategy-distribution gates passed, every game action succeeded, and all
+    would replay. This supports a copy-only correction, not a mechanics or flow
+    rewrite.
+  - >
+    Board V6 and support disclosure each received a direct S1 and broader
+    Station density remains. Their 10/10 and 9/10 exposures keep them open as
+    independent evidence; this change does not declare them solved.
+  - >
+    HUNT/LURE/DRIVE/FORTIFY 1/6/0/3 is a valid organic distribution. Removing
+    premature aliases from a post-selection receipt is not intended to steer,
+    balance, reward, quota, or equalize any strategy.
+  - >
+    The accepted compiler's ea53b6c1 Gallowmere finding and the diagnostic
+    compiler's broader fbba1f54 Albany finding are legitimate. Scope and the
+    smaller exact 9e766750 surface explain the choice; neither compiler is
+    claimed wrong.
+
+nonclaims:
+  - "The pilot tested exact predecessor 360ada1e / aa805dfa, not replacement 977ef1ef; it diagnoses the target and does not validate the new copy."
+  - "Only seven of ten reports received this exact ready-made receipt; the other custom oath/source paths remain residual and are not claimed repaired."
+  - "Seed 822095519002 described four plan aliases, but its authenticated receipt contained only HUNT and LURE; this correction owns those exact exposures, not the report's broader shorthand."
+  - "Ten AI-player reports are diagnostic evidence, not human research, certification authority, or causal proof that this receipt set any rating."
+  - "No clarity, enjoyment, continuation, replay, completion, strategy-diversity, balance, certification, or human-quality lift is claimed before fresh exact-build evidence."
+  - "Exact branch truth is deferred, not deleted: the inspected card and steading surfaces remain authoritative before commitment."
+  - "The 9,035-byte envelope is a deterministic counterfactual and no-growth witness, not a response returned by the pilot or evidence that bytes caused friction."
+  - "This does not solve Station board labels, June disclosure, the compact legend, the whole setup chain, route navigation, checkpoint presentation, or Gallowmere."
+  - "bug_0586 and bug_0588 remain immutable predecessor history; their original measurements and nonclaims are not rewritten."
+  - "The provisional 20260822T103030Z compile is not accepted assessor authority this cycle, and hotspot 9e766750 is not claimed consumed."
+  - "No browser run, screenshot review, visual-quality claim, provider call, checker, compiler invocation, fleet, crawler, health run, state edit, stage, or commit belongs to this correction audit."
+
+production:
+  - content/world/new_york_overworld.json
+  - docs/STARTING_SLICE.md
+  - docs/DECISION_LOG.md
+
+tests:
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/unit/world_opening_registration_doctrine_runtime.test.ts
+  - tests/unit/world_opening_starting_doctrine.test.ts
+
+verification:
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts -t "keeps the selected Road-Warden receipt summary-first"
+  - npx vitest run tests/starting_slice/opening_dispatch_briefing.test.ts tests/unit/world_opening_registration_doctrine_runtime.test.ts tests/unit/world_opening_starting_doctrine.test.ts
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - git diff --check

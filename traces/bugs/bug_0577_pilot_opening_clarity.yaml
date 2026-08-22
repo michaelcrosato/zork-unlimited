@@ -1,0 +1,126 @@
+id: bug_0577
+title: "The Albany opening repeated commitments and mislabeled a read-only HUNT exit"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: "Closed ten-player Terra pilot on ceadd735 plus deterministic projection witnesses"
+severity: S1
+
+evidence:
+  closed_pilot:
+    batch_prefix: blind-tester/reports/20260814T001116Z_overworld_seed20260815
+    tested_commit: ceadd73597828117fcf5438be87c27091300a26b
+    tracked_worktree_clean: true
+    world_hash: ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017
+    model: gpt-5.6-terra
+    play_mode: pure
+    start_surface: fresh_overworld
+    run_seeds: [2026081500, 2026081501, 2026081502, 2026081503, 2026081504, 2026081505, 2026081506, 2026081507, 2026081508, 2026081509]
+    report_sha256:
+      - 865879558c5cac34c89ac3492017d2135d7ec3a0607b6a741ca09b8dc26a5693
+      - a581bc3835910a1269832fb7b75dadf9abb8471cc0ce08e6d818dbc39b7aefd7
+      - 4e4ecd4af4388c44cdf10d4063dc00e95732eefd42098201f12e8b5e806ebaf0
+      - ac8754aa943884f40bbf95154f043b0456a62880fef5cd1b37593a73ce34dc1d
+      - adb09f1e22d53cc1185b92b7978d78444f92651b066c39fdef7820ef972f0385
+      - 93c9e940a93ab94f7c38d9d1ea298a83870a01780cc4c9a856ce031846281171
+      - dcac32e3476b2b1a9854eb8628f5776527d0708bf9816b1e320e17ea00b70241
+      - ef58fcba7889b3cec8877177503b7ce66a7d8b934daaee7cd3dcb76c740bfa1b
+      - 9beaacd6de8f02efe5fe3164b33deed727950809daa33d152ab980e30d7f4a21
+      - f09e0427eedcf8fb0c2f1cb913b20dcd1072438a42c1f86d34d1cb7697d943ea
+    boundary: >
+      All ten reports were verified fresh-overworld runs on the same clean commit. All ten
+      completed Wolf-Winter and Gallowmere, continued at every earlier boundary, ended
+      voluntarily after the second goal, were not stuck, would replay, and scored clarity
+      4/5 and enjoyment 4/5. Their common opening criticism was the dense Albany
+      role/duty/evidence/dispatch stack. Seeds 2026081500 and 2026081503 chose HUNT and
+      independently read PREPARE — HUNT as an attempted preparation that produced no visible
+      change. Seed 2026081500 also received firm-ground copy telling a solo launch to ask June.
+  assessment:
+    run_id: 2026-08-14T00-37-54-319Z
+    plan: ai-runs/2026-08-14T00-37-54-319Z/current-plan.md
+    scope: >
+      The handoff authorizes one projection/copy-only clarity increment. It does not authorize
+      mechanics, schema, Gallowmere, certification-gate, provider-state, or seed changes.
+
+symptom: >
+  Before Wolf-Winter's first field action, the Albany registration and matched quick setup
+  repeated role labels, commitments, plan-legality, and setup boundaries across message,
+  option, and highlight rows. The four-plan read-only compass was complete but syntactically
+  uneven. In the quest, ask_prepare_hunt was visibly labeled PREPARE even though its authored
+  end:true topic has no effects, and one firm-ground room variant told a no-June player to ask
+  June.
+
+root_cause: >
+  Presentation projections copied facts already carried by the option label or commitment into
+  additional highlights and repeated shared facts on every matched card. The plan compass grew
+  by accretion instead of a parallel clause grammar. Wolf-Winter's no-op dialogue exit inherited
+  preparation language despite being only a conversation closure, while the leading firm-ground
+  room copy used a conditional June instruction without checking or projecting June's absence.
+
+fix: >
+  Keep the Albany choices and authored consequences unchanged while deduplicating only their
+  projections: each registration card keeps the shared permanence fact visible once without
+  repeating the role title, plus one obligation and one unique Wolf-Winter fit. Each matched
+  setup names its exact duty/evidence pair once, exposes only unique support in commitment, and
+  states only the closed alternatives as tradeoff. The read-only compass gives each plan
+  parallel Outcome, Cost or risk, and Later clauses and retains the explicit neutral/no-state
+  boundary. Rename ask_prepare_hunt's visible prompt to LEAVE REVIEW and state its no-state-change
+  truth. Remove the unguarded June instruction from the firm-ground room; actual June-present
+  observations still name June and offer TALK.
+
+source_hash_boundary:
+  predecessor_content_hash: 76e01d88be2d5268e11b349796740a4599d26995156fb566acd251f4ec2d1024
+  replacement_content_hash: 8981df5bb46a5173e1dcc43b4560f07042e4e9a338e885433a68089fec328038
+  replacement_file_sha256: ae6a56f2ac20ee2ee6372054676892f8f63cb89f15307ff526c6e4fe2808c3b6
+  replacement_git_blob: a7a61e144d6d7d3e036acb988ae9cb09a28748cd
+  relabeled_twin_hash: bd6d0d98c27012fe1d766f75ed6bc921c84c6b9ede907165deec4a2bb4763eab
+
+deterministic_witnesses:
+  - "registration full, compact MCP, terminal, and rendered UI projections agree on the shorter message and preserve all four option ids in authored order"
+  - "every registration option keeps the shared permanent-role fact visible exactly once and retains starting funds, starter edge, obligation, Wolf-Winter fit, tradeoff, and exact inspected consequence without repeating its role title or commitment in highlights"
+  - "every matched setup names its exact duty/evidence pair exactly once and preserves its id, exact cost, exact benefit inspection, canonical two-decision application, and snapshot equality with manual selection"
+  - "the read-only compass contains exactly four Outcome, four Cost or risk, and four Later clauses, recommends and commits no plan, changes no state, and reveals the same oath ids"
+  - "ask_prepare_hunt retains its id, aliases, order, conditions, end:true topology, and zero effects; using it preserves flags, gameplay vars, items, journal, location, and RNG state while only closing dialogue and advancing the ordinary step counter"
+  - "after the no-op HUNT exit, the north crossing remains legal and is still the commitment that closes LURE, DRIVE, and FORTIFY"
+  - "a no-June firm-ground observation neither names June nor offers talk_june_pike; the corresponding June-present observation names June at the north gate and offers talk_june_pike"
+  - "the exact compiled Wolf-Winter hash advances from 76e01d88 to 8981df5b and the reviewed relabeled certificate advances to bd6d0d98"
+
+nonclaims:
+  - "The pilot proves a consistent clarity/enjoyment shortfall and two direct HUNT misreads; it does not prove churn, failure, stuckness, low replay intent, or a mechanics defect."
+  - "This change does not add HUNT preparation state, a buff, flag, journal receipt, item, cost, RNG draw, or decision. The old action was intentionally nonmutating and remains so."
+  - "This does not change any id, option order, condition, effect, resource, plan legality, strategy outcome, checkpoint, Station schema, certification gate, provider state, or seed selector/order."
+  - "The June copy correction does not remove June from launches that imported june_pike_present; her NPC, TALK action, cattle-first authority, release boundary, and plan effects are unchanged."
+  - "The compressed compass does not recommend HUNT, LURE, DRIVE, or FORTIFY and omits none of their material outcome, cost/risk, or later-consequence boundaries."
+  - "Gallowmere and checkpoint presentation are outside this increment and remain byte-identical."
+  - "The ten predecessor reports are closed pilot evidence for ceadd735, not exact-build evidence for this replacement and not authority for a 100-player spend."
+
+production:
+  - src/world/opening_dispatch_briefing.ts
+  - src/world/opening_registration_presentation.ts
+  - src/world/opening_relief_oath_presentation.ts
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/starting_slice/opening_dispatch_briefing.test.ts
+    cases:
+      - "pins reduced Albany messages, compact/full/UI parity, option order, neutral compass grammar, and nonmutation"
+  - path: tests/unit/world_opening_registration_helpers.test.ts
+    cases:
+      - "pins obligation plus unique Wolf-Winter fit highlights and exact consequence inspection"
+  - path: tests/unit/world_opening_registration_doctrine_runtime.test.ts
+    cases:
+      - "pins shortened matched setup projections and canonical snapshot-equivalent application"
+  - path: tests/regression/wolf_winter_dialogue_surface.test.ts
+    cases:
+      - "proves the truthful HUNT review exit is state-identical and north crossing remains commitment"
+  - path: tests/regression/wolf_winter_seeded_field_conditions.test.ts
+    cases:
+      - "proves no-June absence and June-present name/action truth on firm ground"
+verification:
+  - npx vitest run tests/starting_slice/opening_dispatch_briefing.test.ts tests/unit/world_opening_registration_helpers.test.ts tests/unit/world_opening_registration_doctrine_runtime.test.ts tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_seeded_field_conditions.test.ts tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/wolf_winter_seeded_transfer_witness.test.ts tests/regression/support/seeded_opening_transfer.test.ts
+  - npx vitest run tests/regression/registration_progressive_disclosure.test.ts tests/unit/ui_story_choice_summary_first.test.ts tests/unit/terminal_story_choice_grouping.test.ts
+  - npx vitest run tests/regression/overworld_cli.test.ts -t "keeps the default Civic briefing compact"
+  - npx vitest run tests/unit/mcp_journey_surface.test.ts -t "offers the quick setup immediately"
+  - npm run validate -- wolf_winter
+  - npm run verify:bug-traces
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - git diff --check

@@ -169,7 +169,10 @@ import {
   openingReliefOathOfferJournalEntry,
   openingReliefOathOfferJournalId,
 } from "./opening_relief_oath_journal.js";
-import { presentOpeningReliefOath } from "./opening_relief_oath_presentation.js";
+import {
+  presentOpeningReliefOath,
+  withOpeningReliefOathFieldOutcomeCompass,
+} from "./opening_relief_oath_presentation.js";
 import {
   openingRegistrationJournalEntry,
   openingRegistrationJournalId,
@@ -185,6 +188,7 @@ import {
   deriveOpeningDepartureRecap,
   type OpeningDepartureRecap,
 } from "./opening_departure_recap.js";
+import { STATION_DISPATCH_SUPPORT_REVEAL_ID } from "./station_dispatch_board.js";
 import {
   clearOverworldSessionCaches,
   type OverworldSessionCaches,
@@ -268,6 +272,7 @@ import {
   type JourneyPresentation,
   type JourneyPresentationContext,
   type JourneyStoryChoiceOption,
+  type JourneyStoryChoicePresentationKind,
   type JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
 import {
@@ -383,6 +388,8 @@ export type OverworldJourneyGoalPassageResult =
 export type OverworldJourneyStoryChoiceResult = Readonly<{
   storyChoiceId: string;
   choiceId: string;
+  /** Optional player-first projection; consequence remains the exact authoritative receipt. */
+  displaySummary?: string;
   consequence: string;
   goal: JourneyGoalPresentation;
   entry: OverworldJournalEntry;
@@ -390,18 +397,59 @@ export type OverworldJourneyStoryChoiceResult = Readonly<{
 }>;
 
 /**
- * Keep the durable journal mechanically complete while ensuring the immediate
- * choice response does not re-expand a roleplay-first receipt into deferred
- * setup mechanics. Legacy and unfamiliar summaries retain their authored text.
+ * Keep the durable journal mechanically complete while ensuring ordinary
+ * roleplay-first responses do not re-expand deferred setup mechanics. Opening
+ * registration retains its existing presented journal bytes; legacy and
+ * unfamiliar summaries retain their authored text.
  */
 function storyChoiceEntryForPresentation(
   entry: OverworldJournalEntry,
   option: JourneyStoryChoiceOption,
 ): OverworldJournalEntry {
   const presented = redactOverworldJournalEntryForPresentation(entry);
-  return option.summary?.fieldTrigger === undefined && option.summary !== undefined
+  return entry.kind !== "registration" &&
+    option.summary?.fieldTrigger === undefined &&
+    option.summary !== undefined
     ? { ...presented, text: option.consequence }
     : presented;
+}
+
+const OPENING_STORY_CHOICE_DISPLAY_PREFIX: Readonly<
+  Record<JourneyStoryChoicePresentationKind, string>
+> = Object.freeze({
+  registration: "Background chosen",
+  relief_oath: "Wolf-Winter promise chosen",
+  lead_source: "Report chosen",
+  preparation: "Field kit chosen",
+  relief_allocation: "Relief wagon choice made",
+  ally: "Riding choice made",
+});
+
+const OPENING_STORY_CHOICE_PLAIN_OUTCOME: Readonly<Record<string, string>> = Object.freeze({
+  "albany:ally_june_cattle_first": "June joined you as the second rider.",
+  "albany:ally_june_relay_only": "June declined the subordinate relay and remained at the Station.",
+  "albany:ally_travel_solo": "June remained at the Station; you will ride alone.",
+});
+
+/**
+ * Lead ordinary Albany opening results with the same player-language terms the
+ * accepted card showed. Exact mechanical consequence and journal bytes remain
+ * separate and unchanged; legacy field-trigger summaries retain their old
+ * response shape rather than receiving an incomplete projection. The accepted
+ * receipt intentionally does not concatenate authored commitments/tradeoffs:
+ * some are exact field mechanics whose proper home is the consequence.
+ */
+function openingStoryChoiceDisplaySummary(
+  kind: JourneyStoryChoicePresentationKind | undefined,
+  option: JourneyStoryChoiceOption,
+): string | undefined {
+  const summary = option.summary;
+  if (kind === undefined || summary === undefined || summary.fieldTrigger !== undefined) {
+    return undefined;
+  }
+  const cost = summary.immediateCost.replace(/\.$/u, "");
+  const plainOutcome = OPENING_STORY_CHOICE_PLAIN_OUTCOME[option.id];
+  return `${OPENING_STORY_CHOICE_DISPLAY_PREFIX[kind]} — ${option.label}. ${plainOutcome ? `${plainOutcome} ` : ""}Cost: ${cost}.`;
 }
 
 const DEFAULT_CAMPAIGN_CHARACTER_SERIALIZED = serializeCampaignCharacterState(
@@ -537,6 +585,8 @@ export class OverworldSession {
    * Persisting it makes an exported session fully resumable and keeps legality derivable.
    */
   private inspectedStoryReveals = new Map<string, Set<string>>();
+  /** Read-only compact Station support reveals, persisted independently of story legality. */
+  private stationDispatchSupportReveals = new Map<string, string>();
   private restoreWarningList: readonly string[] = Object.freeze([]);
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
@@ -930,6 +980,19 @@ export class OverworldSession {
     );
   }
 
+  private openingStandardPacketPlayerSummary(args: {
+    profileTitle: string;
+    reliefOathTitle: string;
+    leadSourceTitle: string;
+  }): string {
+    const promiseTitle = args.reliefOathTitle.replace(/\bDuty\b/gu, "Promise");
+    return (
+      `Ready-made dispatch chosen — Background: ${args.profileTitle}; ` +
+      `Wolf-Winter promise: ${promiseTitle}; Report: ${args.leadSourceTitle}. ` +
+      "Optional field kit, relief wagon, second rider, and road remain open."
+    );
+  }
+
   private openingLeadSourceResolved(): boolean {
     return this.journalEntries.some((entry) => entry.kind === "lead_source");
   }
@@ -1108,7 +1171,7 @@ export class OverworldSession {
         overworldDepartureInteraction({
           id: preparation.id,
           kind: "preparation",
-          title: preparation.title,
+          title: "Field kit",
         }),
       );
     }
@@ -1118,7 +1181,7 @@ export class OverworldSession {
         overworldDepartureInteraction({
           id: allocation.id,
           kind: "relief_allocation",
-          title: allocation.title,
+          title: "Relief wagon",
         }),
       );
     }
@@ -1157,7 +1220,7 @@ export class OverworldSession {
     return [
       overworldDepartureContactLead({
         id: scene.id,
-        title: scene.title,
+        title: "Second rider",
         contactId: contact.id,
         contactName: contact.name,
         questId: quest.id,
@@ -1341,6 +1404,40 @@ export class OverworldSession {
     return this.inspectedStoryReveals.get(storyChoiceId)?.has(revealId) === true;
   }
 
+  private stationDispatchSupportWasRevealed(questId: string): boolean {
+    return this.stationDispatchSupportReveals.get(questId) === STATION_DISPATCH_SUPPORT_REVEAL_ID;
+  }
+
+  private currentStationDispatchSupportWasRevealed(): boolean {
+    const chain = resolveOpeningDispatchManifestChain(this.world);
+    return chain ? this.stationDispatchSupportWasRevealed(chain.quest.id) : false;
+  }
+
+  /**
+   * Record the exact compact Station disclosure without accepting a decision.
+   * The current authenticated hub supplies the quest key; unknown or stale ids fail closed.
+   */
+  revealStationDispatchSupport(revealId: string): void {
+    const chain = this.openingDispatchHubAvailable();
+    const board = chain ? this.view().stationDispatchBoard : null;
+    if (!chain || !board || board.questId !== chain.quest.id) {
+      throw new Error("Station optional support is not reviewable at the current boundary.");
+    }
+    if (revealId !== STATION_DISPATCH_SUPPORT_REVEAL_ID) {
+      throw new Error(`Unknown Station optional-support reveal "${revealId}".`);
+    }
+    if (!board.support.some((entry) => entry.status === "open_optional")) {
+      throw new Error("Station optional support is already sealed.");
+    }
+    const prior = this.stationDispatchSupportReveals.get(chain.quest.id);
+    if (prior === revealId) return;
+    if (prior !== undefined) {
+      throw new Error(`Station dispatch "${chain.quest.id}" has a different reveal receipt.`);
+    }
+    this.stationDispatchSupportReveals.set(chain.quest.id, revealId);
+    this.clearSessionCaches();
+  }
+
   /**
    * Reveal receipts are authority for hidden story options, so restoring them
    * requires more than schema-valid strings. Every tuple must name a story that
@@ -1381,6 +1478,53 @@ export class OverworldSession {
         );
       }
     }
+  }
+
+  /** Authenticate additive compact Station receipts against the exact opening lifecycle. */
+  private assertSnapshotStationDispatchSupportReveals(snapshot: OverworldSessionSnapshot): void {
+    const receipts = snapshot.stationDispatchSupportReveals ?? [];
+    if (new Set(receipts.map(([questId]) => questId)).size !== receipts.length) {
+      throw new Error("Overworld session snapshot repeats a Station support reveal receipt.");
+    }
+    if (receipts.length === 0) return;
+    const chain = resolveOpeningDispatchManifestChain(this.world);
+    const supportStillOpen =
+      !this.openingPreparationResolved() ||
+      !this.openingReliefAllocationResolved() ||
+      (chain?.ally !== null && !this.openingAllyResolved());
+    const exactLifecycle =
+      chain !== null &&
+      this.journeyState.status !== "ended" &&
+      this.discoveredQuestIds.has(chain.quest.id) &&
+      !this.startedQuestIds.has(chain.quest.id) &&
+      !this.completedQuestIds.has(chain.quest.id) &&
+      supportStillOpen;
+    if (
+      receipts.length !== 1 ||
+      !chain ||
+      !exactLifecycle ||
+      receipts[0]![0] !== chain.quest.id ||
+      receipts[0]![1] !== STATION_DISPATCH_SUPPORT_REVEAL_ID
+    ) {
+      throw new Error(
+        "Overworld session snapshot Station support reveal must match its exact open dispatch.",
+      );
+    }
+  }
+
+  private forgetStationDispatchSupportReveal(questId: string): void {
+    if (!this.stationDispatchSupportReveals.delete(questId)) return;
+    this.clearSessionCaches();
+  }
+
+  private forgetSealedStationDispatchSupportReveal(): void {
+    const chain = resolveOpeningDispatchManifestChain(this.world);
+    if (!chain) return;
+    const supportSealed =
+      this.openingPreparationResolved() &&
+      this.openingReliefAllocationResolved() &&
+      (chain.ally === null || this.openingAllyResolved());
+    if (supportSealed) this.forgetStationDispatchSupportReveal(chain.quest.id);
   }
 
   /** Drop every reveal receipt — the story is decided, so the gate has no more work. */
@@ -1430,9 +1574,10 @@ export class OverworldSession {
    */
   revealJourneyStory(storyChoiceId: string, revealId: string): JourneyStoryChoicePrompt {
     const story = this.inspectJourneyStory(storyChoiceId);
+    if (this.storyRevealWasInspected(storyChoiceId, revealId)) return story;
     journeyStoryChoiceOptionsForPresentation(story, revealId);
     this.rememberStoryReveal(storyChoiceId, revealId);
-    return story;
+    return this.inspectJourneyStory(storyChoiceId);
   }
 
   /** Validate an option-detail request against the session's durable reveal receipt. */
@@ -1894,7 +2039,16 @@ export class OverworldSession {
   }
 
   journey(): JourneyPresentation {
-    return journeyPresentation(this.journeyState, this.journeyPresentationContext());
+    const journey = journeyPresentation(this.journeyState, this.journeyPresentationContext());
+    const story = journey.storyChoice;
+    const disclosure = story?.progressiveDisclosure;
+    if (!story || !disclosure || !this.storyRevealWasInspected(story.id, disclosure.reveal.id)) {
+      return journey;
+    }
+    const revealedStory = withOpeningReliefOathFieldOutcomeCompass(story, disclosure.reveal.id);
+    return revealedStory === story
+      ? journey
+      : Object.freeze({ ...journey, storyChoice: revealedStory });
   }
 
   journeyExitReceipt(): JourneyExitReceipt | null {
@@ -1905,7 +2059,7 @@ export class OverworldSession {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
       throw new Error(
-        "Choose the presented story consequence, character registration, relief oath, Albany lead source, preparation, relief allocation, or field-team commitment before taking another action.",
+        "Choose the presented story consequence, background, Wolf-Winter promise, report, field kit, relief wagon, or second rider before taking another action.",
       );
     }
   }
@@ -1967,6 +2121,9 @@ export class OverworldSession {
   chooseJourney(choice: JourneyChoice): JourneyChoiceResult {
     const chosen = chooseJourneyContract(this.journeyState, choice);
     this.journeyState = chosen.state;
+    if (choice === "end" && this.stationDispatchSupportReveals.size > 0) {
+      this.stationDispatchSupportReveals.clear();
+    }
     if (
       choice === "continue" &&
       chosen.result.retentionEvent.reasons.includes("goal_completed") &&
@@ -2018,6 +2175,7 @@ export class OverworldSession {
     // also keeps a revealed branch and an unrevealed one converging on the same snapshot
     // hash once both have chosen, which several parity proofs depend on.
     this.forgetStoryReveals();
+    this.forgetSealedStationDispatchSupportReveal();
     return result;
   }
 
@@ -2057,6 +2215,7 @@ export class OverworldSession {
     if (!option) {
       throw new Error(`Story choice "${storyChoice.id}" does not offer option "${choiceId}".`);
     }
+    const displaySummary = openingStoryChoiceDisplaySummary(storyChoice.kind, option);
     if (pullBased && storyChoice.kind === "preparation") {
       this.offerOpeningPreparationAtDeparture();
     } else if (pullBased && storyChoice.kind === "relief_allocation") {
@@ -2065,7 +2224,7 @@ export class OverworldSession {
     if (storyChoice.kind === "registration") {
       const registration = this.openingRegistrationAvailable();
       if (!registration || storyChoice.id !== registration.id) {
-        throw new Error("The presented opening registration is no longer available.");
+        throw new Error("The presented background choice is no longer available.");
       }
       const characterAfter = applyOpeningRegistrationProfile({
         registration,
@@ -2105,6 +2264,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2114,7 +2274,7 @@ export class OverworldSession {
     if (storyChoice.kind === "relief_oath") {
       const scene = this.openingReliefOathAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening relief oath is no longer available.");
+        throw new Error("The presented Wolf-Winter promise is no longer available.");
       }
       const registration = this.world.opening_registration;
       const standardPacket = registration
@@ -2139,9 +2299,15 @@ export class OverworldSession {
           reliefOathTitle: standardPacket.reliefOathOption.title,
           leadSourceTitle: standardPacket.leadSourceOption.title,
         });
+        const playerSummary = this.openingStandardPacketPlayerSummary({
+          profileTitle: standardPacket.profile.title,
+          reliefOathTitle: standardPacket.reliefOathOption.title,
+          leadSourceTitle: standardPacket.leadSourceOption.title,
+        });
         return Object.freeze({
           storyChoiceId: storyChoice.id,
           choiceId,
+          displaySummary: playerSummary,
           consequence,
           goal: leadSourceSelection.goal,
           entry: Object.freeze({
@@ -2193,6 +2359,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2202,7 +2369,7 @@ export class OverworldSession {
     if (storyChoice.kind === "lead_source") {
       const scene = this.openingLeadSourceAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening lead source is no longer available.");
+        throw new Error("The presented report choice is no longer available.");
       }
       const application = applyOpeningLeadSourceOption({
         scene,
@@ -2251,6 +2418,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2260,7 +2428,7 @@ export class OverworldSession {
     if (storyChoice.kind === "preparation") {
       const scene = this.openingPreparationAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening preparation is no longer available.");
+        throw new Error("The presented field-kit choice is no longer available.");
       }
       const application = applyOpeningPreparationProfile({
         scene,
@@ -2306,6 +2474,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2315,7 +2484,7 @@ export class OverworldSession {
     if (storyChoice.kind === "relief_allocation") {
       const scene = this.openingReliefAllocationAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening relief allocation is no longer available.");
+        throw new Error("The presented relief-wagon choice is no longer available.");
       }
       const application = applyOpeningReliefAllocationOption({
         scene,
@@ -2353,6 +2522,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2362,7 +2532,7 @@ export class OverworldSession {
     if (storyChoice.kind === "ally") {
       const scene = this.openingAllyAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening ally commitment is no longer available.");
+        throw new Error("The presented riding choice is no longer available.");
       }
       const application = applyOpeningAllyOption({
         scene,
@@ -2400,6 +2570,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2463,6 +2634,7 @@ export class OverworldSession {
       openingLeadSourceDecisionTrail: this.openingLeadSourceDecisionTrail,
       questCharacterDeathBoundary: this.questCharacterDeathBoundary,
       inspectedStoryReveals: this.inspectedStoryReveals,
+      stationDispatchSupportReveals: this.stationDispatchSupportReveals,
       journey: this.journeyState,
     };
   }
@@ -2495,12 +2667,14 @@ export class OverworldSession {
     this.assertQuestCharacterDeathBoundary();
     this.clearSessionCaches();
     this.assertSnapshotStoryRevealReceipts(snapshot);
+    this.assertSnapshotStationDispatchSupportReveals(snapshot);
     this.inspectedStoryReveals = new Map(
       (snapshot.inspectedStoryReveals ?? []).map(([storyChoiceId, revealIds]) => [
         storyChoiceId,
         new Set(revealIds),
       ]),
     );
+    this.stationDispatchSupportReveals = new Map(snapshot.stationDispatchSupportReveals ?? []);
     this.restoreWarningList = applied.restoreWarnings;
     this.clearSessionCaches();
   }
@@ -3013,6 +3187,7 @@ export class OverworldSession {
       departureInteractions: this.departureInteractions(),
       departureContactLeads: this.departureContactLeads(),
       departureRecap: this.departureRecap(),
+      stationDispatchSupportRevealed: this.currentStationDispatchSupportWasRevealed(),
       roads: this.roadsFrom(this.currentId),
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
       localState,
@@ -3336,6 +3511,7 @@ export class OverworldSession {
         ...(dispatchSeal ? { dispatchSeal } : {}),
       };
     }
+    this.forgetStationDispatchSupportReveal(canonicalPlan.quest.id);
     this.clearSessionCaches();
     return withJourneyDecision(cloneOverworldQuestView(applied.quest), journeyDecision);
   }

@@ -95,6 +95,10 @@ import type { Rng } from "../../src/core/rng.js";
 import type { RpgAction } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
+import {
+  seededOpeningTransferFailureMessage,
+  seededOpeningTransferSupportForPack,
+} from "./support/seeded_opening_transfer.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -238,6 +242,11 @@ describe("bug_0149 — every RPG pack's reachable max score equals its declared 
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const pack = loaded.compiled.pack;
+        const seededOpeningSupport = seededOpeningTransferSupportForPack(pack);
+        expect(
+          seededOpeningSupport.unsupported,
+          seededOpeningTransferFailureMessage(file, seededOpeningSupport),
+        ).toBe(false);
         const declared = pack.meta.max_score;
 
         // Caveat guard A: only a monotone, safely crossed player-HP upper bound is supported.

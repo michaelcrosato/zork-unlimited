@@ -174,6 +174,7 @@ export function verifyCyclePlaytest(
   try {
     const report = verifyBlindReportFile(reportPath, {
       requiredPlayMode: "pure",
+      requireStructuredIssueConsistency: true,
       runEvidenceText: evidenceText,
     });
     if (!report.ok) return reject(report.reason);

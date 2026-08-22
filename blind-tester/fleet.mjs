@@ -33,6 +33,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { codexClientAuthorityRecord, validateOutputPrefix } from "./codex-rollout.mjs";
 import {
+  CODEX_GAME_DIRECT_MCP_CONTRACT,
   CODEX_GAMEPLAY_WRAPPER_FAILURES,
   CODEX_SPARK_DIRECT_MCP_CONTRACT,
   CODEX_STRICT_CURRENT_CONTRACT,
@@ -77,13 +78,16 @@ export const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
 export const HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
 export const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
 export const HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
-export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 8;
-export const PURE_FLEET_SUMMARY_SCHEMA_VERSION = 8;
+export const HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION = 8;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 9;
+export const PURE_FLEET_SUMMARY_SCHEMA_VERSION = 9;
 export const CODEX_CLIENT_AUTHORITY_PROOF_NAME = "codex-client-authority.private.json";
 export const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1";
 export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v2";
 export const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1";
+export const GAME_DIRECT_MCP_TRANSPORT_CONTRACT = CODEX_GAME_DIRECT_MCP_CONTRACT;
 export const SPARK_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0";
+export const GAME_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0";
 const SPARK_ADMISSION_CANARY_COUNT = 3;
 const SPARK_ADMISSION_CANARY_MODEL = "gpt-5.3-codex-spark";
 // These tracked inputs are shared by every live player transport. Prompt and
@@ -431,7 +435,18 @@ export function fleetTransportProfile(model) {
       },
     };
   }
-  if (["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"].includes(model)) {
+  if (model === "gpt-5.6-terra") {
+    return {
+      transportContract: GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
+      componentPaths: {
+        ...FLEET_COMMON_TRANSPORT_COMPONENTS,
+        prompt_template: "prompt-overworld.md",
+        player_catalog: "codex-model-catalog-terra-v1.json",
+        transport_fragment: "prompt-transports/game-direct-mcp-v1.md",
+      },
+    };
+  }
+  if (["gpt-5.6-sol", "gpt-5.6-luna"].includes(model)) {
     return {
       transportContract: PURE_FLEET_CODE_MODE_CONTRACT,
       componentPaths: {
@@ -1756,7 +1771,7 @@ const CURRENT_STRICT_CODEX_ATTESTATION_KEYS = [
   "target",
 ].sort();
 
-const CURRENT_SPARK_DIRECT_CODEX_ATTESTATION_KEYS = CURRENT_STRICT_CODEX_ATTESTATION_KEYS.filter(
+const CURRENT_DIRECT_CODEX_ATTESTATION_KEYS = CURRENT_STRICT_CODEX_ATTESTATION_KEYS.filter(
   (key) => key !== "code_mode_contract",
 )
   .concat("transport_contract")
@@ -1894,17 +1909,23 @@ function isExactPureFleetAttestation(attestation) {
           attestation.recovery_envelope_sha256 === null)
     );
   }
-  const currentSparkDirectCodex =
+  const currentDirectCodex =
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
-    attestation.model === SPARK_ADMISSION_CANARY_MODEL &&
-    keys.length === CURRENT_SPARK_DIRECT_CODEX_ATTESTATION_KEYS.length &&
-    keys.every((key, index) => key === CURRENT_SPARK_DIRECT_CODEX_ATTESTATION_KEYS[index]);
+    keys.length === CURRENT_DIRECT_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === CURRENT_DIRECT_CODEX_ATTESTATION_KEYS[index]);
   const currentStrictCodex =
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    keys.length === CURRENT_STRICT_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === CURRENT_STRICT_CODEX_ATTESTATION_KEYS[index]);
+  const historicalTransportDirectCodex =
+    attestation.schema_version === HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    keys.length === CURRENT_DIRECT_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === CURRENT_DIRECT_CODEX_ATTESTATION_KEYS[index]);
+  const historicalTransportStrictCodex =
+    attestation.schema_version === HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION &&
     attestation.model !== SPARK_ADMISSION_CANARY_MODEL &&
     keys.length === CURRENT_STRICT_CODEX_ATTESTATION_KEYS.length &&
     keys.every((key, index) => key === CURRENT_STRICT_CODEX_ATTESTATION_KEYS[index]);
-  const currentCodex = currentSparkDirectCodex || currentStrictCodex;
   const historicalClientBoundCodex =
     attestation.schema_version === HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION &&
     keys.length === HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_KEYS.length &&
@@ -1926,7 +1947,10 @@ function isExactPureFleetAttestation(attestation) {
     keys.length === HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS.length &&
     keys.every((key, index) => key === HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS[index]);
   return (
-    (currentCodex ||
+    (currentDirectCodex ||
+      currentStrictCodex ||
+      historicalTransportDirectCodex ||
+      historicalTransportStrictCodex ||
       historicalClientBoundCodex ||
       historicalCodeModeCodex ||
       historicalStrictCodex ||
@@ -1953,25 +1977,48 @@ function isExactPureFleetAttestation(attestation) {
     /^[0-9a-f]{64}$/.test(attestation.provider_capture_sha256) &&
     attestation.recovery_metadata_sha256 === null &&
     attestation.recovery_envelope_sha256 === null &&
-    (currentSparkDirectCodex
-      ? attestation.codex_cli_version === SPARK_DIRECT_MCP_CODEX_CLI_VERSION &&
+    (currentDirectCodex
+      ? (attestation.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
+          ? attestation.model === SPARK_ADMISSION_CANARY_MODEL &&
+            attestation.codex_cli_version === SPARK_DIRECT_MCP_CODEX_CLI_VERSION
+          : attestation.transport_contract === GAME_DIRECT_MCP_TRANSPORT_CONTRACT &&
+            attestation.model === "gpt-5.6-terra" &&
+            attestation.codex_cli_version === GAME_DIRECT_MCP_CODEX_CLI_VERSION) &&
         /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
-      : currentStrictCodex || historicalClientBoundCodex
-        ? typeof attestation.codex_cli_version === "string" &&
+      : currentStrictCodex
+        ? ["gpt-5.6-sol", "gpt-5.6-luna"].includes(attestation.model) &&
+          typeof attestation.codex_cli_version === "string" &&
           /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(
             attestation.codex_cli_version,
           ) &&
           /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
-        : true) &&
-    (currentSparkDirectCodex
-      ? attestation.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
-      : currentStrictCodex || historicalClientBoundCodex
-        ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
-        : historicalCodeModeCodex
-          ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
-          : historicalStrictCodex
-            ? attestation.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT
+        : historicalTransportDirectCodex
+          ? attestation.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT &&
+            attestation.model === SPARK_ADMISSION_CANARY_MODEL &&
+            attestation.codex_cli_version === SPARK_DIRECT_MCP_CODEX_CLI_VERSION &&
+            /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
+          : historicalTransportStrictCodex || historicalClientBoundCodex
+            ? typeof attestation.codex_cli_version === "string" &&
+              /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(
+                attestation.codex_cli_version,
+              ) &&
+              /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
             : true) &&
+    (currentDirectCodex
+      ? [SPARK_DIRECT_MCP_TRANSPORT_CONTRACT, GAME_DIRECT_MCP_TRANSPORT_CONTRACT].includes(
+          attestation.transport_contract,
+        )
+      : currentStrictCodex
+        ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
+        : historicalTransportDirectCodex
+          ? attestation.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
+          : historicalTransportStrictCodex || historicalClientBoundCodex
+            ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
+            : historicalCodeModeCodex
+              ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
+              : historicalStrictCodex
+                ? attestation.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT
+                : true) &&
     (historicalCodex
       ? attestation.initial_report_sha256 === null
       : typeof attestation.report_receipt_bound === "boolean" &&
@@ -2085,7 +2132,8 @@ function isExactPureFleetRunArtifactFacts(facts) {
       facts.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT ||
       facts.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT) &&
     (facts.transport_contract === null ||
-      facts.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT) &&
+      facts.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+      facts.transport_contract === GAME_DIRECT_MCP_TRANSPORT_CONTRACT) &&
     isExactFleetArtifactHashes(facts.hashes)
   );
 }
@@ -2295,22 +2343,23 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     return "pure fleet attestation Codex rollout facts do not match authenticated artifacts";
   }
   if (attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION) {
-    if (expected.model === SPARK_ADMISSION_CANARY_MODEL) {
+    const expectedTransportContract = fleetTransportProfile(expected.model).transportContract;
+    if (expectedTransportContract === PURE_FLEET_CODE_MODE_CONTRACT) {
       if (
-        attestation.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
-        Object.hasOwn(attestation, "code_mode_contract") ||
-        artifactFacts.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
-        artifactFacts.code_mode_contract !== null
+        attestation.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+        Object.hasOwn(attestation, "transport_contract") ||
+        artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+        artifactFacts.transport_contract !== null
       ) {
-        return `current Spark attestation requires authenticated ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} evidence`;
+        return `current Codex attestation requires authenticated ${PURE_FLEET_CODE_MODE_CONTRACT} evidence`;
       }
     } else if (
-      attestation.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
-      Object.hasOwn(attestation, "transport_contract") ||
-      artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
-      artifactFacts.transport_contract !== null
+      attestation.transport_contract !== expectedTransportContract ||
+      Object.hasOwn(attestation, "code_mode_contract") ||
+      artifactFacts.transport_contract !== expectedTransportContract ||
+      artifactFacts.code_mode_contract !== null
     ) {
-      return "current Codex attestation requires authenticated strict code-mode evidence";
+      return `current Codex attestation requires authenticated ${expectedTransportContract} evidence`;
     }
   }
   if (attestation.report_recovered !== artifactFacts.report_recovered) {
@@ -2386,9 +2435,9 @@ function buildPureFleetAttestation(run, expected, artifactFacts) {
           provider: "codex",
           codex_cli_version: expected.client.cli_version,
           codex_client_authority_sha256: expected.client.authority_sha256,
-          ...(expected.model === SPARK_ADMISSION_CANARY_MODEL
-            ? { transport_contract: artifactFacts.transport_contract }
-            : { code_mode_contract: artifactFacts.code_mode_contract }),
+          ...(artifactFacts.transport_contract === null
+            ? { code_mode_contract: artifactFacts.code_mode_contract }
+            : { transport_contract: artifactFacts.transport_contract }),
           provider_session_id: artifactFacts.provider_session_id,
           actual_provider: artifactFacts.actual_provider,
           reasoning_effort: artifactFacts.reasoning_effort,
@@ -2901,11 +2950,15 @@ function isSafeStrictRejectionDiagnostic(bytes) {
       diagnostic.ignored === true &&
       diagnostic.kind === "strict_stream_rejection_diagnostic" &&
       Array.isArray(failures) &&
-      [CODEX_STRICT_CURRENT_CONTRACT, CODEX_SPARK_DIRECT_MCP_CONTRACT].includes(
-        diagnostic.transport_contract,
-      ) &&
+      [
+        CODEX_STRICT_CURRENT_CONTRACT,
+        CODEX_SPARK_DIRECT_MCP_CONTRACT,
+        GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
+      ].includes(diagnostic.transport_contract) &&
       (diagnostic.surface !== "private_rollout" ||
-        diagnostic.transport_contract === CODEX_SPARK_DIRECT_MCP_CONTRACT) &&
+        [CODEX_SPARK_DIRECT_MCP_CONTRACT, GAME_DIRECT_MCP_TRANSPORT_CONTRACT].includes(
+          diagnostic.transport_contract,
+        )) &&
       hasExactKeys(diagnostic.commitments, [
         "build_commit",
         "cli_version",
@@ -3318,7 +3371,7 @@ export function writePrivateCodexClientAuthorityProof(fleetDir, fleetClient) {
 
 /**
  * Preserve the legacy closed-slot success rule for structural and historical
- * summaries, while current live-pure v8 fleets additionally fail closed when
+ * summaries, while current live-pure v9 fleets additionally fail closed when
  * any launched attempt's usage could not be recovered.
  */
 export function fleetSummaryExitSucceeded(summary) {

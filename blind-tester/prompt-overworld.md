@@ -102,67 +102,68 @@ WHEN TO CONTINUE OR END
   `session_id`, passing that option's visible `id` value as the tool's `choice`
   argument.
 - The game may present `journey.storyChoice` after you continue. Choose between
-  its visible comparison cards as you would in the human UI. The compact
-  consequence line stages rather than repeats the complete terms. You may call
+  its visible comparison cards as you would in the human UI. The compact prompt
+  carries one review instruction in its message. On structured opening cards,
+  each required per-option `consequence` is intentionally blank instead of
+  repeating technical staging prose; choose from the summaries or inspect one
+  exact option. You may call
   `mcp__adventureforge__inspect_overworld_session_story` with the visible
   `journey.storyChoice.id` for the comparison, then call it again with one exact
   option `id` as `option_id` to read only that option's new detail. Reading
-  either view does not change the game. A compact inspection does not repeat the
+  either view commits no choice. A compact inspection does not repeat the
   Station board or other world context; retain the current state and comparison
   already shown. A preparation, relief-allocation, or ally option detail may
   include authenticated selected terms. Do not expand every option.
   If a visible `revealOption` is present, it is a read-only comparison expansion,
-  not a choice. You may call its named tool with its exact `story_choice_id` and
-  `reveal_id` arguments, then choose only from the expanded visible
+  not a choice. Opening it records that the comparison was viewed but accepts no
+  gameplay decision. You may call its named tool with its exact `story_choice_id`
+  and `reveal_id` arguments, then choose only from the expanded visible
   `story.options`; never invent a reveal id.
   Then call
   `mcp__adventureforge__choose_overworld_session_story` with the same overworld
   `session_id` and that option's visible `id`. This is a normal gameplay
-  decision that can set the next current goal; it is not a harness task.
+  decision that can set the next current goal; it is not a harness task. Its
+  result may include `displaySummary`; when present, read that concise
+  player-language outcome first. The separate `consequence` remains the exact
+  authoritative receipt rather than first-level guidance.
 - A non-null `journey.goalPassage` is a visible optional movement choice. If you
   choose its exact `id: follow_current_goal`, call
   `mcp__adventureforge__follow_overworld_session_goal` with the parent
   `session_id` and `expected_snapshot_hash: latest snapshot_hash`; do not invent, infer, or
   substitute a differently named goal tool. The game, not the harness, decides
   where that passage stops.
-- At the Station, compact context consolidates optional planning into read-only
-  `station_dispatch_board`: `[3, quest_id, guidance, dispatch, rows]`.
-  `dispatch` is `[state, minutes, timing, remaining_optional_slots]`; each row is
-  `[slot, status, selected_title|null, purpose|null, action|null]`. The live
-  departure and its legal roads remain in `context.quests` plus
-  `context.quest_starts` and come first. Treat optional support as one deliberate,
-  collapsed planning affordance: you may depart immediately. In the default v3
-  board, every optional support row has null `purpose` and `action`; that default
-  row does not authorize an inspect or talk call. Only when you actually want
-  support details, call `mcp__adventureforge__get_overworld_session_context` with
-  the current `session_id` and `include_station_dispatch_support: true`. Read its
-  `station_dispatch_support`: `[[slot, purpose, action], ...]`. Do not request it
-  merely to enumerate all three rows. Support rows are independent and optional;
-  they change dispatch cost and aftermath, not which quest strategy you may
-  choose after arriving. A non-null support-detail action
-  `["inspect", story_choice_id]` authorizes
-  `mcp__adventureforge__inspect_overworld_session_story`; an action
-  `["talk", character_id, contact_name]` authorizes
-  `mcp__adventureforge__talk_overworld_session_contact`. A null action is not
-  currently legal. Merely reading the default board or deferred support detail
-  changes no state or decision count.
-- You may depart without choosing support. After the explicit support-detail
-  response, inspect only the exact visible `story_choice_id` you want; the
-  versioned comparison contains short option summaries. To compare one candidate,
-  use its visible `reviewOption` with that option's exact `id` at the declared
-  argument. It returns only that candidate's new consequence/timing and
-  authenticated already-selected terms. Do not separately read recap or terms,
-  and do not expand every option. If you choose it, call
-  `mcp__adventureforge__choose_overworld_session_story` with its visible option
-  `id` as `choice`; pass the inspected `story_choice_id` only when needed to
-  disambiguate a shared option id. A talk action alone can present the actual
-  field-team choice.
-- If a malformed or older session cannot produce the v3 board, the compact
-  fallback may instead expose `departure_recap`, `departure_interactions`, and
-  `departure_contact_leads`; those carry the same read-only plan, inspect, and
-  talk semantics rather than extra choices. A legacy v2 board can instead carry
-  non-null purpose/action directly in its rows; use only those visible non-null
-  actions as authorization.
+- Station v49 `station_dispatch_board` is
+  `[6,quest_id,dispatch_status,dispatch,rows,overview|null]`;
+  `dispatch=[state,minutes,timing,remaining_optional_count]`; each row is
+  `[slot,status,selected_title|null,purpose|null,action|null]`. Slots
+  `role/duty/evidence/preparation/relief_allocation/field_team` mean
+  background/promise/report/kit/wagon/rider. `context.quests` plus
+  `context.quest_starts` are the roads; you may depart with support unfinished.
+  Before review, hidden open rows are summarized by `overview=[id,label]`. If a
+  category interests you, call `mcp__adventureforge__get_overworld_session_context`
+  with that exact `reveal_station_dispatch_support` and latest `if_snapshot_hash`.
+  Its pure delta has outer `overworld_session_id`/`snapshot_hash` plus
+  `station_dispatch_reveal:{version:1,base_snapshot_hash,station_dispatch_board}`.
+  Only when its base matches your retained hash, keep journey/context and replace
+  the board and hash; otherwise refresh without reveal. After review `overview=null`
+  and open rows expose purpose/action. Support changes cost/aftermath, not access.
+  `['inspect',story_choice_id]` and `['talk',character_id,contact_name]` alone
+  authorize their named tools; null is illegal. Inspect at most one desired row,
+  optionally one visible `reviewOption`; never enumerate, separately read recap,
+  or expand every option. Choose a visible option with
+  `mcp__adventureforge__choose_overworld_session_story`; add `story_choice_id`
+  only to disambiguate a shared id.
+- The revealed field-team talk can present a mandatory ally modal. Pass
+  `expected_snapshot_hash:latest snapshot_hash`. Its pure delta omits raw
+  session/context and has outer `overworld_session_id`/`snapshot_hash`, full
+  `journey`/`storyChoice`,
+  `journeyDecision`, compact `result`, any `legend_delta`, and
+  `station_dispatch_modal:{version:1,base_snapshot_hash}`. If its base matches
+  retained state, keep context and adopt those fields. The modal voids old board
+  actions: do not repeat the talk; inspect it or choose a visible ally option.
+  Missing/stale bases do not mutate. The choice returns full context to resync.
+- Without `station_dispatch_board`, use only visible departure recap,
+  interactions, contact leads, or explicit support; only exact actions are legal.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, normally
@@ -197,6 +198,13 @@ to the matching JSON boolean; do not copy the placeholder.
 
 Before you send your report, check every item:
 
+- Every severity-tagged finding anywhere in the report must be covered by an
+  object in `bugs`, with the same severity and a recognizable matching place or
+  concern. Distinct concerns need distinct objects; repeated mentions of the
+  same concern share one object. Do not leave a severity-bearing concern only in
+  prose. If there are no findings, write that plainly without using an S0-S4
+  label and use `"bugs": []`.
+
 - Do not write any part of the report until a game response contains
   `exitReceipt` and does not request the one exact evidence retry above.
   An active goal, checkpoint progress, or having enough material is not an exit.
@@ -226,6 +234,7 @@ content.
 ```json exit-interview
 {
   "schema_version": 2,
+  "issue_consistency_version": 1,
   "play_mode": "pure",
   "start_surface": "fresh_overworld",
   "retention_eligible": true,

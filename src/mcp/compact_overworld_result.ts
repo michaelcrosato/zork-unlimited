@@ -64,6 +64,8 @@ export type OverworldCompactActionResult = {
 export type OverworldCompactJourneyStoryChoiceResult = {
   storyChoiceId: string;
   choiceId: string;
+  /** When present, lead with this player-language projection; consequence stays exact. */
+  displaySummary?: string;
   consequence: string;
   goal: OverworldJourneyStoryChoiceResult["goal"];
   entry: OverworldCompactJournalEntry;
@@ -242,8 +244,10 @@ function compactOverworldJournalEntry(entry: {
 }
 
 /**
- * Keep the selected consequence as the one authoritative receipt while reducing
- * its presented journal record to the same tuple used by rolling compact context.
+ * Keep the selected consequence as the authoritative exact receipt. An optional
+ * displaySummary leads with player-language context while preserving that receipt
+ * separately and byte-for-byte. Reduce the presented journal record to the same
+ * tuple used by rolling compact context.
  * Roleplay-first opening selections already project that receipt into the returned
  * entry while retaining fuller prose in persistent journal state. Other campaign
  * choices may return distinct journal prose; preserve that explicitly.
@@ -254,6 +258,7 @@ export function compactOverworldJourneyStoryChoiceResult(
   return {
     storyChoiceId: result.storyChoiceId,
     choiceId: result.choiceId,
+    ...(result.displaySummary ? { displaySummary: result.displaySummary } : {}),
     consequence: result.consequence,
     goal: result.goal,
     entry: compactOverworldJournalEntry(result.entry),

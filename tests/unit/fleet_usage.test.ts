@@ -223,6 +223,11 @@ describe("fleet usage accounting", () => {
         strictStreamDiagnostic({ rejection: { failure: "direct_forbidden_function" } }),
       ),
     ).toEqual({ source: "strict_stream_lower_bound", ...TERMINAL_USAGE });
+    expect(
+      usageRecordFromStrictStreamDiagnostic(
+        strictStreamDiagnostic({ transport_contract: "game-direct-mcp-v1" }),
+      ),
+    ).toEqual({ source: "strict_stream_lower_bound", ...TERMINAL_USAGE });
     expect(summarizeFleetUsage([lowerBound])).toEqual({
       attempt_count: 1,
       launched_attempt_count: 1,

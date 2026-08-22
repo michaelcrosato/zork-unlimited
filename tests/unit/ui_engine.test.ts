@@ -226,7 +226,13 @@ describe("GameSession — RPG-only structured play", () => {
       npc: "old Cade the houndsman",
       text: mcpRead.observation.dialogue?.npc_text,
     });
-    expect(uiView.dialogue?.text).toContain("Choose what must stand at dawn");
+    expect(uiView.dialogue?.text).toContain("Ask about any plan; asking does not choose it");
+    expect(uiView.dialogue?.text).toContain("Preparation helps without choosing");
+    expect(uiView.dialogue?.text).toContain(
+      "Cross north or RELEASE JUNE, if offered, to choose HUNT",
+    );
+    expect(uiView.dialogue?.text).toContain("Other plans begin only when you choose them");
+    expect(uiView.dialogue?.text).toContain("Choosing one closes the rest");
     expect(talkNarration).toEqual([`old Cade the houndsman: "${uiView.dialogue?.text}"`]);
     expect(talkNarration.join(" ")).not.toContain("Save/cost—HUNT");
     expect(uiView.choices.map((choice) => choice.id)).toEqual(

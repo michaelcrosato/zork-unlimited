@@ -39,6 +39,10 @@ import {
   type OpeningCompactStationDispatchBoard,
   type OpeningCompactStationDispatchBoardSupport,
 } from "./station_dispatch_board.js";
+import {
+  sharedWolfHillRouteDispatchStatus,
+  wolfHillRouteTradeoffParts,
+} from "./wolf_hill_route_presentation.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -63,7 +67,15 @@ export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
 // v45: full-view direct exits carry detached travel estimates, preserving the v44 road
 // contract when a full view is spread, cloned, serialized, and compacted again. This also
 // makes direct-edge event fatigue part of the authenticated public projection.
-export const OVERWORLD_COMPACT_VIEW_VERSION = 45 as const;
+// v46: Station dispatch board V4 puts one bounded purpose and an existing authenticated
+// action on each open optional support row; closed and commitment rows remain null/null.
+// v47: emitted Station legends map durable tuple slots to their player-facing labels;
+// Station board tuples remain V4 and keep their exact slots and actions.
+// v48: Station board V5 stages the three optional support purposes/actions behind one
+// exact, durable read-only reveal while keeping legal Wolf-Winter roads first.
+// v49: Station board V6 makes that reveal relevance-first by naming only the
+// still-open kit, wagon, and rider categories before any support comparison.
+export const OVERWORLD_COMPACT_VIEW_VERSION = 49 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -453,17 +465,17 @@ export const OVERWORLD_COMPACT_LEGEND = {
   service_actions:
     "[[action, source, offer_id|null, available, changed, minutes, [supplies_before, supplies_after], [fatigue_before, fatigue_after], message, blocked_reason|null], ...] current town service choices; use care_overworld_session for care, resupply_overworld_session for resupply, and rest_overworld_session for rest. campaign_override with a non-null offer_id means matching service_offers terms replace ordinary timing for this action, unavailable ordinary choices are still listed, and the field is omitted while gameplay actions are paused",
   departure_interactions:
-    "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id) for a versioned short comparison, unchanged receipt, and the same bounded authenticated departure_recap when available, then optionally inspect one story.options[*].id as option_id for only that option's new detail. Preparation, relief_allocation, and ally option detail also returns authenticated selected terms; other option detail adds no exact terms or world context beyond that recap. Choose with choose_overworld_session_story(choice); include story_choice_id only to disambiguate overlapping option ids, or depart without choosing",
+    "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id) for a versioned short comparison, unchanged receipt, and the same bounded authenticated departure_recap when available, then optionally inspect one story.options[*].id as option_id for only that option's new detail. Field-kit (preparation), relief-wagon (relief_allocation), and second-rider (ally/field_team) option detail also returns authenticated selected terms; other option detail adds no exact terms or world context beyond that recap. Choose with choose_overworld_session_story(choice); include story_choice_id only to disambiguate overlapping option ids, or depart without choosing",
   departure_contact_leads:
-    "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; ready may be pursued with talk_overworld_session_contact(character_id: contact_id) before or after preparation or relief allocation, while legacy requires_preparation has no available action; either status leaves quest_id launch legal as the explicitly disclosed solo default",
+    "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station second-rider leads; ready may be pursued with talk_overworld_session_contact(character_id: contact_id) before or after field kit (preparation) or relief wagon (relief_allocation), while legacy requires_preparation has no available action; either status leaves quest_id launch legal as the explicitly disclosed solo default",
   departure_recap:
-    "[version, quest_id, quest_title, [[slot, status, selected_title|null], ...], dispatch|null]. dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. committed omits their redundant open_optional rows; remaining_optional lists them. preparation, relief_allocation, and field_team are independent optional choices, in any order or skipped at launch. sealed is final; direct_launch and available_after_preparation remain legacy sequential values. Selected terms: departure_recap_terms.",
+    "[version, quest_id, quest_title, [[slot, status, selected_title|null], ...], dispatch|null]. Slots: role=background; duty=Wolf-Winter promise; evidence=report; preparation=field kit; relief_allocation=relief wagon; field_team=second rider. dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. committed omits redundant open_optional rows; remaining_optional lists them. The last three slots are independent optional choices, in any order or skipped at launch. sealed is final; direct_launch and available_after_preparation remain legacy sequential values. Selected terms: departure_recap_terms.",
   departure_recap_terms:
-    "[version, quest_id, [[slot, active_field_term], ...]] exact authenticated terms for selected Station plan slots, returned by explicit read-only include_departure_recap_terms or a preparation, relief_allocation, or ally option detail; no alternatives, outcomes, or actions",
+    "[version,quest_id,[[slot,active_field_term],...]] exact selected Station terms. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Via include_departure_recap_terms or support-option detail; no alternatives/outcomes/actions.",
   station_dispatch_board:
-    "[3, quest_id, guidance, dispatch|null, [[plan_slot, status, selected_title|null, purpose|null, action|null], ...]]. Launch-first Station departure index: role, duty, and evidence rows have no optional action; optional support rows intentionally defer purpose/action to station_dispatch_support. dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. Selected exact terms remain opt-in departure_recap_terms. Canonical quest title and launch approaches remain in quests + quest_starts.",
+    "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null];dispatch=[state,minutes,timing|null,remaining_optional_count];row=[slot,status,selected_title|null,purpose|null,action|null]. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Pre-review hides open_optional;overview=[id,label] names only open kit/wagon/rider categories and kit skills Repair/Streetwise/Mediation. Call get-context(reveal_station_dispatch_support=exact id);read-only receipt survives refresh/export/restore. Then overview=null;rows restore purpose/action:['inspect',story_choice_id]|['talk',character_id,contact_name]. Support optional;strategy unchanged. Terms=departure_recap_terms;roads=quests+quest_starts.",
   station_dispatch_support:
-    "[[support_slot, purpose, action|null], ...] explicit read-only Station support detail, returned only by get_overworld_session_context(include_station_dispatch_support:true). action is ['inspect', story_choice_id] for inspect_overworld_session_story or ['talk', character_id, contact_name] for talk_overworld_session_contact; inspect reveals legal story.options[*].id choices. Support remains optional and changes dispatch cost and aftermath, not which Wolf-Winter strategy is offered.",
+    "[[support_slot, purpose, action|null], ...] explicit read-only Station support detail; preparation=field kit, relief_allocation=relief wagon, field_team=second rider. Returned only by get_overworld_session_context(include_station_dispatch_support:true). action is ['inspect', story_choice_id] for inspect_overworld_session_story or ['talk', character_id, contact_name] for talk_overworld_session_contact; inspect reveals legal story.options[*].id choices. Support remains optional and changes dispatch cost and aftermath, not which Wolf-Winter strategy is offered.",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
@@ -594,6 +606,7 @@ export function compactOverworldQuestRef(
   focusLaunchDecision = false,
   omitLaunch = false,
   acceptedLaunchOnly = false,
+  sharedDispatchStatus?: string,
 ): OverworldCompactQuestRef {
   const base = [value.id, compactOverworldTitle(value.title), value.area] as const;
   if (!value.launch || omitLaunch) return base;
@@ -628,7 +641,16 @@ export function compactOverworldQuestRef(
           ? null
           : compactText(option.consequence, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
         focusOption
-          ? compactText(option.tradeoffSummary, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT)
+          ? compactText(
+              (() => {
+                const parts = wolfHillRouteTradeoffParts(option.tradeoffSummary);
+                return sharedDispatchStatus !== undefined &&
+                  parts.dispatchStatus === sharedDispatchStatus
+                  ? parts.routeSummary
+                  : option.tradeoffSummary;
+              })(),
+              OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT,
+            )
           : (option.tradeoffSummary ?? null),
       ] as const;
     }),
@@ -799,6 +821,7 @@ export function compactOverworldQuestRefs(
   limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
   focusedQuestIds?: ReadonlySet<string>,
   launchOmittedQuestIds?: ReadonlySet<string>,
+  sharedDispatchStatusesByQuestId?: ReadonlyMap<string, string>,
 ): OverworldCompactQuestRef[] {
   const refs: OverworldCompactQuestRef[] = [];
   const capped = Math.min(values.length, limit);
@@ -809,10 +832,35 @@ export function compactOverworldQuestRefs(
         value,
         focusedQuestIds?.has(value.id) === true,
         launchOmittedQuestIds?.has(value.id) === true,
+        false,
+        sharedDispatchStatusesByQuestId?.get(value.id),
       ),
     );
   }
   return refs;
+}
+
+/**
+ * Authenticate one removable route prefix against the Station board that will
+ * carry the same text. No board, missing route detail, or any mismatch keeps
+ * every route summary intact.
+ */
+export function compactStationSharedDispatchStatus(
+  quests: readonly { id: string; launch?: OverworldQuestLaunchView }[],
+  board: Readonly<{ questId: string }> | null | undefined,
+): string | undefined {
+  if (!board) return undefined;
+  const options = quests.find((quest) => quest.id === board.questId)?.launch?.options;
+  if (
+    !options ||
+    options.length === 0 ||
+    !options.every((option) => option.tradeoffSummary !== undefined)
+  ) {
+    return undefined;
+  }
+  return (
+    sharedWolfHillRouteDispatchStatus(options.map((option) => option.tradeoffSummary!)) ?? undefined
+  );
 }
 
 export function compactOverworldQuestStartLocations(
@@ -1577,11 +1625,18 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const sites = compactOverworldTitleRefs(view.sites);
   const questStarts = compactOverworldQuestStarts(view.questStarts);
   const startedQuestIds = new Set(view.startedQuestIds);
+  const stationDispatchStatus = compactStationSharedDispatchStatus(
+    view.quests,
+    view.stationDispatchBoard,
+  );
   const quests = compactOverworldQuestRefs(
     view.quests,
     OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
     new Set(questStarts.map(([questId]) => questId)),
     startedQuestIds,
+    stationDispatchStatus && view.stationDispatchBoard
+      ? new Map([[view.stationDispatchBoard.questId, stationDispatchStatus]])
+      : undefined,
   );
   const questStartLocations = compactOverworldQuestStartLocations(
     view.quests,
@@ -1596,7 +1651,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ? compactOpeningDepartureRecap(view.departureRecap)
     : null;
   const stationDispatchBoard = view.stationDispatchBoard
-    ? compactStationDispatchBoard(view.stationDispatchBoard)
+    ? compactStationDispatchBoard(view.stationDispatchBoard, false, stationDispatchStatus)
     : null;
   const hasStationDispatchBoard = stationDispatchBoard !== null;
   const departureQuestId = hasStationDispatchBoard ? stationDispatchBoard[1] : departureRecap?.[1];

@@ -19,19 +19,31 @@ import { validPureMcpToolCatalogEntry } from "../../blind-tester/codex-pure-enve
 import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import {
   PURE_PLAYER_TOOLS,
+  PURE_STATION_DISPATCH_REVEAL_VERSION,
+  PURE_STATION_JUNE_CONTACT_ID,
+  PURE_STATION_JUNE_MODAL_VERSION,
   resolveAreaMoveSelector,
   resolveVisibleAreaRouteId,
   toolAvailableInPlayMode,
+  type PureOverworldContextWireResponse,
+  type PureOverworldTalkWireResponse,
+  type PureStationDispatchRevealResponseV1,
+  type PureStationJuneModalResponseV1,
 } from "../../src/mcp/server.js";
+import type { OverworldMcpReadArgs } from "../../src/mcp/overworld_sessions.js";
 import {
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
-  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
 } from "../../src/mcp/journey_projection.js";
 import { OVERWORLD_COMPACT_RESULT_LEGEND } from "../../src/mcp/compact_overworld_result.js";
-import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
-import type {
-  OpeningCompactStationDispatchBoard,
-  OpeningCompactStationDispatchBoardSupport,
+import {
+  OVERWORLD_COMPACT_LEGEND,
+  type OverworldCompactCampaignCharacter,
+} from "../../src/world/compact_view.js";
+import {
+  STATION_DISPATCH_SUPPORT_REVEAL_ID,
+  type OpeningCompactStationDispatchBoard,
+  type OpeningCompactStationDispatchBoardSupport,
 } from "../../src/world/station_dispatch_board.js";
 import {
   INSPECT_OVERWORLD_SESSION_STORY_TOOL,
@@ -43,9 +55,9 @@ const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 const MCP_SERVER = join(ROOT, "src", "mcp", "server.ts");
 const TEST_RUN_SEED = 2731;
 const TEST_BUILD_COMMIT = "b".repeat(40);
-const CADE_HUNT_EXIT_LABEL =
-  "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
-const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
+const CADE_HUNT_INSPECT_LABEL =
+  "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.";
+const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
   "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions by calling with session_id set to the exact current parent overworld_session_id and story_choice_id set to that exact visible id. Merge visible revealOption/reviewOption arguments into that call; they do not replace session_id, and option_id/reveal_id are mutually exclusive. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.";
@@ -109,6 +121,25 @@ function textResult(result: Awaited<ReturnType<Client["callTool"]>>): string {
   const first = content[0];
   if (!first || first.type !== "text") throw new Error("expected text tool result");
   return first.text ?? "";
+}
+
+function stringsContaining(value: unknown, needle: string): string[] {
+  const matches: string[] = [];
+  const visit = (candidate: unknown): void => {
+    if (typeof candidate === "string") {
+      if (candidate.includes(needle)) matches.push(candidate);
+      return;
+    }
+    if (Array.isArray(candidate)) {
+      for (const entry of candidate) visit(entry);
+      return;
+    }
+    if (candidate && typeof candidate === "object") {
+      for (const entry of Object.values(candidate)) visit(entry);
+    }
+  };
+  visit(value);
+  return matches;
 }
 
 function mergeLegendAndExpectContextCoverage(
@@ -252,6 +283,33 @@ async function movePlayerToOpeningPreparation(
     ...parent,
     area_route_id: compactAreaRoute(context, "albany_city__transport_hub"),
   });
+}
+
+async function startPureAtOpeningStation(
+  client: Client,
+  sourceId = "albany:source_rowan_civic_docket",
+): Promise<{
+  sessionId: string;
+  stationed: Record<string, unknown>;
+}> {
+  const started = await callPlayerTool(client, "start_overworld", {});
+  const sessionId = String(started.session_id);
+  const parent = { session_id: sessionId };
+  await callPlayerTool(client, "scout_overworld_session_poi", {
+    ...parent,
+    poi_id: "albany_city__civic_core__poi",
+  });
+  await callPlayerTool(client, "talk_overworld_session_contact", {
+    ...parent,
+    character_id: "albany_city__civic_core__contact",
+  });
+  for (const choice of ["albany:ledger_advocate", "albany:oath_limited_aid_only", sourceId]) {
+    await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
+  }
+  return {
+    sessionId,
+    stationed: await movePlayerToOpeningPreparation(client, parent),
+  };
 }
 
 async function chooseOpeningDepartureStories(
@@ -670,6 +728,110 @@ describe("MCP pure play mode", () => {
     }
   }, 120_000);
 
+  it("keeps the selected Road-Warden receipt summary-first while exact branch terms stay opt-in", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-road-warden-receipt-"));
+    const evidence = join(dir, "run.jsonl");
+    try {
+      await withPureServer(evidence, async (client) => {
+        const started = await callPlayerTool(client, "start_overworld", {});
+        const sessionId = String(started.session_id);
+        const parent = { session_id: sessionId };
+        const scouted = await callPlayerTool(client, "scout_overworld_session_poi", {
+          ...parent,
+          poi_id: "albany_city__civic_core__poi",
+          expected_snapshot_hash: started.snapshot_hash,
+        });
+        const registration = await callPlayerTool(client, "talk_overworld_session_contact", {
+          ...parent,
+          character_id: "albany_city__civic_core__contact",
+          expected_snapshot_hash: scouted.snapshot_hash,
+        });
+        await callPlayerTool(client, "inspect_overworld_session_story", {
+          ...parent,
+          story_choice_id: "albany:relief_registration",
+          option_id: "albany:road_warden",
+          if_snapshot_hash: registration.snapshot_hash,
+        });
+
+        const selectedRoleCall = await client.callTool({
+          name: "choose_overworld_session_story",
+          arguments: {
+            ...parent,
+            choice: "albany:road_warden",
+            expected_snapshot_hash: registration.snapshot_hash,
+          },
+        });
+        const selectedRoleText = textResult(selectedRoleCall);
+        const selectedRole = textPayload(selectedRoleCall);
+        expect(selectedRoleCall.isError).not.toBe(true);
+        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBe(6_330);
+        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBeLessThanOrEqual(6_400);
+        expect((selectedRole.result as { consequence?: string }).consequence).toContain(
+          "When Wolf-Winter starts from this journey, your Fieldcraft 4 sets its defense at 4 instead of 3.",
+        );
+        expect((selectedRole.result as { consequence?: string }).consequence).not.toMatch(
+          /\b(?:DEF|LURE|HUNT)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation/gu,
+        );
+
+        const readyDetail = await callPlayerTool(client, "inspect_overworld_session_story", {
+          ...parent,
+          story_choice_id: "albany:wolf_relief_oath",
+          option_id: "albany:doctrine_road_warden_aid_route",
+          if_snapshot_hash: selectedRole.snapshot_hash,
+        });
+        expect(
+          (
+            readyDetail.story as {
+              inspectedOption?: { consequence?: string };
+            }
+          ).inspectedOption?.consequence,
+        ).toContain(
+          "Benefit: Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
+        );
+
+        const selectedDispatchCall = await client.callTool({
+          name: "choose_overworld_session_story",
+          arguments: {
+            ...parent,
+            choice: "albany:doctrine_road_warden_aid_route",
+            expected_snapshot_hash: selectedRole.snapshot_hash,
+          },
+        });
+        const selectedDispatchText = textResult(selectedDispatchCall);
+        const selectedDispatch = textPayload(selectedDispatchCall);
+        expect(selectedDispatchCall.isError).not.toBe(true);
+        const readyDispatchStatus =
+          "Set: background, promise, report. Dispatch 10m; final 10–60m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+        const readyDispatchSummaries = stringsContaining(selectedDispatch, readyDispatchStatus);
+        expect(readyDispatchSummaries).toHaveLength(2);
+        expect(
+          readyDispatchSummaries.every((summary) => summary.startsWith(readyDispatchStatus)),
+        ).toBe(true);
+        expect(selectedDispatchText.split(readyDispatchStatus)).toHaveLength(3);
+        expect(selectedDispatchText).not.toContain("optional Station support remains");
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(9_035);
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBeLessThanOrEqual(9_250);
+        expect(selectedDispatchText).not.toMatch(/\b(?:HUNT|LURE|DRIVE|FORTIFY)\b/gu);
+        expect(selectedDispatchText).not.toMatch(/\bWorks\b/gu);
+        expect(selectedDispatchText).not.toMatch(
+          /public (?:fence )?(?:brace|wedge)|yearling|bare spear/gu,
+        );
+        const consequence = (selectedDispatch.result as { consequence?: string }).consequence;
+        expect(consequence).toContain(
+          "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3. Aid-Only prevents one final ordinary rise in cattle alarm after a clean first feed; a foul still takes that rise. Hayden's report matters only if you hold Cade's ground; its exact brace terms appear before commitment at the steading.",
+        );
+        expect(consequence).not.toMatch(
+          /\b(?:DEF|HUNT|LURE|DRIVE|FORTIFY|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
+        );
+        expect((selectedDispatch.journey as { acceptedDecisions?: number }).acceptedDecisions).toBe(
+          5,
+        );
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   it("keeps area-alias normalization from consuming progressive definitions", async () => {
     await withFullServer(async (client) => {
       const started = await callPlayerTool(client, "start_overworld", {
@@ -859,11 +1021,166 @@ describe("MCP pure play mode", () => {
     expect(PURE_PLAYER_TOOLS.has("choose_overworld_session_story")).toBe(true);
   });
 
+  it("types known context requests narrowly and broad callers conservatively", () => {
+    type IncludesV1<Response> = [Extract<Response, PureStationDispatchRevealResponseV1>] extends [
+      never,
+    ]
+      ? false
+      : true;
+    type IncludesUnchanged<Response> = [Extract<Response, { unchanged: true }>] extends [never]
+      ? false
+      : true;
+    type Assert<Condition extends true> = Condition;
+    const compileTimeAssertions: [
+      Assert<
+        IncludesV1<PureOverworldContextWireResponse<{ session_id: string }>> extends false
+          ? true
+          : false
+      >,
+      Assert<
+        IncludesV1<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            reveal_station_dispatch_support: string;
+          }>
+        >
+      >,
+      Assert<
+        IncludesV1<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            reveal_station_dispatch_support: string;
+            include_station_dispatch_support: true;
+          }>
+        > extends false
+          ? true
+          : false
+      >,
+      Assert<
+        IncludesV1<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            reveal_station_dispatch_support: string;
+            include_departure_recap_terms: true;
+          }>
+        > extends false
+          ? true
+          : false
+      >,
+      Assert<IncludesV1<PureOverworldContextWireResponse<OverworldMcpReadArgs>>>,
+    ] = [true, true, true, true, true];
+    expect(compileTimeAssertions).toEqual([true, true, true, true, true]);
+    const unchangedAssertions: [
+      Assert<
+        IncludesUnchanged<PureOverworldContextWireResponse<{ session_id: string }>> extends false
+          ? true
+          : false
+      >,
+      Assert<
+        IncludesUnchanged<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            if_snapshot_hash: string;
+          }>
+        >
+      >,
+      Assert<
+        IncludesUnchanged<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            if_snapshot_hash: string;
+            reveal_station_dispatch_support: string;
+          }>
+        > extends false
+          ? true
+          : false
+      >,
+      Assert<IncludesUnchanged<PureOverworldContextWireResponse<OverworldMcpReadArgs>>>,
+    ] = [true, true, true, true];
+    expect(unchangedAssertions).toEqual([true, true, true, true]);
+
+    type IncludesJuneModal<Response> = [Extract<Response, PureStationJuneModalResponseV1>] extends [
+      never,
+    ]
+      ? false
+      : true;
+    type IncludesCanonicalTalk<Response> = [Extract<Response, { session_id: string }>] extends [
+      never,
+    ]
+      ? false
+      : true;
+    const talkAssertions: [
+      Assert<
+        IncludesJuneModal<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            character_id: typeof PURE_STATION_JUNE_CONTACT_ID;
+          }>
+        >
+      >,
+      Assert<
+        IncludesJuneModal<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            contact_id: typeof PURE_STATION_JUNE_CONTACT_ID;
+          }>
+        >
+      >,
+      Assert<
+        IncludesJuneModal<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            character_id: "some_other_contact";
+          }>
+        > extends false
+          ? true
+          : false
+      >,
+      Assert<
+        IncludesJuneModal<
+          PureOverworldTalkWireResponse<{ session_id: string; character_id: string }>
+        >
+      >,
+      Assert<
+        IncludesCanonicalTalk<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            character_id: typeof PURE_STATION_JUNE_CONTACT_ID;
+          }>
+        >
+      >,
+      Assert<
+        IncludesCanonicalTalk<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            character_id: "some_other_contact";
+          }>
+        >
+      >,
+    ] = [true, true, true, true, true, true];
+    expect(talkAssertions).toEqual([true, true, true, true, true, true]);
+  });
+
   it("keeps singleton recovery handles out of full multi-session errors", async () => {
     await withFullServer(async (client) => {
       const listed = await client.listTools();
       const fullRead = listed.tools.find((tool) => tool.name === "get_overworld_session_context");
       expect(fullRead?.inputSchema.required).toContain("session_id");
+      const fullCatalogProjection = listed.tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: Object.fromEntries(
+          Object.entries(tool.inputSchema).filter(([key]) => key !== "$schema"),
+        ),
+      }));
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(40_374);
+      expect(fullRead?.description).toBe(
+        "Read compact context; Station support uses the exact V6 board [5] id.",
+      );
+      expect(
+        (fullRead?.inputSchema.properties as Record<string, { description?: string }> | undefined)
+          ?.reveal_station_dispatch_support?.description,
+      ).toBe("Durable read-only reveal; pass the exact Station V6 board [5] id.");
 
       const first = textPayload(await client.callTool({ name: "start_overworld", arguments: {} }));
       const second = textPayload(await client.callTool({ name: "start_overworld", arguments: {} }));
@@ -1745,6 +2062,205 @@ describe("MCP pure play mode", () => {
     }
   }, 60_000);
 
+  it("launches from retained Station context after applying only the V1 reveal delta", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-pure-station-delta-"));
+    const evidence = join(dir, "run.jsonl");
+    try {
+      await withPureServer(evidence, async (client) => {
+        const { sessionId, stationed: beforeJune } = await startPureAtOpeningStation(client);
+        const noReceiptJune = await callPlayerTool(client, "talk_overworld_session_contact", {
+          session_id: sessionId,
+          character_id: PURE_STATION_JUNE_CONTACT_ID,
+        });
+        expect(noReceiptJune).toMatchObject({
+          ok: true,
+          session_id: sessionId,
+          overworld_session_id: sessionId,
+          snapshot_hash: expect.any(String),
+          context: expect.any(Object),
+          journey: {
+            storyChoice: {
+              id: "albany:wolf_ally_commitment",
+              kind: "ally",
+            },
+          },
+        });
+        expect(noReceiptJune.snapshot_hash).not.toBe(beforeJune.snapshot_hash);
+        expect(noReceiptJune).not.toHaveProperty("station_dispatch_modal");
+        await callPlayerTool(client, "choose_overworld_session_story", {
+          session_id: sessionId,
+          story_choice_id: "albany:wolf_ally_commitment",
+          choice: "albany:ally_travel_solo",
+          expected_snapshot_hash: noReceiptJune.snapshot_hash,
+        });
+        const stationed = await callPlayerTool(client, "get_overworld_session_context", {
+          session_id: sessionId,
+        });
+        const retainedJourney = structuredClone(stationed.journey);
+        const retainedContext = structuredClone(stationed.context) as {
+          quest_starts?: [string, string][];
+          station_dispatch_board?: OpeningCompactStationDispatchBoard;
+          [key: string]: unknown;
+        };
+        const hiddenBoard = retainedContext.station_dispatch_board;
+        expect(hiddenBoard?.[0]).toBe(6);
+        expect(hiddenBoard?.[5]).toEqual([STATION_DISPATCH_SUPPORT_REVEAL_ID, expect.any(String)]);
+        const retainedHash = String(stationed.snapshot_hash);
+        const revealed = await callPlayerTool(client, "get_overworld_session_context", {
+          session_id: sessionId,
+          if_snapshot_hash: retainedHash,
+          reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+        });
+        expect(revealed).not.toHaveProperty("journey");
+        expect(revealed).not.toHaveProperty("context");
+        const delta = revealed.station_dispatch_reveal as {
+          version: number;
+          base_snapshot_hash: string;
+          station_dispatch_board: OpeningCompactStationDispatchBoard;
+        };
+        expect(delta).toMatchObject({
+          version: PURE_STATION_DISPATCH_REVEAL_VERSION,
+          base_snapshot_hash: retainedHash,
+        });
+        expect(delta.station_dispatch_board[0]).toBe(6);
+        expect(delta.station_dispatch_board[5]).toBeNull();
+        const { station_dispatch_board: _hiddenBoard, ...retainedOtherContext } = retainedContext;
+        const appliedContext = {
+          ...retainedContext,
+          station_dispatch_board: delta.station_dispatch_board,
+        };
+        const { station_dispatch_board: appliedBoard, ...appliedOtherContext } = appliedContext;
+        expect(appliedOtherContext).toEqual(retainedOtherContext);
+        expect(appliedBoard).toEqual(delta.station_dispatch_board);
+        expect(stationed.journey).toEqual(retainedJourney);
+
+        const launchTuple = retainedContext.quest_starts?.[0];
+        if (!launchTuple) throw new Error("expected a retained Station quest-start tuple");
+        const [quest_id, approach_id] = launchTuple;
+        const launched = await callPlayerTool(client, "start_overworld_session_quest", {
+          session_id: sessionId,
+          quest_id,
+          approach_id,
+          expected_snapshot_hash: revealed.snapshot_hash,
+        });
+        expect(launched).toMatchObject({
+          ok: true,
+          overworld_session_id: sessionId,
+          rpg_session_id: expect.any(String),
+        });
+        expect((launched.quest as unknown[])[0]).toBe("wolf_winter");
+        const afterLaunch = await callPlayerTool(client, "get_overworld_session_context", {
+          session_id: sessionId,
+        });
+        expect(
+          (afterLaunch.context as { station_dispatch_board?: unknown }).station_dispatch_board,
+        ).toBeUndefined();
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it("keeps the legal threshold Station reveal below its pure envelope limit", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-pure-station-threshold-"));
+    const evidence = join(dir, "run.jsonl");
+    try {
+      await withPureServer(evidence, async (client) => {
+        const { sessionId, stationed } = await startPureAtOpeningStation(
+          client,
+          "albany:source_jamie_market_testimony",
+        );
+        const expectedGuidance =
+          "Set: background, promise, report. Dispatch 20m; final 20–65m; support can delay dispatch. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+        const stationedBoard = (
+          stationed.context as { station_dispatch_board?: OpeningCompactStationDispatchBoard }
+        ).station_dispatch_board;
+        expect(stationedBoard?.[2]).toBe(expectedGuidance);
+        const revealed = await callPlayerTool(client, "get_overworld_session_context", {
+          session_id: sessionId,
+          if_snapshot_hash: stationed.snapshot_hash,
+          reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+        });
+        expect(revealed).not.toHaveProperty("journey");
+        expect(revealed).not.toHaveProperty("context");
+        const delta = revealed.station_dispatch_reveal as {
+          version: number;
+          base_snapshot_hash: string;
+          station_dispatch_board: OpeningCompactStationDispatchBoard;
+        };
+        expect(delta).toMatchObject({
+          version: PURE_STATION_DISPATCH_REVEAL_VERSION,
+          base_snapshot_hash: stationed.snapshot_hash,
+        });
+        expect(delta.station_dispatch_board[2]).toBe(expectedGuidance);
+        const revealBytes = Buffer.byteLength(JSON.stringify(revealed), "utf8");
+        expect(revealBytes).toBe(1_098);
+        expect(revealBytes).toBeLessThanOrEqual(1_100);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it("keeps full-mode June talk on the canonical verbose response", async () => {
+    await withFullServer(async (client) => {
+      const { sessionId, stationed } = await startPureAtOpeningStation(client);
+      const revealed = await callPlayerTool(client, "get_overworld_session_context", {
+        session_id: sessionId,
+        if_snapshot_hash: stationed.snapshot_hash,
+        reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+      });
+      const prepared = await callPlayerTool(client, "choose_overworld_session_story", {
+        session_id: sessionId,
+        story_choice_id: "albany:wolf_preparation",
+        choice: "albany:prep_works_fortification",
+        expected_snapshot_hash: revealed.snapshot_hash,
+      });
+      const fullJune = await callPlayerTool(client, "talk_overworld_session_contact", {
+        session_id: sessionId,
+        character_id: PURE_STATION_JUNE_CONTACT_ID,
+        expected_snapshot_hash: prepared.snapshot_hash,
+      });
+      expect(Object.keys(fullJune).sort()).toEqual(
+        [
+          "journey",
+          "journeyDecision",
+          "legend_delta",
+          "ok",
+          "result",
+          "session_id",
+          "snapshot_hash",
+          "context",
+        ].sort(),
+      );
+      expect(fullJune).toMatchObject({
+        ok: true,
+        session_id: sessionId,
+        snapshot_hash: expect.any(String),
+        journey: { storyChoice: { id: "albany:wolf_ally_commitment", kind: "ally" } },
+        journeyDecision: { countsTowardJourney: true, reason: "substantive_dialogue" },
+        context: expect.any(Object),
+        result: expect.any(Object),
+      });
+      expect(fullJune.legend_delta).toEqual({
+        departure_recap: OVERWORLD_COMPACT_LEGEND.departure_recap,
+      });
+      expect(fullJune).not.toHaveProperty("overworld_session_id");
+      expect(fullJune).not.toHaveProperty("station_dispatch_modal");
+      const fullJuneText = JSON.stringify(fullJune);
+      const preparedDispatchStatus =
+        "Set: background, promise, report. Dispatch 30m; final 30–50m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+      const fullJuneSummaries = stringsContaining(fullJune, preparedDispatchStatus);
+      expect(fullJuneSummaries).toHaveLength(2);
+      expect(fullJuneSummaries.every((summary) => summary.startsWith(preparedDispatchStatus))).toBe(
+        true,
+      );
+      expect(fullJuneText.split(preparedDispatchStatus)).toHaveLength(3);
+      expect(fullJuneText).not.toContain("optional Station support remains");
+      expect(Buffer.byteLength(fullJuneText, "utf8")).toBe(8_916);
+    });
+  }, 120_000);
+
   it("advertises only player tools and records exactly one fresh overworld start", async () => {
     const dir = mkdtempSync(join(tmpdir(), "mcp-pure-"));
     const evidence = join(dir, "run.jsonl");
@@ -1753,6 +2269,18 @@ describe("MCP pure play mode", () => {
       await withPureServer(evidence, async (client) => {
         const listed = await client.listTools();
         expect(new Set(listed.tools.map((tool) => tool.name))).toEqual(PURE_PLAYER_TOOLS);
+        const pureCatalogProjection = listed.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          input_schema: Object.fromEntries(
+            Object.entries(tool.inputSchema).filter(([key]) => key !== "$schema"),
+          ),
+        }));
+        const pureCatalogBytes = Buffer.byteLength(JSON.stringify(pureCatalogProjection), "utf8");
+        expect(pureCatalogBytes).toBe(16_773);
+        expect(pureCatalogBytes - 16_694).toBe(79);
+        expect(15_720 + 2_042 + pureCatalogBytes).toBe(34_535);
+        expect(15_720 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(34_868);
         for (const tool of listed.tools) {
           expect(
             validPureMcpToolCatalogEntry({ name: tool.name }),
@@ -1781,11 +2309,21 @@ describe("MCP pure play mode", () => {
         const contextTool = listed.tools.find(
           (tool) => tool.name === "get_overworld_session_context",
         );
+        expect(contextTool?.description).toBe(
+          "Read compact context; Station reveal-only yields V1 delta.",
+        );
         expect(contextTool?.inputSchema.properties).toHaveProperty(
           "include_departure_recap_terms",
           expect.objectContaining({
             type: "boolean",
             description: "Exact selected plan terms.",
+          }),
+        );
+        expect(contextTool?.inputSchema.properties).toHaveProperty(
+          "reveal_station_dispatch_support",
+          expect.objectContaining({
+            type: "string",
+            description: "V6 board [5] id; reveal-only needs latest if_snapshot_hash.",
           }),
         );
 
@@ -1954,6 +2492,7 @@ describe("MCP pure play mode", () => {
         string,
       ][];
       departure_recap?: unknown;
+      departure_recap_terms?: unknown;
       station_dispatch_board?: OpeningCompactStationDispatchBoard;
       station_dispatch_support?: readonly OpeningCompactStationDispatchBoardSupport[];
     };
@@ -1961,6 +2500,7 @@ describe("MCP pure play mode", () => {
       exits: { direction: string; to?: string }[];
       available_actions: { id: string; command?: string }[];
       dialogue: { npc: string; npc_text: string } | null;
+      state: { flags: string[]; vars: Record<string, number>; journal: string[] };
     };
     type RpgCompactContext = {
       actions?: string[];
@@ -2088,14 +2628,16 @@ describe("MCP pure play mode", () => {
           }
         ).storyChoice;
         expect(registrationChoice?.kind).toBe("registration");
-        expect(registrationChoice?.message).toContain("Enter Albany's Relief Compact");
+        expect(registrationChoice?.message).toContain("you must choose one permanent background");
+        expect(JSON.stringify(registrationChoice?.options)).not.toMatch(
+          /\b(?:DEF|import|fieldTrigger)\b/i,
+        );
         expect(
           registrationChoice?.options?.every(
-            (option) =>
-              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
-              typeof option.summary?.tradeoff === "string",
+            (option) => option.consequence === "" && typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
+        expect(registrationChoice?.message).toContain(JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION);
         const ironhandsRepairer = registrationChoice?.options?.find(
           (option) => option.id === "albany:ironhands_repairer",
         );
@@ -2226,23 +2768,21 @@ describe("MCP pure play mode", () => {
         expect(defaultCivicMessages).not.toMatch(/Civic order/i);
         expect(defaultCivicMessages).not.toMatch(/role\s*→\s*duty\s*→\s*evidence/i);
         expect(defaultCivicMessages).not.toMatch(/June Pike|second field seat/i);
-        expect(oathChoice?.message).toMatch(/matched duty(?:\/| and )evidence/i);
-        expect(oathChoice?.message).toMatch(/finish matched duty(?:\/| and )evidence/i);
-        expect(oathChoice?.message).toMatch(/custom duty[^.]*evidence choice next/i);
-        expect(oathChoice?.message).toMatch(/customize/i);
+        expect(oathChoice?.message).toBe(
+          `The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open. ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
+        );
         expect(
           oathChoice?.options?.every(
-            (option) =>
-              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
-              typeof option.summary?.tradeoff === "string",
+            (option) => option.consequence === "" && typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
+        expect(oathChoice?.message).toContain(JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION);
         expect(oathChoice?.options?.map((option) => option.id)).toEqual([
           "albany:doctrine_fortify_breach",
         ]);
         expect(JSON.stringify(oathChoice)).not.toContain("albany:oath_limited_aid_only");
         const matchedShortcut = oathChoice?.options?.[0];
-        if (!matchedShortcut) throw new Error("expected the sole matched role shortcut");
+        if (!matchedShortcut) throw new Error("expected the sole ready-made dispatch");
         const matchedShortcutInspection = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2332,9 +2872,7 @@ describe("MCP pure play mode", () => {
         expect(sourceChoice?.kind).toBe("lead_source");
         expect(
           sourceChoice?.options?.every(
-            (option) =>
-              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
-              typeof option.summary?.tradeoff === "string",
+            (option) => option.consequence === "" && typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
         const rowanDocket = sourceChoice?.options?.find(
@@ -2378,26 +2916,40 @@ describe("MCP pure play mode", () => {
         );
         mergeLegendAndExpectContextCoverage(cumulativeLegend, stationed, "Station");
         expect((stationed.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
-        expect((stationed.legend_delta as Record<string, string>).station_dispatch_board).toMatch(
-          /launch-first Station departure index.*station_dispatch_support/i,
+        const stationLegend = (stationed.legend_delta as Record<string, string>)
+          .station_dispatch_board;
+        expect(stationLegend).toContain(
+          "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null]",
         );
+        expect(stationLegend).toContain("remaining_optional_count");
+        expect(stationLegend).toContain("Pre-review hides open_optional;overview=[id,label]");
+        expect(stationLegend).toContain("names only open kit/wagon/rider categories");
+        expect(stationLegend).toContain("Repair/Streetwise/Mediation");
+        expect(stationLegend).toContain("get-context(reveal_station_dispatch_support=exact id)");
+        expect(stationLegend).toContain("receipt survives refresh/export/restore");
+        expect(stationLegend).toContain("['inspect',story_choice_id]");
+        expect(stationLegend).toContain("['talk',character_id,contact_name]");
         expect(JSON.stringify(cumulativeLegend).length).toBeLessThanOrEqual(7_200);
         const stationedContext = stationed.context as CompactAreaContext;
         expect(stationedContext.departure_contact_leads).toBeUndefined();
         expect(stationedContext.departure_recap).toBeUndefined();
         const stationedBoard = stationedContext.station_dispatch_board;
-        expect(stationedBoard?.slice(0, 2)).toEqual([3, "wolf_winter"]);
+        expect(stationedBoard?.slice(0, 2)).toEqual([6, "wolf_winter"]);
         const stationedGuidance = stationedBoard?.[2];
-        expect(stationedGuidance).toMatch(/field kit/i);
-        expect(stationedGuidance).toMatch(/last (?:relief )?wagon/i);
-        expect(stationedGuidance).toMatch(/June[^.]*second rider|second rider[^.]*June/i);
-        expect(stationedBoard?.[4]).toEqual(
-          expect.arrayContaining([
-            ["preparation", "open_optional", null, null, null],
-            ["relief_allocation", "open_optional", null, null, null],
-            ["field_team", "open_optional", null, null, null],
-          ]),
+        expect(stationedGuidance).toBe(
+          "Set: background, promise, report. Dispatch 5m; final 5–55m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
         );
+        expect(stationedBoard?.[3]).toEqual(["committed", 5, null, 3]);
+        expect(stationedBoard?.[4].map(([slot]) => slot)).toEqual(["role", "duty", "evidence"]);
+        expect(stationedBoard?.[4].every((row) => row[3] === null && row[4] === null)).toBe(true);
+        expect(stationedBoard?.[5]).toEqual([
+          STATION_DISPATCH_SUPPORT_REVEAL_ID,
+          "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+        ]);
+        const hiddenStationJson = JSON.stringify(stationedBoard);
+        expect(hiddenStationJson).not.toContain("albany:wolf_preparation");
+        expect(hiddenStationJson).not.toContain("albany:wolf_relief_allocation");
+        expect(hiddenStationJson).not.toContain("albany_city__transport_hub__june_pike");
         expect((stationed.context as CompactAreaContext).quest_starts).toContainEqual([
           "wolf_winter",
           expect.any(String),
@@ -2430,6 +2982,176 @@ describe("MCP pure play mode", () => {
         expect(
           (supportReview.legend_delta as Record<string, string>).station_dispatch_support,
         ).toMatch(/explicit read-only Station support detail/i);
+        const missingRevealBase = await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: {
+            session_id: sessionId,
+            reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+          },
+        });
+        expect(missingRevealBase.isError).toBe(true);
+        expect(textResult(missingRevealBase)).toMatch(/requires if_snapshot_hash/i);
+        const staleRevealBase = await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: {
+            session_id: sessionId,
+            if_snapshot_hash: "0".repeat(24),
+            reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+          },
+        });
+        expect(staleRevealBase.isError).toBe(true);
+        expect(textResult(staleRevealBase)).toMatch(/base hash is stale/i);
+        const afterRejectedReveal = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(afterRejectedReveal.snapshot_hash).toBe(stationed.snapshot_hash);
+        expect((afterRejectedReveal.context as CompactAreaContext).station_dispatch_board).toEqual(
+          stationedBoard,
+        );
+        const revealed = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: {
+              session_id: sessionId,
+              if_snapshot_hash: stationed.snapshot_hash,
+              reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+            },
+          }),
+        );
+        expect(Object.keys(revealed).sort()).toEqual(
+          ["ok", "overworld_session_id", "snapshot_hash", "station_dispatch_reveal"].sort(),
+        );
+        expect(revealed).toMatchObject({
+          ok: true,
+          overworld_session_id: sessionId,
+          snapshot_hash: expect.any(String),
+        });
+        expect(revealed).not.toHaveProperty("session_id");
+        expect(revealed).not.toHaveProperty("unchanged");
+        expect(revealed).not.toHaveProperty("journey");
+        expect(revealed).not.toHaveProperty("context");
+        expect(revealed).not.toHaveProperty("legend_delta");
+        expect(revealed.snapshot_hash).not.toBe(stationed.snapshot_hash);
+        const stationDispatchReveal = revealed.station_dispatch_reveal as {
+          version: number;
+          base_snapshot_hash: string;
+          station_dispatch_board: OpeningCompactStationDispatchBoard;
+        };
+        expect(Object.keys(stationDispatchReveal).sort()).toEqual(
+          ["version", "base_snapshot_hash", "station_dispatch_board"].sort(),
+        );
+        expect(stationDispatchReveal.version).toBe(PURE_STATION_DISPATCH_REVEAL_VERSION);
+        expect(stationDispatchReveal.base_snapshot_hash).toBe(stationed.snapshot_hash);
+        const revealedBoard = stationDispatchReveal.station_dispatch_board;
+        expect(revealedBoard).toHaveLength(6);
+        expect(revealedBoard?.[0]).toBe(6);
+        expect(revealedBoard?.[3]).toEqual(["committed", 5, null, 3]);
+        expect(revealedBoard?.[5]).toBeNull();
+        expect(revealedBoard?.[4]).toEqual(
+          expect.arrayContaining([
+            [
+              "preparation",
+              "open_optional",
+              null,
+              "Optional kit: compare without choosing; covers one named danger.",
+              ["inspect", "albany:wolf_preparation"],
+            ],
+            [
+              "relief_allocation",
+              "open_optional",
+              null,
+              "Optional wagon: compare without choosing; send Albany's last to one crisis.",
+              ["inspect", "albany:wolf_relief_allocation"],
+            ],
+            [
+              "field_team",
+              "open_optional",
+              null,
+              "Optional rider: ask June before choosing; one cattle line, never combat.",
+              ["talk", "albany_city__transport_hub__june_pike", "June Pike"],
+            ],
+          ]),
+        );
+        const revealReceiptBytes = Buffer.byteLength(JSON.stringify(revealed), "utf8");
+        expect(revealReceiptBytes).toBe(1_081);
+        expect(revealReceiptBytes).toBeLessThanOrEqual(1_100);
+        const repeatedReveal = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: {
+              session_id: sessionId,
+              if_snapshot_hash: revealed.snapshot_hash,
+              reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+              include_departure_recap_terms: false,
+              include_station_dispatch_support: false,
+            },
+          }),
+        );
+        expect(repeatedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect(repeatedReveal).not.toHaveProperty("journey");
+        expect(repeatedReveal).not.toHaveProperty("context");
+        expect(repeatedReveal.station_dispatch_reveal).toEqual({
+          version: PURE_STATION_DISPATCH_REVEAL_VERSION,
+          base_snapshot_hash: revealed.snapshot_hash,
+          station_dispatch_board: revealedBoard,
+        });
+        const refreshedReveal = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(refreshedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect((refreshedReveal.context as CompactAreaContext).station_dispatch_board).toEqual(
+          revealedBoard,
+        );
+        expect(refreshedReveal.journey).toEqual(stationed.journey);
+        expect((refreshedReveal.context as CompactAreaContext).quest_starts).toEqual(
+          stationedContext.quest_starts,
+        );
+        const forgedReveal = await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: {
+            session_id: sessionId,
+            if_snapshot_hash: revealed.snapshot_hash,
+            reveal_station_dispatch_support: "forged:station-support",
+          },
+        });
+        expect(forgedReveal.isError).toBe(true);
+        expect(textResult(forgedReveal)).toMatch(/Unknown Station optional-support reveal/i);
+        const afterForgery = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(afterForgery.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect((afterForgery.context as CompactAreaContext).station_dispatch_board).toEqual(
+          revealedBoard,
+        );
+        const directPreparationAction = revealedBoard?.[4].find(
+          ([slot]) => slot === "preparation",
+        )?.[4];
+        if (directPreparationAction?.[0] !== "inspect") {
+          throw new Error("expected an authenticated revealed preparation row");
+        }
+        const directInspection = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: directPreparationAction[1],
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        expectPureStoryInspectionEnvelope(directInspection, sessionId);
+        expect((directInspection.story as { kind?: string }).kind).toBe("preparation");
+        expect(directInspection.snapshot_hash).toBe(revealed.snapshot_hash);
         const inspected = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2473,7 +3195,7 @@ describe("MCP pure play mode", () => {
           ].sort(),
         );
         expect(preparationChoice?.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
-        expect(JOURNEY_STORY_CHOICE_COMPARISON_VERSION).toBe(10);
+        expect(JOURNEY_STORY_CHOICE_COMPARISON_VERSION).toBe(11);
         expect(preparationChoice?.kind).toBe("preparation");
         expect(preparationChoice?.inspectedOption).toBeNull();
         expect(preparationChoice?.reviewOption).toEqual({
@@ -2493,6 +3215,9 @@ describe("MCP pure play mode", () => {
         if (!worksFortification)
           throw new Error("expected visible works-fortification preparation");
         expect(worksFortification.summary).not.toHaveProperty("checkFit");
+        expect(worksFortification.summary).toMatchObject({
+          highlights: [{ label: "Governing skill", value: "Repair +4 vs DC 12" }],
+        });
         const detailed = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2525,6 +3250,59 @@ describe("MCP pure play mode", () => {
         expect(Object.keys(detailedPreparation.inspectedOption ?? {}).sort()).toEqual(
           ["checkFit", "consequence", "dispatchForecast", "id", "label"].sort(),
         );
+        for (const expansion of [
+          {
+            arguments: { include_departure_recap_terms: true },
+            departureTerms: true,
+            stationSupport: false,
+          },
+          {
+            arguments: {
+              include_station_dispatch_support: true,
+              if_snapshot_hash: "0".repeat(24),
+            },
+            departureTerms: false,
+            stationSupport: true,
+          },
+          {
+            arguments: {
+              include_departure_recap_terms: true,
+              include_station_dispatch_support: true,
+              if_snapshot_hash: "0".repeat(24),
+            },
+            departureTerms: true,
+            stationSupport: true,
+          },
+        ] as const) {
+          const expandedReveal = textPayload(
+            await client.callTool({
+              name: "get_overworld_session_context",
+              arguments: {
+                session_id: sessionId,
+                reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+                ...expansion.arguments,
+              },
+            }),
+          );
+          expect(expandedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+          expect(expandedReveal).toHaveProperty("journey");
+          expect(expandedReveal).toHaveProperty("context");
+          expect(expandedReveal).not.toHaveProperty("station_dispatch_reveal");
+          const expandedContext = expandedReveal.context as CompactAreaContext;
+          expect(expandedContext.station_dispatch_board).toEqual(revealedBoard);
+          if (expansion.departureTerms) {
+            expect(expandedContext.departure_recap_terms).toEqual(expect.any(Array));
+          } else {
+            expect(expandedContext.departure_recap_terms).toBeUndefined();
+          }
+          if (expansion.stationSupport) {
+            expect(expandedContext.station_dispatch_support).toEqual(
+              supportContext.station_dispatch_support,
+            );
+          } else {
+            expect(expandedContext.station_dispatch_support).toBeUndefined();
+          }
+        }
         const prepared = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",
@@ -2537,19 +3315,27 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        const preparedSupportReview = textPayload(
-          await client.callTool({
-            name: "get_overworld_session_context",
-            arguments: {
-              session_id: sessionId,
-              if_snapshot_hash: prepared.snapshot_hash,
-              include_station_dispatch_support: true,
-            },
-          }),
+        const preparedBoard = (prepared.context as CompactAreaContext).station_dispatch_board;
+        expect(preparedBoard?.[0]).toBe(6);
+        expect(preparedBoard?.[2]).toMatch(
+          /^Set: background, promise, report\. Dispatch \d+m; final \d+–\d+m; (?:all on time|support can delay dispatch|already late)\. Compare; named choice commits\. Start Wolf-Winter to decline the rest\.$/,
         );
-        const readyFieldTeam = (
-          (preparedSupportReview.context as CompactAreaContext).station_dispatch_support ?? []
-        ).find(([slot]) => slot === "field_team")?.[2];
+        expect(preparedBoard?.[3]?.[3]).toBe(2);
+        expect(
+          preparedBoard?.[4]
+            .filter(([, status]) => status === "open_optional")
+            .map(([slot]) => slot),
+        ).toEqual(["relief_allocation", "field_team"]);
+        expect(preparedBoard?.[4].find(([slot]) => slot === "preparation")).toMatchObject([
+          "preparation",
+          "selected",
+          expect.any(String),
+          null,
+          null,
+        ]);
+        const readyFieldTeam = (preparedBoard?.[4] ?? []).find(
+          ([slot]) => slot === "field_team",
+        )?.[4];
         expect(readyFieldTeam).toEqual([
           "talk",
           "albany_city__transport_hub__june_pike",
@@ -2559,20 +3345,89 @@ describe("MCP pure play mode", () => {
           throw new Error("expected June's ready Station board action");
         }
         const juneContactId = readyFieldTeam[1];
+        const missingJuneBase = await client.callTool({
+          name: "talk_overworld_session_contact",
+          arguments: {
+            session_id: sessionId,
+            character_id: juneContactId,
+          },
+        });
+        expect(missingJuneBase.isError).toBe(true);
+        expect(textResult(missingJuneBase)).toMatch(/requires expected_snapshot_hash/i);
+        const staleJuneBase = await client.callTool({
+          name: "talk_overworld_session_contact",
+          arguments: {
+            session_id: sessionId,
+            character_id: juneContactId,
+            expected_snapshot_hash: "0".repeat(24),
+          },
+        });
+        expect(staleJuneBase.isError).toBe(true);
+        expect(textResult(staleJuneBase)).toMatch(/base hash is stale/i);
+        const afterRejectedJune = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: {
+              session_id: sessionId,
+              if_snapshot_hash: prepared.snapshot_hash,
+            },
+          }),
+        );
+        expect(afterRejectedJune.snapshot_hash).toBe(prepared.snapshot_hash);
+        expect(afterRejectedJune.unchanged).toBe(true);
+        expect(afterRejectedJune).not.toHaveProperty("context");
         const juneConversation = textPayload(
           await client.callTool({
             name: "talk_overworld_session_contact",
             arguments: {
               session_id: sessionId,
-              character_id: juneContactId,
+              contact_id: juneContactId,
+              expected_snapshot_hash: prepared.snapshot_hash,
               compact_context: false,
               compact_result: false,
             },
           }),
         );
-        expect(
-          (juneConversation.context as CompactAreaContext).departure_contact_leads,
-        ).toBeUndefined();
+        expect(Object.keys(juneConversation).sort()).toEqual(
+          [
+            "journey",
+            "journeyDecision",
+            "legend_delta",
+            "ok",
+            "overworld_session_id",
+            "result",
+            "snapshot_hash",
+            "station_dispatch_modal",
+          ].sort(),
+        );
+        expect(juneConversation).toMatchObject({
+          ok: true,
+          overworld_session_id: sessionId,
+          snapshot_hash: expect.any(String),
+          journeyDecision: {
+            countsTowardJourney: true,
+            reason: "substantive_dialogue",
+          },
+          result: {
+            m: expect.any(Number),
+            entry: expect.any(Array),
+            text: expect.any(String),
+          },
+          station_dispatch_modal: {
+            version: PURE_STATION_JUNE_MODAL_VERSION,
+            base_snapshot_hash: prepared.snapshot_hash,
+          },
+        });
+        expect(juneConversation.snapshot_hash).not.toBe(prepared.snapshot_hash);
+        expect(juneConversation).not.toHaveProperty("session_id");
+        expect(juneConversation).not.toHaveProperty("context");
+        expect(juneConversation.legend_delta).toEqual({
+          departure_recap: OVERWORLD_COMPACT_LEGEND.departure_recap,
+        });
+        const typedJuneConversation = juneConversation as unknown as PureStationJuneModalResponseV1;
+        expect(typedJuneConversation.station_dispatch_modal.version).toBe(
+          PURE_STATION_JUNE_MODAL_VERSION,
+        );
         const allyChoice = (
           juneConversation.journey as {
             storyChoice?: {
@@ -2588,9 +3443,7 @@ describe("MCP pure play mode", () => {
         });
         expect(
           allyChoice?.options?.every(
-            (option) =>
-              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
-              typeof option.summary?.tradeoff === "string",
+            (option) => option.consequence === "" && typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
         if (!allyChoice?.id) throw new Error("expected June's active field-team choice");
@@ -2598,21 +3451,53 @@ describe("MCP pure play mode", () => {
           (option) => option.id === "albany:ally_june_cattle_first",
         );
         if (!cattleFirst) throw new Error("expected June's visible cattle-first option");
-        const allyDepartureRecap = (juneConversation.context as CompactAreaContext).departure_recap;
-        if (!allyDepartureRecap) {
-          throw new Error("expected the authenticated recap beside June's choice");
-        }
+        const juneModalBytes = Buffer.byteLength(JSON.stringify(juneConversation), "utf8");
+        expect(juneModalBytes).toBe(3_908);
+        expect(juneModalBytes).toBeLessThanOrEqual(4_000);
         const inspectedAlly = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
             arguments: {
               session_id: sessionId,
               story_choice_id: allyChoice.id,
+              expected_snapshot_hash: juneConversation.snapshot_hash,
             },
           }),
         );
-        expectPureStoryInspectionEnvelope(inspectedAlly, sessionId, allyDepartureRecap);
+        const inspectedAllyRecap = inspectedAlly.departure_recap as unknown[];
+        expect(inspectedAllyRecap?.[0]).toBe(7);
+        expect(inspectedAllyRecap?.[1]).toBe("wolf_winter");
+        expect(inspectedAllyRecap?.[2]).toEqual(expect.any(String));
+        expect(inspectedAllyRecap?.[3]).toEqual(expect.any(Array));
+        expectPureStoryInspectionEnvelope(inspectedAlly, sessionId, inspectedAllyRecap);
+        expect(inspectedAlly.snapshot_hash).toBe(juneConversation.snapshot_hash);
         expect((inspectedAlly.story as { kind?: string }).kind).toBe("ally");
+        const repeatedJune = await client.callTool({
+          name: "talk_overworld_session_contact",
+          arguments: {
+            session_id: sessionId,
+            character_id: juneContactId,
+            expected_snapshot_hash: juneConversation.snapshot_hash,
+          },
+        });
+        expect(repeatedJune.isError).toBe(true);
+        expect(textResult(repeatedJune)).toMatch(
+          /choose the presented story consequence|finish.*story choice|gameplay.*paused/i,
+        );
+        const afterRepeatedJune = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: {
+              session_id: sessionId,
+              if_snapshot_hash: juneConversation.snapshot_hash,
+            },
+          }),
+        );
+        expect(afterRepeatedJune.snapshot_hash).toBe(juneConversation.snapshot_hash);
+        expect(afterRepeatedJune.unchanged).toBe(true);
+        expect(
+          (afterRepeatedJune.journey as { storyChoice?: { id?: string } }).storyChoice?.id,
+        ).toBe(allyChoice.id);
         const allied = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",
@@ -2620,14 +3505,38 @@ describe("MCP pure play mode", () => {
               session_id: sessionId,
               story_choice_id: allyChoice.id,
               choice: cattleFirst.id,
+              expected_snapshot_hash: juneConversation.snapshot_hash,
               compact_context: false,
               compact_result: false,
             },
           }),
         );
+        expect(allied.session_id).toBe(sessionId);
+        expect(allied.overworld_session_id).toBe(sessionId);
+        expect(allied).toHaveProperty("context");
+        expect(allied).not.toHaveProperty("station_dispatch_modal");
         expect((allied.context as CompactAreaContext).departure_contact_leads).toBeUndefined();
         expectJuneCattleFirst(allied);
         expect((allied.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
+        const postChoiceJune = textPayload(
+          await client.callTool({
+            name: "talk_overworld_session_contact",
+            arguments: {
+              session_id: sessionId,
+              character_id: juneContactId,
+            },
+          }),
+        );
+        expect(postChoiceJune).toMatchObject({
+          ok: true,
+          session_id: sessionId,
+          overworld_session_id: sessionId,
+          snapshot_hash: expect.any(String),
+          context: expect.any(Object),
+        });
+        expect(postChoiceJune.snapshot_hash).not.toBe(allied.snapshot_hash);
+        expect(postChoiceJune).not.toHaveProperty("station_dispatch_modal");
+        expectJuneCattleFirst(postChoiceJune);
         const persistedAlly = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",
@@ -2644,7 +3553,7 @@ describe("MCP pure play mode", () => {
         ]);
         const wolfWinter = areaView(prepared).quests.find((quest) => quest.id === "wolf_winter");
         if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
-        expect((allied.context as CompactAreaContext).station_dispatch_board?.[0]).toBe(3);
+        expect((allied.context as CompactAreaContext).station_dispatch_board?.[0]).toBe(6);
         const inspectedAllocation = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2668,6 +3577,13 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        const allocatedBoard = (allocated.context as CompactAreaContext).station_dispatch_board;
+        expect(allocatedBoard?.[2]).toBe(
+          "Dispatch 35m—on time; roads change arrival, not dispatch. No opening-delay failure pressure.",
+        );
+        expect(allocatedBoard?.[3]?.[3]).toBe(0);
+        expect(allocatedBoard?.[4].filter(([, status]) => status === "open_optional")).toEqual([]);
+        expect(allocatedBoard?.[5]).toBeNull();
         expectJuneCattleFirst(allocated);
         view = areaView(allocated);
         const marketRoute = view.areaExits.find(
@@ -2941,19 +3857,17 @@ describe("MCP pure play mode", () => {
         expect(talked.ok).toBe(true);
         const talkContext = talked.context as RpgCompactContext;
         const talkActions = talkContext.actions;
-        expect(talkContext.dialogue?.[1]).toBe(
-          "Albany sent you. Choose what must stand at dawn. Every plan can finish Wolf-Winter; none saves everything, and I name no best answer.\n\nHUNT — Outcome: hold Cade's ground, herd, and relief stores with prepared combat. Cost: wolves may die; failure can lose cattle or the line. Albany: bloodshed changes Greenway work; damage remains.\nLURE — Outcome: relocate the pack beyond the breach and keep the herd. Cost: last feed, broken paling, two cattle risked on a first-cast foul. Albany: broken boundary or scattered cattle change Station response.\nDRIVE — Outcome: evacuate people and herd; force the pack clear. Cost: abandon the outer steading; Crisis takes a wound, two cattle, or rig. Albany: the line and chosen loss remain.\nFORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost: no retreat; expose property for Cade's aid or spend public seals without it. Albany: terms remain; a no-loss hold opens no Cade repair dispatch.\n\nQuestions teach; they do not commit. HUNT commits on uncommitted north crossing; other plans commit in branches. Any commitment closes the other three.",
+        expect(talkContext.dialogue?.[1]).toMatch(
+          /Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Choosing one closes the rest[^]*Preparation helps without choosing[^]*TONIGHT'S GROUND —/i,
         );
+        expect(talkContext.dialogue?.[1].length).toBeLessThanOrEqual(360);
         expect(talkActions).toEqual(
           expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
         );
-        expect(talkContext.choices).toContainEqual([
-          "ask_commit_hunt_and_hold",
-          CADE_HUNT_EXIT_LABEL,
-        ]);
-        expect(
-          talkContext.choices?.find(([id]) => id === "ask_commit_hunt_and_hold")?.[1],
-        ).not.toMatch(ACTION_TRUNCATION_MARKER);
+        expect(talkContext.choices).toContainEqual(["ask_hunt", CADE_HUNT_INSPECT_LABEL]);
+        expect(talkContext.choices?.find(([id]) => id === "ask_hunt")?.[1]).not.toMatch(
+          ACTION_TRUNCATION_MARKER,
+        );
         expect(talkActions?.length).toBeLessThanOrEqual(24);
 
         const currentRead = textPayload(
@@ -2993,17 +3907,15 @@ describe("MCP pure play mode", () => {
           Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
         ).toMatchObject({
           ask_wolves:
-            "ask: HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits.",
+            "ask: PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; tactics only, no plan commitment.",
           ask_byre:
-            "ask: HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
-          ask_commit_hunt_and_hold: CADE_HUNT_EXIT_COMMAND,
-          ask_leave: "ask: Leave Cade.",
+            "ask: PREPARE SUPPORT — HUNT guarded/patient line: grants the safer combat tactic; no plan commitment.",
+          ask_hunt: CADE_HUNT_INSPECT_COMMAND,
+          ask_leave: "ask: LEAVE — Exit Cade's plan review; this action commits nothing.",
         });
-        const huntAction = labeledActions.find(
-          (action) => action.id === "ask_commit_hunt_and_hold",
-        );
+        const huntAction = labeledActions.find((action) => action.id === "ask_hunt");
         expect(MCP_ACTION_LABEL_CHAR_LIMIT).toBe(160);
-        expect(huntAction?.command).toBe(CADE_HUNT_EXIT_COMMAND);
+        expect(huntAction?.command).toBe(CADE_HUNT_INSPECT_COMMAND);
         expect(huntAction?.command?.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
         expect(huntAction?.command).not.toMatch(ACTION_TRUNCATION_MARKER);
         expect(labeledMenu).toMatchObject({
@@ -3017,12 +3929,7 @@ describe("MCP pure play mode", () => {
           }),
         );
         expect(compactMenu.actions).toEqual(
-          expect.arrayContaining([
-            "ask_wolves",
-            "ask_byre",
-            "ask_commit_hunt_and_hold",
-            "ask_leave",
-          ]),
+          expect.arrayContaining(["ask_wolves", "ask_byre", "ask_hunt", "ask_leave"]),
         );
 
         // The action menu carried by TALK is immediately executable; a player does
@@ -3044,6 +3951,14 @@ describe("MCP pure play mode", () => {
         expect(askedObservation.exits.length).toBeGreaterThan(0);
         expect(askedObservation.exits.every((exit) => exit.to === undefined)).toBe(true);
         expect(askedObservation.available_actions.length).toBeGreaterThan(0);
+        expect(askedObservation.state.flags).toContain("heard_plan");
+        expect(askedObservation.state.flags).not.toEqual(
+          expect.arrayContaining([
+            "strategy_lure_committed",
+            "strategy_drive_committed",
+            "strategy_fortify_committed",
+          ]),
+        );
         expect(
           askedObservation.available_actions.every(
             (action) => typeof action.command === "string" && action.command.length > 0,

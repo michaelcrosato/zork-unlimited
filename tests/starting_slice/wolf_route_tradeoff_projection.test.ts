@@ -1,8 +1,8 @@
 /**
- * The route card must combine the already-selected Albany relief oath and
- * allocation with each Wolf-Winter hill road before the player commits to
- * quest start. Full, compact, browser, and CLI surfaces use the dedicated
- * exact field rather than a truncation of preview.
+ * The route card keeps dispatch timing and the road's actual arrival tradeoff
+ * visible without forecasting a strategy outcome before Cade discloses the
+ * independent ground condition. Full, compact, browser, CLI, and MCP surfaces
+ * share that neutral projection and preserve the authored preview exactly.
  */
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -24,11 +24,13 @@ import {
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { deriveQuestDispatchPresentationWindow } from "../../src/world/quest_dispatch_window.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT } from "../../src/world/station_dispatch_board.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
   WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
   wolfHillRoutePresentation,
+  wolfHillRouteTradeoffParts,
 } from "../../src/world/wolf_hill_route_presentation.js";
 import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
@@ -42,6 +44,9 @@ const WOLF_QUEST =
   (() => {
     throw new Error("The Albany starting slice requires Wolf-Winter.");
   })();
+const AUTHORED_ROUTE_PREVIEWS = Object.fromEntries(
+  WOLF_QUEST.launch?.options.map((option) => [option.id, option.preview]) ?? [],
+) as Record<string, string | undefined>;
 const WOLF_IMPORTS =
   WOLF_QUEST.campaign_imports ??
   (() => {
@@ -50,11 +55,13 @@ const WOLF_IMPORTS =
 const WOLF_SOURCE = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!WOLF_SOURCE.ok) throw new Error("Wolf-Winter must compile.");
 const WOLF_INDEX = indexRpgPack(WOLF_SOURCE.compiled.pack);
-const STALE_ABSOLUTE_RIDGE_RESULT =
-  "A clean three-cast lure line therefore reaches alarm 4 (Breaking) and scatters cattle.";
-const STALE_ABSOLUTE_STOCKWAY_RESULT =
-  "A clean three-cast lure line reaches alarm 3 (Restless), keeps the whole herd, and remains below Breaking.";
-const RIDGE_ENTRY_TIMING = "visible descent starts alarm 1";
+const NEUTRAL_RIDGE_SUMMARY =
+  "Open crest: 30m, 1 supply, fatigue +25; cattle alarm starts at 1; clear sight of the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.";
+const NEUTRAL_STOCKWAY_SUMMARY =
+  "Sheltered lee: 75m, 2 supplies, fatigue +10; cattle alarm starts at 0; hedges conceal the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.";
+const NEUTRAL_GROUND_PREVIEW =
+  "Cade discloses tonight's independent ground fact before commitment; it can supersede one matching first beat.";
+const RIDGE_ENTRY_TIMING = "cattle alarm starts at 1";
 
 const ROUTE_CARD_CASES = [
   {
@@ -64,15 +71,9 @@ const ROUTE_CARD_CASES = [
     expected: {
       ridge: {
         alarm: 4,
-        summary:
-          "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; a clean lure reaches alarm 4 and scatters two cattle.",
-        preview: STALE_ABSOLUTE_RIDGE_RESULT,
       },
       stockway: {
         alarm: 3,
-        summary:
-          "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); a clean lure reaches alarm 3 and keeps the whole herd.",
-        preview: STALE_ABSOLUTE_STOCKWAY_RESULT,
       },
     },
   },
@@ -83,17 +84,9 @@ const ROUTE_CARD_CASES = [
     expected: {
       ridge: {
         alarm: 3,
-        summary:
-          "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; Cade fodder suppresses the first clean-cast alarm: alarm 3, whole herd.",
-        preview:
-          "Cade fodder suppresses the clean first-cast alarm; a clean lure reaches alarm 3 and keeps the whole herd.",
       },
       stockway: {
         alarm: 3,
-        summary:
-          "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); Cade fodder leaves this route at alarm 3, whole herd.",
-        preview:
-          "Cade fodder does not alter this route; a clean lure reaches alarm 3 and keeps the whole herd.",
       },
     },
   },
@@ -104,17 +97,9 @@ const ROUTE_CARD_CASES = [
     expected: {
       ridge: {
         alarm: 3,
-        summary:
-          "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; aid-only suppresses the final clean-cast alarm: alarm 3, whole herd.",
-        preview:
-          "Aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 3 and keeps the whole herd.",
       },
       stockway: {
         alarm: 2,
-        summary:
-          "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); aid-only suppresses the final clean-cast alarm: alarm 2, whole herd.",
-        preview:
-          "Aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 2 and keeps the whole herd.",
       },
     },
   },
@@ -125,17 +110,9 @@ const ROUTE_CARD_CASES = [
     expected: {
       ridge: {
         alarm: 2,
-        summary:
-          "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; Cade fodder and aid-only suppress two clean-cast alarms: alarm 2, whole herd.",
-        preview:
-          "Cade fodder suppresses the first clean-cast alarm and aid-only suppresses the final one; a clean lure reaches alarm 2 and keeps the whole herd.",
       },
       stockway: {
         alarm: 2,
-        summary:
-          "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); Cade fodder leaves this route unchanged; aid-only makes clean lure alarm 2, whole herd.",
-        preview:
-          "Cade fodder does not alter this route, while aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 2 and keeps the whole herd.",
       },
     },
   },
@@ -229,13 +206,13 @@ function dispatchBriefing(session: OverworldSession): string {
     const { minimum, maximum } = presentation.finalMinutes;
     const finalRange =
       minimum === maximum ? `${String(minimum)}m` : `${String(minimum)}–${String(maximum)}m`;
-    const pressure =
-      minimum > 60
-        ? "Delay is already certain; starting now seals the current total."
-        : maximum <= 60
-          ? "Every remaining support combination stays on time; starting now declines them."
-          : "Starting now seals the current total; optional support can cross the delay threshold.";
-    return `Dispatch ${String(presentation.committedMinutes)}m committed; optional Station support remains (final ${finalRange}). ${pressure}`;
+    const timing =
+      minimum > 60 ? "already late" : maximum <= 60 ? "all on time" : "support can delay dispatch";
+    return (
+      `Set: background, promise, report. Dispatch ${String(presentation.committedMinutes)}m; ` +
+      `final ${finalRange}; ${timing}. Compare; named choice commits. ` +
+      "Start Wolf-Winter to decline the rest."
+    );
   }
   if (ridge.status === "delayed" && ridge.ledgerMinutes !== undefined) {
     return (
@@ -255,14 +232,6 @@ function dispatchBriefing(session: OverworldSession): string {
   );
 }
 
-function expectedFirstCastFailureForecast(alarm: number, delayed: boolean): string {
-  return (
-    `Fouled first cast: cattle alarm ${String(alarm)}` +
-    `${delayed ? " (includes delayed +1)" : ""}; ` +
-    "feed spent, no retry; recovery remains."
-  );
-}
-
 function fullSummaries(quest: OverworldQuestView): Record<string, string | undefined> {
   return Object.fromEntries(
     quest.launch?.options.map((option) => [option.id, option.tradeoffSummary]) ?? [],
@@ -276,6 +245,30 @@ function compactSummaries(session: OverworldSession): Record<string, string | nu
   const launch = compactQuest?.[3];
   if (!launch) throw new Error("Expected the compact Wolf-Winter route card.");
   return Object.fromEntries(launch[2].map((option) => [option[0], option[13]]));
+}
+
+function expectCompactSharedDispatchOnce(
+  session: OverworldSession,
+  full: Record<string, string | undefined>,
+  briefing: string,
+): Record<string, string | null> {
+  const compact = session.compactView();
+  expect(compact.station_dispatch_board?.[2]).toBe(briefing);
+  const summaries = compactSummaries(session);
+  for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
+    const canonical = full[optionId];
+    if (!canonical) throw new Error(`Expected canonical route summary ${optionId}.`);
+    expect(canonical.startsWith(`${briefing} `)).toBe(true);
+    expect(summaries[optionId]).toBe(wolfHillRouteTradeoffParts(canonical)?.routeSummary);
+  }
+  expect(
+    JSON.stringify({
+      quests: compact.quests,
+      quest_starts: compact.quest_starts,
+      station_dispatch_board: compact.station_dispatch_board,
+    }).split(briefing).length - 1,
+  ).toBe(1);
+  return summaries;
 }
 
 function compactPreview(session: OverworldSession, optionId: string): string | null {
@@ -454,11 +447,11 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       const stockwayFailure = playForecastedFailedFirstCast(session, STOCKWAY_ID);
       expect(ridgeFailure).toEqual({ alarm: 3, recoveryAction: "set_paling_rail" });
       expect(stockwayFailure).toEqual({ alarm: 2, recoveryAction: "set_paling_rail" });
-      const expectedRidgeSummary = `${briefing} ${expected.ridge.summary}`;
-      const expectedStockwaySummary = `${briefing} ${expected.stockway.summary}`;
+      const expectedRidgeSummary = `${briefing} ${NEUTRAL_RIDGE_SUMMARY}`;
+      const expectedStockwaySummary = `${briefing} ${NEUTRAL_STOCKWAY_SUMMARY}`;
       const snapshotBeforeProjection = session.snapshot();
       const full = fullSummaries(quest);
-      const compact = compactSummaries(session);
+      const compact = expectCompactSharedDispatchOnce(session, fullSummaries(quest), briefing);
       const api = createToolApi({ root: ROOT });
       const restored = api.restore_overworld_session({
         compact_context: false,
@@ -478,8 +471,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         [STOCKWAY_ID]: expectedStockwaySummary,
       });
       expect(compact).toEqual({
-        [RIDGE_ID]: expectedRidgeSummary,
-        [STOCKWAY_ID]: expectedStockwaySummary,
+        [RIDGE_ID]: NEUTRAL_RIDGE_SUMMARY,
+        [STOCKWAY_ID]: NEUTRAL_STOCKWAY_SUMMARY,
       });
       expect(fullSummaries(mcpQuest)).toMatchObject({
         [RIDGE_ID]: expectedRidgeSummary,
@@ -490,6 +483,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       }
 
       const markup = renderQuestNotice(quest);
+      const normalizedMarkup = markup.replaceAll("&#x27;", "'");
       expect(markup.match(/Route tradeoff:/g)).toHaveLength(2);
       expect(markup).toContain(expectedRidgeSummary);
       expect(markup).toContain(expectedStockwaySummary);
@@ -510,23 +504,31 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       const mcpStockwayPreview = mcpQuest.launch.options.find(
         (option) => option.id === STOCKWAY_ID,
       )?.preview;
-      for (const surface of [ridgePreview, mcpRidgePreview, markup, cli]) {
-        expect(surface).toContain(expected.ridge.preview);
+      expect(ridgePreview).toBe(AUTHORED_ROUTE_PREVIEWS[RIDGE_ID]);
+      expect(mcpRidgePreview).toBe(AUTHORED_ROUTE_PREVIEWS[RIDGE_ID]);
+      expect(stockwayPreview).toBe(AUTHORED_ROUTE_PREVIEWS[STOCKWAY_ID]);
+      expect(mcpStockwayPreview).toBe(AUTHORED_ROUTE_PREVIEWS[STOCKWAY_ID]);
+      for (const surface of [ridgePreview, mcpRidgePreview, normalizedMarkup, cli]) {
+        expect(surface).toContain(NEUTRAL_GROUND_PREVIEW);
       }
       expect(compactPreview(session, RIDGE_ID)).toBeNull();
-      for (const surface of [stockwayPreview, mcpStockwayPreview, markup, cli]) {
-        expect(surface).toContain(expected.stockway.preview);
+      for (const surface of [stockwayPreview, mcpStockwayPreview, normalizedMarkup, cli]) {
+        expect(surface).toContain(NEUTRAL_GROUND_PREVIEW);
       }
       expect(compactPreview(session, STOCKWAY_ID)).toBeNull();
-      if (oathId === "albany:oath_limited_aid_only") {
-        expect(ridgePreview).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
-        expect(mcpRidgePreview).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
-        expect(stockwayPreview).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
-        expect(mcpStockwayPreview).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
-        expect(markup).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
-        expect(markup).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
-        expect(cli).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
-        expect(cli).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
+      for (const surface of [
+        expectedRidgeSummary,
+        expectedStockwaySummary,
+        ridgePreview,
+        stockwayPreview,
+        mcpRidgePreview,
+        mcpStockwayPreview,
+        normalizedMarkup,
+        cli,
+      ]) {
+        expect(surface).not.toMatch(
+          /lure|first cast|clean-cast|clean lure reaches|whole herd|scatters two cattle|fouled first cast|feed spent|fodder|aid-only/i,
+        );
       }
       expect(full[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
       expect(compact[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
@@ -550,11 +552,39 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
             ? "ending_pack_diverted_cattle_scattered"
             : "ending_pack_diverted",
       });
-      expect(full[RIDGE_ID]).toContain(`alarm ${ridgeRuntime.alarm}`);
-      expect(full[STOCKWAY_ID]).toContain(`alarm ${stockwayRuntime.alarm}`);
+      expect(full[RIDGE_ID]).not.toContain(`alarm ${ridgeRuntime.alarm}`);
+      expect(full[STOCKWAY_ID]).not.toContain(`alarm ${stockwayRuntime.alarm}`);
       expect(session.snapshot()).toEqual(snapshotBeforeProjection);
     },
   );
+
+  it("keeps route projection invariant to preselected LURE support", () => {
+    const knowledgeSets = [
+      [],
+      ["albany:knowledge_relief_cade_fodder"],
+      ["albany:knowledge_wolf_limited_aid_only"],
+      ["albany:knowledge_relief_cade_fodder", "albany:knowledge_wolf_limited_aid_only"],
+    ];
+    for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
+      const projections = knowledgeSets.map((knowledgeIds) =>
+        wolfHillRoutePresentation({
+          launchId: "albany:wolf_hill_approach",
+          optionId,
+          knowledgeIds,
+        }),
+      );
+      expect(new Set(projections.map((projection) => projection?.tradeoffSummary))).toHaveLength(1);
+      for (const projection of projections) {
+        expect(projection).not.toHaveProperty("previewOverride");
+        expect(projection?.tradeoffSummary).not.toMatch(
+          /lure|fodder|aid-only|clean-cast|whole herd|scatters two cattle|fouled first cast|feed spent/i,
+        );
+        expect(projection?.tradeoffSummary.length).toBeLessThanOrEqual(
+          WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
+        );
+      }
+    }
+  });
 
   it("shows a delayed certified dispatch identically before either road commitment", () => {
     const { session, quest } = routeCard(
@@ -572,43 +602,47 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     expect(dispatchBriefing(session)).toBe(expectedBriefing);
 
     const full = fullSummaries(quest);
-    const compact = compactSummaries(session);
+    const compact = expectCompactSharedDispatchOnce(session, full, expectedBriefing);
     const ridgeFailure = playForecastedFailedFirstCast(session, RIDGE_ID);
     const stockwayFailure = playForecastedFailedFirstCast(session, STOCKWAY_ID);
     expect(ridgeFailure).toEqual({ alarm: 4, recoveryAction: "set_paling_rail" });
     expect(stockwayFailure).toEqual({ alarm: 3, recoveryAction: "set_paling_rail" });
-    expect(full[RIDGE_ID]).toContain(expectedFirstCastFailureForecast(ridgeFailure.alarm, true));
-    expect(full[STOCKWAY_ID]).toContain(
-      expectedFirstCastFailureForecast(stockwayFailure.alarm, true),
-    );
+    expect(full[RIDGE_ID]).not.toMatch(/fouled first cast|feed spent|recovery remains/i);
+    expect(full[STOCKWAY_ID]).not.toMatch(/fouled first cast|feed spent|recovery remains/i);
     const delayedWindow = session.prepareQuestStart(WOLF_ID, RIDGE_ID).dispatchWindow;
+    const delayedSummariesBySupport: Record<string, string[]> = {
+      [RIDGE_ID]: [],
+      [STOCKWAY_ID]: [],
+    };
     for (const knowledgeIds of [
       [],
       ["albany:knowledge_relief_cade_fodder"],
       ["albany:knowledge_wolf_limited_aid_only"],
       ["albany:knowledge_relief_cade_fodder", "albany:knowledge_wolf_limited_aid_only"],
     ]) {
-      for (const [optionId, alarm] of [
-        [RIDGE_ID, ridgeFailure.alarm],
-        [STOCKWAY_ID, stockwayFailure.alarm],
-      ] as const) {
+      for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
         const projection = wolfHillRoutePresentation({
           launchId: "albany:wolf_hill_approach",
           optionId,
           knowledgeIds,
           dispatchWindow: delayedWindow,
         });
-        expect(projection?.tradeoffSummary).toContain(
-          expectedFirstCastFailureForecast(alarm, true),
+        expect(projection?.tradeoffSummary).not.toMatch(
+          /fouled first cast|feed spent|recovery remains|clean lure reaches|whole herd|scatters two cattle/i,
         );
+        if (projection) delayedSummariesBySupport[optionId]!.push(projection.tradeoffSummary);
         expect(projection?.tradeoffSummary.length).toBeLessThanOrEqual(
           WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
         );
       }
     }
+    expect(new Set(delayedSummariesBySupport[RIDGE_ID])).toHaveLength(1);
+    expect(new Set(delayedSummariesBySupport[STOCKWAY_ID])).toHaveLength(1);
     for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
       expect(full[optionId]?.startsWith(expectedBriefing)).toBe(true);
-      expect(compact[optionId]).toBe(full[optionId]);
+      expect(compact[optionId]).toBe(
+        optionId === RIDGE_ID ? NEUTRAL_RIDGE_SUMMARY : NEUTRAL_STOCKWAY_SUMMARY,
+      );
     }
 
     const api = createToolApi({ root: ROOT });
@@ -655,6 +689,27 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     expect(cli.split(expectedBriefing)).toHaveLength(3);
   });
 
+  it("keeps a sealed on-time dispatch briefing once in the compact Station projection", () => {
+    const { session, quest } = routeCard(
+      "albany:oath_full_compact_duty",
+      "albany:relief_resident_shelter",
+      {
+        registrationId: "albany:road_warden",
+        sourceId: "albany:source_rowan_civic_docket",
+        preparationId: "albany:prep_works_fortification",
+        allyId: "albany:ally_june_cattle_first",
+      },
+    );
+    const briefing =
+      "Dispatch 55m—on time; roads change arrival, not dispatch. " +
+      "No opening-delay failure pressure.";
+    expect(dispatchBriefing(session)).toBe(briefing);
+    const full = fullSummaries(quest);
+    expectCompactSharedDispatchOnce(session, full, briefing);
+    expect(full[RIDGE_ID]).toBe(`${briefing} ${NEUTRAL_RIDGE_SUMMARY}`);
+    expect(full[STOCKWAY_ID]).toBe(`${briefing} ${NEUTRAL_STOCKWAY_SUMMARY}`);
+  });
+
   it("keeps the exact 65m open-support → 80m sealed dispatch trace truthful on every surface", () => {
     const { session, quest: beforeJune } = routeCard(
       "albany:oath_limited_aid_only",
@@ -666,8 +721,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       },
     );
     const beforeBriefing =
-      "Dispatch 65m committed; optional Station support remains (final 65–80m). " +
-      "Delay is already certain; starting now seals the current total.";
+      "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. " +
+      "Compare; named choice commits. Start Wolf-Winter to decline the rest.";
     for (const summary of Object.values(fullSummaries(beforeJune))) {
       expect(summary?.startsWith(beforeBriefing)).toBe(true);
     }
@@ -678,8 +733,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     const pendingQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
     if (!pendingQuest?.launch) throw new Error("Expected the pending-June Wolf route card.");
     const pendingBriefing =
-      "Dispatch 65m committed; optional Station support remains (final 65–80m). " +
-      "Delay is already certain; starting now seals the current total.";
+      "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. " +
+      "Compare; named choice commits. Start Wolf-Winter to decline the rest.";
     const pendingFull = fullSummaries(pendingQuest);
     const pendingCompact = compactSummaries(session);
     for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
@@ -732,9 +787,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
 
     const pendingMarkup = renderQuestNotice(pendingQuest);
     const pendingCli = renderQuestLaunch(pendingQuest);
-    expect(pendingMarkup.match(/Dispatch 65m committed; optional Station support/g)).toHaveLength(
-      2,
-    );
+    expect(pendingMarkup.match(/Start Wolf-Winter to decline the rest\./g)).toHaveLength(2);
     expect(pendingCli.split(pendingBriefing)).toHaveLength(3);
     const api = createToolApi({ root: ROOT });
     const restored = api.restore_overworld_session({
@@ -778,8 +831,9 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_works_fortification",
       committedMinutes: 40,
       maximumMinutes: 55,
-      pressureCopy:
-        "Every remaining support combination stays on time; starting now declines them.",
+      expectedBriefing:
+        "Set: background, promise, report. Dispatch 40m; final 40–55m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
+      expectedBytes: 146,
     },
     {
       label: "threshold crossing",
@@ -788,8 +842,9 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_drover_route",
       committedMinutes: 60,
       maximumMinutes: 75,
-      pressureCopy:
-        "Starting now seals the current total; optional support can cross the delay threshold.",
+      expectedBriefing:
+        "Set: background, promise, report. Dispatch 60m; final 60–75m; support can delay dispatch. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
+      expectedBytes: 161,
     },
     {
       label: "guaranteed delayed",
@@ -798,16 +853,34 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_drover_route",
       committedMinutes: 65,
       maximumMinutes: 80,
-      pressureCopy: "Delay is already certain; starting now seals the current total.",
+      expectedBriefing:
+        "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
+      expectedBytes: 147,
     },
   ])(
     "classifies an open field-team range that is $label without inventing a final forecast",
-    ({ oathId, sourceId, preparationId, committedMinutes, maximumMinutes, pressureCopy }) => {
+    ({
+      oathId,
+      sourceId,
+      preparationId,
+      committedMinutes,
+      maximumMinutes,
+      expectedBriefing,
+      expectedBytes,
+    }) => {
       const { session } = routeCard(oathId, "albany:relief_resident_shelter", {
         registrationId: "albany:road_warden",
         sourceId,
         preparationId,
       });
+      const boardQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
+      if (!boardQuest?.launch) throw new Error("Expected the open-support route card.");
+      const briefing = dispatchBriefing(session);
+      expect(briefing).toBe(expectedBriefing);
+      expect(Buffer.byteLength(briefing, "utf8")).toBe(expectedBytes);
+      expect(briefing.length).toBeLessThanOrEqual(STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT);
+      expectCompactSharedDispatchOnce(session, fullSummaries(boardQuest), briefing);
+
       session.talkToCharacter(WORLD.opening_ally!.contact);
       const pendingWindow = deriveQuestDispatchPresentationWindow({
         questId: WOLF_ID,
@@ -825,13 +898,18 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         finalMinutes: { minimum: committedMinutes, maximum: maximumMinutes },
         receipt: { juneCommitment: { kind: "open_optional" } },
       });
+      const pendingQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
+      if (!pendingQuest?.launch) throw new Error("Expected the pending field-team route card.");
+      for (const summary of Object.values(fullSummaries(pendingQuest))) {
+        expect(summary?.startsWith(briefing)).toBe(true);
+      }
       for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
         const summary = wolfHillRoutePresentation({
           launchId: "albany:wolf_hill_approach",
           optionId,
           dispatchWindow: pendingWindow,
         })?.tradeoffSummary;
-        expect(summary).toContain(pressureCopy);
+        expect(summary).toContain(expectedBriefing);
         expect(summary).not.toMatch(/unverified|fouled first cast/i);
         expect(summary?.length).toBeLessThanOrEqual(WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT);
       }

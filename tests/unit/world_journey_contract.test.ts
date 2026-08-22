@@ -144,6 +144,7 @@ describe("journey contract v3 goals", () => {
     let state = decideUntil(createInitialJourneyContractSnapshot(), 40);
 
     for (const checkpoint of [40, 80, 120, 160]) {
+      const beforePresentation = structuredClone(state);
       const view = journeyPresentation(state);
       expect(view).toMatchObject({
         status: "awaiting_choice",
@@ -154,17 +155,18 @@ describe("journey contract v3 goals", () => {
           checkpoint,
           goalVersion: null,
           goalId: null,
-          message: `You reached checkpoint threshold ${String(checkpoint)} at a safe break. Continue until the current goal is completed or the first safe break at or after checkpoint threshold ${String(checkpoint + 40)}, whichever comes first, or end this journey?`,
+          message: `You reached safe journey break ${String(checkpoint)}. Any active quest is paused exactly where it stands. Continue resumes this exact state; End closes the journey here. If you continue, the next choice appears when the current goal completes or the first safe journey break at or after decision ${String(checkpoint + 40)}, whichever comes first.`,
           options: [
             {
               id: "continue",
-              label: `Continue toward checkpoint ${String(checkpoint + 40)}`,
-              consequence: `Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold ${String(checkpoint + 40)}, whichever comes first.`,
+              label: "Continue from this exact state",
+              consequence: `Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision ${String(checkpoint + 40)}, whichever comes first.`,
             },
             { id: "end" },
           ],
         },
       });
+      expect(state).toEqual(beforePresentation);
       expect(view.goalGuidance).toBe(INITIAL_JOURNEY_GOAL_GUIDANCE);
       expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
       expect(() => decide(state, "blocked")).toThrow(/choose whether to continue or end/i);
@@ -201,9 +203,9 @@ describe("journey contract v3 goals", () => {
       options: [
         {
           id: "continue",
-          label: "Continue toward checkpoint 40",
+          label: "Continue from this exact state",
           consequence:
-            "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+            "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
         },
         { id: "end" },
       ],
@@ -262,13 +264,13 @@ describe("journey contract v3 goals", () => {
     });
     expect(journeyPresentation(completed).pendingChoice).toMatchObject({
       message:
-        "You completed your current goal after 41 meaningful decisions. Continue until another goal is completed or the first safe break at or after checkpoint threshold 80, whichever comes first, or end this journey?",
+        "You completed your current goal after decision 41. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when another goal completes or the first safe journey break at or after decision 80, whichever comes first.",
       options: [
         {
           id: "continue",
-          label: "Continue toward checkpoint 80",
+          label: "Continue from this exact state",
           consequence:
-            "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 80, whichever comes first.",
+            "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 80, whichever comes first.",
         },
         { id: "end" },
       ],
@@ -403,13 +405,13 @@ describe("journey contract v3 goals", () => {
     });
     expect(journeyPresentation(state).pendingChoice).toMatchObject({
       message:
-        "You completed your current goal at the first safe break for checkpoint threshold 80. Continue until another goal is completed or the first safe break at or after checkpoint threshold 120, whichever comes first, or end this journey?",
+        "You completed your current goal at safe journey break 80. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when another goal completes or the first safe journey break at or after decision 120, whichever comes first.",
       options: [
         {
           id: "continue",
-          label: "Continue toward checkpoint 120",
+          label: "Continue from this exact state",
           consequence:
-            "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 120, whichever comes first.",
+            "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 120, whichever comes first.",
         },
         { id: "end" },
       ],
@@ -534,11 +536,11 @@ describe("journey contract v3 goals", () => {
     });
     const presented = journeyPresentation(surfaced).pendingChoice;
     expect(presented?.message).toBe(
-      "At the first safe break after checkpoint threshold 40, with 45 meaningful decisions, the overdue checkpoint choice is ready. Continue until the current goal is completed or the first safe break at or after checkpoint threshold 80, whichever comes first, or end this journey?",
+      "At the first safe journey break after decision 40, now at decision 45, this journey choice is ready. Any active quest is paused exactly where it stands. Continue resumes this exact state; End closes the journey here. If you continue, the next choice appears when the current goal completes or the first safe journey break at or after decision 80, whichever comes first.",
     );
     expect(presented?.options[0]).toMatchObject({
       id: "continue",
-      label: "Continue toward checkpoint 80",
+      label: "Continue from this exact state",
     });
     expect(JourneyContractSnapshotSchema.parse(surfaced)).toEqual(surfaced);
     expect(chooseJourney(surfaced, "continue").state).toMatchObject({
@@ -575,7 +577,7 @@ describe("journey contract v3 goals", () => {
     expect(continued.nextCheckpoint).toBe(120);
     expect(JourneyContractSnapshotSchema.parse(continued)).toEqual(continued);
     expect(journeyPresentation(surfaced).pendingChoice?.options[0]?.label).toBe(
-      "Continue toward checkpoint 120",
+      "Continue from this exact state",
     );
   });
 
@@ -807,7 +809,7 @@ describe("journey contract presentation context", () => {
     );
     expect(view.pendingChoice?.options[0].label).toBe("Continue to decide the dawn wagon");
     expect(view.pendingChoice?.options[0].consequence).toBe(
-      "Continue to allocate the wagon. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first. Your choice will shape the next lead.",
+      "Continue to allocate the wagon. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first. Your choice will shape the next lead.",
     );
     expect(view.storyChoice).toEqual(storyChoice);
     expect(Object.keys(view.storyChoice!).sort()).toEqual(["id", "message", "options"]);

@@ -145,6 +145,7 @@ function cycleEvidenceFixture(expectedCommit: string): {
   const receipt = { ...receiptPayload, receiptHash: hashState(receiptPayload) };
   const interview = {
     schema_version: 2,
+    issue_consistency_version: 1,
     play_mode: "pure",
     start_surface: "fresh_overworld",
     retention_eligible: true,
@@ -167,6 +168,10 @@ function cycleEvidenceFixture(expectedCommit: string): {
 I followed the fresh-overworld goal until the journey checkpoint, then chose to end.
 
 Clarity: 4/5. Enjoyment: 4/5.
+
+## Bugs or design flaws
+
+None observed.
 
 ## Verdict
 

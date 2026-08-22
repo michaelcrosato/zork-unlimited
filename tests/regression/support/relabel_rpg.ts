@@ -160,6 +160,14 @@ function relabelSkillCheck(
     ...(s.stakes ? { stakes: s.stakes } : {}),
     on_success: s.on_success.map((e) => relabelEffect(e, r, rv)),
     on_failure: s.on_failure.map((e) => relabelEffect(e, r, rv)),
+    ...(s.on_failure_when
+      ? {
+          on_failure_when: s.on_failure_when.map((branch) => ({
+            conditions: branch.conditions.map((condition) => relabelCondition(condition, r, rv)),
+            effects: branch.effects.map((effect) => relabelEffect(effect, r, rv)),
+          })),
+        }
+      : {}),
   };
 }
 
@@ -408,6 +416,9 @@ export function relabelRpgPack(pack: RpgPack): {
           Object.entries(pack.meta.vars_init).map(([k, v]) => [rvar(k), v]),
         ),
         flags_init: pack.meta.flags_init.map((f) => r(f)),
+        ...(pack.meta.seeded_opening_flags !== undefined
+          ? { seeded_opening_flags: pack.meta.seeded_opening_flags.map((f) => r(f)) }
+          : {}),
         max_score: pack.meta.max_score,
         ...(pack.meta.combat_guaranteed !== undefined
           ? { combat_guaranteed: pack.meta.combat_guaranteed }

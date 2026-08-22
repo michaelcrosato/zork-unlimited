@@ -9,6 +9,7 @@
  */
 import { createHash } from "node:crypto";
 import {
+  CODEX_GAME_DIRECT_MCP_CONTRACT,
   CODEX_SPARK_DIRECT_MCP_CONTRACT,
   CODEX_STRICT_CURRENT_CONTRACT,
   CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES,
@@ -246,11 +247,15 @@ export function usageRecordFromStrictStreamDiagnostic(diagnosticText) {
     diagnostic.canonical !== false ||
     diagnostic.ignored !== true ||
     diagnostic.kind !== "strict_stream_rejection_diagnostic" ||
-    ![CODEX_STRICT_CURRENT_CONTRACT, CODEX_SPARK_DIRECT_MCP_CONTRACT].includes(
-      diagnostic.transport_contract,
-    ) ||
+    ![
+      CODEX_STRICT_CURRENT_CONTRACT,
+      CODEX_SPARK_DIRECT_MCP_CONTRACT,
+      CODEX_GAME_DIRECT_MCP_CONTRACT,
+    ].includes(diagnostic.transport_contract) ||
     (diagnostic.surface === "private_rollout" &&
-      diagnostic.transport_contract !== CODEX_SPARK_DIRECT_MCP_CONTRACT) ||
+      ![CODEX_SPARK_DIRECT_MCP_CONTRACT, CODEX_GAME_DIRECT_MCP_CONTRACT].includes(
+        diagnostic.transport_contract,
+      )) ||
     !Array.isArray(failures) ||
     !hasExactKeys(diagnostic.rejection, ["failure"]) ||
     !failures.includes(diagnostic.rejection.failure) ||

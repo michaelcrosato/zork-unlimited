@@ -1,0 +1,141 @@
+id: bug_0579
+title: "Albany's first-level dispatch still exposed six administrative categories"
+pack: overworld (Albany → Wolf-Winter departure)
+reported_by: >
+  five verified fresh-overworld report narratives compiled in
+  ai-runs/feedback/20260814T094058Z across production-identical clean revisions;
+  three structured hotspot rows (1801, 1802, and 1803) explicitly classify the
+  terminology cluster
+severity: S1
+
+evidence:
+  feedback_compile: ai-runs/feedback/20260814T094058Z/report-manifest.json
+  tested_commits:
+    - 198a88d24f7aea5201b8a391fb83c221f6e99580
+    - a145220e4875400fe5a4dfa5a6f69849fe97e94f
+  report_sha256:
+    - 4ec7cf19d3a6e7ead6b560a052962d8d8e9e415fc175562dab099402f520b57e
+    - 6d2d391881d71f324c27952f6895a92cbf9763fc64f57ac0db74ec2b1b6c401e
+    - 27997f963b4f0452ca30de32577b6f3d53f8dce6026580255ba2935e132e7200
+    - 2c7a0c01438b3a2caa90359b84179e5a44eadf63438c73d56d812351e61f8ecf
+    - a449b7e5637d71c24f812ec7c503d757a22202a535c036a9a2ada7df4cf3bdab
+  boundary: >
+    Four compiler-verified actionable fleet reports observed clean
+    a145220e4875400fe5a4dfa5a6f69849fe97e94f;
+    the sealed pure report observed clean 198a88d24f7aea5201b8a391fb83c221f6e99580.
+    Those commits differ only in AI_LOOP_STATE.md, so the tested game content is the
+    same, but they are not one exact revision. All five narratives mention Albany's
+    opening role/duty/evidence vocabulary or terminology density; only reports 1801,
+    1802, and 1803 contribute structured compiled hotspot rows that explicitly
+    classify this terminology cluster. Report 1800 also reports a separate Gallowmere
+    checkpoint defect, and the sealed pure report also describes broader
+    dual-state-layer friction. The bundle is ordinary feedback, not pilot metrics,
+    and gives no authority for provider or seed work.
+
+symptom: >
+  The opening projected role, duty, evidence, preparation, relief allocation, and
+  field team as six peer administrative categories. Full, compact MCP, terminal, and
+  UI surfaces repeated those labels even though the player's first decision only needs
+  a background, a Wolf-Winter promise and report, then three optional forms of support.
+
+root_cause: >
+  bug_0577 removed repeated facts and bug_0578 made Station support directly actionable,
+  but both retained the engine's durable slot names as first-level player language.
+  The Station guidance also described support generically instead of grouping what was
+  already set apart from what remained optional.
+
+fix: >
+  Translate only first-level presentation: role to background, duty to Wolf-Winter
+  promise, evidence to report, preparation to field kit, relief allocation to relief
+  wagon, and field team to second rider. Give quick setup one short ready-made-dispatch
+  sentence and make Station guidance and render groups derive from currently open rows.
+  Add a display-only ready-made-dispatch summary before the exact MCP consequence, and
+  teach the blind prompt the durable-slot/player-label mapping. Keep Station tuple
+  slots/version, story kinds, ids, actions, authored consequences, journal bytes, and
+  exact inspected terms unchanged.
+
+deterministic_witnesses:
+  - "full opening messages use the six player labels and keep every option id in authored order"
+  - "ready-made setup remains one canonical oath plus source pair and all four plans stay open"
+  - "compact tuples retain role, duty, evidence, preparation, relief_allocation, and field_team while prompt and Station guidance supply the player labels"
+  - "Station V4 guidance names background/promise/report as already set and field kit/relief wagon/second rider as optional"
+  - "after one support choice, only the other two rows remain optional; after all three, no optional support group remains"
+  - "terminal and UI headings, recaps, grouping labels, and action logs use the same first-level vocabulary"
+  - "full UI and terminal choice guidance/card labels name the live background, promise, report, field kit, relief wagon, or second-rider category"
+  - "custom and ready-made recap titles project Duty as Promise, and the solo riding choice projects Ride alone, while exact receipts and active terms remain authored"
+  - "MCP inspection returns the same exact consequence and selecting after inspection yields the same snapshot hash"
+  - "the solo option keeps its id and zero-time mechanics while its first-level label becomes Ride alone"
+  - "ready-made full and compact action results place optional displaySummary before the byte-exact consequence; ordinary results omit it"
+  - "the emitted compact Station legend maps every durable tuple slot to its player label without changing tuple keys or V4"
+
+mechanics_unchanged:
+  - "story ids, kinds, reveal id, tuple slots, option order, and action tuples"
+  - "costs, dispatch minutes, checks, consequences, field terms, and strategy access"
+  - "quest outcomes, checkpoints, content hashes, snapshots, RNG, providers, and seeds"
+
+nonclaims:
+  - "Five narratives support the broader clarity cluster, while three structured hotspot rows explicitly classify it. None quantify churn, retention, or causal lift."
+  - "The pass does not rewrite authored consequence or deep inspection prose, so durable terms such as duty inside an exact receipt remain exact."
+  - "The optional displaySummary is an additive story-choice action-result field; Station compact tuples and their V4 version remain unchanged."
+  - "The emitted legend contract advances the overall compact view from v46 to v47; the Station board itself remains V4 with identical tuple slots and actions."
+  - "This does not change Wolf-Winter tactics, recommend a plan, or close any player choice."
+  - "Gallowmere and checkpoint presentation are outside this cycle and remain untouched."
+  - "The out-of-scope recommendation e2544079 is not implemented by this trace."
+
+production:
+  - blind-tester/prompt-overworld.md
+  - docs/DECISION_LOG.md
+  - docs/STARTING_SLICE.md
+  - src/mcp/compact_overworld_result.ts
+  - src/world/compact_view.ts
+  - src/world/opening_dispatch_briefing.ts
+  - src/world/opening_registration_presentation.ts
+  - src/world/opening_relief_oath_presentation.ts
+  - src/world/opening_ally_presentation.ts
+  - src/world/opening_ally.ts
+  - src/world/opening_departure_recap.ts
+  - src/world/station_dispatch_board.ts
+  - src/world/session.ts
+  - bin/terminal_story_choice.ts
+  - bin/overworld_play.ts
+  - ui/src/JourneyStoryChoiceScreen.tsx
+  - ui/src/DepartureRecap.tsx
+  - ui/src/App.tsx
+
+tests:
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/starting_slice/opening_departure_recap.test.ts
+  - tests/starting_slice/station_dispatch_board.test.ts
+  - tests/starting_slice/station_dispatch_impact.test.ts
+  - tests/regression/registration_progressive_disclosure.test.ts
+  - tests/regression/overworld_optional_departure_interactions.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/shipped_compact_prose_fidelity.test.ts
+  - tests/starting_slice/progressive_event_disclosure.test.ts
+  - tests/unit/compact_journey_projection.test.ts
+  - tests/unit/compact_legend.test.ts
+  - tests/unit/compact_overworld_result.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/terminal_story_choice_grouping.test.ts
+  - tests/unit/ui_story_choice_summary_first.test.ts
+  - tests/unit/ui_overworld.test.ts
+  - tests/unit/world_opening_registration_doctrine_runtime.test.ts
+  - tests/unit/world_opening_registration_helpers.test.ts
+  - tests/unit/world_opening_ally.test.ts
+  - tests/unit/campaign_character_view.test.ts
+  - tests/unit/world_quest_launch.test.ts
+  - tests/unit/world_opening_stale_choice_language.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/starting_slice/opening_dispatch_briefing.test.ts tests/starting_slice/opening_departure_recap.test.ts tests/starting_slice/station_dispatch_board.test.ts
+  - npx vitest run tests/regression/registration_progressive_disclosure.test.ts tests/regression/overworld_optional_departure_interactions.test.ts
+  - npx vitest run tests/unit/mcp_journey_surface.test.ts tests/unit/terminal_story_choice_grouping.test.ts tests/unit/ui_story_choice_summary_first.test.ts tests/unit/ui_overworld.test.ts
+  - npx vitest run tests/regression/overworld_cli.test.ts -t "default Civic briefing compact|structured Station decisions"
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts -t "does not advertise or honor QA-only quest graph and seed overrides"
+  - git diff --check

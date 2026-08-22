@@ -402,6 +402,9 @@ if [[ "$OVERWORLD" == "1" ]]; then
     CODEX_TRANSPORT_CONTRACT="spark-direct-mcp-v1"
     PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"
     PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/spark-direct-mcp-v1.md"
+  elif [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.6-terra" ]]; then
+    CODEX_TRANSPORT_CONTRACT="game-direct-mcp-v1"
+    PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/game-direct-mcp-v1.md"
   else
     CODEX_TRANSPORT_CONTRACT="strict-code-mode-v2"
     PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/strict-code-mode-v2.md"
@@ -468,7 +471,7 @@ CODEX_PREFLIGHT_EXIT=42
 CODEX_STRICT_STREAM_REJECT_EXIT=43
 CODEX_VERSION_TIMEOUT_SECONDS=5
 CODEX_VERSION_MAX_BYTES=1024
-SPARK_DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION="0.146.0"
+DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION="0.146.0"
 SELECTED_CODEX_BIN=""
 SELECTED_CODEX_LAUNCHER=""
 CODEX_BIN_IDENTITY=""
@@ -619,10 +622,11 @@ preflight_codex_client() {
     echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": expected cli=$EXPECTED_CODEX_CLI_VERSION but observed cli=$version." >&2
     return "$CODEX_PREFLIGHT_EXIT"
   fi
-  if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" && \
-        "$version" != "$SPARK_DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION" ]]; then
-    echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": spark-direct-mcp-v1 requires exact codex-cli $SPARK_DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION but observed cli=$version." >&2
-    echo "Set BLIND_CODEX_BIN to one absolute codex-cli $SPARK_DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION executable path; no provider was launched." >&2
+  if [[ ( "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" || \
+          "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ) && \
+        "$version" != "$DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION" ]]; then
+    echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": $CODEX_TRANSPORT_CONTRACT requires exact codex-cli $DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION but observed cli=$version." >&2
+    echo "Set BLIND_CODEX_BIN to one absolute codex-cli $DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION executable path; no provider was launched." >&2
     return "$CODEX_PREFLIGHT_EXIT"
   fi
   CODEX_CLI_VERSION="$version"
@@ -1000,7 +1004,8 @@ record_playthrough_terminal() {
   CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
   CODEX_TRANSPORT_FEATURE_ARGS=(--enable code_mode_only --disable tool_suggest)
   CODEX_PLAYER_PROFILE_ARGS=()
-  if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" ]]; then
+  if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" || \
+        "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ]]; then
     CODEX_TRANSPORT_FEATURE_ARGS=(--disable code_mode_only --disable tool_suggest)
     CODEX_PLAYER_PROFILE_ARGS=(
       --config 'tools.update_plan.enabled=false'
@@ -1011,8 +1016,18 @@ record_playthrough_terminal() {
       --config 'include_permissions_instructions=false'
       --config 'include_collaboration_mode_instructions=false'
       --config 'instructions="You are an autonomous first-time player of an AdventureForge text TTRPG. Follow the user play request. Use only preloaded AdventureForge gameplay functions and exact current player-visible values. Never use coding, planning, search, or MCP resource tools."'
-      --config "model_catalog_json=\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-spark-v1.json\""
     )
+    if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" ]]; then
+      CODEX_PLAYER_PROFILE_ARGS+=(
+        --config "model_catalog_json=\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-spark-v1.json\""
+      )
+    elif [[ "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ]]; then
+      CODEX_PLAYER_PROFILE_ARGS+=(
+        --config "model_catalog_json=\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-terra-v1.json\""
+        --config 'agents.enabled=false'
+        --config 'model_reasoning_summary="none"'
+      )
+    fi
   fi
   # Re-probe the same pinned executable immediately before the gameplay process
   # in case the selected file changed after the early gate.
@@ -1167,6 +1182,7 @@ INITIAL_VERIFY_LOG="$OUT.verify.initial.log"
 set +e
 ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
   --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" \
+  --require-issue-consistency \
   --write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG" ) \
   >"$INITIAL_VERIFY_LOG" 2>&1
 VERIFY_STATUS=$?
@@ -1233,6 +1249,7 @@ if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts \
     "$RECEIPT_BIND_CANDIDATE_ARG" --require-mode pure \
     --run-evidence "$RUN_EVIDENCE_ARG" \
+    --require-issue-consistency \
     --write-run-sidecar "$RECEIPT_BIND_CANDIDATE_SIDECAR_ARG" ) \
     >"$OUT.verify.receipt-bind-candidate.log" 2>&1
   RECEIPT_BIND_CANDIDATE_VERIFY_STATUS=$?
@@ -1248,6 +1265,7 @@ if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   set +e
   ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
     --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" \
+    --require-issue-consistency \
     --write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG" ) \
     >"$OUT.verify.receipt-bind-canonical.log" 2>&1
   RECEIPT_BIND_VERIFY_STATUS=$?

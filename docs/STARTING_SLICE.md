@@ -201,27 +201,104 @@ it is **not yet milestone-certified**:
   declined seal tied to the actual hill approach. Current v11 saves reject a
   stripped or altered seal; the sole supported structural predecessor, v10,
   upgrades without authored-copy rewriting. The
-  human, CLI, and compact Station surfaces now use the same two-tier briefing:
+  human and CLI Station surfaces keep their established two-tier briefing:
   direct launch, one compressed selected-plan clock, and the three optional
   spoke names lead; opening a spoke shows human stakes, cost, and give-up, while
   check math, authenticated timing proof, and full consequence stay behind an
-  exact read-only expansion. No action, outcome, or meaningful decision is
+  exact read-only expansion. Compact MCP now stages those same optional spokes
+  separately as described below. No action, outcome, or meaningful decision is
   removed;
-- the launch-first Station follow-up now keeps both legal hill roads ahead of
-  optional support in terminal and browser clients. The authenticated full
-  board v3 carries the dispatch clock, all six selected/open plan rows, mapped
-  support actions, and launch card; compact v45 emits only
-  `[3, questId, guidance, dispatch|null, rows]` and retains canonical road
-  detail in `quests` / `quest_starts`. It omits redundant compact
+- the launch-first Station follow-up preserves the existing terminal/browser
+  road and support order while changing only the compact MCP hierarchy. The
+  authenticated full board V6 carries the dispatch clock, all six selected/open plan rows, mapped
+  support actions, and launch card; compact v49 emits
+  `[6, questId, dispatchStatus, dispatch|null, rows, overview|null]`, with
+  `dispatch=[state, minutes, timing|null, remainingOptionalCount]`, and retains
+  canonical road detail in `quests` / `quest_starts`. It omits redundant compact
   `departure_recap`, `departure_interactions`, and `departure_contact_leads`
   only when every current action and status is exactly indexed; malformed or
-  unmapped sources fall back to the established surfaces. The exact Station
-  compact slice falls from 2,470 to 2,107 UTF-8 bytes (14.7%). Actions, terms,
-  state, saves, hashes, RNG, outcomes, and accepted-decision counts are
-  unchanged, with focused proof in `station_dispatch_board.test.ts`,
+  unmapped sources fall back to the established surfaces. Before review, the
+  compact board omits all current `open_optional` rows and exposes one exact
+  `[id, label]` read-only overview. Its label names only the support categories
+  still open: specialist kits disclose their authenticated Repair, Streetwise,
+  and Mediation domains; the relief wagon and cattle-first second rider appear
+  only while their rows remain open. Calling
+  `get_overworld_session_context` with that id records a separate durable,
+  idempotent receipt; refresh and export/restore retain it, while a forged id
+  fails and launch, a fully sealed support plan, or journey End clears it. After
+  the canonical mutation, a pure reveal-only call returns a typed V1
+  `station_dispatch_reveal` delta rather than repeating the full context. It is
+  bound to the immediately retained `if_snapshot_hash` and contains that base
+  hash plus the exact revealed board; the outer response carries the new
+  `snapshot_hash` and `overworld_session_id` and omits `journey` / `context`.
+  The player keeps the prior context, routes, `quests`, and `quest_starts`,
+  replaces only the board, and adopts the outer hash. Missing or stale bases
+  reject before mutation. Explicit Station-detail expansions still receive the
+  complete canonical response, as do full and non-pure callers; an unexpected
+  post-mutation board projection also degrades to that complete response rather
+  than turning a successful receipt into an error. After
+  review, the same V5 five-field optional rows and authenticated inspect/talk
+  actions return in their established order. Each open row now starts its
+  purpose with `Optional kit`, `Optional wagon`, or `Optional rider`, then says
+  that inspection or June's talk happens before choosing; the named danger,
+  one-crisis wagon boundary, one cattle-line boundary, and no-combat boundary
+  remain explicit. Selected and non-actionable rows remain null/null. The shared
+  authenticated dispatch briefing now separates the already-set background,
+  promise, and report from support: support can be compared before a named choice
+  commits, and starting Wolf-Winter declines everything still open. Its dynamic
+  timing clause says exactly `all on time`, `support can delay dispatch`, or
+  `already late`. The briefing appears once on the compact board; only then is
+  that exact prefix removed from each compact road, so all route-specific time,
+  supply, fatigue, alarm, and weather facts remain. Row staging is compact-MCP-
+  only; full route cards, terminal, and browser share the same status line. The
+  initial board is 578 UTF-8 bytes and its legend is 741 bytes. The pure prompt is 15,720 bytes
+  and the pure catalogue is 16,773. With the unchanged 2,042-byte fresh context,
+  the aggregate is 34,535 bytes, below sealed V6's 34,868 and V5's 35,207.
+  First-Station prompt + catalogue + 4,921-byte context + newly delivered legend
+  is 38,155 bytes versus sealed V6's 38,495, V5's 38,619, and the frozen v47/V4
+  baseline 39,261. The exact current common V1 reveal fixture is 1,081 bytes;
+  a natural Ledger Advocate / Aid-Only / Jamie threshold fixture is exactly
+  1,098, both under the unchanged 1,100-byte regression budget. Substituting
+  only the current shared briefing into the ten authenticated `e5310845` reveal
+  bodies likewise serializes them at 1,083–1,098 bytes; the tested revision
+  itself returned 1,090–1,099 before this correction. Those pilot substitutions
+  are counterfactual exact-byte calculations, not live player responses. This
+  is not a global runtime limit, and full detail-expansion
+  responses are intentionally outside that narrow budget. The complete
+  Road-Warden ready-dispatch response and canonical full-mode June response each
+  carry the shared open status twice; replacing its old 153-byte form with the
+  current 146-byte form reduces those fixtures by exactly 14
+  bytes, to 9,181 and 8,916 respectively. Their fields and response shapes are
+  unchanged. The receipt may change the save
+  hash but accepts no gameplay or journey decision. Actions, terms, mechanics,
+  costs, gameplay state/effects except that receipt, RNG, outcomes, and
+  accepted-decision counts are unchanged, with
+  focused proof in `station_dispatch_board.test.ts`,
   `opening_dispatch_briefing.test.ts`, `opening_departure_recap.test.ts`,
-  `overworld_cli.test.ts`, `mcp_journey_surface.test.ts`,
+  `overworld_cli.test.ts`, `mcp_pure_play_mode.test.ts`,
+  `blind_pure_prompt_contract.test.ts`, `mcp_journey_surface.test.ts`,
   `ui_overworld.test.ts`, and `compact_legend.test.ts`;
+- the exact pure June talk authorized by a revealed V6 `field_team` row now has
+  its own base-bound V1 modal transport. A non-consuming full observation first
+  proves one open June talk row and no active story modal; only then does the
+  server require the latest `expected_snapshot_hash`, before mutation. The
+  response keeps outer `overworld_session_id` / new `snapshot_hash`, the full
+  current compact `journey` including the mandatory ally `storyChoice`,
+  `journeyDecision`, compact `result`, and the complete canonical
+  `legend_delta` when present, then adds
+  `station_dispatch_modal:{version:1,base_snapshot_hash}`. It omits raw
+  `session_id` and repeated `context`. The retained context stays authoritative
+  except that the new story modal supersedes its old board actions; the following
+  exact ally choice remains a full canonical response and re-synchronizes
+  context. Missing or stale bases reject before mutation, while an ineligible or
+  unexpectedly shaped call stays canonical. The current deterministic envelope
+  is exactly 3,908 UTF-8 bytes under a 4,000-byte budget. In the fresh exact-build
+  pilot, the eight June responses were 71,191 bytes (seven 8,873 and one 9,080);
+  replaying their exact fields through this complete-legend envelope is 31,264
+  bytes, 39,927 / 56.08% less. The pure tool catalogue remains 16,773 bytes and
+  every entry digest remains unchanged because no tool description or schema
+  changed. All support commits, generic contacts, and full/non-pure June talks
+  retain their complete canonical responses;
 - four early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.
@@ -383,6 +460,49 @@ provenance warning, after ordinary replay and integrity checks. Contract proof l
 [`mcp_journey_surface.test.ts`](../tests/unit/mcp_journey_surface.test.ts), and
 [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 
+The first narrative-first selected-receipt follow-up left that disclosure
+boundary intact. Its valid ten-player pilot put every player through the same
+Road-Warden and ready-made Aid-Only/Hayden setup before four different
+Wolf-Winter strategies, yet every report still described front-loaded Albany
+terminology and the cohort missed clarity, enjoyment, and initial-goal
+continuation. That correction led with the plain defense result and explained
+the later plan benefits before their `LURE` and `HUNT` aliases, but deliberately
+kept the complete Aid-Only and Hayden branch sequence in the selected receipt;
+it added no progressive-disclosure flow.
+
+The fresh exact-build follow-up on `360ada1e` completed Wolf-Winter 10/10 with
+no stuck run and passed continuation and strategy-distribution gates, but still
+missed clarity at 39/50 and enjoyment at 40/50. Seven players selected the exact
+ready-made Road-Warden receipt. One filed a direct S1 against its premature plan
+aliases and branch conditions; the cohort's only 3/5 clarity player also saw
+that receipt, skipped Station support review, and still named route/support/
+conditional-plan terminology as the worst moment. The selected preview now
+keeps only defense 4, the Aid-Only clean/foul boundary, and Hayden's relevance
+to holding Cade's ground. The byte-identical inspected card still carries the
+exact 132-character benefit, and Wolf-Winter still states the public brace,
+frost split, unbound rail, yearling, bare-spear, and Works exclusions at the
+steading before commitment. The preview falls from 432 to 286 ASCII bytes and
+the authenticated ready-dispatch counterfactual from 9,181 to 9,035 bytes under
+the unchanged 9,250-byte cap. No glossary, choice, mechanic, route, support,
+strategy, outcome, or decision changes; these are deterministic boundary
+witnesses, not evidence of a rating or human-quality lift.
+
+The following exact-build pilot diversified that opening into six Road-Wardens
+and four Ledger Advocates while preserving 10/10 Wolf-Winter completion, all
+four strategies, and clean Albany foldback, but it again missed clarity,
+enjoyment, and initial-goal continuation. Every player opened the same Station
+support reveal once; nine reports explicitly named Station, dispatch, or linked
+setup density, while the remaining report named broader comparison and compact
+density. The hidden V6 overview already kept Road-Wardens out of unmatched kit
+comparisons—none of six chose a kit, while all four Mediation-aligned Ledger
+Advocates did—so that overview and its Repair/Streetwise/Mediation scent remain
+byte-identical. Only the three post-reveal purpose cells now lead with the plain
+optional category and make the read-before-commit boundary explicit. Board
+shape/version, receipt/modal envelopes, ids, actions, support breadth, costs,
+checks, effects, roads, strategies, outcomes, Continue/End, and Gallowmere are
+unchanged; this failed AI pilot diagnoses the copy target without validating
+the replacement or constituting human research.
+
 The adjacent-plan-recall follow-up keeps that summary-first boundary while
 removing the remaining cross-screen memory test at Albany Station. Every
 Preparation, Relief Allocation, and June comparison now carries the same
@@ -423,6 +543,36 @@ launch fixture, the launch response falls from 11,044 to 6,724 UTF-8 JSON bytes
 (39.1%) and the first field turn from 3,909 to 2,194 bytes (43.9%); actions,
 state hashes, pressure, vitals, inventory, consequences, RNG, decisions,
 foldback, and truthful parent return remain unchanged.
+
+The current first Cade menu now explains the boundary in ordinary player
+language: asking about a plan does not choose it, preparation helps without
+choosing, HUNT begins only on the north crossing or an offered `RELEASE JUNE`,
+and the other plans begin only when explicitly chosen. Choosing any plan still
+closes the rest. Its four peer labels now share the visible `Goal`, `Cost`,
+`Help`, and ask-only choice-boundary grammar. HUNT names the home/herd/stores,
+wolf-death and cattle/outer-defense risk, Cade lessons plus jerkin, and its
+north / `RELEASE JUNE` choice. LURE and DRIVE state that the wolves live and
+name Fieldcraft; DRIVE also states its no-retreat boundary. FORTIFY states the
+same living-wolf outcome, its no-retreat boundary, property exposure for Cade
+aid or public-seal spend, and Repair. The card deliberately does not guarantee
+Cade aid; the opt-in details retain its exact predicates. The stable HUNT,
+LURE, DRIVE, and FORTIFY ids and aliases remain unchanged. LURE, DRIVE, and
+FORTIFY use the exact same label at the first menu and after either support
+lesson. The opt-in plan bodies, ground/oath/preparation/June variants, final
+commitment actions, back/leave actions, and support actions retain their
+detailed terms.
+
+The base explanation is exactly 231 ASCII bytes. With the unchanged four
+seeded-ground suffixes, complete first-root scorecards remain 343/340/343/336
+characters (345/342/345/338 UTF-8 bytes), below the existing 360-character
+boundary. Rendered `ask: ` commands are HUNT 158, LURE 151, DRIVE 159, and
+FORTIFY 151 characters (160/153/161/153 UTF-8 bytes) under the unchanged
+160-character MCP limit. In the fixed seed-541 open-ash witness, the complete
+full observation is 5,177 UTF-8 JSON bytes, its compact projection is 2,599,
+the compact choice array is 978, and the exact 193-character terminal LURE line
+is 197 bytes. The exact compiled Wolf-Winter hash is now `08ddb7ce`; its
+reviewed relabeled twin is `fe16b368`. These are deterministic projection
+measurements, not global response limits or new player evidence.
 
 The stage-purpose follow-up keeps those six Albany comparisons intact while
 making the current commitment explicit in the vocabulary the cards already use.
@@ -1155,10 +1305,14 @@ primary prose and cannot participate in authoritative certification.
 
 Each live member has an adjacent runner-owned provider-discriminated attestation.
 Historical Claude v2 remains compatible, as do ordinary historical Codex v3,
-receipt-bound v4, strict-v1 v5, pre-client-pin strict-v2 v6, and client-bound
-v7. Current Codex v8 is model-discriminated: exact Spark binds
-`spark-direct-mcp-v1` with capture receipt v4, while Sol, Terra, and Luna bind
-`strict-code-mode-v2` with capture receipt v3. Both branches bind fleet-wide
+receipt-bound v4, strict-v1 v5, pre-client-pin strict-v2 v6, client-bound v7,
+and transport-bound v8. Current Codex v9 is model-discriminated: exact Spark
+binds `spark-direct-mcp-v1` with capture receipt v4 and its tracked player catalog,
+Terra binds `game-direct-mcp-v1` with capture receipt v5 and its distinct tracked
+player catalog, disabled multi-agent topology, API-request reasoning-summary mode
+`none`, and the exact 0.146 compatibility-only rollout sentinel `summary: "auto"`,
+while Sol/Luna bind
+`strict-code-mode-v2` with capture receipt v3. All branches bind fleet-wide
 frozen effective-client authority and exact CLI version, the exact CLI-recorded
 selected model, provider/session/turn, effort, isolated cwd, completed lifecycle,
 unique game session, and all artifact hashes. They may also declare deterministic
@@ -1167,7 +1321,7 @@ provider message, `.receipt-bind.json` hashes the envelope/report/raw evidence
 and one replaced field, and certification must reproduce the final report from
 those bytes. Because this starts no model turn and preserves every subjective
 field and all prose outside the receipt value, it is not report recovery and is
-eligible when every v8 check passes. The selected capture receipt binds the
+eligible when every v9 check passes. The selected capture receipt binds the
 copied rollout hash to the exact canonical expected/session/turn cwd and native
 filesystem identity; later validation reparses it and rejects abort/error
 history or any row after terminal `task_complete`.

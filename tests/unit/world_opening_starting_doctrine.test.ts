@@ -18,7 +18,7 @@ function expectIntegrityFailure(mutate: (draft: OverworldManifest) => void, patt
 }
 
 describe("opening starting doctrines", () => {
-  it("authors the three truthful Civic paths without selecting later opening choices", () => {
+  it("authors the three truthful Civic paths", () => {
     const doctrines = shippedDoctrines(SHIPPED_WORLD);
 
     expect(doctrines).toHaveLength(3);
@@ -36,6 +36,11 @@ describe("opening starting doctrines", () => {
         profile_id: "albany:road_warden",
         relief_oath_option_id: "albany:oath_limited_aid_only",
         lead_source_option_id: "albany:source_hayden_frost_report",
+        trigger_category:
+          "Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
+        preview:
+          "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3. Aid-Only prevents one final ordinary rise in cattle alarm after a clean first feed; a foul still takes that rise. Hayden's report matters only if you hold Cade's ground; its exact brace terms appear before commitment at the steading.",
+        consequence: "Preparation, the relief wagon, June's offer, and both roads remain open.",
         immediate_cost: "10 minutes and $0",
       },
       {
@@ -47,15 +52,34 @@ describe("opening starting doctrines", () => {
         immediate_cost: "no added time and $0",
       },
     ]);
+  });
+
+  it("keeps each starting-doctrine tradeoff explicit", () => {
+    const doctrines = shippedDoctrines(SHIPPED_WORLD);
 
     expect(doctrines[0]!.tradeoff).toContain("No Works packet");
     expect(doctrines[1]!.tradeoff).toContain("Rowan/Jamie sources");
+    expect(doctrines[2]!.tradeoff).toContain("No drover packet");
+    expect(doctrines.map((doctrine) => doctrine.id)).not.toContain("albany:doctrine_bounded_aid");
+  });
+
+  it("keeps Road-Warden mechanics inspectable while its confirmation stays branch-neutral", () => {
+    const doctrines = shippedDoctrines(SHIPPED_WORLD);
+
     expect(doctrines[1]!.trigger_category).toContain("Fieldcraft 4");
     expect(doctrines[1]!.trigger_category).toContain("Aid-Only");
     expect(doctrines[1]!.trigger_category).toContain("HUNT");
-    expect(doctrines[2]!.tradeoff).toContain("No drover packet");
-    expect(doctrines.map((doctrine) => doctrine.id)).not.toContain("albany:doctrine_bounded_aid");
-    for (const doctrine of doctrines) {
+    expect(`${doctrines[1]!.preview} ${doctrines[1]!.consequence}`).not.toMatch(
+      /\b(?:DEF|HUNT|LURE|DRIVE|FORTIFY|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
+    );
+  });
+
+  it("leaves later opening choices unselected for the other doctrines", () => {
+    const doctrines = shippedDoctrines(SHIPPED_WORLD);
+
+    for (const doctrine of doctrines.filter(
+      (candidate) => candidate.id !== "albany:doctrine_road_warden_aid_route",
+    )) {
       expect(doctrine.consequence).toContain("relief allocation");
       expect(doctrine.consequence).toContain("June's field-team commitment");
       expect(doctrine.consequence).toContain("road approach remain unselected");

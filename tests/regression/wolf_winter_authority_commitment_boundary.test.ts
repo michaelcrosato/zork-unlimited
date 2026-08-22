@@ -30,7 +30,7 @@ const COMMITMENT_WARNING =
 const CADE_STANCE = /HOUSEHOLD[^]*exposes property[^]*saves seals[^]*failed-seat aid/i;
 const ALBANY_STANCE = /ALBANY[^]*covers property[^]*spends seals[^]*no aid/i;
 const FULL_DUTY_TERMS =
-  /breach full duty[^]*first Albany Repair 2 easier[^]*Mobile stabilizes a recovered miss[^]*dawn/i;
+  /breach full duty[^]*a roll-required first Albany Repair is 2 easier[^]*Mobile stabilizes a recovered miss[^]*dawn/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
@@ -353,7 +353,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
       (action) => action.id === "ask_commit_albany_authority",
     );
     expect(authority?.command).toMatch(
-      /^ask: Commit Albany authority:[^]*no retreat[^]*no strategy switch to lure, drive, or combat/i,
+      /^ask: FINAL COMMITMENT — FORTIFY \/ ALBANY:[^]*no retreat\/switch[^]*preserve property[^]*spend public seals[^]*no aid after a roll-required failed seat[^]*Irreversible/i,
     );
     expect(authority?.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
 
@@ -554,7 +554,11 @@ describe("Wolf-Winter authority commitment boundary", () => {
     ]);
 
     let hunt = act(structuredClone(opening), "talk_houndsman");
-    hunt = act(hunt, "ask_commit_hunt_and_hold");
+    hunt = act(hunt, "ask_hunt");
+    expect(hunt.flags.strategy_lure_committed).not.toBe(true);
+    expect(hunt.flags.strategy_drive_committed).not.toBe(true);
+    expect(hunt.flags.strategy_fortify_committed).not.toBe(true);
+    hunt = act(hunt, "ask_prepare_hunt");
     assertSecondaryRoutesOpen(hunt, [
       ["south", "steading_yard"],
       ["west", "store"],

@@ -1,20 +1,25 @@
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 import { createServer } from "vite";
 
 import { OverworldSession } from "../../src/world/session.js";
+import {
+  OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
+  OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS,
+} from "../../src/world/opening_relief_oath_presentation.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const requireFromRoot = createRequire(import.meta.url);
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: finish matched duty and evidence, or customize; every field plan stays open. A custom duty leaves one evidence choice next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open.";
 const CUSTOM_DUTY_MESSAGE =
-  "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: choose one promise; your report comes next, and every approach stays open.";
 const SOURCE_MESSAGE =
-  "The Wolf-Winter Civic docket · 3/3 — evidence. Purpose: choose evidence; every field plan stays open. Hayden's Station launch board follows. Certify the Wolf-Winter Source Packet. Other accounts close. Compare field priority, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: choose one report; Albany Station comes next, and every approach stays open.";
 
 type DomWindow = {
   document: {
@@ -45,12 +50,14 @@ function registrationJourney(): ReturnType<OverworldSession["journey"]> {
 
 function reliefOathJourney(
   profileId = WORLD.opening_registration!.profiles[0]!.id,
+  reveal = false,
 ): ReturnType<OverworldSession["journey"]> {
   const session = new OverworldSession(WORLD);
   const registration = WORLD.opening_registration!;
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
   session.chooseJourneyStory(profileId);
+  if (reveal) revealCurrentStoryOptions(session);
   return session.journey();
 }
 
@@ -241,10 +248,30 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         querySelectorAll: (selector: string) => ArrayLike<unknown>;
         textContent: string | null;
       };
+      const objectiveGuidance = (): string | null =>
+        (
+          rootElement.querySelector(".journey-choice-goal small") as {
+            textContent: string | null;
+          } | null
+        )?.textContent ?? null;
       const card = rootElement.querySelector(".journey-choice-card") as {
         querySelector: (selector: string) => unknown;
       } | null;
       if (!card) throw new Error("Expected a rendered summary-first choice card.");
+      expect(rootElement.textContent).toContain("choose one permanent background");
+      expect(rootElement.textContent).toContain("ready-made promise/report pair or customize it");
+      expect(rootElement.textContent).not.toContain(
+        "A ready-made background also sets your Wolf-Winter promise and report",
+      );
+      expect(objectiveGuidance()).toBe(
+        "Your background persists into the journey; choose the experience and return promise you will carry.",
+      );
+      expect(reliefOathJourney().storyChoice?.kind).toBe("relief_oath");
+      expect(
+        readFileSync(resolve(process.cwd(), "ui/src/JourneyStoryChoiceScreen.tsx"), "utf8"),
+      ).toContain(
+        "Choose a background. Next, choose a ready-made promise/report pair or customize it.",
+      );
       const choiceButton = card.querySelector("button") as {
         contains: (node: unknown) => boolean;
         click: () => void;
@@ -267,13 +294,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const registrationSource = WORLD.opening_registration!;
       const registrationDetailsText = (details as { textContent?: string | null }).textContent;
       const registrationOption = registration.options[0]!;
-      expect(choiceButtonText).toContain("Commitment:");
-      expect(choiceButtonText).toContain("Starter package / field edge:");
-      expect(choiceButtonText).toContain("Permanent role:");
-      expect(choiceButtonText).toContain("Return obligation — ACTIVE:");
-      expect(choiceButtonText).toContain("Quest DEF:");
-      expect(choiceButtonText).toContain("Immediate cost:");
-      expect(choiceButtonText).toContain("Tradeoff:");
+      expect(choiceButtonText).toContain("Background:");
+      expect(choiceButtonText).toContain("Permanent background —");
+      expect(choiceButtonText).toContain("Starts with:");
+      expect(choiceButtonText).toContain("Cost:");
+      expect(choiceButtonText).toContain("Return obligation:");
+      expect(choiceButtonText).not.toContain("Starter package / field edge:");
+      expect(choiceButtonText).not.toContain("Wolf-Winter fit:");
+      expect(choiceButtonText).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
       expect(choiceButtonText).toContain(registrationOption.summary!.commitment);
       expect(choiceButtonText).toContain(registrationOption.summary!.immediateCost);
       expect(choiceButtonText).toContain(registrationOption.summary!.tradeoff);
@@ -326,18 +354,22 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         );
       });
       const stationCard = rootElement.querySelector(".journey-choice-card") as {
+        textContent: string | null;
         querySelector: (selector: string) => { textContent: string | null } | null;
       } | null;
       const stationButton = stationCard?.querySelector("button");
       const stationDetails = stationCard?.querySelector("details");
-      if (!stationButton || !stationDetails) {
+      if (!stationCard || !stationButton || !stationDetails) {
         throw new Error("Expected the Station preparation comparison and exact receipt.");
       }
       const stationOption = stationJourney.storyChoice!.options[0]!;
-      expect(stationButton.textContent).toContain("Promise / priority:");
+      expect(stationButton.textContent).toContain("Field kit:");
+      expect(stationButton.textContent).not.toContain("Promise / priority:");
       expect(stationButton.textContent).not.toContain("Check fit:");
-      expect(stationButton.textContent).not.toContain(stationOption.summary!.checkFit!);
-      expect(stationButton.textContent).toContain("Cost / give up:");
+      expect(stationButton.textContent).toContain("Governing skill:");
+      expect(stationButton.textContent).toContain(stationOption.summary!.checkFit!);
+      expect(stationButton.textContent).toContain("Cost:");
+      expect(stationButton.textContent).toContain("Give up:");
       expect(stationButton.textContent).not.toContain("Purpose:");
       expect(stationButton.textContent).not.toContain("Trigger category:");
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.tradeoff);
@@ -347,10 +379,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(stationButton.textContent).not.toContain(forecastLine);
       expect(stationButton.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).toContain(stationOption.consequence);
-      expect(stationDetails.textContent).toContain(stationOption.summary!.checkFit!);
+      expect(stationDetails.textContent).not.toContain(stationOption.summary!.checkFit!);
       expect(stationDetails.textContent).toContain(forecastLine);
       expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.consequence);
+      expect(stationCard.textContent?.split(stationOption.summary!.checkFit!)).toHaveLength(2);
+      expect(objectiveGuidance()).toBe(
+        "Your field kit changes later actions and the service Albany can release on your return; it does not replace this objective.",
+      );
       const stationDisclosures = Array.from(
         rootElement.querySelectorAll(".journey-choice-details > summary"),
       ) as Array<{
@@ -387,7 +423,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         throw new Error("Expected the Relief Allocation comparison and exact receipt.");
       }
       const allocationOption = allocationJourney.storyChoice!.options[0]!;
-      expect(allocationButton.textContent).toContain("Promise / priority:");
+      expect(allocationButton.textContent).toContain("Relief wagon:");
+      expect(allocationButton.textContent).not.toContain("Promise / priority:");
       expect(allocationButton.textContent).toContain("Cost / give up:");
       expect(allocationButton.textContent).not.toContain("Purpose:");
       expect(allocationButton.textContent).not.toContain("Trigger category:");
@@ -402,6 +439,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(allocationDetails.textContent).toContain(allocationImpact);
       expect(allocationDetails.textContent).not.toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).not.toContain(allocation.options[0]!.consequence);
+      expect(objectiveGuidance()).toBe(
+        "Albany's relief wagon can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes.",
+      );
 
       const standardPacketJourney = reliefOathJourney();
       const standardPacketChoice = standardPacketJourney.storyChoice;
@@ -411,11 +451,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         );
       }
       const revealRequests: Array<[string, string]> = [];
-      const renderStandardPacket = async (visibleOptionIds?: readonly string[]): Promise<void> => {
+      const renderStandardPacket = async (
+        renderedJourney = standardPacketJourney,
+        visibleOptionIds?: readonly string[],
+      ): Promise<void> => {
         await act!(async () => {
           root!.render(
             react.createElement(module.JourneyStoryChoiceScreen, {
-              journey: standardPacketJourney,
+              journey: renderedJourney,
               onChoose: (choiceId: string) => selected.push(choiceId),
               onReveal: (storyChoiceId: string, revealId: string) => {
                 revealRequests.push([storyChoiceId, revealId]);
@@ -438,10 +481,17 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       );
       expect(standardPacketButtons).toHaveLength(1);
       const roleShortcut = standardPacketChoice.options.find((option) =>
-        option.label.startsWith("Role shortcut —"),
+        option.label.startsWith("Ready-made dispatch —"),
       );
-      if (!roleShortcut) throw new Error("Expected the Road-Warden role shortcut before reveal.");
+      if (!roleShortcut) throw new Error("Expected the Road-Warden quick setup before reveal.");
       expect(standardPacketButtons[0]?.textContent).toContain(roleShortcut.label);
+      expect(standardPacketButtons[0]?.textContent).toContain("Ready-made dispatch:");
+      expect(standardPacketButtons[0]?.textContent).toContain("Cost:");
+      expect(standardPacketButtons[0]?.textContent).toContain("Give up:");
+      expect(standardPacketButtons[0]?.textContent).not.toMatch(
+        /\b(?:DEF|DC|import|fieldTrigger)\b/i,
+      );
+      expect(standardPacketButtons[0]?.textContent).not.toContain("Wolf-Winter promise:");
       const dutySurfaceOrder = Array.from(
         rootElement.querySelectorAll(
           ".journey-choice-progressive-disclosure, .journey-choice-actions",
@@ -453,9 +503,11 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const quickSetupHeading = rootElement.querySelector("h1") as {
         textContent: string | null;
       } | null;
-      expect(quickSetupHeading?.textContent).toBe("Choose a role shortcut or compare duties");
+      expect(quickSetupHeading?.textContent).toBe(
+        "Choose a ready-made dispatch or compare promises",
+      );
       expect(rootElement.textContent).toContain(
-        "The role-shortcut card binds duty and evidence together; the duty comparison is read-only.",
+        "The ready-made dispatch pairs one Wolf-Winter promise with one report; the promise comparison is read-only.",
       );
       expect(rootElement.textContent?.toLowerCase()).not.toContain("standard packet");
       const customize = rootElement.querySelector(
@@ -475,9 +527,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const describedBy = rootElement.querySelector(`[id="${descriptionId}"]`) as {
         textContent: string | null;
       } | null;
-      expect(describedBy?.textContent).toBe(
-        standardPacketChoice.progressiveDisclosure.reveal.description,
-      );
+      expect(describedBy?.textContent).toBe(OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION);
+      expect(rootElement.textContent).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
       await act(async () => {
         standardPacketButtons[0]!.click();
       });
@@ -490,39 +541,25 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(revealRequests).toEqual([
         [standardPacketChoice.id, standardPacketChoice.progressiveDisclosure.reveal.id],
       ]);
-      await renderStandardPacket([
+      const revealedStandardPacketJourney = reliefOathJourney("albany:road_warden", true);
+      await renderStandardPacket(revealedStandardPacketJourney, [
         ...standardPacketChoice.progressiveDisclosure.initialOptionIds,
         ...standardPacketChoice.progressiveDisclosure.reveal.optionIds,
       ]);
-      const expandedCustomize = rootElement.querySelector(
-        ".journey-choice-progressive-disclosure > button",
-      ) as { click: () => void; getAttribute: (name: string) => string | null } | null;
-      if (!expandedCustomize) throw new Error("Expected the expanded disclosure button.");
-      expect(expandedCustomize.getAttribute("aria-expanded")).toBe("true");
-      await act(async () => {
-        expandedCustomize.click();
-      });
+      expect(rootElement.textContent).toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
+      expect(rootElement.querySelector(".journey-choice-progressive-disclosure")).toBeNull();
       expect(selected).toEqual(selectedBeforeCustomize);
       expect(revealRequests).toHaveLength(1);
       const revealedCards = Array.from(
-        rootElement.querySelectorAll(`[id="${customSectionId}"] .journey-choice-card > button`),
+        rootElement.querySelectorAll(".journey-choice-actions > .journey-choice-card > button"),
       ) as Array<{ textContent: string | null; click: () => void }>;
-      expect(revealedCards).toHaveLength(
-        standardPacketChoice.progressiveDisclosure.reveal.optionIds.length,
-      );
-      expect(revealedCards).toHaveLength(3);
+      expect(revealedCards).toHaveLength(standardPacketChoice.options.length);
+      expect(revealedCards).toHaveLength(4);
       expect(revealedCards.map((card) => card.textContent)).toEqual(
-        standardPacketChoice.progressiveDisclosure.reveal.optionIds.map((optionId) =>
-          expect.stringContaining(
-            standardPacketChoice.options.find((option) => option.id === optionId)!.label,
-          ),
-        ),
-      );
-      expect(revealedCards.map((card) => card.textContent)).not.toEqual(
-        expect.arrayContaining([expect.stringContaining(roleShortcut.label)]),
+        standardPacketChoice.options.map((option) => expect.stringContaining(option.label)),
       );
       await act(async () => {
-        revealedCards[0]!.click();
+        revealedCards[1]!.click();
       });
       expect(selected.at(-1)).toBe(standardPacketChoice.progressiveDisclosure.reveal.optionIds[0]);
 
@@ -556,9 +593,27 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         ledgerJourney.storyChoice!.options.length,
       );
 
-      for (const [comparedJourney, sourceOption, expectedMessage] of [
-        [ledgerReliefOathJourney(), WORLD.opening_relief_oath!.options[0]!, CUSTOM_DUTY_MESSAGE],
-        [leadSourceJourney(), WORLD.opening_lead_source!.options[0]!, SOURCE_MESSAGE],
+      for (const [
+        comparedJourney,
+        sourceOption,
+        expectedMessage,
+        expectedSummaryLabel,
+        expectedGuidance,
+      ] of [
+        [
+          ledgerReliefOathJourney(),
+          WORLD.opening_relief_oath!.options[0]!,
+          CUSTOM_DUTY_MESSAGE,
+          "Wolf-Winter promise:",
+          "Compare each promise's access, actual cost, field consequence, and return terms. This binds the dispatch without replacing your current objective.",
+        ],
+        [
+          leadSourceJourney(),
+          WORLD.opening_lead_source!.options[0]!,
+          SOURCE_MESSAGE,
+          "Report:",
+          "Your report changes the approaches you can carry forward; it does not replace this objective.",
+        ],
       ] as const) {
         await act(async () => {
           root!.render(
@@ -582,13 +637,15 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         } | null;
         expect(comparedMessage?.textContent).toBe(expectedMessage);
         const comparedOption = comparedJourney.storyChoice!.options[0]!;
-        expect(comparedButton.textContent).toContain("Promise / priority:");
+        expect(comparedButton.textContent).toContain(expectedSummaryLabel);
+        expect(comparedButton.textContent).not.toContain("Promise / priority:");
         expect(comparedButton.textContent).toContain("Cost / give up:");
         expect(comparedButton.textContent).not.toContain("Trigger category:");
         expect(comparedButton.textContent).not.toContain(sourceOption.preview);
         expect(comparedDetails.textContent).toContain(comparedOption.consequence);
         expect(comparedDetails.textContent).not.toContain(sourceOption.preview);
         expect(comparedDetails.textContent).not.toContain(sourceOption.consequence);
+        expect(objectiveGuidance()).toBe(expectedGuidance);
       }
 
       await act(async () => {
@@ -603,8 +660,19 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         textContent: string | null;
       } | null;
       if (!allyButton) throw new Error("Expected the ally comparison-first card.");
-      expect(allyButton.textContent).toContain("Promise / priority:");
+      expect(allyButton.textContent).toContain("Riding choice:");
+      expect(allyButton.textContent).not.toContain("Promise / priority:");
       expect(allyButton.textContent).toContain("Cost / give up:");
+      const soloButton = Array.from(
+        rootElement.querySelectorAll(".journey-choice-card button"),
+      ).find((candidate) =>
+        (candidate as { textContent: string | null }).textContent?.includes("Ride alone"),
+      ) as { textContent: string | null } | undefined;
+      expect(soloButton?.textContent).toContain("Riding choice:");
+      expect(soloButton?.textContent).not.toContain("Second rider:");
+      expect(objectiveGuidance()).toBe(
+        "Compare what the second rider can do, their binding condition, and actual cost; this does not replace your objective.",
+      );
     } finally {
       if (root && act) {
         await act(async () => root!.unmount());

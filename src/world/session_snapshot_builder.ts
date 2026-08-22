@@ -55,6 +55,7 @@ export type OverworldSessionSnapshotBuildState = {
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
   questCharacterDeathBoundary?: OverworldQuestCharacterDeathBoundary | null;
   inspectedStoryReveals: ReadonlyMap<string, ReadonlySet<string>>;
+  stationDispatchSupportReveals: ReadonlyMap<string, string>;
   journey: JourneyContractSnapshot;
 };
 
@@ -108,6 +109,9 @@ export function buildOverworldSessionSnapshot(
       : {}),
     ...(state.inspectedStoryReveals.size > 0
       ? { inspectedStoryReveals: sortedStringSetMap(state.inspectedStoryReveals) }
+      : {}),
+    ...(state.stationDispatchSupportReveals.size > 0
+      ? { stationDispatchSupportReveals: sortedStringMap(state.stationDispatchSupportReveals) }
       : {}),
     journey: cloneJourneyContractSnapshot(state.journey),
   });

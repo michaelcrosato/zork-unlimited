@@ -157,24 +157,13 @@ describe("opening registration presentation", () => {
         `${profile.summary} ${profile.preview} Field trigger: ${profile.trigger_category}. ${profile.consequence}`,
       );
       expect(option.summary).toEqual({
-        commitment: profile.summary,
-        fieldTrigger: profile.preview,
-        fieldTriggerScope: "starter",
-        highlights: [
-          { label: "Permanent role", value: profile.title },
-          { label: "Role experience", value: profile.summary },
-          {
-            label: "Return obligation",
-            value: "No active return obligation is included in this role.",
-          },
-          {
-            label: "Quest DEF",
-            value: "No additional starting-DEF distinction is stated on this role.",
-          },
-        ],
-        immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
+        commitment: `Permanent background — ${profile.summary}`,
+        immediateCost: `no fee or delay; start with $${String(profile.character.money)}`,
         tradeoff: profile.tradeoff,
       });
+      expect(option.summary).not.toHaveProperty("fieldTrigger");
+      expect(option.summary).not.toHaveProperty("fieldTriggerScope");
+      expect(option.summary).not.toHaveProperty("highlights");
       expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label", "summary"]);
       expect(Object.isFrozen(option.summary)).toBe(true);
       expect(Object.isFrozen(option)).toBe(true);
@@ -192,7 +181,7 @@ describe("opening registration presentation", () => {
     expect(prompt.options[0]!.consequence).toBe(
       "Summary 1. Visible mechanical preview 1. Field trigger: First use 1. Permanent consequence 1.",
     );
-    expect(prompt.options[0]!.summary?.fieldTrigger).toBe(categorized.profiles[0]!.preview);
+    expect(prompt.options[0]!.summary).not.toHaveProperty("fieldTrigger");
 
     const exactLegacy = structuredClone(categorized);
     for (const profile of exactLegacy.profiles) {
@@ -203,22 +192,8 @@ describe("opening registration presentation", () => {
       id: exactLegacy.profiles[0]!.id,
       label: exactLegacy.profiles[0]!.title,
       summary: {
-        commitment: exactLegacy.profiles[0]!.summary,
-        fieldTrigger: exactLegacy.profiles[0]!.preview,
-        fieldTriggerScope: "starter",
-        highlights: [
-          { label: "Permanent role", value: exactLegacy.profiles[0]!.title },
-          { label: "Role experience", value: exactLegacy.profiles[0]!.summary },
-          {
-            label: "Return obligation",
-            value: "No active return obligation is included in this role.",
-          },
-          {
-            label: "Quest DEF",
-            value: "No additional starting-DEF distinction is stated on this role.",
-          },
-        ],
-        immediateCost: "no time/fee; starts with $0",
+        commitment: `Permanent background — ${exactLegacy.profiles[0]!.summary}`,
+        immediateCost: "no fee or delay; start with $0",
         tradeoff: exactLegacy.profiles[0]!.tradeoff,
       },
       consequence:

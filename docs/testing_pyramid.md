@@ -163,15 +163,23 @@ with 10/10 primary
 unrecovered members, unique game and provider sessions, one exact actual
 model id, at least three recognized Wolf-Winter strategies, and no strategy
 above 7/10. The pilot has a distinct result kind and cannot certify the slice.
-Exact Spark uses audited `spark-direct-mcp-v1`: the pure AdventureForge tools are
-preloaded through a tracked game-only player catalog and the first native call is
-`start_overworld({})`. The catalog disables coding tools, Spark-only runner flags
-disable optional context injectors, and the clean build commit binds both.
+Exact Spark uses audited `spark-direct-mcp-v1`, and Terra uses Terra-only
+`game-direct-mcp-v1`: the pure AdventureForge tools are preloaded through an exact
+model-specific tracked game-only player catalog and the first native call is
+`start_overworld({})`. Each catalog disables coding/search surfaces, selects
+native direct tool mode, supplies the exact game-only base instructions, and is
+bound with the optional-context disables by the clean build commit. Terra also
+pins disabled multi-agent topology and API-request reasoning-summary mode
+`none`; its catalog also declares the summary parameter unsupported. Exact
+Codex 0.146 rollout evidence records its compatibility-only `summary: "auto"`
+sentinel, which does not override that request setting; strict Terra remains v2.
+Terra keeps its native 10,000-token truncation policy and
+272,000-token context capacity.
 Subsequent calls must stay in the
-attested pure set while the game server enforces current legality. Sol, Terra,
-and Luna retain
-`strict-code-mode-v2` wrappers. Lifecycle ids are validated within each stream;
-ordered tools, arguments, results, and visible outputs must cross-bind between
+attested pure set while the game server enforces current legality. Sol and Luna
+retain `strict-code-mode-v2` wrappers. Lifecycle ids are validated within each stream;
+both direct transports require exact `codex-cli 0.146.0` before launch.
+Ordered tools, arguments, results, and visible outputs must cross-bind between
 public and private streams under the selected transport;
 tool/resource discovery, cross-server calls, or a transport
 mismatch reject the run. Before larger Spark spend, `--admission-canary` must
@@ -246,14 +254,17 @@ deterministic receipt binding: the provider's original report and strict
 replacing only the existing receipt value from raw server evidence, and the
 unchanged report verifier must pass. This zero-model transformation preserves
 all subjective evidence, so it is certifiable; model-assisted report recovery
-remains forbidden. Codex v8 is the current contract: it authenticates the exact
-selected model-specific transport, Spark capture schema v4 or strict capture
-schema v3 as applicable, public/private cross-binding, and the fleet-wide frozen
+remains forbidden. Codex v9 is the current contract: it authenticates the exact
+selected model-specific transport, Spark capture schema v4, Terra game-direct
+capture schema v5, or Sol/Luna strict capture schema v3 as applicable,
+public/private cross-binding, and the fleet-wide frozen
 effective client authority plus exact CLI version. That authority binds the original
 canonical Unix npm symlink when present, the exact package/entrypoint/native
 closure, and a native-only final execution target; unsupported script launchers
 cannot downgrade to one-file authority. Current resume and certification require
-v8; receipt schemas v1-v3 and Codex v3-v7 are historical-readable only. Codex
+v9. Receipt schemas v1-v2 are historical; v3 remains current only for strict
+Sol/Luna and v4 only for Spark direct, while none of v1-v4 can establish
+Terra's current v5 capture. Codex v3-v8 is historical-readable only. Codex
 `turn_context.model` is a CLI-recorded selected-model value, not a provider-signed
 remote-backend identity. Resume and certification reparse these retained facts.
 The cwd receipt is a trusted capture-time runner assertion: after cleanup they
@@ -281,7 +292,7 @@ before the 100-player spend.
 Certification fixes the count to 100 and is the only authority result. Report
 basenames must carry the cohort's current stamp, preventing historical reports
 from being relabeled as fresh. Receipt-bound Codex members remain eligible only
-when current v8 attestation, original provider bytes, binding metadata, raw evidence,
+when current v9 attestation, original provider bytes, binding metadata, raw evidence,
 and the reproduced final report all agree; manifests and summaries count them
 separately from report recovery.
 Malformed evidence exits 2, a threshold miss exits 1, and a pass exits 0. Exact

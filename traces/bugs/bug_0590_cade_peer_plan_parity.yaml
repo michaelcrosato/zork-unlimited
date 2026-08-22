@@ -1,0 +1,325 @@
+id: bug_0590
+title: "State each Cade plan's goal, cost, help, and choice boundary"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: >
+  Valid failed ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-e14e4208-20260822T061631Z plus the exact-build
+  diagnostic feedback compile 20260822T065131Z; the manifest and all listed
+  report, sidecar, evidence, envelope, provider-event, rollout, and capture
+  hashes were retained as custody, not as validation of this replacement
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-e14e4208-20260822T061631Z
+    stamp: 20260822T061641Z
+    tested_commit: e14e4208b2e1fa9eac03a66ce83bba7d727eac00
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b
+    model: gpt-5.6-terra
+    provider: codex
+    reasoning_effort: xhigh
+    codex_cli_version: 0.146.0
+    codex_client_authority_sha256: a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8
+    play_mode: pure
+    start_surface: fresh_overworld
+    no_retry_or_recovery: true
+    attempts: "10 launched, 10 measured, exactly one verified attempt per seed"
+    valid: true
+    passed: false
+    authority_certified: false
+    artifact_hashes:
+      manifest_sha256: 0dcf142cb31c8382871692aa182c80c8d98adcd4f260d6ed869cbbc030086c02
+      summary_sha256: 93ec8b807da519e633c3764f25d519fe2696950cd953df63e6070b64c6a22bc0
+      starting_slice_pilot_sha256: 7106212918bf20a89e055daa53644ab819fed88c281d0385683bb0f06051bda1
+      authority_proof_sha256: 5098ddb038251676586387614a3cf29f61cc0b9ebe5e088278f2e463f38f0078
+    artifact_bytes:
+      manifest: 38440
+      summary: 2005
+      starting_slice_pilot: 2275
+      authority_proof: 2437
+    outcome_metrics:
+      completed: 10
+      stuck: 0
+      completion_decision_p50: 26
+      clarity_total: 40
+      enjoyment_total: 42
+      continued_after_initial_goal: 9
+      strategies: "HUNT 0, LURE 8, DRIVE 0, FORTIFY 2"
+      seeded_ground_favors: "HUNT 5, LURE 3, DRIVE 1, FORTIFY 1"
+      in_scope_issue_reports: 1
+      blocking_issue_clusters: 0
+      failed_gates: >
+        clarity average >= 4.2; at least three top-level strategies; no strategy
+        above 75%, including the pilot-specific no-strategy-above-7-of-10 gate
+    reports:
+      - seed: 822061631000
+        report_sha256: 331bc963e49331c8388f7a661d1596328f1dabbf1952706a5bc50f2840a37a87
+        run_sidecar_sha256: 16abdea1858527d5775196979445c419aad23aa3ab830beead5c4168943b94e9
+        run_evidence_sha256: 8ace15f331e61eea45379833e4690c0e315f8ee88ce3e64d01b7ef8fd3f9ba14
+        primary_envelope_sha256: 86532e9ddbb78d54062b85b4ad60c5b902762188c95205849c8550ed56220226
+        provider_events_sha256: cabd23520be2bbd325acda63c1c6832b051eba48c34edc946b57fe1eed36db59
+        provider_rollout_sha256: d21e75aab8ae33f4c1375f8db853c4d10b2940e79092b24433040d9b976f6ead
+        provider_capture_sha256: 2bf8e0f577a94836f4eef70c6e04e880522e2b063bea5423df84c3d9950e1e44
+      - seed: 822061631001
+        report_sha256: b8078d79b71152f48be96434c56a0015a132f9e10104f6d12cae353173ab8c9a
+        run_sidecar_sha256: 137a21e1b826d2d12721c5a1fd8136753bcf7a1f5beb5f87e51000098af6e136
+        run_evidence_sha256: 690e0de7d9636e27b814423dd244d6c8b388bfd52bdc301db350c293d20ef07a
+        primary_envelope_sha256: 9af53f9e1e374f54f818cb4156feb80a4d2bfac7fe9de37ca93ddbf263f58eb9
+        provider_events_sha256: 653b76dd8edb863aa57be3793e674feb776e841eb157b9c698bbe30841882490
+        provider_rollout_sha256: 412089360bd370b3d514f03e264710d102621abc77ab99913412d4fe243e7c42
+        provider_capture_sha256: 4505828c3025e601daba235a5c182e24d3a4a310e405f9fbe91d77a0e737e347
+      - seed: 822061631002
+        report_sha256: a62ad32a1c5346eb7dbc7794b61ba112a0c361d02fe2318ab6da3074a6f398e6
+        run_sidecar_sha256: aedab08a7c14acb2d0d8dba3a39db965b1e00531285226246739ebc660089715
+        run_evidence_sha256: 924aec74179fe0636d1bb83cd647ca2ba8ef1c9c991c5f9d0aa35f8e75dc0f04
+        primary_envelope_sha256: e7a2cdbc2af0763a80225da2cb9b17c218501a3b2c7b07cadb0d269cae88a361
+        provider_events_sha256: 3c0cb16b53431dbd5cd6cd2de9204fbd7c9ad434b5ba1a482b9f9b0561fe193c
+        provider_rollout_sha256: bcac1d10596976784676301f2871797b39a8523c95fdba306a23e1013a1ed14d
+        provider_capture_sha256: 58cffde2e93efcd76aa1318f672b42d75b0e9c089a19ad65b2ec1fb1fd79486f
+      - seed: 822061631003
+        report_sha256: 478a0516933ecce0b0b3db99316929a409c0618b15d7d70039d2c7e96785a39c
+        run_sidecar_sha256: f8fecc7c847858477640e7cad8454ae183114c710feef916d8db8ae75802e7b3
+        run_evidence_sha256: cd1347d6b8051bf90d7a7877b01a9986c5e12da72363d64b8cf1c1d309703502
+        primary_envelope_sha256: cffa78ae5d30a59c506fcc85bf01d190abe0ecd708e4539e7f2f001e5fb36c26
+        provider_events_sha256: 63422e1716651560cd1bca72d9a6d50887004dafc3a4468cc6e90c7f08ae1c24
+        provider_rollout_sha256: 1c2c1388f512b6ef226e7f4553ff29f804df47cca541b66badda9f4da66c4678
+        provider_capture_sha256: ad9848c9af4a65b1156827a8a30bd4a03be33362109de4658a02b42f7939b11e
+      - seed: 822061631004
+        report_sha256: 6f150226cc3b03eeed6196b89175fead6231ab89b6598920aec14fc2b5a40bb5
+        run_sidecar_sha256: 2f8160a79835697cc2b234c2d6450d0e146f909bd042ae0263f7f79d56c36fe2
+        run_evidence_sha256: 409b710786adcfb26769d079d4e9de4278fc3746eeba70162ddcfcbcefbb500a
+        primary_envelope_sha256: 72375d6668cb6d0787054aafdd41502ff9dfebd88b98f328f99899d7127c8167
+        provider_events_sha256: 6dc16fb663ed4e1a3db3c779452df02475f6fd9caaff0545ee3fd87b788b8b34
+        provider_rollout_sha256: f16cc6f0cb99521834250c2737c360fe131749d8d8721804313b1dd6b60f142f
+        provider_capture_sha256: 4234c170d732d7b3b6e3980d6a98a2174d06e995d4cd0e85261f5bebb1e5814d
+      - seed: 822061631005
+        report_sha256: 05813e719b343c7c5051b5be069da71d86cc22b726675526e014334ce319e413
+        run_sidecar_sha256: 4e748c42b67476970d027836b0377b5b503d68a0bddb6f6b23be7c19f36b8f79
+        run_evidence_sha256: eee0c9bb6461e931693bc2aa68f807e690d112631a31c22004950144072aa9ca
+        primary_envelope_sha256: dcb2f8e867c54a7830be6067e9e2e6f5af7b7b16d8b526898137a750c5854471
+        provider_events_sha256: e5bbf60e8c5ae83ad774842d7f5b7d6402a4cc9b7c47a9cba22568ba39989d71
+        provider_rollout_sha256: 7d0aa2a4141eca5af3cb9d199288dd601790b03c2c743e7b5338ea77e7dc9e05
+        provider_capture_sha256: 90c7398f7c5af3e3f424bfbe90374be6381f6f7f9e6d42674238e38ea43f6fb1
+      - seed: 822061631006
+        report_sha256: 7c90ba0e0a20fa043768dc506080f527c470e7b2137815444d2e4adc1372c0da
+        run_sidecar_sha256: 06deca415699329bf59d2755e28ed0a831a504f2ef6bd14e5d2283b191837799
+        run_evidence_sha256: 5d0f978747fcd62d77d3f69fbb79997187ca10e5f3eb80fe6570404ce9c5ce20
+        primary_envelope_sha256: 58d9594e2460e1dc5397a3818b552ac0b0c1ed9fa2e17b6df093f02a695b0c4e
+        provider_events_sha256: 91f2c24f487d76d7226263c0105e3a0215c67a5b6b82419ca3c9ea83f24e64dc
+        provider_rollout_sha256: 379337b93937b5e559d1136d729c7e42db59a8e2d1293c48c0a2a408453841d6
+        provider_capture_sha256: 9508b6f8be4522727849ec1d7d8cce602814d9ff5ee593088ce1d2316e2efe4f
+      - seed: 822061631007
+        report_sha256: 9dd24b45a99169035d8c1619284af03221bdfea32fa66bc490808d8ed71c4e3e
+        run_sidecar_sha256: 359cfac65ed69db5441c042cc55fd21d89e7c719c293b364a7e17985dc833093
+        run_evidence_sha256: e97ae8ba35cc2368e8898f96df5db0778228d8af12e4e9fa4f0d026d26c457ce
+        primary_envelope_sha256: ff3f015c33307baabe27d8e4de5bb1bf43426b7ea00711dc67523c37ac97df02
+        provider_events_sha256: e49a70ca17198794025356d789220021363d0079698ac6a33a991b9d7c0c77cf
+        provider_rollout_sha256: 187e49d47e434bd12171e77efe505752aeb267ac4c3e0297ea4d843092182f15
+        provider_capture_sha256: b9c2485ab1b9bb65a61c30fcae91f1758b8a286fe739384cff3fb40d3b035e45
+      - seed: 822061631008
+        report_sha256: e740d836bdea7c94be17645eceacdbd3e8fb13d493ca7df8d05f625722592081
+        run_sidecar_sha256: 890ca3d752367b0fefac143d672464815bcad0d075d5c9f433af18a7f7aac0f4
+        run_evidence_sha256: 45f0e3f4c8d96be2db2793e0c0f3b14babea9d4885bd251f9025c0a930de03de
+        primary_envelope_sha256: 64678f4eede28d9da6c546deec4ef6b66078879558b2ee1f90c408347db98569
+        provider_events_sha256: e8c6adfadf2cae4e7f2649ef2a8436ee8709509bc60cf0aa6b9c1dc9b048b3e0
+        provider_rollout_sha256: ab48bb93ff103e2fbfe19605936ce29da95850cc2edb8a5011dc72fe3a1ef52e
+        provider_capture_sha256: bca84411825b416edf2753b6e7b243d26e3f04c0d3fbc09920ae7f8038124254
+      - seed: 822061631009
+        report_sha256: 76d893206e83604291160ed4e0c202a57ab67f0160f4a664894f81c661f86e53
+        run_sidecar_sha256: b9130319f5c29f9dcfa379abcf1d8f483aca707ab7a13eb2ceda8ecac04c08c3
+        run_evidence_sha256: 21b5268e03e12ea9b3db9bbbcf6d22d6677dee05d7850d27e28fa9e2f8bcd7da
+        primary_envelope_sha256: 4572fd9036295f7b61a089e1a967e939de00b92eabd21c18ed8dacae51f6fcd1
+        provider_events_sha256: d6f8c5b04e7256a8fd973fc1887a41bc9eba7f07f36822727b6cee5060ecc871
+        provider_rollout_sha256: dce48fe60a90cc6ef33b6a52168e3af2f3520c6228a62a3fa47768095a285990
+        provider_capture_sha256: 6d872cf6885c10a6387996efeb5df10785cf0a20c77dae39a6a8042bd3e7b790
+  compile:
+    run: 20260822T065131Z
+    generated_at: 2026-08-22T06:51:43.326Z
+    candidate_commit: e14e4208b2e1fa9eac03a66ce83bba7d727eac00
+    verified_reports: 11
+    actionable_reports: 11
+    excluded_mock_reports: 0
+    rejected_reports: 220
+    hotspot_count: 10
+    hotspot_score_tie: "all ten are singleton S1 findings at score 2"
+    recommended_hotspot_id: ea53b6c1
+    recommended_hotspot_scope: "Gallowmere kill-site retry consequence; outside the bounded Albany / Wolf-Winter / Albany slice"
+    wolf_hotspot_ids:
+      - f731f093
+      - 5afe1374
+      - 1a66396e
+      - ed638a76
+      - d386e06d
+      - 64db6ba6
+    artifact_hashes:
+      report_manifest_sha256: 000353629ced7c3a91218cbf2810eb7a1e2345f90b49966bdc77ade3fbab8e94
+      hotspots_json_sha256: 303b942a94f68f3212b4193c30b6bfd3564200dec1a50961cccb9678b7487bb3
+      hotspots_md_sha256: e78c3a776551dc761d7cd9f3d8ddaf188d523f407026b5c7b6787658a0b0b467
+      retention_sha256: fcfc5b269342839dcf6b3939e5a273e9553442cad3b67173baa8bdaa9208afdc
+    artifact_bytes:
+      report_manifest: 219255
+      hotspots_json: 7434
+      hotspots_md: 7093
+      retention: 757
+  exposure:
+    cade_first_root: "10/10 authenticated chronologies reached Cade's first root"
+    plan_details: "all 10 opened a plan detail; chosen outcomes were LURE 8 and FORTIFY 2"
+    seeded_ground_counterfactual: "deterministic openings favored HUNT 5, LURE 3, DRIVE 1, FORTIFY 1"
+    rating_pattern: "all ten clarity ratings were exactly 4/5"
+    direct_request: >
+      Seed 822061631004 named Albany Station and Cade's plan review and asked for
+      a concise summary of the advantages currently relevant to commitment.
+    wider_friction: >
+      Every report mentioned opening, Station, linked setup, or plan-density
+      friction; the compiler split the Wolf-Winter evidence across six new
+      singleton S1 hotspots rather than producing a strategy-balance cluster.
+    counter_signal: >
+      All ten completed Wolf-Winter, none was stuck, enjoyment passed at 42/50,
+      nine continued after the initial goal, all would replay, and every game
+      action succeeded.
+
+symptom: >
+  Cade's first-root cards already shared plain-language plan names and costs,
+  but they did not expose comparable help or outcome fields. HUNT alone said
+  plainly that wolves may die, while LURE, DRIVE, and FORTIFY described movement
+  or separation without equally plain living-wolf outcomes. The valid pilot
+  then selected LURE eight times despite five of ten seeded grounds favoring
+  HUNT and only three favoring LURE; all ten clarity ratings remained 4/5.
+
+root_cause: >
+  The peer cards had unequal comparison resolution. LURE's keep-the-pack-moving
+  framing made its living-pack aim easiest to infer, while DRIVE and FORTIFY
+  omitted that their successful endings also leave the wolves alive, and no
+  card used one stable field for the relevant aid. The detailed opt-in bodies
+  already hold the full conditional truth, so the smallest correction is a
+  symmetric preview rather than new mechanics or another commitment step.
+
+fix: >
+  Rewrite only the one HUNT prompt and the byte-identical three copies each of
+  LURE, DRIVE, and FORTIFY. Give every peer card the exact visible sequence
+  `Goal`, `Cost`, `Help`, then an ask-only choice boundary. Name Cade lessons
+  plus jerkin for HUNT, Fieldcraft for LURE and DRIVE, and Repair for FORTIFY.
+  State that LURE, DRIVE, and FORTIFY keep the wolves alive; retain HUNT's
+  wolf-death risk and identify its cattle/outer-defense exposure. Restore no
+  retreat to DRIVE and FORTIFY. Describe FORTIFY's property-for-Cade-aid or
+  public-seal spend without guaranteeing that Cade aid is received. Keep Cade's
+  root, all detail bodies, and every action and commitment mechanic byte-for-byte
+  unchanged.
+
+semantic_review:
+  status: "rejected draft repaired before freeze"
+  rejected_draft_content_hash: 86659867989113dd139586723a37508c4c18fdb1fbcf32141259ec6c514001a2
+  rejected_draft_file_sha256: 336ad91c84ff1c6ee8b0a5d2d3de216f85db3ab758616dadb12fda2e75d2c5a6
+  rejected_draft_git_blob: 9068750ef0c70a0783380e4eb52af3f2ee42c4d9
+  rejected_draft_relabeled_twin_hash: 4b9b5857167fabb9468a7e8992659262bb4c981d48af0be626c18bbc9b6a4efa
+  rejected_draft_file_bytes: 365369
+  findings:
+    - "HUNT's `cattle/defense` shorthand failed to identify the outer defense actually at risk"
+    - "DRIVE omitted its no-retreat cost"
+    - "FORTIFY omitted no retreat and `get Cade's aid` could overclaim aid whose detailed predicates remain conditional"
+  resolution: >
+    Replace only HUNT once and the three DRIVE plus three FORTIFY mirrors from
+    the rejected draft. Keep LURE byte-identical. The rejected draft was never
+    committed, pilot-tested, certified, or accepted as a feedback boundary.
+
+source_hash_boundary:
+  predecessor_content_hash: 99afa4a376f7c18a6871a784473d375773661032000cabe7171bfbe1742755fa
+  replacement_content_hash: 08ddb7ce41d319fa34db896ba032cbf69edcf0b0d2a5fd413c457b28091be777
+  predecessor_file_sha256: 0e981cac00b6e03a66c6cb6bb9666deca0d14847f73ea96690b7923c0a35007f
+  replacement_file_sha256: b1d1bb41cd3c803fc7601079c0d84a889879f676e13b2871c67ded2b8367ad48
+  predecessor_git_blob: a29def4722672e5b505d7e7f1d6638867253c37a
+  replacement_git_blob: b4987788bef47d1d07d72339fcd586097f54c2a4
+  predecessor_relabeled_twin_hash: c12a5fe2c3557cc81709eaf377fda13ec663aaae5078550b0e328a279ec6d56b
+  replacement_relabeled_twin_hash: fe16b3687c8d10037073515a7073661ef4b1adf52152140fad18959642d7813e
+  predecessor_file_bytes: 365350
+  replacement_file_bytes: 365393
+
+deterministic_witnesses:
+  - "exact HUNT/LURE/DRIVE/FORTIFY labels are 153/146/154/146 characters and 155/148/156/148 UTF-8 bytes"
+  - "rendered `ask: ` commands are 158/151/159/151 characters and 160/153/161/153 UTF-8 bytes under the unchanged 160-character limit"
+  - "HUNT appears with its exact peer label once; LURE, DRIVE, and FORTIFY each appear byte-identically at cade_root, cade_wolves, and cade_byre"
+  - "the exact trimmed first-root explanation remains 231 ASCII bytes"
+  - "unchanged firm/scent/ash/frame suffixes retain complete roots of 343/340/343/336 characters and 345/342/345/338 UTF-8 bytes under the existing 360-character boundary"
+  - "fixed seed 541 open-ash full observation is 5,177 UTF-8 JSON bytes; compact is 2,599 bytes and its choice array is 978 bytes"
+  - "the exact terminal LURE line is 193 characters / 197 UTF-8 bytes and retains every established alias"
+  - "full observation, compact MCP, terminal help, and browser projection retain the same four action ids and authored order"
+  - "asking every plan detail remains noncommitting; HUNT still commits only on north crossing or offered June release, while LURE/DRIVE/FORTIFY still commit only through their existing final actions"
+  - "the exact compiled hash advances from 99afa4a3 to 08ddb7ce and the reviewed relabeled certificate advances from c12a5fe2 to fe16b368"
+
+mechanics_unchanged:
+  - "Cade's npc id, first-root text, dialogue-node ids, topic ids, every alias, authored order, condition, goto, end marker, and effect"
+  - "all opt-in HUNT/LURE/DRIVE/FORTIFY bodies and variants, including ground, oath, preparation, June, support, recovery, failure, and final-outcome truth"
+  - "all final commitment, back, leave, and support labels and their commitment boundaries"
+  - "strategy flags, resources, skills, checks, rolls, RNG, damage, cattle, alarm, pressure, gear, journal, score, decisions, and outcomes"
+  - "Albany registration, Station board/reveal/modal/support, hill routes, quest launch, foldback, Continue/End, Gallowmere, and checkpoints"
+  - "save schema, MCP schema and limits, terminal command parser, browser action ids, validators, feedback state, and certification gates"
+
+counterevidence:
+  - >
+    Every pilot player completed Wolf-Winter, none was stuck, enjoyment and
+    initial-goal continuation passed, all would replay, and no gameplay action
+    failed. This supports a presentation-only comparison correction, not a
+    mechanics rewrite or a claim that LURE is overpowered.
+  - >
+    The 5/3/1/1 seeded-ground favors versus 0/8/0/2 choices is exposure evidence,
+    not causal proof of menu bias. Players may organically prefer a living-pack
+    plan, and this correction does not force, reward, or quota any strategy.
+  - >
+    The compiler's first recommendation, ea53b6c1, is a legitimate singleton S1
+    Gallowmere retry-consequence finding. Gallowmere lies outside the explicitly
+    bounded Albany / Wolf-Winter / Albany certification slice, so it remains
+    preserved for its own reviewed correction rather than being declared false.
+  - >
+    Six Wolf-Winter singleton hotspots still name opening, Station, pressure, and
+    commitment density. This peer-card change addresses only the universally
+    exposed comparison surface and does not claim those broader reports are solved.
+
+nonclaims:
+  - "The failed pilot tested exact predecessor e14e4208 / 99afa4a3, not this 08ddb7ce replacement; it diagnoses the target and does not validate the new copy."
+  - "Ten AI-player reports are diagnostic evidence, not human research, certification authority, or causal proof that Cade's cards determined a strategy or rating."
+  - "No clarity, enjoyment, continuation, replay, completion, strategy-diversity, balance, certification, or human-quality lift is claimed before a fresh exact-build pilot."
+  - "The copy does not claim that any plan is best, equally attractive, equally safe, or optimal for any seeded ground, character, oath, route, or support package."
+  - "`Help` names the relevant existing aid or skill; it is not a guarantee, requirement, exhaustive modifier list, free resource, or promise that every check disappears."
+  - "`Cade aid` names the existing conditional FORTIFY branch; it does not guarantee Cade appears, succeeds, or replaces the detailed predicates and roll-required failure boundary."
+  - "`Wolves live` describes the existing successful DRIVE/FORTIFY outcomes and LURE aim; it does not erase their documented costs, failure-forward states, cattle harm, wounds, rig loss, property exposure, or seal spend."
+  - "`Ask only` describes these four root inspection actions only; their existing opt-in final actions remain irreversible commitments."
+  - "The detailed plan bodies remain authoritative for exact conditions and costs. This increment does not claim that four compact cards replace reading a chosen plan's details."
+  - "The compiler is not claimed wrong; ea53b6c1, Station density, pressure language, checkpoint presentation, and all unrelated findings remain open or independently reviewable."
+  - "No Gallowmere content, road encounter, checkpoint, second-goal boundary, provider behavior, feedback manifest, certification marker, or expansion is changed or claimed."
+  - "The browser uses its existing generic `Ask` verb before these authored labels; no browser production code, browser run, screenshot review, responsive audit, or visual-quality claim is part of this correction."
+  - "The 160 limit is a character limit; the separately recorded UTF-8 byte counts are projection facts, not an assertion that characters and bytes are interchangeable."
+  - "The content-hash change intentionally invalidates exact predecessor-hash saves/replays under the existing integrity policy; no compatibility relaxation is claimed or added."
+
+production:
+  - content/rpg/quests/wolf_winter.yaml
+  - docs/STARTING_SLICE.md
+  - docs/DECISION_LOG.md
+
+tests:
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/wolf_winter_dialogue_surface.test.ts
+  - tests/regression/wolf_winter_seeded_field_conditions.test.ts
+  - tests/regression/wolf_winter_uncommitted_living_boundary.test.ts
+  - tests/regression/wolf_winter_complementary_clues.test.ts
+  - tests/regression/wolf_winter_cli_command_projection.test.ts
+  - tests/regression/wolf_winter_paling_stage_actions.test.ts
+  - tests/regression/support/seeded_opening_transfer.ts
+  - tests/regression/support/seeded_opening_transfer.test.ts
+  - tests/unit/ui_engine.test.ts
+  - tests/unit/ui_active_quest_persistence.test.ts
+  - tests/starting_slice/wolf_strategy_counterfactual.test.ts
+  - tests/starting_slice/drive_crisis_return_counterfactual.test.ts
+  - tests/starting_slice/fortify_outlast_return_e2e.test.ts
+
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_seeded_field_conditions.test.ts tests/regression/wolf_winter_uncommitted_living_boundary.test.ts tests/regression/wolf_winter_complementary_clues.test.ts tests/regression/wolf_winter_cli_command_projection.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/support/seeded_opening_transfer.test.ts tests/unit/ui_engine.test.ts tests/unit/ui_active_quest_persistence.test.ts tests/starting_slice/wolf_strategy_counterfactual.test.ts tests/starting_slice/drive_crisis_return_counterfactual.test.ts tests/starting_slice/fortify_outlast_return_e2e.test.ts
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts -t "advertises only player tools and records exactly one fresh overworld start"
+  - npm run verify:bug-traces
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - git diff --check

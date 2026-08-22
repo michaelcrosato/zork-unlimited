@@ -93,6 +93,26 @@ describe("compactOverworldJourneyStoryChoiceResult", () => {
     expect(JSON.stringify(compact).match(new RegExp(consequence, "g"))).toHaveLength(1);
     expect(JSON.stringify(compact)).not.toContain("registrationBoundary");
     expect(JSON.stringify(compact)).not.toContain("a".repeat(64));
+    expect(compact).not.toHaveProperty("displaySummary");
+    expect(result).toEqual(before);
+  });
+
+  it("leads with an optional display summary while preserving the exact receipt", () => {
+    const consequence = "Exact authored consequence with durable receipt terms.";
+    const displaySummary =
+      "Ready-made dispatch chosen — Background, promise, and report are already set.";
+    const result = { ...storyChoiceResult(consequence), displaySummary };
+    const before = structuredClone(result);
+
+    const compact = compactOverworldJourneyStoryChoiceResult(result);
+    const serialized = JSON.stringify(compact);
+
+    expect(compact.displaySummary).toBe(displaySummary);
+    expect(compact.consequence).toBe(consequence);
+    expect(serialized.indexOf('"displaySummary"')).toBeLessThan(
+      serialized.indexOf('"consequence"'),
+    );
+    expect(compact.consequence).toBe(result.consequence);
     expect(result).toEqual(before);
   });
 

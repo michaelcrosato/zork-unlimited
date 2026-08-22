@@ -98,11 +98,16 @@ interpret `CODEX_HOME/models_cache.json`: model-catalog cache compatibility,
 refresh, and persistence belong to the selected Codex client, which treats a
 different client version as an ordinary cache miss. Repository code does not
 repair or delete that cache and does not inspect login data.
+At direct-player launch, the exact model-specific `model_catalog_json` selects
+the CLI's static catalog manager, so ambient cache contents do not choose shell
+or tool mode. The catalog is argv-bound and tracked; there is no cache-derived
+transport fallback.
 
-The audited `spark-direct-mcp-v1` transport requires exact `codex-cli 0.146.0`.
-Any other version exits at client preflight with code 42 before the model starts;
-set `BLIND_CODEX_BIN` to the absolute path of the compatible executable. Strict
-Sol, Terra, and Luna transports retain their existing version-pinning behavior.
+The audited `spark-direct-mcp-v1` and Terra-only `game-direct-mcp-v1`
+transports require exact `codex-cli 0.146.0`. Any other version exits at client
+preflight with code 42 before the model starts; set `BLIND_CODEX_BIN` to the
+absolute path of the compatible executable. Strict Sol and Luna transports
+retain their existing version-pinning behavior.
 
 `--preflight-only`, used by a live fleet's shared gate, does not resolve, read,
 or enumerate `CODEX_HOME` and creates no report or player artifacts. It returns
@@ -126,24 +131,39 @@ After this read-only gate, the runner passes `--ignore-user-config`,
 user/project instructions, shell/web/apps/plugins/browser/computer, the unused
 shell snapshot, and subagent capabilities cannot enter the player turn. It also
 selects one audited transport by exact requested model. Exact
-`gpt-5.3-codex-spark` uses native `spark-direct-mcp-v1`: code mode is disabled,
-native tool search is disabled, all pure AdventureForge tools are preloaded, and
-the player's first tool call is `start_overworld({})`. Its tracked
-`codex-model-catalog-spark-v1.json` removes shell and patch tools, selects direct
-tool mode, supplies game-only base instructions, and keeps complete shipped game
-results inside an explicit 16 KiB client truncation policy (above the measured
-12,098-byte framed response that exposed the former 10,000-byte setting). The
-limit does not enlarge ordinary responses. The catalog's `null`
+`gpt-5.3-codex-spark` uses native `spark-direct-mcp-v1`, while exact Terra uses
+Terra-only `game-direct-mcp-v1`: code mode and native tool search are disabled,
+all pure AdventureForge tools are preloaded, and the player's first tool call is
+`start_overworld({})`. Their tracked `codex-model-catalog-spark-v1.json` and
+`codex-model-catalog-terra-v1.json` remove shell, patch, search, skills, and
+model-message surfaces; select native direct tool mode; and supply the exact
+game-only base instructions. Spark retains an explicit 16 KiB byte truncation
+policy (above the measured 12,098-byte framed response that exposed the former
+10,000-byte setting). Terra preserves its native 10,000-token policy and 272,000-
+token context capacity rather than inheriting Spark's smaller byte ceiling. These
+limits do not enlarge ordinary responses. Each catalog's `null`
 `auto_compact_token_limit` preserves the client's maximum default headroom; it
 does not turn compaction off. Because an opaque encrypted replacement history
 cannot yet be independently proven to contain only player-visible evidence, any
 compaction lifecycle fails closed for Spark, Sol, Terra, and Luna pure runs. The
-clean build commit binds that catalog along with the prompt and runner.
-Exact Sol, Terra, and Luna
-use `strict-code-mode-v2` with `--enable code_mode_only` and canonical
+clean build commit binds the selected catalog along with the prompt and runner.
+Exact Sol and Luna use
+`strict-code-mode-v2` with `--enable code_mode_only` and canonical
 `functions.exec` wrappers. The runner reads the public `thread.started` UUID,
 copies only the UUID-matched rollout under `CODEX_HOME/sessions`, and cross-binds
 its private session/cwd/file identity to the isolated player directory.
+Terra direct fails closed unless its exact 0.146 turn profile retains compatibility
+hash `3000`, disabled multi-agent topology with no mode block, and the CLI's
+compatibility-only `summary: "auto"` rollout sentinel. Codex 0.146 hard-codes that
+serialized sentinel; it does not report or override the effective request setting.
+The tracked catalog removes Terra's native v2 team prelude, pins the actual
+API-request reasoning summary to `none`, and declares the summary parameter
+unsupported so Codex cannot send it even if that setting drifts. The Terra-only
+launch redundantly pins the request setting to `none` plus `agents.enabled=false`.
+Strict Terra evidence retains its historical v2 profile. Hash `3000` matches both
+the CLI's exact bundled Terra metadata and a
+retained exact-CLI Terra strict capture. A fresh live reduced-profile game-direct
+canary must still confirm that the repo-owned overrides are applied before fleet spend.
 
 The health bar starts the real pure MCP server, reads its actual `tools/list`,
 projects the canonical build catalogue shape `{name, description, input_schema}`,
@@ -154,14 +174,14 @@ commit binds those server and test bytes for launch. Codex rollout files do not
 repeat the preloaded descriptor catalogue, so this is build-bound local
 authority, not a claim that the remote provider signed runtime descriptors.
 
-The direct Spark audit accepts only preloaded native
+The direct Spark and Terra audits accept only preloaded native
 `function_call -> MCP completion -> function_call_output` lifecycles. After the
 single exact `start_overworld({})` call, every later name must remain in the
 build-attested pure player catalog; it need not be repeated as prose in the
 immediately prior result. The pure server independently enforces current state,
 handles, hashes, legal arguments, and terminal boundaries. The private audit
-also authenticates the exact applied game-only base instructions and catalog
-compatibility hash, and permits only one final assistant message after gameplay;
+also authenticates the exact applied game-only base instructions and selected
+catalog compatibility hash. Both permit only one final assistant message after gameplay;
 interim narration is rejected. The strict
 audit accepts only canonical `exec -> MCP completion -> visible output`
 lifecycles, including the exact `// @exec: {"yield_time_ms": 120000}` pragma and
@@ -260,9 +280,10 @@ outside and non-overlapping with `ai-runs/fleet/<label>`.
 - **Preflight**: before spending tokens, a live fleet freezes the full clean
   tracked Git commit, canonical world id/hash, contiguous planned seeds, and
   run/model plan. Its model-specific transport fingerprint hashes Spark's
-  compact prompt, catalog, and direct fragment, or the strict prompt and strict
-  fragment for Sol/Terra/Luna. A dirty tree, fingerprint drift, or Git/provenance
-  error aborts launch. Untracked notes do not dirty this check.
+  compact prompt, catalog, and direct fragment; Terra's live prompt, catalog,
+  and game-direct fragment; or the strict prompt and strict fragment for Sol/Luna.
+  A dirty tree, fingerprint drift, or Git/provenance error aborts launch.
+  Untracked notes do not dirty this check.
 - **Persona**: pure live fleets enforce the neutral `default` first-time-player
   persona. `explorer`, `speedrunner`, `breaker`, `casual`, `lore-reader`, and
   `mixed` remain explicit structural experiments; their prescribed behavior
@@ -283,16 +304,20 @@ outside and non-overlapping with `ai-runs/fleet/<label>`.
   which is terminal and never retried. Before a retry, every
   generated artifact and a diagnostic log are copied into the bundle's
   per-seed/per-attempt archive with byte counts and SHA-256 digests.
-- **Runner attestation**: current Codex v8 binds the exact selected
+- **Runner attestation**: current Codex v9 binds the exact selected
   model-specific transport, actual provider/model/effort/session/turn,
   isolated cwd, public events, copied rollout, cross-bound capture receipt,
   original provider report, exact CLI version, and frozen client authority.
-  Spark receipts are schema v4 with `spark-direct-mcp-v1`; strict receipts retain
-  schema v3 with `strict-code-mode-v2`. The audit requires the controlled Spark
-  preloaded native direct lifecycle or the strict code-mode lifecycle as selected,
+  Spark receipts are schema v4 with `spark-direct-mcp-v1`; Terra receipts are
+  schema v5 with `game-direct-mcp-v1`; Sol/Luna strict receipts retain schema v3
+  with `strict-code-mode-v2`. The audit requires the selected controlled native
+  direct or strict code-mode lifecycle,
   and rejects every cross-binding, topology, or transport mismatch. Current
-  resume and certification require v8. Historical receipt schemas v1-v3 and
-  Codex v3-v7 (plus Claude v2) remain readable only. `task_complete` must be
+  resume and certification require v9. Receipt schemas v1-v2 are historical;
+  v3 remains current only for strict Sol/Luna and v4 only for Spark direct, and
+  none of v1-v4 can establish Terra's current v5 capture. Codex attestations
+  v3-v8 (plus Claude v2) remain readable only. Historical v8 keeps its original
+  Spark-direct/strict-Sol-Terra-Luna meaning. `task_complete` must be
   final; abort/error history, recovery, reuse, links, path escape, ambiguous
   rollout proof, and model recovery reject. Receipt binding remains a
   deterministic one-value replacement, never a new model turn.
@@ -312,7 +337,7 @@ outside and non-overlapping with `ai-runs/fleet/<label>`.
   `.repair.meta.json`, and `.repair.json` form a complete, deterministically
   reproducible byte-bound set; rejected originals stay outside feedback
   compiler `*.md` discovery. Deterministic Codex receipt binding is recorded
-  separately in each attempt, manifest row, current v8 attestation, and the summary's
+  separately in each attempt, manifest row, current v9 attestation, and the summary's
   `receipt_bound_runs`; it does not change subjective fields and remains
   certification-eligible. Historical Claude recovery is diagnostic only: subjective fields
   such as confusion, bugs, stuck state, and replay intent were generated after

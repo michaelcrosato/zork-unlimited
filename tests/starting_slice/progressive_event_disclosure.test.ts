@@ -19,7 +19,7 @@ const EVENT_ID = "albany_city__civic_core__event";
 const EVENT_PAUSED_MESSAGE = "No authored choice is currently available in this journey state.";
 const EVENT_INVESTIGATE_MESSAGE = "Required first: investigate this event.";
 const STORY_ACTION_BLOCKED_MESSAGE =
-  "Choose the presented story consequence, character registration, relief oath, Albany lead source, preparation, relief allocation, or field-team commitment before taking another action.";
+  "Choose the presented story consequence, background, Wolf-Winter promise, report, field kit, relief wagon, or second rider before taking another action.";
 
 function expectEventLeadParity(session: OverworldSession, message: string): void {
   const compact = session.compactView();

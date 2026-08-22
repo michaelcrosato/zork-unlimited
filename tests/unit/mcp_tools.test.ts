@@ -842,9 +842,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(
       a.get_overworld_session({ session_id: started.session_id }).journey.storyChoice?.kind,
     ).not.toBe("relief_allocation");
-    expect(
-      a.get_overworld_session_context({ session_id: started.session_id }).context.quests?.[0],
-    ).toEqual(compactOverworldQuestRef(discoveredQuest, true));
+    const compactContext = a.get_overworld_session_context({ session_id: started.session_id });
+    const sharedDispatchStatus = compactContext.context.station_dispatch_board?.[2];
+    expect(sharedDispatchStatus).toMatch(/^Set: background, promise, report\. Dispatch 35m;/);
+    expect(compactContext.context.quests?.[0]).toEqual(
+      compactOverworldQuestRef(discoveredQuest, true, false, false, sharedDispatchStatus),
+    );
+    expect(JSON.stringify(compactContext.context.quests?.[0])).not.toContain(sharedDispatchStatus);
     const routeAwayFromQuest = sourced.areaExits.find(
       (exit) => exit.destination.id !== discoveredQuest.area,
     );
@@ -1047,7 +1051,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
     // NPC display-name tuples add a small amount of actionable orientation;
     // the ceiling below remains the real transport budget.
-    expect(compactLaunchBytes).toBe(6_770);
+    expect(compactLaunchBytes).toBe(7_059);
     expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
     const fieldHandoff = a.step_action({
       session_id: compactStartedQuest.rpg_session_id,
@@ -1069,7 +1073,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(fieldHandoff.journey).not.toHaveProperty("decisionProof");
     expect(fieldHandoff.journey.pendingChoice).toBeNull();
     const compactFieldTurnBytes = Buffer.byteLength(JSON.stringify(fieldHandoff));
-    expect(compactFieldTurnBytes).toBe(2_245);
+    expect(compactFieldTurnBytes).toBe(2_336);
     expect(compactFieldTurnBytes).toBeLessThanOrEqual(3_500);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,

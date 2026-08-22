@@ -21,6 +21,10 @@ const directTransport = readFileSync(
   join(ROOT, "blind-tester", "prompt-transports", "spark-direct-mcp-v1.md"),
   "utf8",
 );
+const gameDirectTransport = readFileSync(
+  join(ROOT, "blind-tester", "prompt-transports", "game-direct-mcp-v1.md"),
+  "utf8",
+);
 const prompt = fillPrompt(promptTemplate, {
   startInstruction: "start",
   seed: 1,
@@ -33,8 +37,17 @@ const sparkPrompt = fillPrompt(sparkPromptTemplate, {
   persona: "",
   transport: directTransport,
 });
+const terraPrompt = fillPrompt(promptTemplate, {
+  startInstruction: "start",
+  seed: 1,
+  persona: "",
+  transport: gameDirectTransport,
+});
 const protocol = readFileSync(join(ROOT, "docs", "blind_playtest_protocol.md"), "utf8");
 const readme = readFileSync(join(ROOT, "blind-tester", "README.md"), "utf8");
+const rootReadme = readFileSync(join(ROOT, "README.md"), "utf8");
+const startingSlice = readFileSync(join(ROOT, "docs", "STARTING_SLICE.md"), "utf8");
+const testingPyramid = readFileSync(join(ROOT, "docs", "testing_pyramid.md"), "utf8");
 const runner = readFileSync(join(ROOT, "blind-tester", "run.sh"), "utf8");
 const mockAgent = readFileSync(join(ROOT, "blind-tester", "mock-agent.mjs"), "utf8");
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
@@ -58,6 +71,49 @@ function protocolParagraph(marker: string): string {
 }
 
 describe("pure blind prompt + runner contract", () => {
+  it("documents the exact Terra-direct v9 boundary without rewriting historical v8", () => {
+    expect(rootReadme).toContain("game-direct capture receipt v5 (`game-direct-mcp-v1`)");
+    expect(rootReadme).toContain(
+      "each direct model is\n  launched through its own tracked game-only model catalog",
+    );
+    expect(rootReadme).toContain("Fleet attestation v9 binds");
+    expect(readme).toContain("Terra's live prompt, catalog,\n  and game-direct fragment");
+    expect(readme).toContain("`codex-model-catalog-terra-v1.json`");
+    expect(readme).toContain("ambient cache contents do not choose shell\nor tool mode");
+    expect(readme).toContain("current Codex v9 binds");
+    expect(protocol).toContain("Terra-only `game-direct-mcp-v1`");
+    expect(protocol).toContain("Current fleet publication uses Codex attestation v9");
+    expect(protocol).toContain("Terra's catalog and model-scoped launch record the");
+    expect(protocol).toContain('`multi_agent_version: "disabled"`, no\n`multi_agent_mode`');
+    expect(protocol).toContain('compatibility-only rollout sentinel `summary: "auto"`');
+    expect(protocol).toContain(
+      "Responses request omits `reasoning.summary` when that value is `none`",
+    );
+    expect(protocol).toContain(
+      "The verifier also requires every private\nreasoning response item to retain an empty summary array",
+    );
+    expect(protocol).toMatch(/Strict Terra keeps its\s+v2 team\/mode profile/u);
+    expect(protocol).toContain('`comp_hash: "3000"`');
+    expect(protocol).toContain(
+      "Both direct transports reject every\ninterim assistant message before the one final interview",
+    );
+    expect(protocol).toContain(
+      "fresh live reduced-profile game-direct\ncanary must still confirm the repo-owned override before fleet spend",
+    );
+    expect(protocol).toContain("Spark's and Terra's tracked player catalogs preload");
+    expect(protocol).toContain("There is no cache-derived transport\nfallback");
+    expect(protocol).not.toContain("Sol and Terra use the\nv2 `explicitRequestOnly` profile");
+    expect(startingSlice).toContain("Current Codex v9 is model-discriminated");
+    expect(testingPyramid).toContain("Terra game-direct\ncapture schema v5");
+
+    for (const currentContract of [rootReadme, readme, protocol, startingSlice, testingPyramid]) {
+      expect(currentContract).not.toMatch(/current Codex v8/i);
+      expect(currentContract).not.toMatch(/Sol, Terra, and\s+Luna use\s+(?:a )?strict/i);
+    }
+    expect(protocol).toContain("Codex attestations v3-v8\nremain readable historical evidence");
+    expect(startingSlice).toContain("transport-bound v8");
+  });
+
   it("pins one non-yielding Codex exec lifecycle without weakening historical evidence", () => {
     const transport = promptBullet(
       "- For every Codex `functions.exec` AdventureForge gameplay wrapper",
@@ -168,50 +224,79 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("normal player");
     expect(prompt).toContain("context.quest_starts");
     expect(prompt).toContain("pass those values unchanged");
-    expect(prompt).toContain("read-only\n  `station_dispatch_board`");
-    expect(prompt).toContain("`[3, quest_id, guidance, dispatch, rows]`");
-    expect(prompt).toContain("`[slot, status, selected_title|null, purpose|null, action|null]`");
-    expect(prompt).toContain("The live\n  departure and its legal roads remain");
-    expect(prompt).toContain("one deliberate,\n  collapsed planning affordance");
-    expect(prompt).toContain("every optional support row has null `purpose` and `action`");
-    expect(prompt).toContain("does not authorize an inspect or talk call");
-    expect(prompt).toContain("mcp__adventureforge__get_overworld_session_context");
-    expect(prompt).toContain("`include_station_dispatch_support: true`");
-    expect(prompt).toContain("`station_dispatch_support`: `[[slot, purpose, action], ...]`");
-    expect(prompt).toContain("Do not request it\n  merely to enumerate all three rows");
-    expect(prompt).toContain("Support rows are independent and optional");
-    expect(prompt).toContain('`["inspect", story_choice_id]`');
-    expect(prompt).toContain('`["talk", character_id, contact_name]`');
-    expect(prompt).toContain("A null action is not");
-    expect(prompt).toContain("mcp__adventureforge__talk_overworld_session_contact");
-    expect(prompt).toContain("A talk action alone can present the actual");
-    expect(prompt).toContain("reading the default board or deferred support detail");
-    expect(prompt).toContain("or decision count");
-    expect(prompt).toMatch(
-      /older session cannot produce the v3 board, the compact\s+fallback may instead expose `departure_recap`/,
+    expect(prompt).toContain("Station v49 `station_dispatch_board`");
+    expect(prompt).toContain("`[6,quest_id,dispatch_status,dispatch,rows,overview|null]`");
+    expect(prompt).toContain("remaining_optional_count");
+    expect(prompt).toContain("`[slot,status,selected_title|null,purpose|null,action|null]`");
+    expect(prompt).toContain(
+      "`role/duty/evidence/preparation/relief_allocation/field_team` mean\n  background/promise/report/kit/wagon/rider",
     );
-    expect(prompt).toContain("A legacy v2 board can instead carry");
-    expect(prompt).toContain("use only those visible non-null\n  actions as authorization");
-    expect(prompt).toContain("`departure_interactions`, and");
-    expect(prompt).toContain("`departure_contact_leads`");
+    expect(prompt).toContain(
+      "`context.quests` plus\n  `context.quest_starts` are the roads; you may depart with support unfinished",
+    );
+    expect(prompt).toContain("Before review, hidden open rows are summarized");
+    expect(prompt).toContain("`overview=[id,label]`");
+    expect(prompt).toContain("If a\n  category interests you");
+    expect(prompt).toContain("`reveal_station_dispatch_support`");
+    expect(prompt).toContain("latest `if_snapshot_hash`");
+    expect(prompt).toContain("pure delta has outer `overworld_session_id`/`snapshot_hash`");
+    expect(prompt).toContain(
+      "`station_dispatch_reveal:{version:1,base_snapshot_hash,station_dispatch_board}`",
+    );
+    expect(prompt).toContain("base matches your retained hash");
+    expect(prompt).toContain("keep journey/context and replace\n  the board and hash");
+    expect(prompt).toContain("otherwise refresh without reveal");
+    expect(prompt).toContain("After review `overview=null`");
+    expect(prompt).toContain("open rows expose purpose/action");
+    expect(prompt).toContain("Support changes cost/aftermath, not access");
+    expect(prompt).toContain("Inspect at most one desired row");
+    expect(prompt).toContain("never enumerate");
+    expect(prompt).toContain("`['inspect',story_choice_id]`");
+    expect(prompt).toContain("`['talk',character_id,contact_name]`");
+    expect(prompt).toContain("null is illegal");
+    expect(prompt).toContain("revealed field-team talk can present a mandatory ally modal");
+    expect(prompt).toContain("`expected_snapshot_hash:latest snapshot_hash`");
+    expect(prompt).toContain("pure delta omits raw\n  session/context");
+    expect(prompt).toContain("outer `overworld_session_id`/`snapshot_hash`, full");
+    expect(prompt).toContain("`journey`/`storyChoice`");
+    expect(prompt).toContain("`journeyDecision`, compact `result`, any `legend_delta`");
+    expect(prompt).toContain("`station_dispatch_modal:{version:1,base_snapshot_hash}`");
+    expect(prompt).toContain("base matches\n  retained state, keep context and adopt those fields");
+    expect(prompt).toContain("modal voids old board\n  actions");
+    expect(prompt).toContain("do not repeat the talk");
+    expect(prompt).toContain("inspect it or choose a visible ally option");
+    expect(prompt).toContain("Missing/stale bases do not mutate");
+    expect(prompt).toContain("choice returns full context to resync");
+    expect(Buffer.byteLength(promptTemplate, "utf8")).toBe(15_720);
+    expect(prompt).not.toMatch(/legacy v[23]/iu);
+    expect(prompt).not.toContain("older session");
+    expect(prompt).not.toContain("`include_station_dispatch_support: true`");
+    expect(prompt).toContain("Without `station_dispatch_board`");
+    expect(prompt).toContain("only exact actions are legal");
     expect(prompt).toContain("context.job_scenes");
     expect(prompt).toContain("context.job_choices");
     expect(prompt).toContain("exact `[job_id, option_id]` tuple");
     expect(prompt).toMatch(/passing\s+both values unchanged/);
-    expect(prompt).toContain("versioned comparison contains short option summaries");
     expect(prompt).toContain("visible `reviewOption`");
-    expect(prompt).toMatch(/that option's\s+exact `id` at the declared\s+argument/);
-    expect(prompt).toMatch(/candidate's new\s+consequence\/timing/);
-    expect(prompt).toContain("authenticated already-selected terms");
-    expect(prompt).toContain("separately read recap or terms");
+    expect(prompt).toContain("one exact\n  option `id` as `option_id`");
+    expect(prompt).toContain("authenticated selected terms");
+    expect(prompt).toMatch(/separately read recap,\s+or expand every option/u);
     expect(prompt).toContain("option detail may");
     expect(prompt).not.toContain("never the exact active terms");
+    expect(prompt).toContain("compact prompt\n  carries one review instruction in its message");
+    expect(prompt).toContain("required per-option `consequence` is intentionally blank");
+    expect(prompt).not.toContain("consequence line stages rather than repeats");
     expect(prompt).toContain("visible `revealOption`");
+    expect(prompt).toContain(
+      "records that the comparison was viewed but accepts no\n  gameplay decision",
+    );
+    expect(prompt).toContain("result may include `displaySummary`");
+    expect(prompt).toContain("read that concise\n  player-language outcome first");
+    expect(prompt).toContain("`consequence` remains the exact\n  authoritative receipt");
     expect(prompt).toContain("`reveal_id`");
     expect(prompt).toContain("then choose only from the expanded visible");
-    expect(prompt).toMatch(/do not expand every\s+option/);
-    expect(prompt).toContain("pass the inspected `story_choice_id` only when needed");
-    expect(prompt).toMatch(/to\s+disambiguate a shared\s+option id/);
+    expect(prompt).toMatch(/expand every\s+option/);
+    expect(prompt).toContain("add `story_choice_id`\n  only to disambiguate a shared id");
     expect(prompt).not.toContain("with both that\n  `story_choice_id`");
     expect(prompt).toContain("does not repeat the\n  Station board or other world context");
     expect(prompt).not.toContain("mcp__adventureforge__start_world_quest");
@@ -224,6 +309,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("same `end` choice");
     expect(prompt).toContain("`retryable: false`");
     expect(prompt).toContain('"journey_exit_receipt": {}');
+    expect(prompt).toContain('"issue_consistency_version": 1');
+    expect(prompt).toContain("Every severity-tagged finding anywhere in the report");
+    expect(prompt).toMatch(/Do not leave a severity-bearing concern only in\s+prose/u);
+    expect(prompt).toContain("Distinct concerns need distinct objects");
     expect(prompt).not.toMatch(/"journey_exit_receipt"\s*:\s*"/);
 
     expect(prompt).not.toMatch(/30\s*[–-]\s*45|30\s+to\s+45/i);
@@ -276,6 +365,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(sparkPrompt.trimEnd().endsWith("```")).toBe(true);
     expect(sparkPrompt.match(/^```json exit-interview\r?$/gmu)).toHaveLength(1);
     expect(sparkPrompt).toContain('"schema_version":2');
+    expect(sparkPrompt).toContain('"issue_consistency_version":1');
+    expect(sparkPrompt).toContain("Every severity-tagged finding anywhere in the report");
+    expect(sparkPrompt).toContain("Distinct concerns need distinct objects");
+    expect(sparkPrompt).toContain("Never leave a severity concern only in prose");
     expect(sparkPrompt).toContain('"play_mode":"pure"');
     expect(sparkPrompt).toContain('"start_surface":"fresh_overworld"');
     expect(sparkPrompt).toContain('"journey_exit_receipt":{}');
@@ -289,6 +382,12 @@ describe("pure blind prompt + runner contract", () => {
     expect(sparkPrompt).not.toContain("text(await tools.");
     expect(sparkPrompt).not.toContain("{{TRANSPORT_INSTRUCTIONS}}");
     expect(sparkPrompt).not.toContain("{{PERSONA}}");
+    expect(terraPrompt).toContain("`mcp__adventureforge__start_overworld({})` exactly once");
+    expect(terraPrompt).toContain("Before any words or other action");
+    expect(terraPrompt).toContain("Never use any other tool");
+    expect(terraPrompt).not.toContain("functions.exec");
+    expect(terraPrompt).not.toContain(CODEX_EXEC_YIELD_PRAGMA);
+    expect(terraPrompt).not.toContain("{{TRANSPORT_INSTRUCTIONS}}");
     expect(prompt).not.toContain("{{TRANSPORT_INSTRUCTIONS}}");
     expect(prompt).toContain('Never put `"none"`,\n  `"none observed"`');
     expect(prompt.trimEnd().endsWith("```")).toBe(true);
@@ -354,6 +453,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(runner).toContain("--play-mode");
     expect(runner).toContain("--run-evidence");
     expect(runner).toContain("--require-mode pure");
+    expect(runner.match(/--require-issue-consistency/g)).toHaveLength(3);
     expect(runner).toContain('rm -f "$PRIVATE_RUN_SIDECAR"');
     expect(runner).toContain("PURE_PUBLICATION_COMPLETE=1");
     for (const persona of ["breaker", "casual", "explorer", "lore-reader", "speedrunner"]) {

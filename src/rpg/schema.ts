@@ -461,6 +461,23 @@ export const EnemySchema = z
   })
   .strict();
 
+const SeededOpeningFlagsSchema = z
+  .array(z.string().min(1))
+  .min(2)
+  .superRefine((flags, ctx) => {
+    const seen = new Set<string>();
+    flags.forEach((flag, index) => {
+      if (seen.has(flag)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message: `Duplicate seeded opening flag "${flag}".`,
+        });
+      }
+      seen.add(flag);
+    });
+  });
+
 export const RpgMetaSchema = z
   .object({
     id: z.string().min(1),
@@ -469,6 +486,10 @@ export const RpgMetaSchema = z
     start_room: z.string().min(1),
     vars_init: z.record(z.string(), z.number().finite()).default({}),
     flags_init: z.array(z.string()).default([]),
+    // Optional with no default: legacy packs retain their parsed object shape and
+    // therefore their established content hashes. When present, exactly one flag
+    // is selected from the authored order for the fresh state's numeric seed.
+    seeded_opening_flags: SeededOpeningFlagsSchema.optional(),
     max_score: z.number().int().nonnegative().default(0),
     combat_guaranteed: z.boolean().optional(),
   })

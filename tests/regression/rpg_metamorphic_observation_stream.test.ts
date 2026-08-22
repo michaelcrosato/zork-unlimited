@@ -119,6 +119,11 @@ import type { RpgRelabeler } from "./support/relabel_rpg.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
+import {
+  seededOpeningRelabelTransferSupportForPacks,
+  seededOpeningTransferFailureMessage,
+  seededOpeningTransferSupportForPack,
+} from "./support/seeded_opening_transfer.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -715,9 +720,23 @@ endings:
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const original = loaded.compiled.pack;
+        const originalSeededOpeningSupport = seededOpeningTransferSupportForPack(original);
+        expect(
+          originalSeededOpeningSupport.unsupported,
+          seededOpeningTransferFailureMessage(file, originalSeededOpeningSupport),
+        ).toBe(false);
 
         const { pack: twin, relabeler } = relabelRpgPack(original);
         const mapId = mapIdFn(relabeler);
+        const twinSeededOpeningSupport = seededOpeningRelabelTransferSupportForPacks(
+          original,
+          twin,
+          mapId,
+        );
+        expect(
+          twinSeededOpeningSupport.unsupported,
+          seededOpeningTransferFailureMessage(`${file} relabeled twin`, twinSeededOpeningSupport),
+        ).toBe(false);
 
         // NON-VACUITY (1): the relabel actually renamed things — no id maps to itself.
         expect(relabeler.map.size).toBeGreaterThan(0);

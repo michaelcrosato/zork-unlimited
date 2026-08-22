@@ -232,6 +232,14 @@ export function openingAllyOptionById(
   return option ? OpeningAllyOptionSchema.parse(option) : null;
 }
 
+/** Keep the authored option identity while naming the solo choice in player-facing language. */
+export function openingAllyOptionDisplayLabel(
+  scene: Pick<OpeningAlly, "solo_option_id">,
+  option: Pick<OpeningAllyOption, "id" | "title">,
+): string {
+  return option.id === scene.solo_option_id ? "Ride alone" : option.title;
+}
+
 export function formatOpeningAllyCost(terms: OpeningAllyTerms): string {
   return terms.minutes === 0 ? "no added time" : `${String(terms.minutes)} minutes`;
 }
@@ -259,7 +267,7 @@ function openingAllyOptionTimingSummary(scene: OpeningAlly): string {
         option.terms.minutes === 0
           ? "no added time"
           : `${formatOpeningAllyCost(option.terms)} additional`;
-      return `${option.title}: ${additional}, ${String(totalMinutes)} minutes total`;
+      return `${openingAllyOptionDisplayLabel(parsed, option)}: ${additional}, ${String(totalMinutes)} minutes total`;
     })
     .join("; ");
 }

@@ -5,6 +5,9 @@ import {
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
   embeddedJourneyFocus,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
+  JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT,
+  JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
   type EmbeddedJourneyFocus,
   type JourneyStoryChoiceRevealAffordance,
@@ -50,6 +53,7 @@ function expectRoleplayReceipt(
     commitment: string;
     benefit: string;
     checkFit?: string;
+    highlights?: readonly Readonly<{ label: string; value: string }>[];
     immediateCost: string;
     giveUp: string;
   },
@@ -58,12 +62,14 @@ function expectRoleplayReceipt(
   expect(option?.summary).toEqual({
     commitment: args.commitment,
     ...(args.checkFit === undefined ? {} : { checkFit: args.checkFit }),
+    ...(args.highlights === undefined ? {} : { highlights: args.highlights }),
     immediateCost: args.immediateCost,
     tradeoff: args.giveUp,
   });
   expect(Object.keys(option?.summary ?? {}).sort()).toEqual([
     ...(args.checkFit === undefined ? [] : ["checkFit"]),
     "commitment",
+    ...(args.highlights === undefined ? [] : ["highlights"]),
     "immediateCost",
     "tradeoff",
   ]);
@@ -118,6 +124,18 @@ function structuredPrompt(option: JourneyStoryChoiceOption): JourneyStoryChoiceP
       }),
     ]) as JourneyStoryChoiceOptions,
   });
+}
+
+function expectPromptLevelReview(
+  compact: ReturnType<typeof compactJourneyStoryChoicePrompt>,
+  prompt: JourneyStoryChoicePrompt,
+): void {
+  expect(compact.message).toBe(`${prompt.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`);
+  expect(compact.options.every((option) => option.consequence === "")).toBe(true);
+  expect(
+    JSON.stringify(compact).match(/inspection is read-only and commits nothing/gu),
+  ).toHaveLength(1);
+  expect(JSON.stringify(compact)).not.toContain(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
 }
 
 describe("compact journey projection", () => {
@@ -186,7 +204,7 @@ describe("compact journey projection", () => {
     expect(compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption).toEqual(option);
   });
 
-  it("stages an unstructured historic ally prompt without changing its source", () => {
+  it("keeps the legacy staging fallback for an unstructured historic ally prompt", () => {
     const ally = Object.freeze({
       id: "test:ally",
       kind: "ally" as const,
@@ -206,6 +224,7 @@ describe("compact journey projection", () => {
         (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
       ),
     ).toBe(true);
+    expect(compact.message).toBe(ally.message);
     expect(compactJourneyStoryChoiceComparison(ally, "a").inspectedOption).toEqual(ally.options[0]);
     expect(JSON.stringify(ally)).toBe(before);
   });
@@ -282,8 +301,8 @@ describe("compact journey projection", () => {
     expect(compactJourney.options).toHaveLength(1);
     expect(compactJourney.options[0]).toMatchObject({
       id: "test:standard-packet",
-      consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
     });
+    expectPromptLevelReview(compactJourney, prompt);
     const compactJourneyJson = JSON.stringify(compactJourney);
     expect(compactJourneyJson.indexOf('"revealOption"')).toBeLessThan(
       compactJourneyJson.indexOf('"options"'),
@@ -343,6 +362,15 @@ describe("compact journey projection", () => {
     }
     const full = presentOpeningPreparation(preparation, character);
     const compact = compactJourneyStoryChoicePrompt(full);
+    const summary = compactJourneyStoryChoiceComparison(full);
+    for (const option of compact.options) {
+      expect(option).not.toHaveProperty("situationalBoundary");
+    }
+    expect(summary.options.every((option) => !("situationalBoundary" in option))).toBe(true);
+    expect(JSON.stringify([compact, summary])).not.toContain("May never trigger");
+    expect(JSON.stringify([compact, summary])).not.toContain(
+      "spend the split-rail guard to redirect the yearling alive",
+    );
 
     for (const profile of preparation.profiles) {
       const option = compact.options.find((candidate) => candidate.id === profile.id);
@@ -363,11 +391,70 @@ describe("compact journey projection", () => {
         immediateCost: fullOption.summary!.immediateCost,
         giveUp: profile.tradeoff,
       });
-      expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      expect(option?.summary?.highlights).toEqual(
+        check
+          ? [
+              {
+                label: "Governing skill",
+                value: `${check.skill_label} ${signedModifier} vs DC ${String(check.difficulty)}`,
+              },
+            ]
+          : undefined,
+      );
+      expect(option?.summary).not.toHaveProperty("checkFit");
+      expect(option?.consequence).toBe("");
       const detail = compactJourneyStoryChoiceComparison(full, profile.id).inspectedOption;
+      expect(detail.consequence).toBe(fullOption.consequence);
       expect(detail.consequence).not.toContain(profile.preview);
       expect(detail.consequence).not.toContain(profile.consequence);
+      if (profile.id === "albany:prep_relief_protocol") {
+        expect(Object.keys(detail)).toEqual([
+          "id",
+          "label",
+          "checkFit",
+          "situationalBoundary",
+          "consequence",
+        ]);
+        expect(detail.situationalBoundary).toBe(
+          "May never trigger. In LURE, foul the first feed cast, fail the public wedge, spend the split-rail guard to redirect the yearling alive, then return to Cade before the loft cast. A clean cast, braced rail, or other recovery gets no benefit.",
+        );
+        expect(detail.situationalBoundary!.length).toBeLessThanOrEqual(
+          JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT,
+        );
+        expect(detail.situationalBoundary!.trim().split(/\s+/u).length).toBeLessThanOrEqual(
+          JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT,
+        );
+        expect(JSON.stringify(detail).length).toBeLessThanOrEqual(800);
+      } else {
+        expect(detail).not.toHaveProperty("situationalBoundary");
+      }
     }
+  });
+
+  it("does not attach Station boundaries to a reused option id outside its exact card", () => {
+    const reused: JourneyStoryChoicePrompt = {
+      id: "test:unrelated",
+      message: "Unrelated historical card.",
+      options: [
+        {
+          id: "albany:prep_relief_protocol",
+          label: "Jamie's Relief Protocol",
+          consequence: "Unrelated consequence.",
+        },
+        {
+          id: "test:other",
+          label: "Other option",
+          consequence: "Other consequence.",
+        },
+      ],
+    };
+
+    const detail = compactJourneyStoryChoiceComparison(
+      reused,
+      "albany:prep_relief_protocol",
+    ).inspectedOption;
+    expect(detail.consequence).toBe("Unrelated consequence.");
+    expect(detail).not.toHaveProperty("situationalBoundary");
   });
 
   it("keeps exact Relief Allocation receipts behind the concise compact comparison", () => {
@@ -389,7 +476,7 @@ describe("compact journey projection", () => {
         immediateCost: fullOption.summary!.immediateCost,
         giveUp: `Leaves exposed: ${allocationOption.leaves_exposed}`,
       });
-      expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      expect(option?.consequence).toBe("");
       const detail = compactJourneyStoryChoiceComparison(full, allocationOption.id).inspectedOption;
       expect(detail.consequence).not.toContain(allocationOption.preview);
       expect(detail.consequence).not.toContain(allocationOption.consequence);
@@ -428,17 +515,34 @@ describe("compact journey projection", () => {
       for (const sourceOption of sourceOptions) {
         const option = compact.options.find((candidate) => candidate.id === sourceOption.id);
         if (full.kind === "registration") {
+          const profile = sourceOption as (typeof registration.profiles)[number];
+          const requiredPreviewFact = (label: string): string => {
+            const prefix = `${label}: `;
+            const fact = profile.preview
+              .split(". ")
+              .map((part) => part.replace(/\.$/u, ""))
+              .find((part) => part.startsWith(prefix));
+            if (!fact) throw new Error(`Registration preview must disclose ${label}.`);
+            return fact.slice(prefix.length);
+          };
+          const highlights = option?.summary?.highlights ?? [];
           expect(option?.summary).toMatchObject({
-            commitment: sourceOption.summary,
-            fieldTriggerScope: "starter",
-            highlights: expect.arrayContaining([
-              { label: "Permanent role", value: sourceOption.title },
-              { label: "Role experience", value: sourceOption.summary },
-            ]),
-            immediateCost: expect.any(String),
-            tradeoff: sourceOption.tradeoff,
+            commitment: `Permanent background — ${profile.summary}`,
+            immediateCost: `no fee or delay; start with $${String(profile.character.money)}`,
+            tradeoff: requiredPreviewFact("Obligation").replace(/^./u, (value) =>
+              value.toUpperCase(),
+            ),
           });
-          expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+          expect(option?.summary).not.toHaveProperty("fieldTrigger");
+          expect(option?.summary).not.toHaveProperty("fieldTriggerScope");
+          expect(highlights).toEqual([
+            {
+              label: "Starts with",
+              value: `${requiredPreviewFact("Skill edge")}; ${requiredPreviewFact("Kit")}`,
+            },
+          ]);
+          expect(JSON.stringify(option?.summary)).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
+          expect(option?.consequence).toBe("");
           const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
           expect(detail.consequence).toContain(sourceOption.preview);
           expect(detail.consequence).toContain(sourceOption.consequence);
@@ -451,7 +555,7 @@ describe("compact journey projection", () => {
           immediateCost: option!.summary!.immediateCost,
           giveUp: sourceOption.tradeoff,
         });
-        expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+        expect(option?.consequence).toBe("");
         const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
         expect(detail.consequence).not.toContain(sourceOption.preview);
         expect(detail.consequence).not.toContain(sourceOption.consequence);
@@ -464,6 +568,14 @@ describe("compact journey projection", () => {
     const character = WORLD.opening_registration?.profiles[0]?.character;
     if (!ally || !character) throw new Error("Albany must retain its ally commitment.");
     const full = presentOpeningAlly(ally, character);
+    const compact = compactJourneyStoryChoicePrompt(full);
+    const summary = compactJourneyStoryChoiceComparison(full);
+    for (const option of compact.options) {
+      expect(option).not.toHaveProperty("situationalBoundary");
+    }
+    expect(summary.options.every((option) => !("situationalBoundary" in option))).toBe(true);
+    expect(JSON.stringify([compact, summary])).not.toContain("May never trigger");
+    expect(JSON.stringify([compact, summary])).not.toContain("first wolf death ends her help");
     const benefits: Readonly<Record<string, string>> = {
       "albany:ally_june_cattle_first": "Independent cattle-pressure ally",
       "albany:ally_june_relay_only": "No companion; relay terms refused",
@@ -478,6 +590,23 @@ describe("compact journey projection", () => {
         immediateCost: option.summary!.immediateCost,
         giveUp: sourceOption.tradeoff,
       });
+      const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
+      expect(detail.consequence).toBe(option.consequence);
+      if (sourceOption.id === "albany:ally_june_cattle_first") {
+        expect(Object.keys(detail)).toEqual(["id", "label", "situationalBoundary", "consequence"]);
+        expect(detail.situationalBoundary).toBe(
+          "May never trigger. June lowers cattle alarm when a recovered LURE leaves the herd pressing, or prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized failed first FORTIFY seal at pressure 3+. Clean DRIVE, pressure-2/mobile-stabilized FORTIFY gain nothing; no combat help; first wolf death ends her help.",
+        );
+        expect(detail.situationalBoundary!.length).toBeLessThanOrEqual(
+          JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT,
+        );
+        expect(detail.situationalBoundary!.trim().split(/\s+/u).length).toBeLessThanOrEqual(
+          JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT,
+        );
+        expect(JSON.stringify(detail).length).toBeLessThanOrEqual(800);
+      } else {
+        expect(detail).not.toHaveProperty("situationalBoundary");
+      }
     }
   });
 
@@ -632,12 +761,13 @@ describe("compact journey projection", () => {
         id: "continue",
         label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
         consequence:
-          "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+          "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
       },
       {
         id: "end",
-        label: "End this journey",
-        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+        label: "End here",
+        consequence:
+          "Close this journey here and keep its read-only record; this journey cannot resume.",
       },
     ]);
   });
@@ -661,9 +791,9 @@ describe("compact journey projection", () => {
     expect(compact).toBe(full);
     expect(compact.pendingChoice?.options[0]).toEqual({
       id: "continue",
-      label: "Continue toward checkpoint 80",
+      label: "Continue from this exact state",
       consequence:
-        "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 80, whichever comes first.",
+        "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 80, whichever comes first.",
     });
   });
 });

@@ -201,6 +201,7 @@ export type CampaignCharacterImportTargetIssueCode =
   | "UNKNOWN_VAR"
   | "INVALID_HEALTH_TARGET"
   | "INVALID_SKILL_TARGET"
+  | "IMMUTABLE_SEEDED_OPENING_FLAG"
   | "UNKNOWN_FLAG"
   | "UNKNOWN_OBJECT"
   | "INVALID_INVENTORY_TARGET";
@@ -235,7 +236,7 @@ function collectStringTargets(node: unknown, keys: ReadonlySet<string>, acc: Set
 }
 
 function authoredFlags(pack: RpgPack): Set<string> {
-  const flags = new Set(pack.meta.flags_init);
+  const flags = new Set([...pack.meta.flags_init, ...(pack.meta.seeded_opening_flags ?? [])]);
   collectStringTargets(
     pack,
     new Set(["has_flag", "not_flag", "set_flag", "clear_flag", "defeat_flag", "result_flag"]),
@@ -265,6 +266,7 @@ function targetIssues(
   const issues: CampaignCharacterImportTargetIssue[] = [];
   const vars = new Set(Object.keys(pack.meta.vars_init));
   const flags = authoredFlags(pack);
+  const seededOpeningFlags = new Set(pack.meta.seeded_opening_flags ?? []);
   const objects = new Set(pack.objects.map((object) => object.id));
   const inventoryTargets = authoredInventoryTargets(pack);
 
@@ -319,6 +321,13 @@ function targetIssues(
           message: `Campaign import rule "${ruleId}" targets object "${target.target_object}", which cannot legitimately enter inventory.`,
         });
       }
+    } else if (seededOpeningFlags.has(target.target_flag)) {
+      issues.push({
+        code: "IMMUTABLE_SEEDED_OPENING_FLAG",
+        ruleId,
+        path: [...path, "target_flag"],
+        message: `Campaign import rule "${ruleId}" cannot target immutable seeded opening flag "${target.target_flag}".`,
+      });
     } else if (!flags.has(target.target_flag)) {
       issues.push({
         code: "UNKNOWN_FLAG",

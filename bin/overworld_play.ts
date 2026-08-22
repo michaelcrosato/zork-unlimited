@@ -52,6 +52,7 @@ import {
   matchTerminalStoryChoiceOption,
   renderTerminalStoryChoiceComparison,
   runTerminalStoryChoiceController,
+  storyChoiceCommitmentLabel,
   type TerminalStoryChoiceAuxiliaryResult,
 } from "./terminal_story_choice.js";
 import { loadOverworldManifest } from "../src/world/source.js";
@@ -65,6 +66,7 @@ import {
   OverworldSession,
   type OverworldActionResult,
   type OverworldJourneyGoalPassageResult,
+  type OverworldJourneyStoryChoiceResult,
   type OverworldPendingRoadEncounter,
   type OverworldQuestCompletionResult,
   type OverworldQuestView,
@@ -166,18 +168,18 @@ export function render(view: OverworldView): string {
   if (!view.stationDispatchBoard && view.departureInteractions.length) {
     lines.push("Optional departure decisions:");
     for (const interaction of view.departureInteractions) {
-      lines.push(`  ${interaction.title}`);
+      lines.push(`  ${interaction.kind === "preparation" ? "Field kit" : "Relief wagon"}`);
       lines.push(`    Compare: \`inspect ${interaction.id}\``);
     }
   }
   if (!view.stationDispatchBoard && view.departureContactLeads.length) {
     lines.push("Optional before departure:");
     for (const lead of view.departureContactLeads) {
-      lines.push(`  ${lead.title} — ${lead.guidance}`);
+      lines.push(`  Second rider — ${lead.guidance}`);
       if (lead.action) {
         lines.push(`    Command: talk ${lead.contactName}`);
       } else {
-        lines.push("    Available after choosing a Station preparation.");
+        lines.push("    Available after choosing a Station field kit.");
       }
     }
   }
@@ -212,6 +214,23 @@ export function render(view: OverworldView): string {
 
 type StationDispatchBoardView = NonNullable<OverworldView["stationDispatchBoard"]>;
 
+const STATION_SUPPORT_SLOT_LABELS: Readonly<
+  Record<StationDispatchBoardView["support"][number]["slot"], string>
+> = {
+  preparation: "field kit",
+  relief_allocation: "relief wagon",
+  field_team: "second rider",
+};
+
+function formatStationSupportLabels(
+  support: readonly StationDispatchBoardView["support"][number][],
+): string {
+  const labels = support.map((entry) => STATION_SUPPORT_SLOT_LABELS[entry.slot]);
+  if (labels.length === 1) return labels[0]!;
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, or ${labels.at(-1)!}`;
+}
+
 function stationDispatchStatus(support: StationDispatchBoardView["support"][number]): string {
   if (support.selectedTitle) return `Selected: ${support.selectedTitle}`;
   switch (support.status) {
@@ -230,14 +249,20 @@ function stationDispatchStatus(support: StationDispatchBoardView["support"][numb
 export function renderStationDispatchBoard(view: OverworldView): string[] {
   const board = view.stationDispatchBoard;
   if (!board) return [];
-  const lines = ["Optional dispatch support (independent):"];
-  for (const support of board.support) {
+  const openSupport = board.support.filter(
+    (support) => support.status === "open_optional" && support.selectedTitle === null,
+  );
+  const lines =
+    openSupport.length > 0
+      ? [`Optional dispatch support — ${formatStationSupportLabels(openSupport)}:`]
+      : ["No optional dispatch support remains."];
+  for (const support of openSupport) {
     lines.push(`  ${support.label} — ${stationDispatchStatus(support)}.`);
     lines.push(`    ${support.purpose}`);
     lines.push(`    ${support.detailHint}`);
     if (support.action?.kind === "inspect") {
       lines.push(
-        `    Inspect ${support.action.title}: \`inspect ${support.action.storyChoiceId}\``,
+        `    Inspect ${STATION_SUPPORT_SLOT_LABELS[support.slot]}: \`inspect ${support.action.storyChoiceId}\``,
       );
     } else if (support.action?.kind === "talk") {
       lines.push(
@@ -245,7 +270,7 @@ export function renderStationDispatchBoard(view: OverworldView): string[] {
       );
     }
   }
-  lines.push("  Current commitments: `review dispatch`.");
+  lines.push("  Already set: `review dispatch`.");
   return lines;
 }
 
@@ -257,9 +282,27 @@ export function renderStationDispatchBoard(view: OverworldView): string[] {
 export function renderStationSupportAffordance(view: OverworldView): string[] {
   const board = view.stationDispatchBoard;
   if (!board) return [];
+  const open = board.support.filter(
+    (support) =>
+      support.status === "open_optional" &&
+      support.selectedTitle === null &&
+      support.action !== null,
+  );
   return [
-    "Optional support: field kit, relief wagon, or second rider — `review support`.",
-    "  Current commitments: `review dispatch`.",
+    ...(open.length > 0
+      ? [
+          "Optional support (independent; `review support` for detail):",
+          ...open.map((support) => {
+            const action = support.action!;
+            const command =
+              action.kind === "inspect"
+                ? `inspect ${action.storyChoiceId}`
+                : `talk ${action.contactName}`;
+            return `  ${support.purpose} \`${command}\``;
+          }),
+        ]
+      : []),
+    "  Already set: `review dispatch`.",
   ];
 }
 
@@ -279,7 +322,7 @@ function departureRecapValue(
   if (entry.title !== null) return entry.title;
   if (entry.status === "open_optional") return "Open (optional)";
   if (entry.status === "available_after_preparation") {
-    return "Available after choosing preparation";
+    return "Available after choosing a field kit";
   }
   if (entry.status === "solo_default") return "Solo departure";
   return "Selected";
@@ -297,15 +340,15 @@ export function renderDepartureRecap(
     } else if (dispatch.state === "direct_launch") {
       const timing = dispatch.timing === "on_time" ? "on time" : "delayed";
       lines.push(
-        `  Direct launch now: ${String(dispatch.minutes)}m — ${timing}. Field-team contact remains optional.`,
+        `  Direct launch now: ${String(dispatch.minutes)}m — ${timing}. A second rider remains optional.`,
       );
     } else {
       const remainingLabels = dispatch.remainingOptional.map((slot) =>
         slot === "preparation"
-          ? "preparation"
+          ? "field kit"
           : slot === "relief_allocation"
-            ? "relief allocation"
-            : "field team",
+            ? "relief wagon"
+            : "second rider",
       );
       const remaining =
         remainingLabels.length > 2
@@ -326,7 +369,7 @@ export function renderDepartureRecap(
   }
   for (const entry of recap.entries) {
     lines.push(
-      `  ${entry.label}: ${departureRecapValue(entry)}${entry.status === "solo_default" ? " (direct-launch default; field-team contact remains optional)" : ""}`,
+      `  ${entry.label}: ${departureRecapValue(entry)}${entry.status === "solo_default" ? " (direct-launch default; a second rider remains optional)" : ""}`,
     );
   }
   if (recap.entries.some((entry) => entry.activeFieldTerm)) {
@@ -511,7 +554,13 @@ export function renderJourneyGate(journey: JourneyPresentation): string {
     const summary = "summary" in option ? option.summary : undefined;
     if (summary) {
       if (summary.fieldTrigger === undefined) {
-        lines.push(`       Promise / priority: ${summary.commitment}`);
+        lines.push(
+          `       ${storyChoiceCommitmentLabel(
+            journey.storyChoice?.kind,
+            journey.storyChoice?.progressiveDisclosure?.initialOptionIds.includes(option.id) ===
+              true,
+          )}: ${summary.commitment}`,
+        );
         lines.push(`       Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`);
       } else {
         const usesTriggerCategory = summary.fieldTriggerScope === "category";
@@ -741,16 +790,17 @@ async function controlTerminalStoryChoice(args: {
   reject: (message: string) => void;
   onAuxiliary: (line: string) => Promise<TerminalStoryChoiceAuxiliaryResult>;
 }): Promise<TerminalStoryChoiceRunResult> {
+  let chosenResult: OverworldJourneyStoryChoiceResult | undefined;
   const result = await runTerminalStoryChoiceController({
     prompt: args.prompt,
     reader: args.reader,
     write: (text) => console.log(text),
     reject: args.reject,
     choose: (option) => {
-      args.session.chooseJourneyStory(option.id, args.prompt.id);
+      chosenResult = args.session.chooseJourneyStory(option.id, args.prompt.id);
     },
     reveal: (revealId) => {
-      args.session.revealJourneyStory(args.prompt.id, revealId);
+      return args.session.revealJourneyStory(args.prompt.id, revealId);
     },
     presentedOptions: () => args.session.journeyStoryOptionsForPresentation(args.prompt.id),
     allowComparisonExit: args.allowComparisonExit,
@@ -758,7 +808,11 @@ async function controlTerminalStoryChoice(args: {
   });
   if (result.kind === "chosen") {
     console.log(`Chosen: ${result.option.label}.`);
-    console.log(`Consequence: ${result.option.consequence}`);
+    if (chosenResult?.displaySummary) {
+      console.log(chosenResult.displaySummary);
+    } else {
+      console.log(`Consequence: ${result.option.consequence}`);
+    }
     console.log(renderJourneyStatus(args.session.journey()));
   } else if (result.kind === "cancelled") {
     console.log("Story comparison closed without changing the journey.");

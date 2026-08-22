@@ -1,0 +1,218 @@
+id: bug_0586
+title: "Explain the Road-Warden receipt before its Wolf-Winter plan terms"
+pack: overworld (Albany registration and ready-made Wolf-Winter dispatch)
+reported_by: >
+  Valid ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-bfccce6a-20260821T141909Z on exact clean
+  bfccce6a58414a99806edf2cfdcd12d263d24e14; every report, run-evidence,
+  provider-event, rollout, and capture hash matched its fleet-manifest attestation
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-bfccce6a-20260821T141909Z
+    stamp: 20260821T142512Z
+    tested_commit: bfccce6a58414a99806edf2cfdcd12d263d24e14
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017
+    model: gpt-5.6-terra
+    provider: codex
+    launcher_kind: official_npm_shim
+    codex_cli_version: 0.146.0
+    codex_client_authority_sha256: a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8
+    play_mode: pure
+    start_surface: fresh_overworld
+    authority_certified: false
+    valid: true
+    passed: false
+    no_retry_or_recovery: true
+    artifact_hashes:
+      manifest_sha256: 9beb01c427eff4fb05de47e2d16f58bae1ba894037cf01cb42181384a3238613
+      summary_sha256: c9c2de1146b7455fe8061486dfcb353a31a9990bad87082d50b0ade0484bf858
+      starting_slice_pilot_sha256: 65ca011c7d6eeae4498f4b4a6bc1a591fec7c847aba476a961b167123474f1bc
+      authority_proof_sha256: 5098ddb038251676586387614a3cf29f61cc0b9ebe5e088278f2e463f38f0078
+    reports:
+      - seed: 821141909000
+        report_sha256: b4067cd9f689c0cabf4b871c35664177fb9b049cb91da8a7ac0d6eaa3f0440c9
+        run_evidence_sha256: ab005ce1b14bd82c6b2d68337e9d51ea0a90106832bc1a3616999fa10e95233c
+        provider_events_sha256: 7242df24ed359bc431b7228c464b38f156cbcfd40802743f134e8e4d4615aa35
+        provider_rollout_sha256: 5ea558f69d5249db1c2b79ed8d08cfc8d74c43832187794d3b0782e225fd4d02
+        provider_capture_sha256: 8667e1c43932d8de6166d9fe6077397afde3cb51f44a50b298979fb8f701f2cd
+      - seed: 821141909001
+        report_sha256: 37e70f651fea9412b1ae59e32c0f37897cd58c8e256420cac24bceebef9ef62e
+        run_evidence_sha256: 117000fa0e6359cf8dc64e5862cff63383ce706c3d81c934e1d8be86acb30823
+        provider_events_sha256: c140b92fc984a2265ee3cdbe549f05273eb09e2f090e6be5ca9f593e00950685
+        provider_rollout_sha256: a01b44731d3eb787b54cbae63c7103e600a79335e5c528b98b54e2de084c22b7
+        provider_capture_sha256: 48596b45be84a84c40c04d831e5cf1bcf166486e245e84ef4fcf93341dd249b9
+      - seed: 821141909002
+        report_sha256: 75011d5cdf4470146226b5eb73be4542bfc9607f8e20c3459afb3ab2eea5b36a
+        run_evidence_sha256: 4926dc2883cf1ac4d7dcaf99c769968f9df880afe840581a5220ab1059a3ff63
+        provider_events_sha256: 93db4168e95080b07a150e54726e05d8f64c8659e54d169fe550c275a978bb93
+        provider_rollout_sha256: 8a8e08936776e76efc1fc3518928130aaf1545232ea67ac23089af80f6d983af
+        provider_capture_sha256: 9620fa6acacaec873b363aa7192fd5c2294e64cad962dec986c8d3430baab85f
+      - seed: 821141909003
+        report_sha256: 2088c3ecdb27e0f9dcdd6209f0cfb39ed331c70da921db5215e3c4bbce40f72b
+        run_evidence_sha256: 97cf2081531d37ecdf94ff3bc236ce291bf335fb04004a91c1d5876732353720
+        provider_events_sha256: b68e81f679721cc28655c4f9e6b87ffd6c4749e7593598c0b68fc9611ba650d6
+        provider_rollout_sha256: 2e7f7a3c112f3fba3ffc1b4b519f7dbc2608a0fd7fbe835f2611174d22879b80
+        provider_capture_sha256: f4d64a2d9a00cfc470f68bc38f2c34c140796bb63e63225841cb8848c8c2b113
+      - seed: 821141909004
+        report_sha256: 694f5430f3da72d39e851edc2348626c6589e1171a5c83fd64e0bd14cc9265a8
+        run_evidence_sha256: eaddc086e70be16d001f2a54e8d5e4370ca8d77a4b5fce762d2d8e49aa0f1768
+        provider_events_sha256: 64a0af7abf3e11a124b6017f46d490c77daf2f9128717ecfb9703939e1666413
+        provider_rollout_sha256: 690654ef7036cc84495330fc5fb196f5d6b90caf69ff00f302be4b0dbafdd57c
+        provider_capture_sha256: 7c8c7e0d93d0cd61da8dc4fde66cb1d887c723b5dc96758fa3d0455198acee0a
+      - seed: 821141909005
+        report_sha256: bb752f171408863ab2fa195cfa2a0fb59b4cb04c30aee529996e800608340aee
+        run_evidence_sha256: 6a1a6b13570566b332f473eb61a52b6757455f4f7da342516c334cbb73289250
+        provider_events_sha256: 0f5d27a5206a26faa579bbf2e6c07974406c7670bcdc82c0e30383072fdbdf3d
+        provider_rollout_sha256: 5ad3cf6fb9ae336a24223239945a80a45fc29af6f2a127aa12aee8f4536dae17
+        provider_capture_sha256: 93e46e5210c20feb285dae261862d93439ed9e3c3238daa724a68b2ef979d6ef
+      - seed: 821141909006
+        report_sha256: 53df9bcc9a7b6a1fbe47e09b4d0d8948e77f8e9d7fc34cfa699e8f61d399e823
+        run_evidence_sha256: 794e8341890925a6af7581373f864f94f3223c6a2705649c9c7b79bdefc03900
+        provider_events_sha256: 1dcbac96d78c6e417cc7e10aaa3be79d3fa7b3d23744a4ef2fca75f90de7dcb4
+        provider_rollout_sha256: 78a40a696b997be9b86ed1c8873ec0e349856ea008ed43345df2cd66e3699b20
+        provider_capture_sha256: 83525cbbadb781ced105feef2af1b5498aec37c621910f7bf0139f49f5b147d1
+      - seed: 821141909007
+        report_sha256: f44764e182eb5d7b0682d007c1fafe05e1dd3e735fc1f4a766b47d75307f6f87
+        run_evidence_sha256: fa2e91724f977ca5adb573fae2f039750b3704c223fd9b05f11f4e95e83771dd
+        provider_events_sha256: cd0563fa1fbc622740b243cb38d0118097a14edbee70a058c0e563e25acc61a8
+        provider_rollout_sha256: 7c62316971ab0d8e7cbc33aa49924231e31b92896431487d664a74f504be38b9
+        provider_capture_sha256: d4bb13f1e39b9db24a33a29c7c1183a74612dac4097c7e1819c20f95f133348d
+      - seed: 821141909008
+        report_sha256: 04687ee7895a2d294d7ebb21bd10a484a96d2e851b98254423cb30b3b2bea5c2
+        run_evidence_sha256: e2689f7e8913ec9ce81af4647287600720af47e4edf3550728453d74540b37ec
+        provider_events_sha256: dea7d0fdbd8f7c76f4bdcbe85ba7d73e23712eec3125906f2d6ea3c6467905a3
+        provider_rollout_sha256: c9b1479768a229eb583a8eddb8dc3bac239cbbffdcb2edc02bc93055bb477ab4
+        provider_capture_sha256: 55da9acbfa11d564182ee4ca3eeccd409e1a4f596d98beddb91b293ffa4c1039
+      - seed: 821141909009
+        report_sha256: 6692b24a3aa7c1868467a60149ffafe13869357af368284f965d1af86c62e345
+        run_evidence_sha256: 64e5a8065c6f7c6494c3df1abedcac83ee0be48182d63f4b6ad080904a193de6
+        provider_events_sha256: 296a201f7ae639bb77c95d9e28ed331678bc09df73a4cbb175a67bd346cbc042
+        provider_rollout_sha256: 23814670a9ba4b17638b860507c0248b0d2b186e329f69d6ee0fc43a4ade4de8
+        provider_capture_sha256: 3b25cdab6bbf5a2fa1b1cc88c4a20a28430d43dd96fd6d96df6c2d8dcd7bf177
+    artifact_bytes:
+      manifest: 36484
+      summary: 2005
+      starting_slice_pilot: 2215
+      authority_proof: 2437
+      reports_total: 60635
+      provider_events_total: 2385899
+      provider_rollouts_total: 6757844
+    outcome_metrics:
+      completed: 10
+      stuck: 0
+      completion_decision_p50: 24
+      clarity_total: 40
+      enjoyment_total: 40
+      continued_after_initial_goal: 5
+      strategies: "hunt 1, lure 4, drive 3, fortify 2"
+      in_scope_issue_reports: 2
+      blocking_issue_clusters: 0
+      failed_gates: >
+        clarity average >= 4.2; enjoyment average >= 4.2;
+        initial-goal continuation >= 70 percent
+    shared_road_warden_path:
+      cohort: "10/10 chose Road-Warden, then the ready-made Aid-Only/Hayden dispatch"
+      chronology: >
+        start decision 0; scout decision 1; Rowan talk decision 2; Road-Warden
+        selection decision 3; one ready-dispatch call records oath/source decisions 4 and 5
+      tested_registration_response_utf8_bytes: "6,414 each; 64,140 total"
+      tested_ready_dispatch_response_utf8_bytes: "9,196 each; 91,960 total"
+      next_station_move_response_utf8_bytes: >
+        6,638 for nine seeds and 6,569 for seed 821141909003; 66,311 total
+      report_cluster: >
+        All ten reports independently described dense, technical, or front-loaded
+        Albany/dispatch language before the central Wolf-Winter scene.
+      direct_signals: >
+        Seed 821141909005 named DEF, LURE, HUNT, DRIVE, and FORTIFY before the
+        quest introduced its plan language. Seed 821141909009 recorded the
+        relief-registration choice chain as an in-scope S1 and named DEF floors,
+        LURE, frost braces, sealed evidence, and deferred support.
+    counter_signals: >
+      All ten completed without rejected gameplay calls or stuck state; nine used
+      Station reveal V1, eight used June modal V1, four strategies appeared, and
+      all ten said they would replay. The evidence supports a universal copy
+      correction, not another flow, transport, mechanic, or strategy change.
+
+symptom: >
+  The universal Road-Warden confirmation described an imported starting DEF
+  floor, and its matching ready-made dispatch projected terse DEF/LURE/HUNT,
+  ordinary-hunt, public-wedge, field-team, and relief-allocation terms before the
+  player had reached Cade's plan comparison. Exact mechanics were available, but
+  the selected receipts led with parser and plan vocabulary instead of the result
+  in the story.
+
+root_cause: >
+  The authored profile consequence and matching doctrine trigger, preview, and
+  consequence were written as compact implementation summaries. Those four
+  strings feed the Road-Warden result and ready-dispatch result directly. The
+  known-doctrine presentation also authenticates its special player-facing
+  summary by exact trigger-category equality, so changing only the manifest
+  literal would silently fall back to the generic pairing copy.
+
+fix: >
+  Rewrite only the four Road-Warden-specific presentation strings. The profile
+  now says Fieldcraft 4 sets Wolf-Winter's defense to 4 instead of 3. The visible
+  ready-card benefit names defense and cattle alarm in plain causal clauses before
+  their LURE and HUNT aliases and stays within its existing 160-character/32-word guards.
+  The selected preview gives the exact Aid-Only clean/fouled first-cast boundary
+  and the exact Hayden attempt, frost split, loose rail, yearling, bare-spear,
+  skip/bind/Works exclusions in narrative order. Its final sentence translates
+  the still-open preparation, wagon, June, and road choices. Mirror the exact
+  trigger literal in the known-doctrine presentation guard. The separate exact
+  Hayden source detail and Wolf-Winter plan surfaces remain authoritative and
+  unchanged.
+
+deterministic_witnesses:
+  - "the shipped Road-Warden profile receipt says Fieldcraft 4 sets defense 4 instead of an imported DEF floor"
+  - "the ready-card trigger is exactly 132 characters and 21 words; its complete inspected receipt remains at the 32-word cap"
+  - "manifest trigger_category and the known-doctrine presentation guard are byte-identical, retaining the matched player-facing commitment"
+  - "the accepted Aid-Only/Hayden receipt names the final ordinary +1 cattle-alarm boundary and preserves the fouled-cast exclusion"
+  - "the accepted receipt retains attempted public fence brace, frost split, loose rail, yearling death, bare spear north, and skip/bind/Works exclusions"
+  - "the accepted receipt contextualizes LURE after its clean-feed consequence and HUNT after hold-the-ground language; old parser phrases are absent"
+  - "the pure Road-Warden response is exactly 6,330 UTF-8 bytes, below its 6,400-byte regression budget and the pilot's 6,414 bytes"
+  - "the pure ready-dispatch response is exactly 9,195 UTF-8 bytes, below its 9,250-byte regression budget and the pilot's 9,196 bytes"
+  - "the ready-made selection still advances from accepted decision 3 to 5 and manual oath/source selection yields the same snapshot"
+
+mechanics_unchanged:
+  - "Fieldcraft rank 4, Wolf-Winter starting defense 4 instead of 3, import condition, and direct-start defense 3"
+  - "Aid-Only's final ordinary +1 cattle-alarm suppression only after a clean first LURE cast; fouled openings retain it"
+  - "Hayden's HUNT-only attempted public wedge, frozen split, unbound rail, yearling death, bare-spear north, and Works/skip/bind exclusions"
+  - "profile, doctrine, oath, source, preparation, allocation, ally, road, quest, strategy, action, and outcome ids"
+  - "costs, time, funds, skills, checks, effects, promises, relationships, equipment, knowledge, journals, and decision counts"
+  - "compact context v49, Station board V6, reveal V1, June modal V1, support breadth/order, and full following support responses"
+  - "all roads, four Wolf-Winter strategies, Continue/End, saves, restore, UI, terminal, CLI, and Gallowmere"
+
+nonclaims:
+  - "The pilot was technically valid but failed clarity, enjoyment, and continuation gates; it diagnoses the target and does not validate the replacement."
+  - "Ten matching AI-player reports are recurring diagnostic evidence, not human research, authority certification, or causal proof that these four strings set the ratings."
+  - "Only seed 821141909009 filed the directly matching relief-registration S1; seed 821141909008's other in-scope S1 concerns June's ally-effect presentation and is not repaired here."
+  - "The 6,330- and 9,195-byte corrected envelopes are deterministic exact-build witnesses, not responses returned by the tested pilot revision."
+  - "The one-byte ready-dispatch reduction is a no-growth control, not a transport optimization or a claim that response size caused the quality failure."
+  - "The full Hayden sequence remains deliberately available in the selected preview and existing exact detail; this change adds no glossary or progressive-disclosure flow."
+  - "Station V6, reveal V1, June modal V1, support commits, routes, Continue/End, retention accounting, metrics, and thresholds are unchanged."
+  - "No Gallowmere content, behavior, checkpoint, conclusion, or expansion is in scope or claimed."
+
+production:
+  - content/world/new_york_overworld.json
+  - docs/DECISION_LOG.md
+  - docs/STARTING_SLICE.md
+  - src/world/opening_relief_oath_presentation.ts
+
+tests:
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/unit/world_opening_registration_doctrine_runtime.test.ts
+  - tests/unit/world_opening_starting_doctrine.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts -t "keeps the universal Road-Warden receipts narrative-first"
+  - npx vitest run tests/starting_slice/opening_dispatch_briefing.test.ts tests/unit/world_opening_registration_doctrine_runtime.test.ts tests/unit/world_opening_starting_doctrine.test.ts
+  - git diff --check

@@ -5,10 +5,13 @@ import {
   HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
   HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION,
   HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION,
+  HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION,
   parsePureFleetAttestation,
   PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
   PURE_FLEET_CODE_MODE_CONTRACT,
   PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION,
+  PURE_FLEET_GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
   PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
   PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
   PureFleetAttestationSchema,
@@ -20,6 +23,7 @@ import {
   pureFleetAttestationMismatch,
   PURE_FLEET_ATTESTATION_SCHEMA_VERSION as RUNNER_ATTESTATION_SCHEMA_VERSION,
   PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION as RUNNER_CODEX_ATTESTATION_SCHEMA_VERSION,
+  GAME_DIRECT_MCP_CODEX_CLI_VERSION as RUNNER_GAME_DIRECT_MCP_CODEX_CLI_VERSION,
   SPARK_DIRECT_MCP_CODEX_CLI_VERSION as RUNNER_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
   // @ts-expect-error — native runner module has no declaration file
 } from "../../blind-tester/fleet.mjs";
@@ -54,6 +58,10 @@ const SPARK_CODEX_CLIENT = codexClientAuthorityRecord(
   CLIENT_AUTHORITY_TOKEN,
   PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
 );
+const GAME_DIRECT_CODEX_CLIENT = codexClientAuthorityRecord(
+  CLIENT_AUTHORITY_TOKEN,
+  PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION,
+);
 
 const VALID_ATTESTATION = {
   schema_version: PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
@@ -84,7 +92,7 @@ const VALID_ATTESTATION = {
 } as const;
 
 const VALID_STRICT_CODEX_ATTESTATION = {
-  schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  schema_version: HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION,
   provider: "codex",
   codex_cli_version: CODEX_CLIENT.cli_version,
   codex_client_authority_sha256: CODEX_CLIENT.authority_sha256,
@@ -122,6 +130,34 @@ const VALID_STRICT_CODEX_ATTESTATION = {
 const { code_mode_contract: _currentCodeModeContract, ...CURRENT_CODEX_COMMON_ATTESTATION_FIELDS } =
   VALID_STRICT_CODEX_ATTESTATION;
 const VALID_SPARK_DIRECT_CODEX_ATTESTATION = {
+  ...CURRENT_CODEX_COMMON_ATTESTATION_FIELDS,
+  schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  codex_cli_version: SPARK_CODEX_CLIENT.cli_version,
+  codex_client_authority_sha256: SPARK_CODEX_CLIENT.authority_sha256,
+  model: "gpt-5.3-codex-spark",
+  actual_model: "gpt-5.3-codex-spark",
+  transport_contract: PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+} as const;
+const VALID_GAME_DIRECT_CODEX_ATTESTATION = {
+  ...CURRENT_CODEX_COMMON_ATTESTATION_FIELDS,
+  schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  codex_cli_version: GAME_DIRECT_CODEX_CLIENT.cli_version,
+  codex_client_authority_sha256: GAME_DIRECT_CODEX_CLIENT.authority_sha256,
+  transport_contract: PURE_FLEET_GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
+} as const;
+const VALID_CURRENT_SOL_STRICT_CODEX_ATTESTATION = {
+  ...VALID_STRICT_CODEX_ATTESTATION,
+  schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  model: "gpt-5.6-sol",
+  actual_model: "gpt-5.6-sol",
+} as const;
+const VALID_CURRENT_LUNA_STRICT_CODEX_ATTESTATION = {
+  ...VALID_STRICT_CODEX_ATTESTATION,
+  schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  model: "gpt-5.6-luna",
+  actual_model: "gpt-5.6-luna",
+} as const;
+const VALID_HISTORICAL_SPARK_DIRECT_CODEX_ATTESTATION = {
   ...CURRENT_CODEX_COMMON_ATTESTATION_FIELDS,
   codex_cli_version: SPARK_CODEX_CLIENT.cli_version,
   codex_client_authority_sha256: SPARK_CODEX_CLIENT.authority_sha256,
@@ -175,6 +211,9 @@ describe("PureFleetAttestationSchema", () => {
     expect(RUNNER_SPARK_DIRECT_MCP_CODEX_CLI_VERSION).toBe(
       PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
     );
+    expect(RUNNER_GAME_DIRECT_MCP_CODEX_CLI_VERSION).toBe(
+      PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION,
+    );
     expect(PureFleetAttestationSchema.parse(VALID_ATTESTATION)).toEqual(VALID_ATTESTATION);
     expect(parsePureFleetAttestation(JSON.stringify(VALID_ATTESTATION))).toEqual({
       ok: true,
@@ -206,10 +245,12 @@ describe("PureFleetAttestationSchema", () => {
     ).toBe(false);
   });
 
-  it("accepts only the model-specific current Codex v8 transport branch", () => {
+  it("accepts only the model-specific current Codex v9 transport branches", () => {
     for (const attestation of [
       VALID_SPARK_DIRECT_CODEX_ATTESTATION,
-      VALID_STRICT_CODEX_ATTESTATION,
+      VALID_GAME_DIRECT_CODEX_ATTESTATION,
+      VALID_CURRENT_SOL_STRICT_CODEX_ATTESTATION,
+      VALID_CURRENT_LUNA_STRICT_CODEX_ATTESTATION,
     ]) {
       expect(PureFleetAttestationSchema.parse(attestation)).toEqual(attestation);
       expect(parseRunnerAttestation(JSON.stringify(attestation))).toEqual({
@@ -219,16 +260,8 @@ describe("PureFleetAttestationSchema", () => {
     }
 
     expect(VALID_SPARK_DIRECT_CODEX_ATTESTATION).not.toHaveProperty("code_mode_contract");
-    expect(VALID_STRICT_CODEX_ATTESTATION).not.toHaveProperty("transport_contract");
-    for (const model of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"] as const) {
-      const strictAttestation = {
-        ...VALID_STRICT_CODEX_ATTESTATION,
-        model,
-        actual_model: model,
-      };
-      expect(PureFleetAttestationSchema.safeParse(strictAttestation).success).toBe(true);
-      expect(parseRunnerAttestation(JSON.stringify(strictAttestation))).toMatchObject({ ok: true });
-    }
+    expect(VALID_GAME_DIRECT_CODEX_ATTESTATION).not.toHaveProperty("code_mode_contract");
+    expect(VALID_CURRENT_SOL_STRICT_CODEX_ATTESTATION).not.toHaveProperty("transport_contract");
 
     for (const invalid of [
       {
@@ -244,16 +277,34 @@ describe("PureFleetAttestationSchema", () => {
         ...VALID_STRICT_CODEX_ATTESTATION,
         transport_contract: PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
       },
-      { ...VALID_STRICT_CODEX_ATTESTATION, code_mode_contract: "legacy" },
+      {
+        ...VALID_GAME_DIRECT_CODEX_ATTESTATION,
+        transport_contract: PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+      },
+      { ...VALID_CURRENT_SOL_STRICT_CODEX_ATTESTATION, code_mode_contract: "legacy" },
       {
         ...VALID_SPARK_DIRECT_CODEX_ATTESTATION,
         model: "gpt-5.6-luna",
         actual_model: "gpt-5.6-luna",
       },
       {
-        ...VALID_STRICT_CODEX_ATTESTATION,
-        model: "gpt-5.3-codex-spark",
-        actual_model: "gpt-5.3-codex-spark",
+        ...VALID_GAME_DIRECT_CODEX_ATTESTATION,
+        model: "gpt-5.6-sol",
+        actual_model: "gpt-5.6-sol",
+      },
+      {
+        ...VALID_GAME_DIRECT_CODEX_ATTESTATION,
+        model: "gpt-5.6-luna",
+        actual_model: "gpt-5.6-luna",
+      },
+      {
+        ...VALID_CURRENT_SOL_STRICT_CODEX_ATTESTATION,
+        model: "gpt-5.6-terra",
+        actual_model: "gpt-5.6-terra",
+      },
+      {
+        ...VALID_GAME_DIRECT_CODEX_ATTESTATION,
+        codex_cli_version: CODEX_CLIENT.cli_version,
       },
     ]) {
       expect(PureFleetAttestationSchema.safeParse(invalid).success).toBe(false);
@@ -261,13 +312,15 @@ describe("PureFleetAttestationSchema", () => {
     }
   });
 
-  it("keeps historical Codex attestation schemas v3 through v7 readable", () => {
+  it("keeps historical Codex attestation schemas v3 through v8 readable", () => {
     for (const attestation of [
       VALID_HISTORICAL_PURE_CODEX_ATTESTATION,
       VALID_HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION,
       VALID_HISTORICAL_STRICT_CODEX_ATTESTATION,
       VALID_HISTORICAL_CODE_MODE_CODEX_ATTESTATION,
       VALID_HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION,
+      VALID_STRICT_CODEX_ATTESTATION,
+      VALID_HISTORICAL_SPARK_DIRECT_CODEX_ATTESTATION,
     ]) {
       expect(PureFleetAttestationSchema.parse(attestation)).toEqual(attestation);
       expect(parseRunnerAttestation(JSON.stringify(attestation))).toEqual({
@@ -326,63 +379,68 @@ describe("PureFleetAttestationSchema", () => {
 
   it("binds Codex provider, effort, turn, and cwd back to authenticated rollout facts", () => {
     const run = {
-      run_seed: VALID_STRICT_CODEX_ATTESTATION.run_seed,
-      build: VALID_STRICT_CODEX_ATTESTATION.build,
-      session_id: VALID_STRICT_CODEX_ATTESTATION.game_session_id,
-      receipt: { receiptHash: VALID_STRICT_CODEX_ATTESTATION.receipt_hash },
+      run_seed: VALID_GAME_DIRECT_CODEX_ATTESTATION.run_seed,
+      build: VALID_GAME_DIRECT_CODEX_ATTESTATION.build,
+      session_id: VALID_GAME_DIRECT_CODEX_ATTESTATION.game_session_id,
+      receipt: { receiptHash: VALID_GAME_DIRECT_CODEX_ATTESTATION.receipt_hash },
     };
     const artifactFacts = {
       run,
-      game_session_id: VALID_STRICT_CODEX_ATTESTATION.game_session_id,
+      game_session_id: VALID_GAME_DIRECT_CODEX_ATTESTATION.game_session_id,
       provider: "codex",
-      provider_session_id: VALID_STRICT_CODEX_ATTESTATION.provider_session_id,
-      actual_model: VALID_STRICT_CODEX_ATTESTATION.actual_model,
-      actual_provider: VALID_STRICT_CODEX_ATTESTATION.actual_provider,
-      reasoning_effort: VALID_STRICT_CODEX_ATTESTATION.reasoning_effort,
-      provider_turn_id: VALID_STRICT_CODEX_ATTESTATION.provider_turn_id,
-      provider_cwd: VALID_STRICT_CODEX_ATTESTATION.provider_cwd,
-      code_mode_contract: VALID_STRICT_CODEX_ATTESTATION.code_mode_contract,
-      transport_contract: null,
+      provider_session_id: VALID_GAME_DIRECT_CODEX_ATTESTATION.provider_session_id,
+      actual_model: VALID_GAME_DIRECT_CODEX_ATTESTATION.actual_model,
+      actual_provider: VALID_GAME_DIRECT_CODEX_ATTESTATION.actual_provider,
+      reasoning_effort: VALID_GAME_DIRECT_CODEX_ATTESTATION.reasoning_effort,
+      provider_turn_id: VALID_GAME_DIRECT_CODEX_ATTESTATION.provider_turn_id,
+      provider_cwd: VALID_GAME_DIRECT_CODEX_ATTESTATION.provider_cwd,
+      code_mode_contract: null,
+      transport_contract: PURE_FLEET_GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
       report_recovered: false,
       report_receipt_bound: false,
       hashes: {
-        report_sha256: VALID_STRICT_CODEX_ATTESTATION.report_sha256,
-        run_sidecar_sha256: VALID_STRICT_CODEX_ATTESTATION.run_sidecar_sha256,
-        run_evidence_sha256: VALID_STRICT_CODEX_ATTESTATION.run_evidence_sha256,
-        primary_envelope_sha256: VALID_STRICT_CODEX_ATTESTATION.primary_envelope_sha256,
+        report_sha256: VALID_GAME_DIRECT_CODEX_ATTESTATION.report_sha256,
+        run_sidecar_sha256: VALID_GAME_DIRECT_CODEX_ATTESTATION.run_sidecar_sha256,
+        run_evidence_sha256: VALID_GAME_DIRECT_CODEX_ATTESTATION.run_evidence_sha256,
+        primary_envelope_sha256: VALID_GAME_DIRECT_CODEX_ATTESTATION.primary_envelope_sha256,
         initial_report_sha256: null,
         receipt_binding_sha256: null,
         recovery_metadata_sha256: null,
         recovery_envelope_sha256: null,
-        provider_events_sha256: VALID_STRICT_CODEX_ATTESTATION.provider_events_sha256,
-        provider_rollout_sha256: VALID_STRICT_CODEX_ATTESTATION.provider_rollout_sha256,
-        provider_capture_sha256: VALID_STRICT_CODEX_ATTESTATION.provider_capture_sha256,
+        provider_events_sha256: VALID_GAME_DIRECT_CODEX_ATTESTATION.provider_events_sha256,
+        provider_rollout_sha256: VALID_GAME_DIRECT_CODEX_ATTESTATION.provider_rollout_sha256,
+        provider_capture_sha256: VALID_GAME_DIRECT_CODEX_ATTESTATION.provider_capture_sha256,
       },
     };
     const expected = {
-      seed: VALID_STRICT_CODEX_ATTESTATION.run_seed,
+      seed: VALID_GAME_DIRECT_CODEX_ATTESTATION.run_seed,
       provider: "codex",
-      model: VALID_STRICT_CODEX_ATTESTATION.model,
-      build: VALID_STRICT_CODEX_ATTESTATION.build,
-      client: CODEX_CLIENT,
+      model: VALID_GAME_DIRECT_CODEX_ATTESTATION.model,
+      build: VALID_GAME_DIRECT_CODEX_ATTESTATION.build,
+      client: GAME_DIRECT_CODEX_CLIENT,
     };
     expect(
-      pureFleetAttestationMismatch(VALID_STRICT_CODEX_ATTESTATION, run, expected, artifactFacts),
+      pureFleetAttestationMismatch(
+        VALID_GAME_DIRECT_CODEX_ATTESTATION,
+        run,
+        expected,
+        artifactFacts,
+      ),
     ).toBeNull();
     expect(
       pureFleetAttestationMismatch(
-        { ...VALID_STRICT_CODEX_ATTESTATION, provider_cwd: "C:\\substituted" },
+        { ...VALID_GAME_DIRECT_CODEX_ATTESTATION, provider_cwd: "C:\\substituted" },
         run,
         expected,
         artifactFacts,
       ),
     ).toMatch(/rollout facts/i);
     expect(
-      pureFleetAttestationMismatch(VALID_STRICT_CODEX_ATTESTATION, run, expected, {
+      pureFleetAttestationMismatch(VALID_GAME_DIRECT_CODEX_ATTESTATION, run, expected, {
         ...artifactFacts,
-        code_mode_contract: null,
+        transport_contract: null,
       }),
-    ).toMatch(/strict code-mode evidence/i);
+    ).toMatch(/game-direct-mcp-v1 evidence/i);
     const sparkExpected = {
       ...expected,
       model: VALID_SPARK_DIRECT_CODEX_ATTESTATION.model,
@@ -407,14 +465,9 @@ describe("PureFleetAttestationSchema", () => {
         ...sparkArtifactFacts,
         transport_contract: null,
       }),
-    ).toMatch(/Spark attestation requires authenticated spark-direct-mcp-v1 evidence/i);
+    ).toMatch(/spark-direct-mcp-v1 evidence/i);
     expect(
-      pureFleetAttestationMismatch(
-        VALID_HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION,
-        run,
-        expected,
-        artifactFacts,
-      ),
-    ).toMatch(/current Codex resume requires attestation v8/i);
+      pureFleetAttestationMismatch(VALID_STRICT_CODEX_ATTESTATION, run, expected, artifactFacts),
+    ).toMatch(/current Codex resume requires attestation v9/i);
   });
 });

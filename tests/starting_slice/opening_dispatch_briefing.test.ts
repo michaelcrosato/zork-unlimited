@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   compactJourneyStoryChoiceComparison,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
   type CompactJourneyPresentation,
   type JourneyStoryChoiceSummaryComparison,
 } from "../../src/mcp/journey_projection.js";
@@ -10,9 +11,18 @@ import {
   journeyStoryChoiceOptionsForPresentation,
   type JourneyPresentation,
   type JourneyStoryChoicePrompt,
+  type JourneyStoryChoicePresentationKind,
 } from "../../src/world/journey_contract.js";
 import { openingDispatchCrisisPreview } from "../../src/world/opening_dispatch_briefing.js";
-import { OverworldSession } from "../../src/world/session.js";
+import {
+  OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
+  OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+  OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS,
+} from "../../src/world/opening_relief_oath_presentation.js";
+import {
+  OverworldSession,
+  type OverworldJourneyStoryChoiceResult,
+} from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
 
@@ -24,39 +34,22 @@ const PREPARATION = WORLD.opening_preparation!;
 const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
-const ALLY_CONTACT = WORLD.characters.find((character) => character.id === ALLY.contact)!;
-const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
-const REGISTRATION_HEADER = `Compare starting resources, first field edge, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const OATH_HEADER = `Compare promise, exact cost, and what each duty gives up. ${FIELD_CHECK_TIMING}`;
-const STANDARD_PACKET_OATH_HEADER = `Compare promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const SOURCE_HEADER = `Other accounts close. Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const PREPARATION_HEADER = `Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const RELIEF_ALLOCATION_HEADER = `Compare who is protected, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
-const ALLY_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const JUNE_TOTAL_TIMING =
-  "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.";
-const PURPOSES = Object.freeze({
-  registration: "Purpose: choose your permanent background and promise.",
-  relief_oath: "Purpose: choose duty; every field plan stays open.",
-  lead_source: "Purpose: choose evidence; every field plan stays open.",
-  preparation:
-    "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
-  relief_allocation:
-    "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
-  ally: "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
-});
-const STANDARD_PACKET_PURPOSE =
-  "Purpose: finish matched duty and evidence, or customize; every field plan stays open.";
 const WOLF_CRISIS_PREVIEW =
   "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather.";
 const REGISTRATION_MESSAGE =
-  "The Wolf-Winter Civic docket · role. Purpose: choose your permanent background and promise. Mission preview — A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. In one next choice, a matched role may finish duty and evidence, or customize. Enter Albany's Relief Compact. Compare starting resources, first field edge, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather; you must choose one permanent background, then take a ready-made promise/report pair or customize it; every approach stays open.";
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: finish matched duty and evidence, or customize; every field plan stays open. A custom duty leaves one evidence choice next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open.";
+const PREPARATION_MESSAGE =
+  "Albany Station: ready to depart now, or choose one field kit; relief-wagon and riding choices are separate.";
 const CUSTOM_DUTY_MESSAGE =
-  "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: choose one promise; your report comes next, and every approach stays open.";
 const SOURCE_MESSAGE =
-  "The Wolf-Winter Civic docket · 3/3 — evidence. Purpose: choose evidence; every field plan stays open. Hayden's Station launch board follows. Certify the Wolf-Winter Source Packet. Other accounts close. Compare field priority, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: choose one report; Albany Station comes next, and every approach stays open.";
+const RELIEF_ALLOCATION_MESSAGE =
+  "Albany Station: ready to depart now, or choose the relief wagon's job; field-kit and riding choices are separate.";
+const ALLY_MESSAGE =
+  "Albany Station: ready to depart now alone, or ask June Pike to ride; field kit and relief wagon choices are separate.";
 const STALE_DEFAULT_CIVIC_FRAMING = /\b(?:1\/3|2\/3|Civic order)\b|role\s*→\s*duty\s*→\s*evidence/i;
 const DEFERRED_STATION_SUPPORT_DETAILS =
   /Hayden|field kit|last relief wagon|June|second field seat|second rider|cattle-first/i;
@@ -81,35 +74,15 @@ function expectStage(
   args: {
     id: string;
     kind: NonNullable<JourneyStoryChoicePrompt["kind"]>;
-    phase: "Civic docket" | "Departure plan";
-    step: number;
-    total: number;
-    label: string;
-    originalTitle: string;
     originalMessage: string;
-    presentedMessage: string;
+    expectedMessage: string;
   },
 ): JourneyStoryChoicePrompt {
   const storyChoice = currentStoryChoice(session);
   expect(storyChoice).toMatchObject({ id: args.id, kind: args.kind });
-  expect(storyChoice.message).toContain(
-    `${WOLF.title} ${args.phase} · ${args.step}/${args.total} — ${args.label}.`,
-  );
-  expect(storyChoice.message).toContain(`${args.originalTitle}. ${args.presentedMessage}`);
+  expect(storyChoice.message).toBe(args.expectedMessage);
   expect(storyChoice.message).not.toContain(args.originalMessage);
   return storyChoice;
-}
-
-function expectLaunchDetailsDeferred(storyChoice: { message: string }): void {
-  expect(storyChoice.message).toContain(
-    `Route costs and tactics remain on ${WOLF.title}'s launch card.`,
-  );
-  expect(storyChoice.message).not.toContain(WOLF.discovery);
-  for (const option of WOLF.launch?.options ?? []) {
-    expect(storyChoice.message).not.toContain(option.title);
-    expect(storyChoice.message).not.toContain(option.summary);
-    expect(storyChoice.message).not.toContain(option.preview);
-  }
 }
 
 function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void {
@@ -129,37 +102,73 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
       continue;
     }
     expect(option.summary).not.toHaveProperty("fieldTrigger");
+    if (storyChoice.kind === "registration") {
+      expect(option.consequence).toContain("Field trigger:");
+      if (option.id === "albany:road_warden") {
+        expect(option.consequence).toContain(
+          "your Fieldcraft 4 sets its defense at 4 instead of 3",
+        );
+        expect(option.consequence).not.toMatch(/\bDEF\b|imported starting/iu);
+      } else {
+        expect(option.consequence).toMatch(/\b(?:DEF|import)\b/i);
+      }
+      expect(JSON.stringify(option.summary)).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
+      continue;
+    }
     expect(option.consequence).toContain("Benefit:");
     expect(option.consequence).toContain(`Cost: ${option.summary!.immediateCost}.`);
-    expect(option.consequence).toContain(`Boundary: ${option.summary!.tradeoff}`);
+    const isReadyMadeDispatch =
+      REGISTRATION.doctrines?.some((doctrine) => doctrine.id === option.id) === true;
+    expect(option.consequence).toContain(
+      `Boundary: ${isReadyMadeDispatch ? "Other duty/evidence pairs close." : option.summary!.tradeoff}`,
+    );
   }
+}
+
+const RESULT_PREFIX: Readonly<Record<JourneyStoryChoicePresentationKind, string>> = {
+  registration: "Background chosen",
+  relief_oath: "Wolf-Winter promise chosen",
+  lead_source: "Report chosen",
+  preparation: "Field kit chosen",
+  relief_allocation: "Relief wagon choice made",
+  ally: "Riding choice made",
+};
+
+const RESULT_PLAIN_OUTCOME: Readonly<Record<string, string>> = {
+  "albany:ally_june_cattle_first": "June joined you as the second rider.",
+  "albany:ally_june_relay_only": "June declined the subordinate relay and remained at the Station.",
+  "albany:ally_travel_solo": "June remained at the Station; you will ride alone.",
+};
+
+function expectPlayerFirstOpeningResult(args: {
+  session: OverworldSession;
+  prompt: JourneyStoryChoicePrompt & { kind: JourneyStoryChoicePresentationKind };
+  optionId: string;
+  result: OverworldJourneyStoryChoiceResult;
+}): void {
+  const option = args.prompt.options.find((candidate) => candidate.id === args.optionId);
+  if (!option?.summary) throw new Error(`Expected a summary for ${args.optionId}.`);
+  const summary = option.summary;
+  const plainOutcome = RESULT_PLAIN_OUTCOME[option.id];
+  expect(args.result.displaySummary).toBe(
+    `${RESULT_PREFIX[args.prompt.kind]} — ${option.label}. ` +
+      `${plainOutcome ? `${plainOutcome} ` : ""}Cost: ${summary.immediateCost.replace(/\.$/u, "")}.`,
+  );
+  expect(args.result.consequence).toBe(option.consequence);
+  expect(args.result.displaySummary).not.toContain(args.result.consequence);
+  const serializedResult = JSON.stringify(args.result);
+  expect(serializedResult.indexOf('"displaySummary"')).toBeLessThan(
+    serializedResult.indexOf('"consequence"'),
+  );
+  const snapshot = args.session.snapshot();
+  expect(JSON.stringify(snapshot)).not.toContain(args.result.displaySummary!);
+  expect(snapshot.journalEntries.find((entry) => entry.id === args.result.entry.id)?.text).not.toBe(
+    args.result.displaySummary,
+  );
 }
 
 function wordCount(value: string): number {
   return value.match(/\S+/g)?.length ?? 0;
-}
-
-function expectBoundedPurpose(storyChoice: JourneyStoryChoicePrompt, purpose: string): void {
-  expect(purpose.length).toBeLessThanOrEqual(140);
-  expect(storyChoice.message.match(/\bPurpose:/g) ?? []).toHaveLength(1);
-  expect(storyChoice.message).toContain(purpose);
-  expect(storyChoice.message.indexOf(purpose)).toBeLessThan(
-    storyChoice.message.indexOf(FIELD_CHECK_TIMING),
-  );
-  expect(purpose).not.toMatch(/\b(?:best|optimal|recommended)\b/i);
-  if (purpose !== PURPOSES.relief_oath) {
-    expect(purpose).not.toMatch(/\bmust\b/i);
-  }
-}
-
-function expectRoleplayFirstFraming(storyChoice: JourneyStoryChoicePrompt): void {
-  expect(storyChoice.message).toMatch(/\b(?:promises?|priorit(?:y|ies))\b/i);
-  expect(storyChoice.message).toContain("exact cost");
-  expect(storyChoice.message).toMatch(/\b(?:gives up|remains exposed|tradeoffs?)\b/i);
-  expect(storyChoice.message).toContain(FIELD_CHECK_TIMING);
-  expect(storyChoice.message).not.toMatch(
-    /broad field fit|trigger category|inspect a card|exact check|recovery chain/i,
-  );
 }
 
 function expectCompactSummaryOptions(storyChoice: JourneyStoryChoiceSummaryComparison): void {
@@ -199,6 +208,7 @@ function expectProgressivePreparationComparison(
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
+      highlights: [{ label: "Governing skill", value: expectedPreparationCheckFit(profile) }],
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
     });
@@ -220,6 +230,35 @@ function expectProgressiveReliefAllocationOptions(storyChoice: JourneyStoryChoic
     expect(option?.consequence).not.toContain(allocationOption.preview);
     expect(option?.consequence).not.toContain(allocationOption.consequence);
   }
+}
+
+function openingSessionAtRegistration(): OverworldSession {
+  const session = new OverworldSession(WORLD);
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(REGISTRATION.contact);
+  return session;
+}
+
+function openingSessionAtLeadSource(): OverworldSession {
+  const session = openingSessionAtRegistration();
+  session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+  const oath = currentStoryChoice(session);
+  if (oath.progressiveDisclosure) {
+    session.revealJourneyStory(oath.id, oath.progressiveDisclosure.reveal.id);
+  }
+  session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
+  return session;
+}
+
+function openingSessionAtStation(): OverworldSession {
+  const session = openingSessionAtLeadSource();
+  session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
+  const route = session
+    .view()
+    .areaExits.find((candidate) => candidate.destination.id === PREPARATION.area);
+  if (!route) throw new Error("Expected the opening route to Albany Station.");
+  session.moveArea(route.id);
+  return session;
 }
 
 function expectProgressiveReliefAllocationComparison(
@@ -276,23 +315,21 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const registration = currentStoryChoice(session);
     expect(registration).toMatchObject({ id: REGISTRATION.id, kind: "registration" });
     expect(registration.message).toBe(REGISTRATION_MESSAGE);
-    expect(registration.message).toContain(`${WOLF.title} Civic docket · role.`);
-    expect(registration.message).toContain(`${REGISTRATION.title}. ${REGISTRATION_HEADER}`);
+    expect(registration.message).toContain(`${WOLF.title}:`);
     expect(registration.message).not.toContain(REGISTRATION.message);
-    expect(registration.message).toContain(`Mission preview — ${WOLF_CRISIS_PREVIEW}`);
-    expect(registration.message).toContain(
-      "In one next choice, a matched role may finish duty and evidence, or customize.",
-    );
+    expect(registration.message).toContain(WOLF_CRISIS_PREVIEW.replace(/\.$/u, ""));
+    expect(registration.message).toContain("choose one permanent background");
+    expect(registration.message).toContain("ready-made promise/report pair or customize it");
+    expect(registration.message).toContain("every approach stays open");
     expect(registration.message).not.toContain(WOLF.discovery);
     expect(registration.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(registration.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
-    expectBoundedPurpose(registration, PURPOSES.registration);
     expect(registration.options.map((option) => option.id)).toEqual(
       REGISTRATION.profiles.map((profile) => profile.id),
     );
     expect(registration.options.every((option) => option.group === undefined)).toBe(true);
-    expectRoleplayFirstFraming(registration);
-    expect(wordCount(registration.message)).toBeLessThanOrEqual(90);
+    expect(registration.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(wordCount(registration.message)).toBeLessThanOrEqual(52);
     expectSummaryFirstOptions(registration);
     expect(registration.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
@@ -306,44 +343,56 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       text: REGISTRATION.message,
     });
 
-    session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    const registrationResult = session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    expectPlayerFirstOpeningResult({
+      session,
+      prompt: registration as JourneyStoryChoicePrompt & {
+        kind: JourneyStoryChoicePresentationKind;
+      },
+      optionId: REGISTRATION.profiles[0]!.id,
+      result: registrationResult,
+    });
+    expect(registrationResult.consequence).toContain(
+      "When Wolf-Winter starts from this journey, your Fieldcraft 4 sets its defense at 4 instead of 3.",
+    );
+    expect(registrationResult.consequence).not.toMatch(
+      /\b(?:DEF|LURE|HUNT)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation/gu,
+    );
     const oath = currentStoryChoice(session);
     expect(oath).toMatchObject({ id: RELIEF_OATH.id, kind: "relief_oath" });
     expect(oath.message).toBe(MATCHED_OATH_MESSAGE);
-    expect(oath.message).toContain(`${WOLF.title} Civic docket · matched duty + evidence.`);
-    expect(oath.message).toContain(`${RELIEF_OATH.title}. ${STANDARD_PACKET_OATH_HEADER}`);
+    expect(oath.message).toContain(`${WOLF.title}:`);
     expect(oath.message).not.toContain(RELIEF_OATH.message);
     const standardPacket = REGISTRATION.doctrines!.find(
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
-    expect(oath.message).toContain("A custom duty leaves one evidence choice next.");
+    expect(oath.message).toContain("every approach stays open.");
     expect(oath.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(oath.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
-    expectBoundedPurpose(oath, STANDARD_PACKET_PURPOSE);
     expect(oath.options.map((option) => option.id)).toEqual([
       standardPacket.id,
       ...RELIEF_OATH.options.map((option) => option.id),
     ]);
-    expectRoleplayFirstFraming(oath);
-    expect(wordCount(oath.message)).toBeLessThanOrEqual(50);
-    expect(wordCount(registration.message) + wordCount(oath.message)).toBeLessThanOrEqual(135);
+    expect(oath.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(wordCount(oath.message)).toBeLessThanOrEqual(16);
+    expect(wordCount(registration.message) + wordCount(oath.message)).toBeLessThanOrEqual(65);
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     const roadWardenPacket = oath.options.find((option) => option.id === standardPacket.id)!;
     expect(roadWardenPacket.label).toBe(
-      "Role shortcut — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "Ready-made dispatch — Aid-Only promise + Hayden's frost report",
     );
     expect(roadWardenPacket.summary?.commitment).toBe(
-      "Skips the separate evidence choice; no field plan is chosen. Support: Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
+      "Carry winter-road judgment and flexible, life-first aid to Cade's steading.",
     );
-    expect(roadWardenPacket.summary?.tradeoff).toBe(
-      "Other duty/evidence pairs close; every field plan stays open.",
-    );
+    expect(roadWardenPacket.summary?.tradeoff).toBe("Other promise/report pairs close.");
+    expect(roadWardenPacket.consequence).toContain("Boundary: Other duty/evidence pairs close.");
     expect(roadWardenPacket.consequence).toContain(
-      "Benefit: Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
+      "Benefit: Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
     );
-    expect(roadWardenPacket.summary?.commitment).not.toContain("DEF");
-    expect(roadWardenPacket.summary?.commitment).not.toContain("split-rail");
+    expect(JSON.stringify(roadWardenPacket.summary)).not.toMatch(
+      /\b(?:DEF|DC|import|fieldTrigger)\b/i,
+    );
     expect(roadWardenPacket.summary?.commitment).not.toContain(standardPacket.summary);
     expect(
       compactJourneyStoryChoiceComparison(
@@ -356,20 +405,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       initialOptionIds: [standardPacket.id],
       reveal: {
         id: "customize_duty_and_evidence",
-        label: expect.stringContaining("Customize duty and evidence"),
+        label: OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+        description: OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
         optionIds: RELIEF_OATH.options.map((option) => option.id),
       },
     });
-    const oathCompass = oath.progressiveDisclosure!.reveal.description;
-    expect(oathCompass).toMatch(/HUNT[^]*defends herd and relief stores[^]*wolves may die/i);
-    expect(oathCompass).toMatch(/LURE[^]*keep herd and pack alive[^]*spends Cade's last feed/i);
-    expect(oathCompass).toMatch(
-      /DRIVE[^]*moves people and the living pack clear[^]*abandons the outer line/i,
-    );
-    expect(oathCompass).toMatch(
-      /FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals/i,
-    );
-    expect(oathCompass).toMatch(/No plan is recommended or committed/i);
+    expect(JSON.stringify(oath)).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     expect(journeyStoryChoiceOptionsForPresentation(oath).map((option) => option.id)).toEqual([
       standardPacket.id,
     ]);
@@ -396,21 +437,15 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const ledgerOath = expectStage(ledgerSession, {
       id: RELIEF_OATH.id,
       kind: "relief_oath",
-      phase: "Civic docket",
-      step: 2,
-      total: 3,
-      label: "duty",
-      originalTitle: RELIEF_OATH.title,
       originalMessage: RELIEF_OATH.message,
-      presentedMessage: OATH_HEADER,
+      expectedMessage: CUSTOM_DUTY_MESSAGE,
     });
-    expect(ledgerOath.message).toBe(CUSTOM_DUTY_MESSAGE);
-    expect(wordCount(ledgerOath.message)).toBeLessThanOrEqual(45);
+    expect(ledgerOath.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(wordCount(ledgerOath.message)).toBeLessThanOrEqual(16);
     expect(ledgerOath.options.map((option) => option.id)).toEqual(
       RELIEF_OATH.options.map((option) => option.id),
     );
     expect(ledgerOath).not.toHaveProperty("progressiveDisclosure");
-    expectBoundedPurpose(ledgerOath, PURPOSES.relief_oath);
     expect(journeyStoryChoiceOptionsForPresentation(ledgerOath).map((option) => option.id)).toEqual(
       RELIEF_OATH.options.map((option) => option.id),
     );
@@ -420,45 +455,64 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const ledgerSource = expectStage(ledgerSession, {
       id: LEAD_SOURCE.id,
       kind: "lead_source",
-      phase: "Civic docket",
-      step: 3,
-      total: 3,
-      label: "evidence",
-      originalTitle: LEAD_SOURCE.title,
       originalMessage: LEAD_SOURCE.message,
-      presentedMessage: SOURCE_HEADER,
+      expectedMessage: SOURCE_MESSAGE,
     });
-    expect(ledgerSource.message).toBe(SOURCE_MESSAGE);
-    expect(wordCount(ledgerSource.message)).toBeLessThanOrEqual(45);
+    expect(ledgerSource.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(wordCount(ledgerSource.message)).toBeLessThanOrEqual(15);
     expect(
       wordCount(registration.message) +
         wordCount(ledgerOath.message) +
         wordCount(ledgerSource.message),
-    ).toBeLessThanOrEqual(170);
+    ).toBeLessThanOrEqual(80);
     expect(
       registration.message.length + ledgerOath.message.length + ledgerSource.message.length,
-    ).toBeLessThanOrEqual(1_120);
+    ).toBeLessThanOrEqual(620);
 
-    session.revealJourneyStory(oath.id, oath.progressiveDisclosure!.reveal.id);
-    session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
+    const revealedOath = session.revealJourneyStory(oath.id, oath.progressiveDisclosure!.reveal.id);
+    expect(revealedOath).not.toHaveProperty("progressiveDisclosure");
+    expect(revealedOath.message).toBe(
+      `${oath.message} ${OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS}`,
+    );
+    const oathCompass = OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS;
+    expect(oathCompass).toMatch(/HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die/i);
+    expect(oathCompass).toMatch(
+      /LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed/i,
+    );
+    expect(oathCompass).toMatch(
+      /DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading/i,
+    );
+    expect(oathCompass).toMatch(
+      /FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals/i,
+    );
+    expect(oathCompass).toMatch(/No plan is recommended or committed/i);
+    expect(oathCompass).toContain("Review recorded; no choice or decision accepted");
+    expect(oathCompass.match(/Outcome:/g)).toHaveLength(4);
+    expect(oathCompass.match(/Cost or risk:/g)).toHaveLength(4);
+    expect(oathCompass.match(/Later:/g)).toHaveLength(4);
+    expect(wordCount(oathCompass)).toBeLessThanOrEqual(145);
+    expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
+      revealedOath,
+    );
+    const oathResult = session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
+    expectPlayerFirstOpeningResult({
+      session,
+      prompt: revealedOath as JourneyStoryChoicePrompt & {
+        kind: JourneyStoryChoicePresentationKind;
+      },
+      optionId: RELIEF_OATH.options[0]!.id,
+      result: oathResult,
+    });
     const source = expectStage(session, {
       id: LEAD_SOURCE.id,
       kind: "lead_source",
-      phase: "Civic docket",
-      step: 3,
-      total: 3,
-      label: "evidence",
-      originalTitle: LEAD_SOURCE.title,
       originalMessage: LEAD_SOURCE.message,
-      presentedMessage: SOURCE_HEADER,
+      expectedMessage: SOURCE_MESSAGE,
     });
-    expect(source.message).toBe(SOURCE_MESSAGE);
-    expect(source.message).toContain("Hayden's Station launch board follows.");
-    expect(source.message).toContain(`Certify the Wolf-Winter Source Packet. ${SOURCE_HEADER}`);
+    expect(source.message).toContain("Albany Station comes next");
     expect(source.message).not.toContain(LEAD_SOURCE.message);
-    expectBoundedPurpose(source, PURPOSES.lead_source);
-    expectRoleplayFirstFraming(source);
-    expect(wordCount(source.message)).toBeLessThanOrEqual(45);
+    expect(source.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(wordCount(source.message)).toBeLessThanOrEqual(15);
     expectSummaryFirstOptions(source);
     expect(source.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
@@ -471,7 +525,13 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       text: LEAD_SOURCE.message,
     });
 
-    session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
+    const sourceResult = session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
+    expectPlayerFirstOpeningResult({
+      session,
+      prompt: source as JourneyStoryChoicePrompt & { kind: JourneyStoryChoicePresentationKind },
+      optionId: LEAD_SOURCE.options[0]!.id,
+      result: sourceResult,
+    });
     expect(session.journey().storyChoice).toBeNull();
     const route = session
       .view()
@@ -485,19 +545,13 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
     const preparation = session.inspectJourneyStory(PREPARATION.id);
     expect(preparation).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
-    expect(preparation.message).toContain(`${WOLF.title} · optional preparation.`);
-    expect(preparation.message).toContain(`${PREPARATION.title}. ${PREPARATION_HEADER}`);
+    expect(preparation.message).toBe(PREPARATION_MESSAGE);
+    expect(preparation.message).toContain("ready to depart now");
+    expect(preparation.message).toContain("choose one field kit");
     expect(preparation.message).not.toContain(PREPARATION.message);
-    expect(preparation.message).not.toContain("relief-capacity choice");
-    expect(preparation.message).toContain(
-      `${ALLY_CONTACT.name}'s field-team conversation is separate.`,
-    );
-    expect(preparation.message).toContain(JUNE_TOTAL_TIMING);
-    expectBoundedPurpose(preparation, PURPOSES.preparation);
-    expectRoleplayFirstFraming(preparation);
-    expect(preparation.message).not.toMatch(/Departure plan|1\/2|Still ahead/i);
-    expect(wordCount(preparation.message)).toBeLessThanOrEqual(110);
-    expectLaunchDetailsDeferred(preparation);
+    expect(preparation.message).toContain("relief-wagon and riding choices are separate");
+    expect(preparation.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(wordCount(preparation.message)).toBeLessThanOrEqual(20);
     expectSummaryFirstOptions(preparation);
     expectProgressivePreparationOptions(preparation);
     expect(preparation.options.every((option) => option.summary?.immediateCost)).toBe(true);
@@ -511,7 +565,15 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       OverworldSession.restore(WORLD, session.snapshot()).inspectJourneyStory(PREPARATION.id),
     ).toEqual(preparation);
 
-    session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
+    const preparationResult = session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
+    expectPlayerFirstOpeningResult({
+      session,
+      prompt: preparation as JourneyStoryChoicePrompt & {
+        kind: JourneyStoryChoicePresentationKind;
+      },
+      optionId: PREPARATION.profiles[0]!.id,
+      result: preparationResult,
+    });
     expect(
       session.snapshot().journalEntries.find((entry) => entry.kind === "preparation_offer"),
     ).toMatchObject({
@@ -528,20 +590,13 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       id: RELIEF_ALLOCATION.id,
       kind: "relief_allocation",
     });
-    expect(allocation.message).toContain(`${WOLF.title} · optional relief priority.`);
-    expect(allocation.message).toContain(`${RELIEF_ALLOCATION.title}. ${RELIEF_ALLOCATION_HEADER}`);
+    expect(allocation.message).toBe(RELIEF_ALLOCATION_MESSAGE);
+    expect(allocation.message).toContain("ready to depart now");
+    expect(allocation.message).toContain("choose the relief wagon's job");
     expect(allocation.message).not.toContain(RELIEF_ALLOCATION.message);
-    expect(allocation.message).not.toMatch(/Departure plan|2\/2|Still ahead|Chosen for departure/i);
-    expect(allocation.message).not.toContain("Optional field-team choice follows");
-    expect(allocation.message).not.toMatch(/\b(?:required|mandatory)\b/i);
-    expect(allocation.message).toContain(
-      `${ALLY_CONTACT.name}'s field-team conversation is separate; launching now keeps the solo route legal.`,
-    );
-    expect(allocation.message).toContain(JUNE_TOTAL_TIMING);
-    expectBoundedPurpose(allocation, PURPOSES.relief_allocation);
-    expectRoleplayFirstFraming(allocation);
-    expect(wordCount(allocation.message)).toBeLessThanOrEqual(115);
-    expectLaunchDetailsDeferred(allocation);
+    expect(allocation.message).toContain("field-kit and riding choices are separate");
+    expect(allocation.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(wordCount(allocation.message)).toBeLessThanOrEqual(21);
     expectSummaryFirstOptions(allocation);
     expectProgressiveReliefAllocationOptions(allocation);
     expect(allocation.options.every((option) => option.summary?.immediateCost)).toBe(true);
@@ -553,22 +608,104 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       OverworldSession.restore(WORLD, session.snapshot()).inspectJourneyStory(RELIEF_ALLOCATION.id),
     ).toEqual(allocation);
 
-    session.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    const allocationResult = session.chooseJourneyStory(
+      RELIEF_ALLOCATION.options[0]!.id,
+      RELIEF_ALLOCATION.id,
+    );
+    expectPlayerFirstOpeningResult({
+      session,
+      prompt: allocation as JourneyStoryChoicePrompt & {
+        kind: JourneyStoryChoicePresentationKind;
+      },
+      optionId: RELIEF_ALLOCATION.options[0]!.id,
+      result: allocationResult,
+    });
     session.talkToCharacter(ALLY.contact);
     const ally = currentStoryChoice(session);
     expect(ally).toMatchObject({ id: ALLY.id, kind: "ally" });
-    expect(ally.message).toContain(`${WOLF.title} · optional field team.`);
-    expectBoundedPurpose(ally, PURPOSES.ally);
-    expect(ally.message).toContain(
-      'Choose "Leave with a Solo Field Team" to keep the one-rider launch.',
-    );
-    expect(ally.message).toContain(`${ALLY.title}. ${ALLY_HEADER}`);
+    expect(ally.message).toBe(ALLY_MESSAGE);
+    expect(ally.message).toContain("ready to depart now alone");
+    expect(ally.message).toContain("field kit and relief wagon choices are separate");
     expect(ally.message).not.toContain(ALLY.message);
-    expectRoleplayFirstFraming(ally);
-    expect(wordCount(ally.message)).toBeLessThanOrEqual(75);
-    expectLaunchDetailsDeferred(ally);
+    expect(ally.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(wordCount(ally.message)).toBeLessThanOrEqual(24);
     expectSummaryFirstOptions(ally);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(ally);
+    const allyResult = session.chooseJourneyStory(ALLY.options[0]!.id);
+    expectPlayerFirstOpeningResult({
+      session,
+      prompt: ally as JourneyStoryChoicePrompt & { kind: JourneyStoryChoicePresentationKind },
+      optionId: ALLY.options[0]!.id,
+      result: allyResult,
+    });
+  });
+
+  it("keeps every ordinary accepted opening summary player-first while exact bytes stay separate", () => {
+    const forbiddenFirstLevelMechanics =
+      /\b(?:DRIVE|FORTIFY|Overrun|pressure|HP|DEF|import)\b|field\s*trigger/iu;
+    const assertAccepted = (
+      session: OverworldSession,
+      prompt: JourneyStoryChoicePrompt,
+      optionId: string,
+      result: OverworldJourneyStoryChoiceResult,
+    ): void => {
+      expectPlayerFirstOpeningResult({
+        session,
+        prompt: prompt as JourneyStoryChoicePrompt & {
+          kind: JourneyStoryChoicePresentationKind;
+        },
+        optionId,
+        result,
+      });
+      expect(result.displaySummary).not.toMatch(forbiddenFirstLevelMechanics);
+    };
+
+    for (const profile of REGISTRATION.profiles) {
+      const session = openingSessionAtRegistration();
+      const prompt = currentStoryChoice(session);
+      assertAccepted(session, prompt, profile.id, session.chooseJourneyStory(profile.id));
+    }
+    for (const oathOption of RELIEF_OATH.options) {
+      const session = openingSessionAtRegistration();
+      session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+      const initialOath = currentStoryChoice(session);
+      if (initialOath.progressiveDisclosure) {
+        session.revealJourneyStory(initialOath.id, initialOath.progressiveDisclosure.reveal.id);
+      }
+      const prompt = currentStoryChoice(session);
+      assertAccepted(session, prompt, oathOption.id, session.chooseJourneyStory(oathOption.id));
+    }
+    for (const sourceOption of LEAD_SOURCE.options) {
+      const session = openingSessionAtLeadSource();
+      const prompt = currentStoryChoice(session);
+      assertAccepted(session, prompt, sourceOption.id, session.chooseJourneyStory(sourceOption.id));
+    }
+    for (const profile of PREPARATION.profiles) {
+      const session = openingSessionAtStation();
+      const prompt = session.inspectJourneyStory(PREPARATION.id);
+      assertAccepted(
+        session,
+        prompt,
+        profile.id,
+        session.chooseJourneyStory(profile.id, PREPARATION.id),
+      );
+    }
+    for (const allocationOption of RELIEF_ALLOCATION.options) {
+      const session = openingSessionAtStation();
+      const prompt = session.inspectJourneyStory(RELIEF_ALLOCATION.id);
+      assertAccepted(
+        session,
+        prompt,
+        allocationOption.id,
+        session.chooseJourneyStory(allocationOption.id, RELIEF_ALLOCATION.id),
+      );
+    }
+    for (const allyOption of ALLY.options) {
+      const session = openingSessionAtStation();
+      session.talkToCharacter(ALLY.contact);
+      const prompt = currentStoryChoice(session);
+      assertAccepted(session, prompt, allyOption.id, session.chooseJourneyStory(allyOption.id));
+    }
   });
 
   it("keeps role packets immediate and makes customization a durable session receipt", () => {
@@ -587,7 +724,8 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       expect(disclosure.initialOptionIds).toEqual([doctrine.id]);
       expect(disclosure.reveal).toMatchObject({
         id: "customize_duty_and_evidence",
-        label: expect.stringContaining("Customize duty and evidence"),
+        label: OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+        description: OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
       });
       expect(journeyStoryChoiceOptionsForPresentation(oath).map((option) => option.id)).toEqual([
         doctrine.id,
@@ -609,15 +747,19 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       expect(session.journey()).toEqual(beforeJourney);
       expect(OverworldSession.restore(WORLD, beforeReveal).journey()).toEqual(beforeJourney);
 
-      session.revealJourneyStory(oath.id, disclosure.reveal.id);
+      const revealedOath = session.revealJourneyStory(oath.id, disclosure.reveal.id);
       const afterReveal = session.snapshot();
       expect(afterReveal).not.toEqual(beforeReveal);
       expect(afterReveal.inspectedStoryReveals).toContainEqual([oath.id, [disclosure.reveal.id]]);
-      expect(session.journey()).toEqual(beforeJourney);
-      expect(session.inspectJourneyStoryOption(oath.id, customDuty.id)).toEqual(oath);
+      expect(revealedOath).not.toHaveProperty("progressiveDisclosure");
+      expect(revealedOath.message).toBe(
+        `${oath.message} ${OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS}`,
+      );
+      expect(session.journey()).toEqual({ ...beforeJourney, storyChoice: revealedOath });
+      expect(session.inspectJourneyStoryOption(oath.id, customDuty.id)).toEqual(revealedOath);
 
       const restored = OverworldSession.restore(WORLD, afterReveal);
-      expect(restored.inspectJourneyStoryOption(oath.id, customDuty.id)).toEqual(oath);
+      expect(restored.inspectJourneyStoryOption(oath.id, customDuty.id)).toEqual(revealedOath);
       expect(() => restored.chooseJourneyStory(customDuty.id, oath.id)).not.toThrow();
     }
   });
@@ -686,9 +828,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
 
     expect(talked.journey.storyChoice).toEqual(ui.journey().storyChoice);
-    expect(talked.journey.storyChoice?.message).toContain(
-      `Mission preview — ${WOLF_CRISIS_PREVIEW}`,
-    );
+    expect(talked.journey.storyChoice?.message).toBe(REGISTRATION_MESSAGE);
     expectSummaryFirstOptions(talked.journey.storyChoice!);
 
     const standardPacket = REGISTRATION.doctrines!.find(
@@ -703,7 +843,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
         compact_result: true,
       }).journey;
     expect(ui.journey().storyChoice?.message).toBe(MATCHED_OATH_MESSAGE);
-    expect(compactJourney.storyChoice?.message).toBe(MATCHED_OATH_MESSAGE);
+    expect(compactJourney.storyChoice?.message).toBe(
+      `${MATCHED_OATH_MESSAGE} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
+    );
 
     ui.chooseJourneyStory(standardPacket.id);
     compactJourney = api.choose_overworld_session_story({
@@ -731,7 +873,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(mcpStation.context.station_dispatch_board).toEqual(
       ui.compactView().station_dispatch_board,
     );
-    expect(mcpStation.context.station_dispatch_board?.[4]).toHaveLength(6);
+    expect(mcpStation.context.station_dispatch_board?.[0]).toBe(6);
+    expect(mcpStation.context.station_dispatch_board?.[4]).toHaveLength(3);
+    expect(mcpStation.context.station_dispatch_board?.[5]).toEqual([
+      "station_dispatch:review_optional_support",
+      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+    ]);
     expect(mcpStation.context).not.toHaveProperty("departure_recap");
     expect(mcpStation.context).not.toHaveProperty("departure_interactions");
     expect(mcpStation.context).not.toHaveProperty("departure_contact_leads");
@@ -750,7 +897,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     }).story;
     expect(mcpPreparation).toEqual(compactJourneyStoryChoiceComparison(uiPreparation));
     expect(mcpPreparation).not.toEqual(uiPreparation);
-    expectLaunchDetailsDeferred(mcpPreparation);
+    expect(mcpPreparation.message).toBe(PREPARATION_MESSAGE);
     expectCompactSummaryOptions(mcpPreparation);
     expectProgressivePreparationComparison(mcpPreparation);
     expectSummaryFirstOptions(uiPreparation);
@@ -770,7 +917,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       "committed",
       35,
       null,
-      ["relief_allocation", "field_team"],
+      2,
     ]);
     const uiAllocation = ui.inspectJourneyStory(RELIEF_ALLOCATION.id);
     const mcpAllocation = api.inspect_overworld_session_story({
@@ -798,7 +945,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     }).journey.storyChoice;
     expect(mcpAlly).toEqual(ui.journey().storyChoice);
     expect(mcpAlly).not.toBeNull();
-    expectBoundedPurpose(mcpAlly!, PURPOSES.ally);
+    expect(mcpAlly!.message).toBe(ALLY_MESSAGE);
   });
 
   it("keeps custom Civic headers literal across full UI and compact MCP", () => {
@@ -833,7 +980,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const fullDuty = ui.journey().storyChoice;
     if (!fullDuty) throw new Error("Expected Ledger Advocate's full duty choice.");
     expect(fullDuty.message).toBe(CUSTOM_DUTY_MESSAGE);
-    expect(compactDuty?.message).toBe(CUSTOM_DUTY_MESSAGE);
+    expect(compactDuty?.message).toBe(
+      `${CUSTOM_DUTY_MESSAGE} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
+    );
     expect(compactJourneyStoryChoiceComparison(fullDuty).message).toBe(CUSTOM_DUTY_MESSAGE);
     expect(fullDuty).not.toHaveProperty("progressiveDisclosure");
     expect(fullDuty.options.map((option) => option.id)).toEqual([
@@ -858,7 +1007,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const fullSource = ui.journey().storyChoice;
     if (!fullSource) throw new Error("Expected the full Albany evidence choice.");
     expect(fullSource.message).toBe(SOURCE_MESSAGE);
-    expect(compactSource?.message).toBe(SOURCE_MESSAGE);
+    expect(compactSource?.message).toBe(
+      `${SOURCE_MESSAGE} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
+    );
     expect(compactJourneyStoryChoiceComparison(fullSource).message).toBe(SOURCE_MESSAGE);
     expect(fullSource.options.map((option) => option.id)).toEqual([
       "albany:source_rowan_civic_docket",

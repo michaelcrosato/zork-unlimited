@@ -19,7 +19,7 @@
         "trigger_category": "First use: fieldcraft support on winter roads.",
       "preview": "Contact: Hayden Hale. Skill edge: Fieldcraft 4. Value: Stewardship 4. Kit: weatherproof field kit. Funds: 12. Standing: Road Wardens +5. Knowledge: Relief Compact and winter routes. Obligation: return Hayden's winter packet with an honest account.",
       "tradeoff": "Owe Hayden the winter packet and an honest account.",
-      "consequence": "Rowan stamps you as a Road-Warden Relief Hand. Your Fieldcraft 4 raises Wolf-Winter's imported starting DEF floor from 3 to 4 when that quest is launched from this journey. Hayden remembers sponsoring you, you carry a weatherproof field kit, and his return-packet promise remains active.",
+      "consequence": "Rowan stamps you as a Road-Warden Relief Hand. When Wolf-Winter starts from this journey, your Fieldcraft 4 sets its defense at 4 instead of 3. Hayden remembers sponsoring you; your weatherproof field kit and return-packet promise remain active.",
         "character": {
           "version": 1,
           "background": "albany:road_warden",
@@ -355,10 +355,10 @@
         "id": "albany:doctrine_road_warden_aid_route",
         "title": "Take the Road-Warden Aid Route",
         "summary": "Begin as a Road-Warden under Aid-Only Duty with Hayden's sponsored frost report.",
-        "trigger_category": "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
-        "preview": "Starts as a Road-Warden Relief Hand under Aid-Only Duty with Hayden's sponsored frost report. Fieldcraft 4 raises Wolf-Winter's starting DEF floor to 4. Aid-Only skips only the final alarm step when LURE's first cast stayed clean; a fouled opening keeps it. Hayden's report enables the ordinary-hunt frost brace only after the attempted public wedge splits; it never helps LURE.",
+        "trigger_category": "Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
+        "preview": "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3. Aid-Only prevents one final ordinary rise in cattle alarm after a clean first feed; a foul still takes that rise. Hayden's report matters only if you hold Cade's ground; its exact brace terms appear before commitment at the steading.",
         "tradeoff": "Rowan/Jamie sources omitted; prep, allocation, June, road remain open.",
-        "consequence": "Optional preparation, relief allocation, June's field-team commitment, and road approach remain unselected and available later.",
+        "consequence": "Preparation, the relief wagon, June's offer, and both roads remain open.",
         "immediate_cost": "10 minutes and $0",
         "profile_id": "albany:road_warden",
         "relief_oath_option_id": "albany:oath_limited_aid_only",
@@ -48782,15 +48782,15 @@
       "launch": {
         "version": 1,
         "id": "albany:wolf_hill_approach",
-        "prompt": "Hayden's dispatch names two last-mile roads to Cade's hill steading. Choose which cost and field condition you will carry into the Wolf-Winter watch.",
+        "prompt": "Hayden's dispatch names two last-mile roads to Cade's hill steading. Choose an approach tradeoff; tonight's independent ground condition is disclosed after arrival.",
         "options": [
           {
             "id": "albany:wolf_approach_exposed_ridge",
             "title": "Take the Exposed Ridge Road",
-            "summary": "Reach Cade quickly across the open crest, accepting a harder cattle arrival for a clearer first feed cast.",
-            "preview": "Costs 30 minutes, 1 supply, and 25 fatigue. The open crest exposes the smoke plume, wolf breath, and crosswind, lowering the first downwind feed cast to DC 10, but the visible descent raises cattle alarm by 1 before the watch. A clean three-cast lure line therefore reaches alarm 4 (Breaking) and scatters cattle.",
-            "consequence": "You spend 30 minutes, 1 supply, and 25 fatigue on the exposed crest. The plume and crosswind are legible for the first cast, but the herd sees the descent and begins the watch at cattle alarm 1.",
-            "return_summary": "You reached Cade by the exposed ridge: faster and better sighted for the first lure cast, with the cattle already alarmed by the visible descent.",
+            "summary": "Reach Cade quickly across the open crest, trading a visible, more tiring arrival for clear sight of the byre and its weather.",
+            "preview": "Costs 30 minutes, 1 supply, and 25 fatigue. This road chooses no strategy: inspect all four at Cade. The open crest reveals the byre and weather, but the herd sees the descent and begins at cattle alarm 1. Cade discloses tonight's independent ground fact before commitment; it can supersede one matching first beat. Other route mechanics are unchanged.",
+            "consequence": "You spend 30 minutes, 1 supply, and 25 fatigue on the exposed crest. The whole byre line is visible on arrival, but the herd sees the descent and begins the watch at cattle alarm 1.",
+            "return_summary": "You reached Cade by the exposed ridge: faster and better sighted across the whole byre, with the cattle already alarmed by the visible descent.",
             "terms": {
               "minutes": 30,
               "supplies": 1,
@@ -48811,10 +48811,10 @@
           {
             "id": "albany:wolf_approach_sheltered_stockway",
             "title": "Take the Sheltered Stockway",
-            "summary": "Spend longer under the lee to keep the herd calm, accepting a concealed crosswind at the first feed cast.",
-            "preview": "Costs 75 minutes, 2 supplies, and 10 fatigue. The sheltered stockway keeps the herd calm at arrival but conceals the crosswind, leaving the first downwind feed cast at DC 12. A clean three-cast lure line reaches alarm 3 (Restless), keeps the whole herd, and remains below Breaking.",
-            "consequence": "You spend 75 minutes, 2 supplies, and 10 fatigue under the lee. The cattle do not see the approach and begin steady, while the hidden crosswind leaves the first feed cast at DC 12.",
-            "return_summary": "You reached Cade by the sheltered stockway: slower and less tiring, with the herd calm but the first lure crosswind concealed.",
+            "summary": "Spend longer under the lee to arrive less tired and keep the herd calm, trading away the exposed ridge's clear view.",
+            "preview": "Costs 75 minutes, 2 supplies, and 10 fatigue. This road chooses no strategy: inspect all four at Cade. The lee keeps the herd at alarm 0 and reduces fatigue, but hedges conceal the byre's weather and sight lines. Cade discloses tonight's independent ground fact before commitment; it can supersede one matching first beat. Other route mechanics are unchanged.",
+            "consequence": "You spend 75 minutes, 2 supplies, and 10 fatigue under the lee. The cattle do not see the approach and begin steady, while hedges conceal the byre's broader weather and sight lines.",
+            "return_summary": "You reached Cade by the sheltered stockway: slower and less tiring, with the herd calm and the byre's weather and sight lines concealed.",
             "terms": {
               "minutes": 75,
               "supplies": 2,

@@ -1,0 +1,158 @@
+id: bug_0582
+title: "Stage compact Station support behind one durable review"
+pack: overworld (Albany Station departure)
+reported_by: >
+  Valid ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-85a8bcf1-20260820-c on exact clean
+  85a8bcf1d11158881554ec5e4788e8b1830cbfb0; all ten report bytes were
+  independently hashed against their manifest rows
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-85a8bcf1-20260820-c
+    stamp: 20260820T230527Z
+    tested_commit: 85a8bcf1d11158881554ec5e4788e8b1830cbfb0
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017
+    model: gpt-5.6-terra
+    play_mode: pure
+    start_surface: fresh_overworld
+    authority_certified: false
+    reports:
+      - seed: 2026082300
+        report_sha256: 94abd44d45eef02cbf56897047c71c2ab64911e86e9236b8cf0b871605db2c29
+      - seed: 2026082301
+        report_sha256: 4aa450fac6df5b1089394d6059a657708c7ef6b9d78176811a78dd0c3deb5f97
+      - seed: 2026082302
+        report_sha256: a122b92ae46373de303c367f1ae58fe451fcdc70593f199bab1c03a7bf5aa3f6
+      - seed: 2026082303
+        report_sha256: 17c064d90ea363f32e48e4013175127a5e3a72ecdd8b1b7718394c45e3dea578
+      - seed: 2026082304
+        report_sha256: 24abf9d0ae7fc8ab0e4c5c75ee8afa86e59cbda9513c87880fcc0cba8a899775
+      - seed: 2026082305
+        report_sha256: 484cba231322ed58a632b959d08b53280df0eefa72e1f5b38cb0479dec4bb651
+      - seed: 2026082306
+        report_sha256: cb1caa0a249e674b7ffad625fbc253cfba9700b8ec2279780f3453c19d2d374d
+      - seed: 2026082307
+        report_sha256: eb79568e2d2fc4cd79c552bd53ebd539fb4f587efc9617a426ca25bcebb5dbff
+      - seed: 2026082308
+        report_sha256: bca931998841bf21bb58a53c16b46072eae2017fd6f12af72ac8beb799c52dfe
+      - seed: 2026082309
+        report_sha256: 0316aca4b946c74b3d9b8c011e65e66abf4009751b1d7c84d0d570e1af3141ea
+    finding_boundary: >
+      All ten reports describe a broad Albany setup or compact-density concern.
+      Nine explicitly name Station, dispatch, or support density; seed 2026082300
+      names the broader compact state/choice density and is not counted as
+      Station-specific. Seed 2026082302 reports the narrow trigger boundary of
+      Jamie's Relief Protocol as an S1, and seed 2026082309 separately reports
+      June Pike's situational payoff as an S1. Neither report says the underlying
+      mechanics failed.
+
+symptom: >
+  Compact MCP placed three optional Station support rows, their purposes, and
+  their authenticated actions beside both legal Wolf-Winter roads before the
+  player asked to compare support. The same authenticated dispatch range and
+  threshold prefix repeated on both route summaries. Exact inspection preserved
+  authored consequences but did not plainly state that Jamie's narrow
+  split-rail recovery or June's conditional help might never trigger, or which
+  clean/recovered states receive no benefit.
+
+root_cause: >
+  Board V4 treated every open optional support row as first-level compact
+  guidance. Compact route projection had no contract for lifting an exact shared
+  dispatch prefix once without risking loss of its final range and threshold
+  facts. The option-detail projection authenticated canonical consequence bytes
+  but had no narrowly keyed field for situational trigger and no-effect boundaries.
+
+fix: >
+  Compact v48 emits Station board V5 as
+  [5, quest_id, dispatch_status, dispatch, rows, reveal|null]. Before review it
+  keeps the two legal roads, one complete shared dispatch briefing, selected core
+  and support rows, and one exact reveal affordance while omitting open optional
+  support rows. The exact reveal records a separate durable, idempotent read-only
+  receipt; after review the unchanged five-field support rows and actions return
+  in their established order. Forged ids fail, refresh and export/restore retain
+  the receipt, and sealing support, launch, or journey End clears it. Compact
+  routes shed the common prefix only when that exact prefix is emitted by the
+  same board; missing or mismatched source detail fails closed. Exact Jamie and
+  June option inspection adds a bounded situationalBoundary keyed by prompt id,
+  kind, option id, and label while canonical consequence bytes remain unchanged.
+
+deterministic_witnesses:
+  - "pre-review V5 keeps role/duty/evidence and selected support, omits every open optional row/id/purpose/action, and exposes one exact reveal with the truthful remaining count"
+  - "post-review rows are byte-equal to the established five-field V4 row/action projection and retain authored order"
+  - "exact reveal changes only the separate receipt-bound snapshot field and accepts no gameplay or journey decision"
+  - "refresh, exact repeat, and export/restore preserve the revealed board; exact repeat is hash-idempotent and forged ids reject without mutation"
+  - "awaiting-choice snapshots with a valid historical receipt restore, while End clears it and injected ended or post-start receipts fail authentication"
+  - "support selection changes only its established support row/state, and full seal or quest launch clears the disclosure receipt"
+  - "all-on-time, threshold-crossing, already-delayed, and sealed dispatch briefings retain the full final range/threshold truth exactly once"
+  - "no-board, missing-summary, mismatched-prefix, and unknown-source controls retain every full compact route summary"
+  - "canonical full, terminal, and browser route/support presentation remains unchanged"
+  - "initial compact preparation and ally summaries contain no situationalBoundary text; exact Jamie and June option inspection alone returns it"
+  - "Jamie and June boundaries say the benefit may never trigger, name the exact trigger, and name clean or recovered no-effect cases within 320 characters and 50 words"
+  - "exact option detail preserves canonical consequence bytes, returns authenticated selected terms without a duplicate weaker recap, and the worst of all 324 legal Station setup combinations is 2,034 characters, within the 2,048-character compact response budget"
+  - "UTF-8 density accounting includes the pure catalogue: fresh prompt + catalogue + context is 35,207 bytes versus 35,208 at V47/V4; first-Station prompt + catalogue + context + new legend is 38,619 versus 39,261 (-642)"
+
+mechanics_unchanged:
+  - "existing gameplay, quest, approach, story, option, character, and action ids; one new read-only Station presentation reveal id is additive"
+  - "legal choices, support order, costs, minutes, money, checks, DCs, gameplay state/effects except the persisted disclosure receipt, RNG, outcomes, and accepted-decision counts"
+  - "canonical consequences, selected terms, route-specific time/supply/fatigue/alarm/weather facts, quest starts, and continuation copy"
+  - "full Station data plus terminal and browser interaction behavior"
+
+nonclaims:
+  - "The failed pilot identifies a correction target; it is not evidence that this replacement improves any quality, retention, or certification metric."
+  - "No metric result or threshold change is claimed by this correction."
+  - "No Gallowmere content, behavior, checkpoint, or conclusion is in scope or claimed."
+  - "The broad density cluster is 10/10, but only 9/10 explicitly names Station or dispatch; it is not a 10/10 Station-specific finding."
+  - "The two in-scope S1 reports are distinct situational-legibility findings, not a repeated blocking cluster and not evidence of broken mechanics."
+  - "Report hashes authenticate report bytes only; they do not independently prove transport tuple counts or repeated prefixes."
+  - "This AI pilot is not human market validation and is not authority certification."
+  - "The durable read-only disclosure receipt may change snapshot hash, but it accepts no gameplay choice, journey decision, plan, or outcome."
+  - "The correction is compact-MCP-only; it makes no existing human UI parity claim and does not change terminal or browser presentation."
+
+production:
+  - blind-tester/codex-pure-envelope.mjs
+  - blind-tester/prompt-overworld.md
+  - docs/DECISION_LOG.md
+  - docs/STARTING_SLICE.md
+  - src/mcp/journey_projection.ts
+  - src/mcp/overworld_sessions.ts
+  - src/mcp/overworld_tool_handlers.ts
+  - src/mcp/server.ts
+  - src/world/compact_view.ts
+  - src/world/session.ts
+  - src/world/session_compact_view.ts
+  - src/world/session_persistence.ts
+  - src/world/session_snapshot.ts
+  - src/world/session_snapshot_builder.ts
+  - src/world/session_view_state.ts
+  - src/world/station_dispatch_board.ts
+  - src/world/wolf_hill_route_presentation.ts
+
+tests:
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/mcp_server_registration.test.ts
+  - tests/regression/overworld_optional_departure_interactions.test.ts
+  - tests/starting_slice/opening_departure_recap.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/starting_slice/station_dispatch_board.test.ts
+  - tests/starting_slice/wolf_route_tradeoff_projection.test.ts
+  - tests/unit/compact_journey_projection.test.ts
+  - tests/unit/compact_legend.test.ts
+  - tests/unit/campaign_character_view.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/mcp_tools.test.ts
+  - tests/unit/world_quest_launch.test.ts
+  - tests/unit/world_session_snapshot_builder.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/starting_slice/station_dispatch_board.test.ts tests/starting_slice/opening_dispatch_briefing.test.ts tests/starting_slice/opening_departure_recap.test.ts tests/starting_slice/wolf_route_tradeoff_projection.test.ts tests/unit/campaign_character_view.test.ts tests/unit/compact_journey_projection.test.ts tests/unit/compact_legend.test.ts tests/unit/mcp_journey_surface.test.ts tests/unit/mcp_tools.test.ts tests/unit/world_quest_launch.test.ts tests/unit/world_session_snapshot_builder.test.ts
+  - npx vitest run tests/regression/blind_pure_prompt_contract.test.ts tests/regression/mcp_pure_play_mode.test.ts tests/regression/mcp_server_registration.test.ts tests/regression/overworld_optional_departure_interactions.test.ts
+  - git diff --check

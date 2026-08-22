@@ -1207,3 +1207,492 @@ must remain 19 rows, 12 counted, `active_unproven`, with SS-F19 still uncounted;
 this is a rejection-only verifier repair with no content, mechanics, fleet,
 threshold, or certification-result change. The clean 19:37 pure report predates
 the uncommitted repair and is baseline evidence only, not causal validation.
+
+### Ultraplan re-aim — 2026-08-14 (HEAD = ceadd735; next move = pilot-backed opening clarity)
+
+**Confirmed CLOSED or rejected boundaries — do not re-nominate as this move:**
+
+- **Starting-slice structure and strategy plurality are not the current failure.** The authenticated
+  ten-player Terra pilot at `ceadd735` completed Wolf-Winter 10/10, continued 10/10, represented
+  HUNT/LURE/FORTIFY at 2/4/4, and had no stuck run. DRIVE remained legal; its sole matching-ground
+  player compared it and deliberately chose FORTIFY. No mechanics, seed selector, outcome, route,
+  or certification threshold changes belong in this cycle.
+- **Progressive Station support remains a deliberate bounded contract.** The compact board keeps
+  optional support behind its existing read-only detail affordance; inlining another 458 characters
+  would increase the density the cohort reported. This cycle does not change Station schema/version,
+  support authority, availability, or action handles.
+- **Post-Wolf checkpoint and Gallowmere continuity findings remain follow-up work.** They occur only
+  after the initial goal's authenticated Continue and do not explain the unanimous pre-field Albany
+  density report. They are retained as evidence rather than bundled into this starting-slice repair.
+- **The HUNT review action is intentionally nonmutating.** Its `end:true` topology and zero effects
+  preserve the north-crossing/June-release commitment boundary. The defect is the word PREPARE on a
+  no-change exit, not a missing buff or receipt; adding state would be a mechanics regression.
+
+**Chosen move — pilot-backed summary-first Albany handoff and truthful HUNT closure.**
+
+The valid pilot missed only clarity and enjoyment (40/50 each versus 42/50), while every one of its
+ten reports named Albany role/duty/evidence/dispatch density. Deduplicate the first registration and
+matched quick-setup projections without deleting any option or exact inspected term: option labels own
+role identity, commitments own experience, tradeoffs own obligations, and the prompt owns shared
+no-fee/no-plan language. Compress the read-only four-plan compass into parallel outcome/cost/later
+lines while retaining every irreversible boundary. In the same presentation-only handoff, rename the
+zero-effect HUNT exit as leaving the review with no change and ensure no-June firm-ground prose never
+instructs the player to ask an absent June. Preserve all ids, conditions, effects, resources, decisions,
+progressive reveal authority, plan legality, outcomes, and save/runtime shape. A fresh exact-build pilot,
+not these deterministic checks, decides whether the 4.2 quality gates improve.
+
+### Ultraplan re-aim — 2026-08-14 (HEAD = 39e2e0ee; next move = Station board V4)
+
+**The prior V3-collapse decision is superseded by fresher authenticated evidence.** The valid,
+no-retry Terra pilot `cert-pilot-albany-wolf-return-20260814T055626Z` bound exact clean commit
+`39e2e0ee845e593f4da05caf445fd677e86293d8` and world hash `ef907fe6…`; its manifest SHA-256 is
+`824e8d3a…` and pilot-result SHA-256 is `ff775c3d…`. It completed Wolf-Winter 10/10 with no stuck
+run, but reached only 38/50 clarity, 40/50 enjoyment, and 6/10 continuation. Five players made the
+extra `include_station_dispatch_support` context read; the direct seed-2026081700 witness (report
+`d6fc12e3…`, evidence `ff4b1885…`) explicitly called the default board indirect because open rows
+had neither stakes nor handles. The earlier estimate that safe inlining necessarily added 458
+characters counted verbose detail rather than a short row purpose and therefore no longer governs.
+
+**Chosen move — authenticated, stale-safe V4 projection.** Compact v46 introduced board V4; compact v47 preserves its
+five-field tuple while giving only each current `open_optional` support row one short purpose and
+its already-authenticated inspect/talk tuple. Role, duty, evidence, selected support, blocked support,
+and any null-action state remain null/null. Guidance stops repeating all three purposes. The board is
+817 JSON characters and board plus legend is 1,231, close to V3's 648 + 515 = 1,163; when support is
+wanted, the one 844-character V4 board object replaces the 1,161-character V3 board-plus-detail
+objects and eliminates a repeated full-context hop. The legacy detail flag and response stay available
+unchanged. This is presentation and projection only: ids, mechanics, costs, roads, choices, outcomes,
+checkpoints, saves, hashes, decision counts, and support authority do not change. The failed pilot is
+diagnostic evidence, not certification; a fresh exact-build cohort must judge whether V4 helps.
+
+### Ultraplan re-aim — 2026-08-20 (HEAD = 85a8bcf1; next move = compact Station V5)
+
+**Chosen move — one durable compact-MCP support review.** The valid but
+non-certified pilot `starting-slice-terra-pilot-85a8bcf1-20260820-c` reported a
+broad Albany/setup/compact-density cluster in 10/10 reports, with 9/10 explicitly
+naming Station or dispatch density; its two in-scope S1 findings were Jamie's
+narrow Relief Protocol trigger and June Pike's situational payoff. Compact v48
+therefore moves board V5's three open optional-support rows behind one exact
+read-only reveal receipt, restores their existing actions unchanged after review,
+and adds narrowly keyed no-effect/trigger boundaries only to exact Jamie and June
+option inspection. It also emits the complete shared dispatch briefing once while
+preserving every route-specific fact. Human UI and CLI behavior, ids, costs,
+mechanics, gameplay state/effects, save version, decisions, and outcomes remain
+unchanged; only the additive read receipt changes snapshot bytes/hash until support
+seals, launch, or End. The
+failed pilot identifies this correction target; it does not validate the
+replacement, certify authority, or support any unrelated content or metric claim.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = 766bad57; next move = compact Station V6)
+
+**Chosen move — make the optional-support reveal relevance-first.** The valid but
+non-certified no-retry Terra pilot `station-v5-sealed-pilot-766bad57` completed
+Wolf-Winter 10/10 but missed clarity at 40/50 and enjoyment at 41/50. All ten
+players opened the Station support reveal, nine inspected the field-kit comparison,
+and six Road-Warden players made that comparison even though their Fieldcraft
+background matched none of the three kit checks (Repair, Streetwise, Mediation).
+Those authenticated calls support a bounded information-scent correction, not a
+claim that the existing actions or mechanics failed.
+
+Compact v49 / board V6 keeps V5's exact reveal id, durable receipt, hidden pre-review
+rows, and byte-identical post-review purposes/actions, but replaces the generic
+choice count with one dynamic overview naming only the still-open kit, relief-wagon,
+and second-rider categories. The all-open copy names the three kit skill domains so
+an uninterested or unmatched player can depart without drilling into support. The
+pure prompt makes review conditional and removes V2/V3 history; the compatible
+explicit-detail flag and runtime responses remain available. IDs, support order,
+costs, timing, checks, gameplay effects, roads, strategies, outcomes, saves apart
+from the existing read receipt, accepted decisions, Continue/End, full UI, and CLI
+remain unchanged. The failed pilot diagnoses this target; only a fresh exact-build
+pilot can show whether clarity or enjoyment improves.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = 06144d52; next move = pure Station reveal V1)
+
+**V6 worked at its chosen boundary; do not reopen its board or mechanics.** The
+valid ten-player, single-attempt Terra pilot `station-v6-sealed-pilot-06144d52`
+bound exact clean `06144d52f333b217230dd23f1bc02393b9102fbc`. It completed
+Wolf-Winter 10/10 with no stuck run, p50 22 accepted decisions, 8/10 initial-goal
+continuation, and three represented strategies, but failed clarity at 40/50 and
+enjoyment at 41/50. Road-Warden preparation inspection fell from 6/7 under V5
+to 2/7 under V6, and total preparation inspection fell from 9/10 to 5/10. That
+is bounded evidence to preserve V6's relevance-first kit/wagon/rider overview,
+not a causal quality-lift claim.
+
+All ten authenticated raw rollouts made exactly one Station reveal. The old
+response repeated `journey` and a 4,257–4,361-byte context even though every
+pre/post context field except `station_dispatch_board` was byte-identical; total
+responses were 5,314–5,418 bytes (53,841 combined) and boards only 788–802.
+Each next call was one support action (four inspect, six talk), so the repeated
+journey/routes were unused on that next turn. Re-serializing the ten exact boards
+inside the chosen V1 envelope, with each actual 24-character retained base hash,
+yields 1,020–1,034 bytes (10,315 combined), 43,526 bytes / 80.84% less. This is
+structural amplification correlated with density
+reports, not proof that repetition caused the two failed ratings.
+
+**Chosen move — a base-bound, versioned pure delta.** Only a reveal-only pure
+`get_overworld_session_context` call specializes. It requires the latest
+`if_snapshot_hash`, captures the manager's immediately prior hash before the
+canonical receipt mutation, and returns outer `ok`, new `snapshot_hash`, and
+`overworld_session_id` plus
+`station_dispatch_reveal:{version:1,base_snapshot_hash,station_dispatch_board}`.
+The delta omits `journey` and `context`; the player keeps the prior context,
+`quests`, and `quest_starts`, replaces only its board when the base matches, and
+uses the outer hash. Missing/stale bases fail before mutation. Exact repeats are
+hash-idempotent. Either explicit detail-expansion flag preserves the full
+canonical response and legacy hash behavior; unexpected post-mutation board
+shape also keeps the full success. Full/non-pure refresh, manager, export, UI,
+CLI, compact v49, board V6, receipt lifecycle, ids, actions, costs, mechanics,
+strategies, outcomes, accepted decisions, and Continue/End remain unchanged.
+The pilot remains non-certified AI evidence, not human validation or support for
+Gallowmere, June-mechanic, retention-metric, or certification claims.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = 3da05f64; next move = pure June modal V1)
+
+**V6 relevance and the reveal V1 remain closed.** The valid, clean, no-retry
+ten-player Terra pilot
+`starting-slice-terra-pilot-3da05f64-20260821T110413Z` bound exact commit
+`3da05f6481aece49d088b9132271ae79d97fae15`, official npm-shim Codex 0.146.0,
+and world hash `ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017`.
+Its manifest, summary, pilot-result, and authority-proof SHA-256 values are
+`7ff590a0a0741a724f6c09ae58c2f54467e1ddb29aa59d0c88ff79f492189cb0`,
+`265ba0f3bf12f2369752b565753ce18985cb8b01f41c1c47b231dc629bea2362`,
+`efa0a0471b8c8b223b9805186a5f8011863fa40b33a05f8241ee2f9a3d964e07`, and
+`5098ddb038251676586387614a3cf29f61cc0b9ebe5e088278f2e463f38f0078`.
+All ten report and rollout hashes matched their manifest rows. The cohort had no
+stuck player, p50 23 accepted decisions, 8/10 initial-goal continuation, and all
+four Wolf-Winter strategies (HUNT 1, LURE 4, DRIVE 3, FORTIFY 2), but failed
+clarity at 39/50 and enjoyment at 40/50. It carried four S1 report findings and
+no repeated blocking cluster. These are valid technical and diagnostic results,
+not a quality pass or authority certification.
+
+Nine players used the existing reveal V1 at 1,032–1,034 bytes and one used the
+canonical exact-detail path. That supports preserving board V6's relevance-first
+overview and reveal V1's narrow board delta. Eight players then took the revealed
+June action. Its canonical full compact responses were seven 8,873-byte members
+and one 9,080-byte member: 71,191 bytes total. Every one was immediately followed
+by the mandatory ally choice. Reconstructing the eight exact responses as the
+chosen complete-legend V1 modal envelope yields 3,908 bytes each, 31,264 total,
+for 39,927 bytes / 56.08% less. This is structural repetition evidence correlated
+with the cohort's density reports, not proof that transport size caused either
+failed rating. Seven of those players chose June immediately after the reveal;
+seed `821110413000` chose relief first, then June. The focused regression takes
+preparation first. These cover three observed order shapes, not every permutation.
+
+**Chosen move — authenticate and narrow only the exact pure June modal handoff.**
+After an exact persisted Station reveal receipt and matching public snapshot, a
+non-consuming full observation must show board V6, exactly one open `field_team`
+row whose action talks to June, and no current story modal. Only that member
+requires `expected_snapshot_hash` before mutation. Its versioned response carries
+outer `overworld_session_id`, a distinct new `snapshot_hash`, the complete compact
+`journey` and ally `storyChoice`, `journeyDecision`, compact `result`, the complete
+canonical `legend_delta` when present, and
+`station_dispatch_modal:{version:1,base_snapshot_hash}`; it omits raw `session_id`
+and repeated `context`. The new story modal supersedes retained board actions.
+Read-only story inspection keeps the hash unchanged, and the mandatory exact ally
+choice remains full and re-synchronizes context. Missing/stale bases fail before
+mutation; an ineligible contact or post-shape mismatch retains canonical behavior.
+
+The broader support-commit idea is rejected for this move. Nine players selected
+support, but order-neutral play produced thirteen separate mutations (eight ally,
+four wagon, one preparation), with 6,268–6,746-byte responses and 85,882 bytes
+total. A partial state patch would need stronger merge proof for time, character,
+services, journal, discovery, and selected support. Those commits therefore stay
+full, as do generic/non-pure contacts. Board V6, reveal V1, all ids, content,
+costs, checks, mechanics, effects, outcomes, decisions, strategies, Continue/End,
+and Gallowmere remain unchanged. This ten-player AI pilot does not establish a
+quality lift, human validation, retention improvement, or certification.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = bfccce6a; next move = narrative-first Road-Warden receipt)
+
+**The Station transport contracts remain closed.** The valid, single-attempt
+ten-player Terra pilot
+`starting-slice-terra-pilot-bfccce6a-20260821T141909Z` bound exact clean
+`bfccce6a58414a99806edf2cfdcd12d263d24e14`, official npm-shim Codex 0.146.0,
+and the unchanged world hash
+`ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017`.
+It completed Wolf-Winter 10/10 with no stuck run, p50 24 accepted decisions,
+four strategies, clarity 40/50, enjoyment 40/50, and 5/10 initial-goal
+continuation. It therefore failed three quality gates while remaining valid
+technical evidence. Nine players used reveal V1, eight used June modal V1, all
+gameplay calls succeeded, and those surfaces are counter-signals against
+reopening board V6, either V1 envelope, or support breadth.
+
+Every player independently chose Road-Warden, then the ready-made Aid-Only and
+Hayden dispatch. The shared chronology was start at decision 0, scout at 1,
+talk to Rowan at 2, choose Road-Warden at 3, and use one 9,196-byte dispatch
+selection call to record the oath and report at decisions 4 and 5. All ten
+reports described dense or front-loaded Albany terminology. Seed
+`821141909005` specifically named `DEF`, `LURE`, `HUNT`, `DRIVE`, and `FORTIFY`
+before the quest introduced the plans in player language; seed
+`821141909009` recorded an in-scope S1 on the relief-registration choice chain.
+This locates one universal selected-receipt correction before Station rather
+than another June-only or support-flow change.
+
+**Chosen move — explain the Road-Warden result before its plan aliases.** Rewrite
+only the Road-Warden registration consequence and the matched Aid-Only/Hayden
+doctrine trigger, preview, and consequence. Say that Fieldcraft starts Wolf-Winter at defense
+4 instead of 3; describe the later bait-and-redirect and hold-the-ground
+benefits before attaching their `LURE` and `HUNT` names; retain the exact clean
+first-cast/fouled-cast boundary and Hayden's ordinary split, unbound rail,
+fallen-yearling, bare-spear, and Works/skipping/binding exclusions. Mirror the
+exact trigger literal in the known-doctrine presentation guard so ordinary
+fallback remains honest if content diverges. IDs, numbers, predicates, effects,
+costs, actions, decisions, Station V6, reveal V1, June modal V1, support, roads,
+strategies, outcomes, Continue/End, Gallowmere, and quality thresholds do not
+change. This failed AI pilot diagnoses the copy target; deterministic tests do
+not prove a rating, continuation, certification, or human-quality lift.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = d8bf7d7a; next move = pre-choice Station row language)
+
+**Keep the Station overview and transports closed.** The valid, no-retry
+ten-player Terra pilot
+`starting-slice-terra-pilot-d8bf7d7a-20260821T172508Z` bound exact clean
+`d8bf7d7a3787d7d38832f0ec1882a9019f9ce4e8`, official npm-shim Codex
+0.146.0, and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All seventy manifest-bound report, run, evidence, envelope, provider-event,
+rollout, and capture hashes matched. Wolf-Winter completed 10/10 with no stuck
+run, p50 23 accepted decisions, all four strategies, clarity 39/50, enjoyment
+40/50, and 5/10 initial-goal continuation. The same three quality gates failed;
+all ten players nevertheless said they would replay.
+
+The following pilot observed non-universal opening roles: six players chose Road-Warden
+and exercised its exact 6,330-byte registration and 9,195-byte ready dispatch;
+four chose Ledger Advocate. All ten then moved to Station, opened the exact V6
+support reveal once, started Wolf-Winter, and folded back to Albany with a
+completed goal and the real Continue/End choice. Nine reports explicitly named
+Station, dispatch, optional-support, or linked-setup density; seed
+`821172508000` instead named broader comparison and compact density. The
+overview's relevance signal remained useful counter-evidence: none of six
+Fieldcraft Road-Wardens selected a kit, while all four Mediation Ledger
+Advocates did. That supports retaining the overview byte-for-byte, including
+Repair/Streetwise/Mediation, rather than reopening V6, reveal V1, June modal V1,
+or support mechanics.
+
+**Chosen move — identify each optional row before its pre-choice action.** Change
+only the three revealed `purpose` cells. Each now begins `Optional kit`,
+`Optional wagon`, or `Optional rider`; kit and wagon say comparison happens
+without choosing, and June's row says to ask before choosing. Preserve the one
+named danger, Albany's last wagon to one crisis, June's one cattle line, and
+never-combat boundaries. The literals add 65 UTF-8 bytes to an all-open reveal:
+the focused pure fixture is 1,088 bytes under its unchanged 1,100-byte cap, and
+substitution into the ten authenticated pilot bodies is 1,097–1,099. The hidden
+board, overview, fresh response, first-Station context, prompt, catalogue, and
+legend stay byte-identical. IDs, version, shape, row order, actions, durable
+receipt, modal handoff, costs, checks, effects, support breadth, roads, four
+strategies, Albany return, Continue/End, and Gallowmere do not change. The
+failed AI pilot diagnoses this target; deterministic checks do not establish a
+rating lift, continuation lift, certification, causal transport finding, or
+human validation.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = e5310845; next move = shared Station choice boundary)
+
+**The row labels worked mechanically, but the same-model pilot still failed the
+quality gate.** The fresh, homogeneous, single-attempt Terra pilot
+`starting-slice-terra-pilot-e5310845-20260821T215622Z` bound exact clean
+`e5310845c50c0377205cb3bb39634ba7c69f0d59`, official npm-shim Codex 0.146.0,
+and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All seventy manifest-bound report, run, evidence, envelope, provider-event,
+rollout, and capture files plus all ten fleet attestations rehashed exactly. The
+cohort completed Wolf-Winter 10/10 with no stuck run, p50 23 accepted decisions,
+8/10 initial-goal continuation, and three strategies (LURE 5, DRIVE 2, FORTIFY
+3). It failed only clarity at 39/50 and enjoyment at 40/50, carried four
+in-scope issue reports, and therefore prohibits the 100-player cohort.
+
+All ten reports named Station, dispatch, support, or pre-departure density in a
+confusion or worst moment; nine put it directly in `confusions`. All ten
+authenticated streams received board V6 and the three corrected optional-row
+labels. Eight players then staged support (June 6, kit 1, wagon 1), two declined
+it, and no gameplay call was rejected. That is counter-evidence against
+reopening the reveal, actions, or mechanics, while the repeated comparison /
+commit / launch boundary identifies the one shared line every route and compact
+Station board already carries.
+
+**Chosen move — translate the shared state machine in place.** Rewrite only the
+`support_choices_open` dispatch briefing. It now names background, promise, and
+report as set; presents support as comparison before a named choice commits; and
+says that starting Wolf-Winter declines the rest. The dynamic clause remains
+truthful for all three existing pressure states: `all on time`, `support can
+delay dispatch`, or `already late`. No other status, row, overview, action,
+receipt, modal, route fact, version, limit, mechanic, strategy, outcome, or
+return changes. The all-on-time, threshold, and delayed strings are 146, 161,
+and 147 UTF-8 bytes; the largest complete route summary is 343 characters under
+the unchanged 360-character limit. The initial board is 578 bytes, the fresh
+aggregate remains 34,535, the first-Station aggregate is 38,155, and the focused
+common reveal is 1,081. A natural Ledger Advocate / Aid-Only / Jamie threshold
+reveal is exactly 1,098, while exact substitution into the ten authenticated
+pilot reveal bodies yields 1,083–1,098, below the unchanged 1,100-byte cap. The
+complete Road-Warden ready-dispatch and canonical full-mode June fixtures each
+contain the shared status twice, so the seven-byte substitution reduces them by
+exactly fourteen bytes to 9,181 and 8,916 without changing their fields. The
+pilot substitutions are deterministic counterfactuals, not responses seen by
+the failed pilot; only a new exact-build pilot can test clarity, enjoyment, or
+certification.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = 2c07598a; next move = plain-language Cade plan comparison)
+
+**The corrected Station boundary worked mechanically, but the fresh pilot still
+failed the certification quality bar.** The homogeneous, single-attempt Terra
+pilot `starting-slice-terra-pilot-2c07598a-20260822T023646Z` bound exact clean
+`2c07598ab4b1a12545e3b078e78f326d9ced1fea`, official Codex 0.146.0,
+authority `a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8`,
+and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All ten fresh default-persona runs completed Wolf-Winter, none got stuck, p50
+was 24 accepted decisions, all four strategies appeared, and all ten players
+understood the goal and would replay. Clarity was 40/50, enjoyment 41/50, and
+initial-goal continuation 5/10, so the pilot validly failed three required gates
+and cannot authorize the 100-player cohort.
+
+The candidate-bound compile `20260822T030213Z` verified eleven actionable
+reports and returned ten new S1 hotspots tied at score 2. Its mechanically first
+recommendation, `5b9a9a66`, asks the Station overview to predict character
+relevance. That overview was reached by eight players and its kit detail by
+seven; the observed players then chose matching Mediation support or declined
+the mismatched +0 kits correctly. Cade's first menu instead reached all ten
+players, every player selected one of its four details, and several reports
+independently described its route/oath/plan labels or specialized conditional
+terms as dense. This is stronger exposure evidence for a bounded off-list copy
+correction, not evidence that the compiler is wrong or that Station relevance
+is solved forever.
+
+**Chosen move — make Cade's first comparison a question before a choice.** Change
+only the first-root explanation and the four peer plan labels. The root says
+asking and preparation choose nothing, identifies HUNT's north-crossing / offered
+June-release boundary, and says one choice closes the rest. Each label states
+its goal and material cost in ordinary language and says `Ask only`. Preserve
+HUNT once and mirror byte-identical LURE, DRIVE, and FORTIFY labels at the root
+and after both support lessons. IDs, aliases, order, conditions, gotos, effects,
+commitment points, resources, rolls, outcomes, and every detailed plan/final/
+back/leave/support surface remain unchanged. The base root is 231 bytes; complete
+seeded roots remain 343/340/343/336 characters. Rendered plan commands are
+159/151/143/159 characters under the unchanged 160-character limit. The exact
+compiled Wolf-Winter hash advances from `8981df5b` to `99afa4a3`, and its reviewed
+relabeled twin advances from `bd6d0d98` to `c12a5fe2`. The failed pilot tested
+the predecessor only. Deterministic tests can prove projection parity and
+mechanical invariants, but not clarity, enjoyment, continuation, human
+validation, or certification lift.
+
+### Ultraplan re-aim — 2026-08-22 (HEAD = e14e4208; next move = Cade peer-card parity)
+
+**The plain-language Cade comparison remained mechanically sound, but its peer
+cards did not expose equivalent decision facts.** The fresh, homogeneous,
+single-attempt Terra pilot
+`starting-slice-terra-pilot-e14e4208-20260822T061631Z` bound exact clean
+`e14e4208b2e1fa9eac03a66ce83bba7d727eac00`, official Codex 0.146.0,
+authority `a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8`,
+and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All ten no-retry runs completed Wolf-Winter with no stuck player, p50 26
+accepted decisions, enjoyment 42/50, 9/10 initial-goal continuation, and
+unanimous replay intent. Clarity remained 40/50. Only LURE and FORTIFY appeared
+(8/2), so clarity, three-strategy diversity, and the 75% concentration gate
+failed and the 100-player cohort remains prohibited.
+
+All ten authenticated chronologies reached Cade's first root and opened a plan
+detail. Their deterministic seeded grounds favored HUNT/LURE/DRIVE/FORTIFY
+5/3/1/1, while their outcomes were 0/8/0/2. That mismatch is exposure evidence,
+not proof that the cards caused preference or that LURE is mechanically too
+strong. The candidate-bound compile `20260822T065131Z` verified eleven
+actionable reports and returned ten singleton S1 hotspots tied at score 2. Its
+first recommendation, `ea53b6c1`, is a legitimate Gallowmere retry-consequence
+finding outside the bounded Albany / Wolf-Winter / Albany certification slice.
+Six separate Wolf-Winter hotspots preserve the wider opening, Station,
+pressure, and commitment-density evidence; seed `822061631004` specifically
+asked for a concise summary of the advantages currently relevant to commitment.
+
+**Chosen move — give all four peer cards the same decision fields.** Change only
+the one HUNT prompt and the three byte-identical copies each of LURE, DRIVE, and
+FORTIFY. Each now reads in the exact order `Goal`, `Cost`, `Help`, then its
+ask-only choice boundary. HUNT names Cade lessons plus jerkin; LURE and DRIVE
+name Fieldcraft; FORTIFY names Repair. LURE, DRIVE, and FORTIFY now say plainly
+that the wolves live, while HUNT retains its wolf-death risk. Cade's root and
+every detail body, id, alias, order, predicate, goto, effect, final commitment,
+resource, roll, outcome, and return remain unchanged. Rendered commands are
+152/151/147/157 characters under the unchanged 160-character cap. The exact
+compiled hash advances from `99afa4a3` to `86659867`, and the reviewed relabeled
+twin from `c12a5fe2` to `4b9b5857`. The failed AI pilot tested only the
+predecessor; deterministic parity checks cannot establish a rating, diversity,
+balance, certification, causal, or human-quality lift.
+
+### Semantic review correction — 2026-08-22 (draft 86659867 superseded by truthful 08ddb7ce)
+
+**Pre-freeze semantic review rejected three compressed cost claims in the first
+peer-card draft.** HUNT's `cattle/defense` shorthand did not identify the outer
+defense actually at risk. DRIVE omitted its no-retreat commitment. FORTIFY also
+omitted no retreat and said `get Cade's aid`, which could read as a guarantee
+even though the detailed plan retains predicates and a roll-required failure
+boundary. The draft `86659867` / relabeled `4b9b5857` was never committed,
+certified, or tested by the failed pilot; it remains audit history, not an
+accepted evidence boundary.
+
+**Correction — restore the exact costs without reopening mechanics.** HUNT now
+says `cattle/outer defense at risk`. DRIVE now says `Cost: no retreat; outer
+defense + wound/two cattle/rig.` FORTIFY now says `Cost: no retreat; expose
+property for Cade aid or spend seals.` LURE remains byte-identical. Only the one
+HUNT scalar and three DRIVE plus three FORTIFY mirrors change from the rejected
+draft. Cade's root, details, ids, order, predicates, gotos, effects, resources,
+checks, outcomes, and commitments remain unchanged. The final commands are
+158/151/159/151 characters under the unchanged 160-character limit. The exact
+compiled hash is `08ddb7ce`, its relabeled twin is `fe16b368`, and only a fresh
+exact-build pilot can test clarity, strategy diversity, certification, causal,
+or human-quality lift.
+
+### Ultraplan re-aim — 2026-08-22 (HEAD = 360ada1e; next move = Road-Warden confirmation disclosure)
+
+**The peer-card correction passed its structural goals, but Albany still
+front-loaded one branch manual after the player had already selected a
+dispatch.** The valid, no-retry ten-player Terra pilot
+`starting-slice-terra-pilot-360ada1e-20260822T095519Z` bound exact clean
+`360ada1eeb71dfa47bcbb223de524befa6fb3975`, official Codex 0.146.0,
+authority `a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8`,
+and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All ten completed Wolf-Winter, none got stuck, p50 was 24 accepted decisions,
+7/10 continued after the initial goal, and HUNT/LURE/DRIVE/FORTIFY were
+1/6/0/3. Clarity 39/50 and enjoyment 40/50 failed the required quality gates;
+the pilot is diagnostic predecessor evidence and cannot authorize a larger
+fleet.
+
+Seven authenticated chronologies selected the exact 9,181-byte Road-Warden
+ready-dispatch response, each with the 432-byte preview once. Seed
+`822095519002` filed the direct S1 in four-plan language; its authenticated
+receipt itself contained `HUNT` once and `LURE` once, not `DRIVE` or `FORTIFY`,
+plus the full conditional brace branch before Cade introduced those plans.
+Seed `822095519000`, the cohort's only 3/5 clarity report, selected the same
+receipt, skipped Station support review, and still named route, support, and
+conditional-plan terminology as its worst moment. The two adjacent direct S1s
+were lower-exposure Station boundaries: board V6 at 1/10 and support disclosure
+at 1/9 versus this receipt at 1/7. V6 already reduced mismatched preparation
+inspection and remains closed; Cade's cards were just corrected, reached all
+ten, and did not form a fresh direct S1. The passing 1/6/0/3 strategy spread is
+not a prompt to rebalance or steer plan choice.
+
+The accepted compile `20260822T090736Z` still recommends legitimate but
+out-of-slice Gallowmere hotspot `ea53b6c1`; its six Wolf-Winter singletons retain
+the wider dispatch-density evidence. The newer exact-build diagnostic compile
+`20260822T103030Z` is provisional and assessor-inert until a later seal. It ranks
+broad Albany-chain hotspot `fbba1f54` first, but independently emits the exact
+receipt hotspot `9e766750` from seed `822095519002`. That corroborates this
+smallest surface without turning the broad report into a multi-surface rewrite.
+Because `9e766750` was not an accepted candidate at this cycle's assessment,
+this correction remains off-list and the frozen selection stays `null`.
+
+**Chosen move — defer the branch manual to its existing read boundaries.**
+Rewrite only the Road-Warden doctrine `preview`. Keep defense 4, summarize the
+Aid-Only clean/foul cattle-alarm boundary, and say only that Hayden matters when
+holding Cade's ground; the selected confirmation no longer repeats plan aliases,
+the attempted public brace, frost split, loose rail, yearling death, bare spear,
+or Works/skip/bind exclusions. The exact `trigger_category` remains
+byte-identical on read-only option inspection, and the steading states all exact
+brace terms before `paling_gap` commits HUNT. The preview is 286 ASCII bytes and
+48 words, down 146 bytes from its 432-byte/79-word predecessor. Each exact pilot
+response deterministically reconstructs at 9,035 bytes under the unchanged
+9,250 cap; the Road-Warden registration response stays 6,330 under 6,400. The
+world hash advances from `aa805dfa` to `977ef1ef`; the world file SHA advances
+from `c6ce8ffc` to `3288f968`, and its Git blob from `0960d53e` to `4ddcedcb`.
+IDs, order, triggers, costs, timing, decisions, mechanics, checks, aliases,
+strategies, outcomes, Station V6, Continue/End, and Gallowmere remain unchanged.
+Response shrink is a no-growth witness, not the reason for the copy or evidence
+of clarity, enjoyment, continuation, certification, causal, or human-quality
+lift.

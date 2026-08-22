@@ -269,6 +269,11 @@ const PURE_INTERVIEW_KEYS = [
   ...SUBJECTIVE_KEYS,
 ] as const;
 
+const PURE_INTERVIEW_KEYS_WITH_ISSUE_CONSISTENCY = [
+  ...PURE_INTERVIEW_KEYS,
+  "issue_consistency_version",
+] as const;
+
 function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
   const actual = Object.keys(value).sort();
   const expected = [...keys].sort();
@@ -311,7 +316,10 @@ function parseBindableReport(report: string): ParsedBindableReport {
     return { ok: false, reason: "exit interview must be one JSON object" };
   }
   const record = raw.value as Record<string, unknown>;
-  if (!hasExactKeys(record, PURE_INTERVIEW_KEYS)) {
+  if (
+    !hasExactKeys(record, PURE_INTERVIEW_KEYS) &&
+    !hasExactKeys(record, PURE_INTERVIEW_KEYS_WITH_ISSUE_CONSISTENCY)
+  ) {
     return { ok: false, reason: "exit interview does not have the exact V2 pure field set" };
   }
   if (
@@ -321,6 +329,9 @@ function parseBindableReport(report: string): ParsedBindableReport {
     record.retention_eligible !== true
   ) {
     return { ok: false, reason: "exit interview does not have the required pure run identity" };
+  }
+  if ("issue_consistency_version" in record && record.issue_consistency_version !== 1) {
+    return { ok: false, reason: "exit interview issue consistency version is unsupported" };
   }
 
   const subjectiveRaw = Object.fromEntries(SUBJECTIVE_KEYS.map((key) => [key, record[key]]));

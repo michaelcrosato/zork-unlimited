@@ -19,7 +19,7 @@ import {
 import {
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
-  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
   type CompactJourneyStoryChoicePrompt,
 } from "../../src/mcp/journey_projection.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
@@ -210,6 +210,34 @@ type OpeningSourceOption = Readonly<{
   consequence: string;
 }>;
 
+function openingStageDisplayTitle(kind: JourneyStoryChoicePrompt["kind"]): string {
+  switch (kind) {
+    case "registration":
+      return "choose one permanent background";
+    case "relief_oath":
+      return "choose a ready-made promise/report pair";
+    case "lead_source":
+      return "choose one report";
+    case "preparation":
+      return "choose one field kit";
+    case "relief_allocation":
+      return "choose the relief wagon's job";
+    case "ally":
+      return "ready to depart now alone, or ask";
+    case undefined:
+      throw new Error("Expected an opening story kind.");
+  }
+}
+
+function openingOptionDisplayLabel(
+  kind: JourneyStoryChoicePrompt["kind"],
+  sourceOption: OpeningSourceOption,
+): string {
+  if (kind === "relief_oath") return sourceOption.title.replace(/\bDuty\b/gu, "Promise");
+  if (kind === "ally" && sourceOption.id === "albany:ally_travel_solo") return "Ride alone";
+  return sourceOption.title;
+}
+
 function expectOpeningPromptExact(
   source: Readonly<{ id: string; title: string; message: string }>,
   sourceOptions: readonly OpeningSourceOption[],
@@ -219,8 +247,8 @@ function expectOpeningPromptExact(
   expect(prompt.id).toBe(source.id);
   const projected = compactJourneyStoryChoicePrompt(prompt);
   const registrationDetail = prompt.kind === "registration";
-  expectExact(`opening:${source.id}.prompt`, prompt.message, projected.message);
-  expect(projected.message).toContain(source.title);
+  expect(projected.message).toBe(`${prompt.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`);
+  expect(projected.message).toContain(openingStageDisplayTitle(prompt.kind));
   if (authoredMessageVisible) expect(projected.message).toContain(source.message);
   else expect(projected.message).not.toContain(source.message);
 
@@ -269,7 +297,7 @@ function expectOpeningPromptExact(
         projectedOption,
         `opening:${source.id}.${sourceOption.id} must be initially compacted`,
       ).toBeDefined();
-      expect(projectedOption!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      expect(projectedOption!.consequence).toBe("");
     } else {
       expect(projectedOption).toBeUndefined();
       expect(progressiveDisclosure!.reveal.optionIds).toContain(sourceOption.id);
@@ -279,7 +307,8 @@ function expectOpeningPromptExact(
       comparisonOption,
       `opening:${source.id}.${sourceOption.id} must be available after staged expansion`,
     ).toBeDefined();
-    expect(comparisonOption!.label).toBe(sourceOption.title);
+    const expectedDisplayLabel = openingOptionDisplayLabel(prompt.kind, sourceOption);
+    expect(comparisonOption!.label).toBe(expectedDisplayLabel);
 
     const inspected = compactJourneyStoryChoiceComparison(prompt, sourceOption.id);
     const inspectedOption = inspected.inspectedOption;
@@ -287,7 +316,7 @@ function expectOpeningPromptExact(
       inspectedOption,
       `opening:${source.id}.${sourceOption.id} must be inspectable`,
     ).toBeDefined();
-    expect(inspectedOption!.label).toBe(sourceOption.title);
+    expect(inspectedOption!.label).toBe(expectedDisplayLabel);
     expect(inspectedOption!.consequence).toBe(canonicalOption!.consequence);
     if (canonicalOption!.summary?.checkFit === undefined) {
       expect(inspectedOption).not.toHaveProperty("checkFit");
@@ -307,7 +336,14 @@ function expectOpeningPromptExact(
       expect(inspectedJson).not.toContain(sibling.consequence);
     }
 
-    const { checkFit: _checkFit, ...expectedCompactSummary } = canonicalOption!.summary!;
+    const { checkFit, ...withoutCheckFit } = canonicalOption!.summary!;
+    const expectedCompactSummary =
+      prompt.kind === "preparation" && checkFit
+        ? {
+            ...withoutCheckFit,
+            highlights: [{ label: "Governing skill", value: checkFit }],
+          }
+        : withoutCheckFit;
     expect(comparisonOption!.summary).toEqual(expectedCompactSummary);
     expect(comparisonOption!.summary).not.toHaveProperty("checkFit");
     if (registrationDetail) {
@@ -606,11 +642,8 @@ describe("shipped compact prose fidelity", () => {
     moveToArea(session, WORLD, ally.area);
     session.talkToCharacter(ally.contact);
     const allyPrompt = currentStoryChoice(session);
-    expect(allyPrompt.message).toContain(
-      "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
-    );
-    expect(allyPrompt.message).toContain(
-      'Choose "Leave with a Solo Field Team" to keep the one-rider launch.',
+    expect(allyPrompt.message).toBe(
+      "Albany Station: ready to depart now alone, or ask June Pike to ride; field kit and relief wagon choices are separate.",
     );
     choose(ally, ally.options, allyPrompt, false);
   });

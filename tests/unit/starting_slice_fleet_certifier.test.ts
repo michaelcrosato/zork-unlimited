@@ -634,6 +634,7 @@ function currentDeathReceipt() {
 function reportText(receipt: unknown): string {
   const interview = {
     schema_version: 2,
+    issue_consistency_version: 1,
     play_mode: "pure",
     start_surface: "fresh_overworld",
     retention_eligible: true,
@@ -659,6 +660,10 @@ Played the opening naturally to its checkpoint.
 
 Clarity 5/5 and enjoyment 5/5.
 
+## Bugs or design flaws
+
+None found.
+
 ## Verdict
 
 The opening worked and invited continuation.
@@ -674,7 +679,7 @@ function sha256Text(text: string): string {
 }
 
 describe("closed fleet filesystem integrity", () => {
-  it("accepts client-pinned v8 strict and Spark pilots, then rejects transport and lifecycle tamper", () => {
+  it("accepts client-pinned v9 Terra-direct and Spark pilots, then rejects historical and lifecycle tamper", () => {
     const base = mkdtempSync(join(tmpdir(), "af-codex-slice-certifier-"));
     tempDirs.push(base);
     const fleetDir = join(base, "fleet", "codex-pilot");
@@ -683,7 +688,7 @@ describe("closed fleet filesystem integrity", () => {
     mkdirSync(reportsDir, { recursive: true });
     const build = fixtureBuild;
     const receipt = currentReceipt();
-    const model = "gpt-5.6-luna" as const;
+    const model = "gpt-5.6-terra" as const;
     const authorityIdentity = {
       device_id: "1",
       file_id: "2",
@@ -712,7 +717,7 @@ describe("closed fleet filesystem integrity", () => {
       executable_binary: "/opt/codex",
       authority_token: authorityToken,
       authority_sha256: sha256Text(authorityToken),
-      cli_version: "0.144.1",
+      cli_version: PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
       test_script: false,
     } as const;
     const sparkCodexClient = {
@@ -790,15 +795,6 @@ describe("closed fleet filesystem integrity", () => {
       };
       const providerEventsBody = `${[
         { type: "thread.started", thread_id: providerSessionId },
-        {
-          type: "item.completed",
-          item: {
-            id: "item_0",
-            type: "error",
-            message:
-              "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in C:\\Users\\operator\\.codex\\config.toml.",
-          },
-        },
         { type: "turn.started" },
         {
           type: "item.started",
@@ -821,10 +817,12 @@ describe("closed fleet filesystem integrity", () => {
       ]
         .map((event) => JSON.stringify(event))
         .join("\n")}\n`;
+      let providerInputOrdinal = 0;
       const providerInputMessage = (role: "developer" | "user", ...texts: string[]) => ({
         type: "response_item",
         payload: {
           type: "message",
+          id: `input-${(providerInputOrdinal += 1)}`,
           role,
           content: texts.map((text) => ({ type: "input_text", text })),
           internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
@@ -837,8 +835,9 @@ describe("closed fleet filesystem integrity", () => {
           payload: {
             id: providerSessionId,
             cwd: providerCwd,
-            cli_version: "0.145.0",
+            cli_version: codexClient.cli_version,
             model_provider: "openai",
+            base_instructions: { text: CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS },
           },
         },
         {
@@ -846,12 +845,7 @@ describe("closed fleet filesystem integrity", () => {
           type: "event_msg",
           payload: { type: "task_started", turn_id: providerTurnId },
         },
-        providerInputMessage(
-          "developer",
-          "<permissions instructions>read-only player</permissions instructions>",
-          "<skills_instructions>player skills</skills_instructions>",
-        ),
-        providerInputMessage("user", "<environment_context>isolated player</environment_context>"),
+        providerInputMessage("user", GLOBAL_AGENTS_BLOCK),
         { type: "world_state", payload: { full: true } },
         {
           timestamp: "2026-07-19T00:00:00.002Z",
@@ -870,8 +864,10 @@ describe("closed fleet filesystem integrity", () => {
                 developer_instructions: null,
               },
             },
-            multi_agent_version: "v1",
+            multi_agent_version: "disabled",
+            comp_hash: "3000",
             effort: "xhigh",
+            summary: "auto",
           },
         },
         providerInputMessage("user", "blind prompt"),
@@ -889,14 +885,12 @@ describe("closed fleet filesystem integrity", () => {
           timestamp: "2026-07-19T00:00:00.100Z",
           type: "response_item",
           payload: {
-            type: "custom_tool_call",
-            id: "wrapper-item-1",
-            status: "completed",
-            call_id: "call-wrapper-1",
-            name: "exec",
-            input:
-              '// @exec: {"yield_time_ms": 120000}\n' +
-              "text(await tools.mcp__adventureforge__start_overworld({}));\n",
+            type: "function_call",
+            id: "function-call-1",
+            call_id: "function-call-1",
+            name: "start_overworld",
+            namespace: "mcp__adventureforge",
+            arguments: "{}",
             internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
           },
         },
@@ -905,7 +899,7 @@ describe("closed fleet filesystem integrity", () => {
           type: "event_msg",
           payload: {
             type: "mcp_tool_call_end",
-            call_id: "exec-gameplay-1",
+            call_id: "function-call-1",
             invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
             result: { Ok: { content: [] } },
           },
@@ -914,16 +908,11 @@ describe("closed fleet filesystem integrity", () => {
           timestamp: "2026-07-19T00:00:00.300Z",
           type: "response_item",
           payload: {
-            type: "custom_tool_call_output",
-            call_id: "call-wrapper-1",
+            type: "function_call_output",
+            id: "function-output-1",
+            call_id: "function-call-1",
             internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
-            output: [
-              {
-                type: "input_text",
-                text: "Script completed\nWall time 0.0 seconds\nOutput:\n",
-              },
-              { type: "input_text", text: '{"content":[]}' },
-            ],
+            output: "Wall time: 0.0 seconds\nOutput:\n[]",
           },
         },
         {
@@ -962,9 +951,9 @@ describe("closed fleet filesystem integrity", () => {
         .join("\n")}\n`;
       const providerCaptureBody = `${JSON.stringify(
         {
-          schema_version: 3,
+          schema_version: 5,
           binding: "runner_work_player",
-          code_mode_contract: "strict-code-mode-v2",
+          transport_contract: "game-direct-mcp-v1",
           recorded_session_cwd: providerCwd,
           recorded_turn_cwd: providerCwd,
           canonical_expected_cwd: providerCwd,
@@ -1004,11 +993,11 @@ describe("closed fleet filesystem integrity", () => {
         },
       })}\n`;
       const modelAttestation = {
-        schema_version: 8,
+        schema_version: 9,
         provider: "codex",
         codex_cli_version: codexClient.cli_version,
         codex_client_authority_sha256: codexClient.authority_sha256,
-        code_mode_contract: "strict-code-mode-v2",
+        transport_contract: "game-direct-mcp-v1",
         run_seed: seed,
         model,
         persona: "default",
@@ -1098,7 +1087,7 @@ describe("closed fleet filesystem integrity", () => {
       };
     });
     const summary = {
-      schema_version: 8,
+      schema_version: 9,
       label: "codex-pilot",
       stamp: "20260102T000000Z",
       count: 10,
@@ -1126,7 +1115,7 @@ describe("closed fleet filesystem integrity", () => {
       target: "overworld",
       resume_enabled: false,
       evidence_schema_version: 2,
-      model_attestation_schema_version: 8,
+      model_attestation_schema_version: 9,
       build,
       codex_client: {
         schema_version: 2,
@@ -1162,6 +1151,107 @@ describe("closed fleet filesystem integrity", () => {
     expect(accepted.validity_errors).toEqual([]);
     expect(accepted.pilot_passed).toBe(true);
     expect(accepted.authenticated_actual_model).toBe(model);
+
+    const firstTerraPrefix = join(reportsDir, "20260102T000000Z_overworld_seed700");
+    const originalTerraRolloutBody = readFileSync(
+      `${firstTerraPrefix}.codex-rollout.jsonl`,
+      "utf8",
+    );
+    const originalTerraCaptureBody = readFileSync(`${firstTerraPrefix}.codex-capture.json`, "utf8");
+    const originalTerraAttestationBody = readFileSync(`${firstTerraPrefix}.fleet.json`, "utf8");
+    const originalTerraManifestBody = readFileSync(manifestPath, "utf8");
+    const tamperedTerraRollout = originalTerraRolloutBody
+      .trim()
+      .split(/\r?\n/u)
+      .map((line) => JSON.parse(line) as { type?: string; payload?: Record<string, unknown> });
+    const tamperedTerraContext = tamperedTerraRollout.find(
+      (entry) => entry.type === "turn_context",
+    )?.payload;
+    if (!tamperedTerraContext) throw new Error("missing Terra turn context fixture");
+    tamperedTerraContext.comp_hash = "3001";
+    const tamperedTerraRolloutBody = `${tamperedTerraRollout
+      .map((entry) => JSON.stringify(entry))
+      .join("\n")}\n`;
+    const tamperedTerraCapture = JSON.parse(originalTerraCaptureBody) as Record<string, unknown>;
+    tamperedTerraCapture.copied_rollout_sha256 = sha256Text(tamperedTerraRolloutBody);
+    const tamperedTerraCaptureBody = `${JSON.stringify(tamperedTerraCapture, null, 2)}\n`;
+    const tamperedTerraAttestation = JSON.parse(originalTerraAttestationBody) as Record<
+      string,
+      unknown
+    >;
+    tamperedTerraAttestation.provider_rollout_sha256 = sha256Text(tamperedTerraRolloutBody);
+    tamperedTerraAttestation.provider_capture_sha256 = sha256Text(tamperedTerraCaptureBody);
+    const tamperedTerraRows = structuredClone(rows) as Array<Record<string, unknown>>;
+    tamperedTerraRows[0] = {
+      ...tamperedTerraRows[0],
+      model_attestation: tamperedTerraAttestation,
+    };
+    writeFileSync(`${firstTerraPrefix}.codex-rollout.jsonl`, tamperedTerraRolloutBody);
+    writeFileSync(`${firstTerraPrefix}.codex-capture.json`, tamperedTerraCaptureBody);
+    writeFileSync(
+      `${firstTerraPrefix}.fleet.json`,
+      `${JSON.stringify(tamperedTerraAttestation, null, 2)}\n`,
+    );
+    writeFileSync(
+      manifestPath,
+      `${tamperedTerraRows.map((row) => JSON.stringify(row)).join("\n")}\n`,
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("Codex provider evidence rejected");
+    writeFileSync(`${firstTerraPrefix}.codex-rollout.jsonl`, originalTerraRolloutBody);
+    writeFileSync(`${firstTerraPrefix}.codex-capture.json`, originalTerraCaptureBody);
+    writeFileSync(`${firstTerraPrefix}.fleet.json`, originalTerraAttestationBody);
+    writeFileSync(manifestPath, originalTerraManifestBody);
+
+    const historicalV8Rows = rows.map((row) => {
+      const { transport_contract: _transportContract, ...attestationBase } = row.model_attestation;
+      const historicalAttestation = {
+        ...attestationBase,
+        schema_version: 8,
+        code_mode_contract: "strict-code-mode-v2",
+      };
+      const prefix = join(reportsDir, `20260102T000000Z_overworld_seed${row.seed}`);
+      writeFileSync(`${prefix}.fleet.json`, `${JSON.stringify(historicalAttestation, null, 2)}\n`);
+      return { ...row, model_attestation: historicalAttestation };
+    });
+    const historicalV8Summary = {
+      ...summary,
+      schema_version: 8,
+      model_attestation_schema_version: 8,
+    };
+    writeFileSync(
+      join(fleetDir, "summary.json"),
+      `${JSON.stringify(historicalV8Summary, null, 2)}\n`,
+    );
+    writeFileSync(
+      manifestPath,
+      `${historicalV8Rows.map((row) => JSON.stringify(row)).join("\n")}\n`,
+    );
+    const historicalRejected = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    }).validity_errors.join("\n");
+    expect(historicalRejected).toContain(
+      "current Codex pilot certification requires attestation v9",
+    );
+    expect(historicalRejected).toContain(
+      "current Codex pilot certification requires fleet summary v9",
+    );
+    expect(historicalRejected).toContain(
+      "historical v8 gpt-5.6-terra attestation lacks exact strict-code-mode-v2 evidence",
+    );
+    for (const row of rows) {
+      const prefix = join(reportsDir, `20260102T000000Z_overworld_seed${row.seed}`);
+      writeFileSync(`${prefix}.fleet.json`, `${JSON.stringify(row.model_attestation, null, 2)}\n`);
+    }
+    writeFileSync(join(fleetDir, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
+    writeFileSync(manifestPath, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
 
     const sparkModel = "gpt-5.3-codex-spark" as const;
     const sparkTransportContract = PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT;
@@ -1234,53 +1324,10 @@ describe("closed fleet filesystem integrity", () => {
         },
       });
 
-      const wrapperIndex = sparkRollout.findIndex(
-        (entry) => entry.type === "response_item" && entry.payload?.type === "custom_tool_call",
+      const directCallIndex = sparkRollout.findIndex(
+        (entry) => entry.type === "response_item" && entry.payload?.type === "function_call",
       );
-      if (wrapperIndex < 0) throw new Error("missing strict wrapper fixture");
-      const turnMetadata = {
-        internal_chat_message_metadata_passthrough: {
-          turn_id: row.model_attestation.provider_turn_id,
-        },
-      };
-      sparkRollout.splice(
-        wrapperIndex,
-        3,
-        {
-          timestamp: "2026-07-19T00:00:00.100Z",
-          type: "response_item",
-          payload: {
-            type: "function_call",
-            id: "function-call-1",
-            name: "start_overworld",
-            namespace: "mcp__adventureforge",
-            arguments: "{}",
-            call_id: "function-call-1",
-            ...turnMetadata,
-          },
-        },
-        {
-          timestamp: "2026-07-19T00:00:00.200Z",
-          type: "event_msg",
-          payload: {
-            type: "mcp_tool_call_end",
-            call_id: "function-call-1",
-            invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
-            result: { Ok: { content: [] } },
-          },
-        },
-        {
-          timestamp: "2026-07-19T00:00:00.300Z",
-          type: "response_item",
-          payload: {
-            type: "function_call_output",
-            id: "function-output-1",
-            call_id: "function-call-1",
-            output: "Wall time: 0.0 seconds\nOutput:\n[]",
-            ...turnMetadata,
-          },
-        },
-      );
+      if (directCallIndex < 0) throw new Error("missing Terra direct-call fixture");
       let responseItemOrdinal = 0;
       for (const entry of sparkRollout) {
         if (entry.type !== "response_item" || !entry.payload) continue;
@@ -1294,7 +1341,7 @@ describe("closed fleet filesystem integrity", () => {
       ) as Record<string, unknown>;
       const {
         schema_version: _strictCaptureSchema,
-        code_mode_contract: _strictCaptureContract,
+        transport_contract: _strictCaptureContract,
         ...captureBase
       } = strictCapture;
       const sparkCapture = {
@@ -1314,7 +1361,7 @@ describe("closed fleet filesystem integrity", () => {
       sparkPrimary.modelUsage = { [sparkModel]: strictModelUsage };
       const sparkPrimaryBody = `${JSON.stringify(sparkPrimary)}\n`;
 
-      const { code_mode_contract: _strictAttestationContract, ...sparkAttestationBase } =
+      const { transport_contract: _strictAttestationContract, ...sparkAttestationBase } =
         row.model_attestation;
       const sparkAttestation = {
         ...sparkAttestationBase,
@@ -1373,6 +1420,98 @@ describe("closed fleet filesystem integrity", () => {
     expect(acceptedSpark.pilot_passed).toBe(true);
     expect(acceptedSpark.authenticated_actual_model).toBe(sparkModel);
 
+    const historicalV8SparkRows = sparkRows.map((row) => {
+      const historicalAttestation = { ...row.model_attestation, schema_version: 8 };
+      const prefix = join(sparkReportsDir, `20260102T000000Z_overworld_seed${row.seed}`);
+      writeFileSync(`${prefix}.fleet.json`, `${JSON.stringify(historicalAttestation, null, 2)}\n`);
+      return { ...row, model_attestation: historicalAttestation };
+    });
+    const historicalV8SparkSummary = {
+      ...sparkSummary,
+      schema_version: 8,
+      model_attestation_schema_version: 8,
+    };
+    writeFileSync(
+      join(sparkFleetDir, "summary.json"),
+      `${JSON.stringify(historicalV8SparkSummary, null, 2)}\n`,
+    );
+    writeFileSync(sparkManifestPath, renderJsonl(historicalV8SparkRows));
+    const historicalV8SparkErrors = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir: sparkFleetDir,
+      expectedBuild: build,
+    }).validity_errors;
+    expect(historicalV8SparkErrors).toContain(
+      "current Codex pilot certification requires attestation v9",
+    );
+    expect(historicalV8SparkErrors).toContain(
+      "current Codex pilot certification requires fleet summary v9",
+    );
+    expect(historicalV8SparkErrors.join("\n")).not.toMatch(
+      /direct-MCP evidence requires|historical v8 Spark attestation lacks/iu,
+    );
+    const receiptMarkedHistoricalV8SparkRows = historicalV8SparkRows.map((row, index) => ({
+      ...row,
+      report_receipt_bound: index === 0,
+      attempt_history: row.attempt_history.map((attempt) => ({
+        ...attempt,
+        report_receipt_bound: index === 0,
+      })),
+    }));
+    writeFileSync(
+      join(sparkFleetDir, "summary.json"),
+      `${JSON.stringify({ ...historicalV8SparkSummary, receipt_bound_runs: 1 }, null, 2)}\n`,
+    );
+    writeFileSync(sparkManifestPath, renderJsonl(receiptMarkedHistoricalV8SparkRows));
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir: sparkFleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).not.toContain("receipt-bound row requires a receipt-aware Codex attestation schema");
+    writeFileSync(
+      join(sparkFleetDir, "summary.json"),
+      `${JSON.stringify(historicalV8SparkSummary, null, 2)}\n`,
+    );
+    writeFileSync(sparkManifestPath, renderJsonl(historicalV8SparkRows));
+    const driftedHistoricalV8SparkAttestation = {
+      ...historicalV8SparkRows[0]!.model_attestation,
+      codex_client_authority_sha256: "f".repeat(64),
+    };
+    const firstHistoricalV8SparkPrefix = join(
+      sparkReportsDir,
+      `20260102T000000Z_overworld_seed${historicalV8SparkRows[0]!.seed}`,
+    );
+    writeFileSync(
+      `${firstHistoricalV8SparkPrefix}.fleet.json`,
+      `${JSON.stringify(driftedHistoricalV8SparkAttestation, null, 2)}\n`,
+    );
+    writeFileSync(
+      sparkManifestPath,
+      renderJsonl(
+        historicalV8SparkRows.map((row, index) =>
+          index === 0 ? { ...row, model_attestation: driftedHistoricalV8SparkAttestation } : row,
+        ),
+      ),
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir: sparkFleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("seed 700: model attestation Codex client authority differs");
+    for (const row of sparkRows) {
+      const prefix = join(sparkReportsDir, `20260102T000000Z_overworld_seed${row.seed}`);
+      writeFileSync(`${prefix}.fleet.json`, `${JSON.stringify(row.model_attestation, null, 2)}\n`);
+    }
+    writeFileSync(
+      join(sparkFleetDir, "summary.json"),
+      `${JSON.stringify(sparkSummary, null, 2)}\n`,
+    );
+    writeFileSync(sparkManifestPath, renderJsonl(sparkRows));
+
     const outdatedSparkClient = { ...sparkCodexClient, cli_version: "0.145.0" } as const;
     const outdatedSparkSummary = {
       ...sparkSummary,
@@ -1396,7 +1535,7 @@ describe("closed fleet filesystem integrity", () => {
         fleetDir: sparkFleetDir,
         expectedBuild: build,
       }).validity_errors.join("\n"),
-    ).toContain("current Spark certification requires exact Codex CLI 0.146.0");
+    ).toContain("current direct-MCP certification requires exact Codex CLI 0.146.0");
     writeFileSync(
       join(sparkFleetDir, "summary.json"),
       `${JSON.stringify(sparkSummary, null, 2)}\n`,
@@ -1878,7 +2017,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedHistoricalPilot.validity_errors.join("\n")).toMatch(
-      /v8 live certification requires current Codex attestation v8/i,
+      /summary\.json invalid: model_attestation_schema_version: Invalid literal value, expected 9/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
 
@@ -1978,7 +2117,7 @@ describe("closed fleet filesystem integrity", () => {
       const receiptBound = index === 0;
       const modelAttestation = {
         ...row.model_attestation,
-        schema_version: 8,
+        schema_version: 9,
         report_receipt_bound: receiptBound,
         report_sha256: receiptBound
           ? sha256Text(boundReportBody)
@@ -2014,7 +2153,7 @@ describe("closed fleet filesystem integrity", () => {
     const boundSummary = {
       ...summary,
       receipt_bound_runs: 1,
-      model_attestation_schema_version: 8,
+      model_attestation_schema_version: 9,
     };
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
     writeFileSync(manifestPath, `${boundRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
@@ -2043,7 +2182,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedCurrentAuthority.validity_errors.join("\n")).toMatch(
-      /v8 live certification requires current Codex attestation v8/i,
+      /summary\.json invalid: model_attestation_schema_version: Invalid literal value, expected 9/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
 
@@ -2626,9 +2765,21 @@ describe("closed fleet filesystem integrity", () => {
 
 I played naturally until the game offered its checkpoint and then ended.
 
+## Did it work mechanically?
+
+Yes. The game tools and state transitions worked throughout.
+
 ## Understandable & fun?
 
 Clarity 5/5 and enjoyment 5/5.
+
+## Confusion / friction points
+
+None.
+
+## Bugs or design flaws
+
+None found.
 
 ## Verdict
 

@@ -11,41 +11,89 @@ import type {
 } from "./session_departure_interactions.js";
 
 /** A read-only, coverage-complete index of the current Station dispatch. */
-export const STATION_DISPATCH_BOARD_VERSION = 3 as const;
+export const STATION_DISPATCH_BOARD_VERSION = 6 as const;
 export const STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT = 240;
 export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
+export const STATION_DISPATCH_SUPPORT_REVEAL_ID =
+  "station_dispatch:review_optional_support" as const;
 
 const SUPPORT_SLOTS = ["preparation", "relief_allocation", "field_team"] as const;
 type StationDispatchSupportSlot = (typeof SUPPORT_SLOTS)[number];
-const PLAN_SLOTS = ["role", "duty", "evidence", ...SUPPORT_SLOTS] as const;
+const CORE_PLAN_SLOTS = ["role", "duty", "evidence"] as const;
+const PLAN_SLOTS = [...CORE_PLAN_SLOTS, ...SUPPORT_SLOTS] as const;
 type StationDispatchPlanSlot = (typeof PLAN_SLOTS)[number];
 
-const READY_GUIDANCE =
-  "Cade's herd is under pressure. Depart now for fastest arrival, or review one field kit, Albany's last relief wagon, and June, a cattle-first second rider. Support changes dispatch cost/aftermath; every Wolf-Winter strategy stays legal.";
-const WAITING_GUIDANCE =
-  "Cade's herd is under pressure. No departure road is open yet. Review one field kit, Albany's last relief wagon, and June, a cattle-first second rider. Support changes dispatch cost/aftermath; every Wolf-Winter strategy stays legal.";
+const GUIDANCE_LABELS: Readonly<Record<StationDispatchPlanSlot, string>> = Object.freeze({
+  role: "background",
+  duty: "Wolf-Winter promise",
+  evidence: "report",
+  preparation: "field kit",
+  relief_allocation: "relief wagon",
+  field_team: "riding choice",
+});
+
+const OPTIONAL_GUIDANCE_LABELS: Readonly<Record<StationDispatchSupportSlot, string>> =
+  Object.freeze({
+    preparation: "field kit",
+    relief_allocation: "one relief wagon",
+    field_team: "second rider",
+  });
+
+function formatGuidanceList(items: readonly string[], conjunction: "and" | "or"): string {
+  if (items.length === 1) return items[0]!;
+  if (items.length === 2) return `${items[0]} ${conjunction} ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, ${conjunction} ${items.at(-1)!}`;
+}
+
+function stationGuidance(recap: OpeningDepartureRecap, canDepart: boolean): string {
+  const setLabels = recap.entries
+    .filter((entry) => entry.status !== "open_optional")
+    .map((entry) => GUIDANCE_LABELS[entry.slot]);
+  const optionalLabels = recap.entries
+    .filter(
+      (entry): entry is typeof entry & { slot: StationDispatchSupportSlot } =>
+        entry.status === "open_optional" &&
+        SUPPORT_SLOTS.includes(entry.slot as StationDispatchSupportSlot),
+    )
+    .map((entry) => OPTIONAL_GUIDANCE_LABELS[entry.slot]);
+  const set = formatGuidanceList(setLabels, "and");
+  if (optionalLabels.length === 0) {
+    return canDepart
+      ? `Ready to depart now with ${set} set; no optional support remains.`
+      : `No road is open with ${set} set; no optional support remains.`;
+  }
+  const optional = formatGuidanceList(optionalLabels, "or");
+  const remain = optionalLabels.length === 1 ? "remains" : "remain";
+  const change = optionalLabels.length === 1 ? "changes" : "change";
+  return canDepart
+    ? `Ready to depart now with ${set} set; ${optional} ${remain} optional and ${change} cost or aftermath, not your Wolf-Winter approach.`
+    : `No road is open with ${set} set; ${optional} ${remain} optional and ${change} cost or aftermath, not your approach.`;
+}
 
 const SUPPORT_COPY: Readonly<
   Record<
     StationDispatchSupportSlot,
-    Readonly<{ label: string; purpose: string; detailHint: string }>
+    Readonly<{ label: string; purpose: string; inlinePurpose: string; detailHint: string }>
   >
 > = Object.freeze({
   preparation: {
     label: "One field kit",
     purpose:
       "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
+    inlinePurpose: "Optional kit: compare without choosing; covers one named danger.",
     detailHint: "Compare kits only if you want their exact cost and field use.",
   },
   relief_allocation: {
     label: "Albany's last relief wagon",
     purpose:
       "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
+    inlinePurpose: "Optional wagon: compare without choosing; send Albany's last to one crisis.",
     detailHint: "Compare destinations only if you want to decide who is protected.",
   },
   field_team: {
     label: "Second rider",
     purpose: "Second rider: optionally ask about cattle-first authority, or ride alone.",
+    inlinePurpose: "Optional rider: ask June before choosing; one cattle line, never combat.",
     detailHint: "Talk only to compare exact terms; this adds no combat power.",
   },
 });
@@ -125,7 +173,12 @@ export type OpeningCompactStationDispatchBoardDispatch = readonly [
   state: StationDispatchBoardDispatch["state"],
   minutes: number,
   timing: StationDispatchBoardDispatch["timing"],
-  remainingOptional: readonly StationDispatchSupportSlot[],
+  remainingOptionalCount: number,
+];
+
+export type OpeningCompactStationDispatchBoardOverview = readonly [
+  id: typeof STATION_DISPATCH_SUPPORT_REVEAL_ID,
+  label: string,
 ];
 
 export type OpeningCompactStationDispatchBoard = readonly [
@@ -134,13 +187,10 @@ export type OpeningCompactStationDispatchBoard = readonly [
   guidance: string,
   dispatch: OpeningCompactStationDispatchBoardDispatch | null,
   rows: readonly OpeningCompactStationDispatchBoardPlanRow[],
+  overview: OpeningCompactStationDispatchBoardOverview | null,
 ];
 
-/**
- * Optional Station support is intentionally omitted from the first compact
- * board read. This bounded detail is returned only by an explicit read-only
- * context request, while retaining the same authenticated action handles.
- */
+/** Backward-compatible explicit detail for clients that request Station support separately. */
 export type OpeningCompactStationDispatchBoardSupport = readonly [
   slot: StationDispatchSupportSlot,
   purpose: string,
@@ -264,8 +314,18 @@ function hasExactPlanCoverage(recap: OpeningDepartureRecap): boolean {
   );
 }
 
+function hasCoherentPlanRows(recap: OpeningDepartureRecap): boolean {
+  return recap.entries.every((entry) =>
+    CORE_PLAN_SLOTS.includes(entry.slot as (typeof CORE_PLAN_SLOTS)[number])
+      ? entry.status === "selected" && entry.title !== null
+      : (entry.status === "open_optional" && entry.title === null) ||
+        (entry.status === "selected" && entry.title !== null),
+  );
+}
+
 function actionMatchesStatus(entry: StationDispatchBoardSupport): boolean {
   const requiresAction = entry.status === "open_optional";
+  if (requiresAction && entry.selectedTitle !== null) return false;
   if (requiresAction !== (entry.action !== null)) return false;
   if (!entry.action) return true;
   return entry.slot === "field_team"
@@ -325,6 +385,7 @@ export function deriveStationDispatchBoard(args: {
   const recap = args.recap;
   if (!recap) return null;
   if (!hasExactPlanCoverage(recap)) return null;
+  if (!hasCoherentPlanRows(recap)) return null;
   const quest = args.quests.find((candidate) => candidate.id === recap.questId);
   if (!quest?.launch || quest.title !== recap.questTitle || quest.launch.options.length === 0) {
     return null;
@@ -376,7 +437,7 @@ export function deriveStationDispatchBoard(args: {
     questId: recap.questId,
     questTitle: recap.questTitle,
     guidance: bounded(
-      legalApproachIds.size > 0 ? READY_GUIDANCE : WAITING_GUIDANCE,
+      stationGuidance(recap, legalApproachIds.size > 0),
       "guidance",
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
     ),
@@ -427,34 +488,118 @@ function compactAction(
     : ["talk", action.characterId, action.contactName];
 }
 
+function compactStationDispatchGuidance(
+  board: StationDispatchBoard,
+  sharedDispatchStatus?: string,
+): string {
+  if (sharedDispatchStatus) {
+    return bounded(
+      sharedDispatchStatus,
+      "compact guidance",
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    );
+  }
+  const departure = board.launch.approaches.some((approach) => approach.availableNow)
+    ? "ready to depart now"
+    : "no road is ready now";
+  if (!board.dispatch) {
+    return bounded(
+      `Dispatch unverified; ${departure}.`,
+      "compact guidance",
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    );
+  }
+  if (board.dispatch.state === "sealed" && board.dispatch.timing) {
+    return bounded(
+      `Dispatch ${String(board.dispatch.minutes)}m ${board.dispatch.timing.replace("_", "-")}; ${departure}.`,
+      "compact guidance",
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    );
+  }
+  return bounded(
+    `Dispatch ${String(board.dispatch.minutes)}m committed; ${departure}.`,
+    "compact guidance",
+    STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+  );
+}
+
+function compactStationDispatchOverview(
+  openSupport: readonly StationDispatchBoardSupport[],
+  supportRevealed: boolean,
+): OpeningCompactStationDispatchBoardOverview | null {
+  if (supportRevealed) return null;
+  if (openSupport.length === 0) return null;
+  const openSlots = new Set(openSupport.map((entry) => entry.slot));
+  const kit = openSlots.has("preparation") ? "kits use Repair, Streetwise, or Mediation" : null;
+  const wagon = openSlots.has("relief_allocation") ? "Albany's last relief wagon" : null;
+  const rider = openSlots.has("field_team") ? "a cattle-first second rider" : null;
+  const other = [wagon, rider].filter((entry): entry is string => entry !== null);
+  const categories = kit
+    ? `${kit}${other.length > 0 ? `; plus ${formatGuidanceList(other, "or")}` : ""}`
+    : formatGuidanceList(other, "or");
+  return [
+    STATION_DISPATCH_SUPPORT_REVEAL_ID,
+    bounded(
+      `Optional support: ${categories}. Review only if one interests you.`,
+      "compact overview",
+    ),
+  ];
+}
+
 export function compactStationDispatchBoard(
   board: StationDispatchBoard,
+  supportRevealed = false,
+  sharedDispatchStatus?: string,
 ): OpeningCompactStationDispatchBoard {
+  const openSupport = board.support.filter((entry) => entry.status === "open_optional");
+  const openOptionalCount = openSupport.length;
+  if (openOptionalCount > SUPPORT_SLOTS.length) {
+    throw new Error("Station dispatch board has too many optional support rows.");
+  }
+  if (
+    board.dispatch &&
+    (board.dispatch.remainingOptional.length !== openOptionalCount ||
+      board.dispatch.remainingOptional.some((slot, index) => slot !== openSupport[index]?.slot))
+  ) {
+    throw new Error("Station dispatch board optional support set is inconsistent.");
+  }
   return [
     board.version,
     board.questId,
-    compactText(board.guidance, STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT),
+    compactText(
+      compactStationDispatchGuidance(board, sharedDispatchStatus),
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    ),
     board.dispatch
-      ? [
-          board.dispatch.state,
-          board.dispatch.minutes,
-          board.dispatch.timing,
-          [...board.dispatch.remainingOptional],
-        ]
+      ? [board.dispatch.state, board.dispatch.minutes, board.dispatch.timing, openOptionalCount]
       : null,
-    board.plan.map(
-      (entry) =>
-        [
+    board.plan
+      .filter((entry) => supportRevealed || entry.status !== "open_optional")
+      .map((entry) => {
+        const support = board.support.find((candidate) => candidate.slot === entry.slot);
+        const openSupport =
+          supportRevealed &&
+          entry.status === "open_optional" &&
+          entry.selectedTitle === null &&
+          support?.status === entry.status &&
+          support.selectedTitle === entry.selectedTitle &&
+          support.action !== null
+            ? support
+            : null;
+        return [
           entry.slot,
           entry.status,
           entry.selectedTitle,
-          // The first compact Station view is deliberately launch-first. Exact
-          // optional-support purposes and action handles are disclosed only by
-          // an explicit read-only context request.
-          null,
-          null,
-        ] as const,
-    ),
+          openSupport
+            ? compactText(
+                SUPPORT_COPY[openSupport.slot].inlinePurpose,
+                STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT,
+              )
+            : null,
+          openSupport ? compactAction(openSupport.action) : null,
+        ] as const;
+      }),
+    compactStationDispatchOverview(openSupport, supportRevealed),
   ];
 }
 
@@ -478,7 +623,7 @@ export function cloneCompactStationDispatchBoard(
     board[0],
     board[1],
     board[2],
-    board[3] ? [board[3][0], board[3][1], board[3][2], [...board[3][3]]] : null,
+    board[3] ? [board[3][0], board[3][1], board[3][2], board[3][3]] : null,
     board[4].map(
       (row) =>
         [
@@ -489,6 +634,7 @@ export function cloneCompactStationDispatchBoard(
           row[4] ? [...row[4]] : null,
         ] as OpeningCompactStationDispatchBoardPlanRow,
     ),
+    board[5] ? [board[5][0], board[5][1]] : null,
   ];
 }
 

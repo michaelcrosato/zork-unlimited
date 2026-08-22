@@ -7,12 +7,18 @@ import {
   compactJourneyPresentation,
   compactJourneyStoryChoicePrompt,
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
   type JourneyStoryChoiceDetail,
   type JourneyStoryChoiceRevealAffordance,
   type JourneyStoryChoiceSummaryComparison,
   type EmbeddedJourneyFocus,
 } from "../../src/mcp/journey_projection.js";
+import {
+  OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
+  OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+  OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS,
+} from "../../src/world/opening_relief_oath_presentation.js";
 import {
   INITIAL_JOURNEY_GOAL,
   INITIAL_JOURNEY_GOAL_GUIDANCE,
@@ -25,7 +31,11 @@ import {
   openingSelectionReceiptWordCount,
 } from "../../src/world/opening_choice_receipt.js";
 import { compactOpeningDepartureRecapTerms } from "../../src/world/opening_departure_recap.js";
-import { compactStationDispatchBoardSupport } from "../../src/world/station_dispatch_board.js";
+import {
+  compactStationDispatchBoard,
+  compactStationDispatchBoardSupport,
+  STATION_DISPATCH_SUPPORT_REVEAL_ID,
+} from "../../src/world/station_dispatch_board.js";
 import {
   TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
   TANNERS_FEVER_ACCOUNTABILITY_ID,
@@ -699,12 +709,13 @@ describe("MCP journey surface", () => {
         id: "continue",
         label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
         consequence:
-          "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+          "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
       },
       {
         id: "end",
-        label: "End this journey",
-        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+        label: "End here",
+        consequence:
+          "Close this journey here and keep its read-only record; this journey cannot resume.",
       },
     ] as const;
     const sourceJourney = source.journey();
@@ -871,6 +882,9 @@ describe("MCP journey surface", () => {
       expect(compactJourney.storyChoice).toEqual(compactJourneyStoryChoicePrompt(fullStoryChoice));
       expect(compactJourney.storyChoice).not.toEqual(fullStoryChoice);
       expect(compactJourney.storyChoice).toMatchObject({ kind });
+      expect(compactJourney.storyChoice?.message).toBe(
+        `${fullStoryChoice.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
+      );
       for (const compactOption of compactJourney.storyChoice!.options) {
         const fullOption = fullStoryChoice.options.find((option) => option.id === compactOption.id);
         if (!fullOption?.summary) throw new Error(`expected summary for ${compactOption.id}`);
@@ -878,26 +892,23 @@ describe("MCP journey surface", () => {
           id: fullOption.id,
           label: fullOption.label,
           summary: fullOption.summary,
-          consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
         });
-        expect(compactOption.consequence.length).toBeLessThan(fullOption.consequence.length);
+        expect(compactOption.consequence).toBe("");
         if (kind === "registration") {
           expect(Object.keys(fullOption.summary).sort()).toEqual([
             "commitment",
-            "fieldTrigger",
-            "fieldTriggerScope",
             "highlights",
             "immediateCost",
             "tradeoff",
           ]);
           expect(fullOption.summary).toMatchObject({
-            fieldTriggerScope: "starter",
-            highlights: expect.arrayContaining([
-              expect.objectContaining({ label: "Permanent role" }),
-              expect.objectContaining({ label: "Return obligation — ACTIVE" }),
-              expect.objectContaining({ label: "Quest DEF" }),
-            ]),
+            commitment: expect.stringMatching(/^Permanent background — /u),
+            highlights: [expect.objectContaining({ label: "Starts with" })],
+            immediateCost: expect.stringMatching(/^no fee or delay; start with \$\d+$/u),
           });
+          expect(JSON.stringify(fullOption.summary)).not.toMatch(
+            /\b(?:DEF|DC|import|fieldTrigger)\b/i,
+          );
         } else {
           expect(Object.keys(fullOption.summary).sort()).toEqual([
             "commitment",
@@ -906,16 +917,22 @@ describe("MCP journey surface", () => {
           ]);
           expect(fullOption.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
           expect(fullOption.consequence).toContain(`Cost: ${fullOption.summary.immediateCost}.`);
-          expect(fullOption.consequence).toContain(`Boundary: ${fullOption.summary.tradeoff}`);
+          const isReadyMadeDispatch =
+            WORLD.opening_registration?.doctrines?.some(
+              (doctrine) => doctrine.id === fullOption.id,
+            ) === true;
+          expect(fullOption.consequence).toContain(
+            `Boundary: ${isReadyMadeDispatch ? "Other duty/evidence pairs close." : fullOption.summary.tradeoff}`,
+          );
           expect(openingSelectionReceiptWordCount(fullOption.consequence)).toBeLessThanOrEqual(
             OPENING_SELECTION_RECEIPT_WORD_LIMIT,
           );
         }
-        expect(compactOption.consequence).not.toContain(fullOption.summary.commitment);
-        expect(compactOption.consequence).not.toContain(fullOption.summary.immediateCost);
-        expect(compactOption.consequence).not.toContain(fullOption.summary.tradeoff);
         expect(JSON.stringify(compactJourney.storyChoice)).not.toContain(fullOption.consequence);
       }
+      expect(JSON.stringify(compactJourney.storyChoice)).not.toContain(
+        JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+      );
     };
     const reachRegistration = (sessionId: string, compactResult: boolean) => {
       const observation = a.get_overworld_session({
@@ -1014,7 +1031,7 @@ describe("MCP journey surface", () => {
       compactPreparationStory.options.every(
         (option) =>
           JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
-          JSON.stringify(["commitment", "immediateCost", "tradeoff"]),
+          JSON.stringify(["commitment", "highlights", "immediateCost", "tradeoff"]),
       ),
     ).toBe(true);
     expect(
@@ -1023,6 +1040,14 @@ describe("MCP journey surface", () => {
           JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
           JSON.stringify(["checkFit", "commitment", "immediateCost", "tradeoff"]),
       ),
+    ).toBe(true);
+    expect(compactPreparationStory.options.map((option) => option.summary?.highlights)).toEqual(
+      fullPreparationStory.options.map((option) => [
+        { label: "Governing skill", value: option.summary?.checkFit },
+      ]),
+    );
+    expect(
+      fullPreparationStory.options.every((option) => option.summary?.highlights === undefined),
     ).toBe(true);
 
     a.choose_overworld_session_story({
@@ -1086,9 +1111,12 @@ describe("MCP journey surface", () => {
           expect(payload).not.toHaveProperty("station_dispatch_board");
         }
       };
-      const expectInspectionRecall = (payload: Record<string, unknown>): void => {
+      const expectInspectionRecall = (
+        payload: Record<string, unknown>,
+        exactTerms = false,
+      ): void => {
         expect(payload).not.toHaveProperty("station_dispatch_board");
-        if (expectedBoard) {
+        if (expectedBoard || exactTerms) {
           expect(payload).not.toHaveProperty("departure_recap");
         } else {
           expect(payload.departure_recap).toEqual(expectedRecap);
@@ -1104,6 +1132,36 @@ describe("MCP journey surface", () => {
       if (expectedBoard) {
         const sourceBoard = source.view().stationDispatchBoard;
         if (!sourceBoard) throw new Error("expected full Station dispatch board");
+        const compactBoard = compact.context.station_dispatch_board;
+        if (!compactBoard) throw new Error("expected compact Station dispatch board");
+        expect(compactBoard[0]).toBe(6);
+        expect(compactBoard[3]?.[3]).toBe(
+          sourceBoard.support.filter((entry) => entry.status === "open_optional").length,
+        );
+        expect(compactBoard[4].every((row) => row[3] === null && row[4] === null)).toBe(true);
+        expect(compactBoard[4].map(([slot]) => slot)).not.toEqual(
+          expect.arrayContaining(
+            sourceBoard.support
+              .filter((entry) => entry.status === "open_optional")
+              .map((entry) => entry.slot),
+          ),
+        );
+        const openSupportKey = sourceBoard.support
+          .filter((entry) => entry.status === "open_optional")
+          .map((entry) => entry.slot)
+          .join("|");
+        const expectedOverviewByOpenSupport: Readonly<Record<string, string>> = {
+          "preparation|relief_allocation|field_team":
+            "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+          "relief_allocation|field_team":
+            "Optional support: Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+          field_team:
+            "Optional support: a cattle-first second rider. Review only if one interests you.",
+        };
+        expect(compactBoard[5]).toEqual([
+          STATION_DISPATCH_SUPPORT_REVEAL_ID,
+          expectedOverviewByOpenSupport[openSupportKey],
+        ]);
         // An explicitly requested verbose observation remains the complete data
         // surface; progressive disclosure applies to compact/pure presentation.
         expect(full.observation.stationDispatchBoard).toEqual(sourceBoard);
@@ -1124,6 +1182,84 @@ describe("MCP journey surface", () => {
         );
         expect(supportReview.legend_delta).toHaveProperty("station_dispatch_support");
         expect(supportReview.snapshot_hash).toBe(compact.snapshot_hash);
+        const afterLegacyReview = a.export_overworld_session({
+          session_id: compact.session_id,
+        });
+        expect(afterLegacyReview.ok).toBe(true);
+        if (!afterLegacyReview.ok) throw new Error(`expected export after ${kind} support review`);
+        expect(afterLegacyReview.snapshot).toEqual(snapshot);
+        expect(afterLegacyReview.snapshot_hash).toBe(compact.snapshot_hash);
+
+        const revealProbe = a.restore_overworld_session({ compact_context: true, snapshot });
+        const beforeReveal = a.export_overworld_session({ session_id: revealProbe.session_id });
+        if (!beforeReveal.ok) throw new Error(`expected export before ${kind} Station reveal`);
+        const revealed = a.get_overworld_session_context({
+          session_id: revealProbe.session_id,
+          if_snapshot_hash: revealProbe.snapshot_hash,
+          reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+        });
+        expect(revealed).not.toHaveProperty("unchanged");
+        if (!("context" in revealed)) {
+          throw new Error(`expected revealed Station support before ${kind}`);
+        }
+        const revealedBoard = revealed.context.station_dispatch_board;
+        if (!revealedBoard) throw new Error("expected revealed compact Station board");
+        expect(revealed.snapshot_hash).not.toBe(revealProbe.snapshot_hash);
+        expect(revealed.journey).toEqual(revealProbe.journey);
+        expect(revealedBoard[3]?.[3]).toBe(compactBoard[3]?.[3]);
+        expect(revealedBoard[4]).toHaveLength(sourceBoard.plan.length);
+        expect(revealedBoard[5]).toBeNull();
+        expect(revealedBoard[4]).toEqual(compactStationDispatchBoard(sourceBoard, true)[4]);
+        const afterReveal = a.export_overworld_session({ session_id: revealProbe.session_id });
+        if (!afterReveal.ok) throw new Error(`expected export after ${kind} Station reveal`);
+        expect(afterReveal.snapshot.stationDispatchSupportReveals).toEqual([
+          [sourceBoard.questId, STATION_DISPATCH_SUPPORT_REVEAL_ID],
+        ]);
+        const { stationDispatchSupportReveals: _revealedReceipt, ...revealedGameplaySnapshot } =
+          afterReveal.snapshot;
+        expect(revealedGameplaySnapshot).toEqual(beforeReveal.snapshot);
+
+        const repeatedReveal = a.get_overworld_session_context({
+          session_id: revealProbe.session_id,
+          if_snapshot_hash: revealed.snapshot_hash,
+          reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+        });
+        expect(repeatedReveal).not.toHaveProperty("unchanged");
+        if (!("context" in repeatedReveal)) {
+          throw new Error(`expected repeated Station support before ${kind}`);
+        }
+        expect(repeatedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect(repeatedReveal.context.station_dispatch_board).toEqual(revealedBoard);
+        expect(a.export_overworld_session({ session_id: revealProbe.session_id })).toEqual(
+          afterReveal,
+        );
+
+        const refreshedReveal = a.get_overworld_session_context({
+          session_id: revealProbe.session_id,
+        });
+        if (!("context" in refreshedReveal)) {
+          throw new Error(`expected refreshed Station support before ${kind}`);
+        }
+        expect(refreshedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect(refreshedReveal.context.station_dispatch_board).toEqual(revealedBoard);
+        const restoredReveal = a.restore_overworld_session({
+          compact_context: true,
+          snapshot: afterReveal.snapshot,
+        });
+        expect(restoredReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect(restoredReveal.context.station_dispatch_board).toEqual(revealedBoard);
+
+        const forgedProbe = a.restore_overworld_session({ compact_context: true, snapshot });
+        const beforeForgery = a.export_overworld_session({ session_id: forgedProbe.session_id });
+        expect(() =>
+          a.get_overworld_session_context({
+            session_id: forgedProbe.session_id,
+            reveal_station_dispatch_support: "forged:station-support",
+          }),
+        ).toThrow(/Unknown Station optional-support reveal/i);
+        expect(a.export_overworld_session({ session_id: forgedProbe.session_id })).toEqual(
+          beforeForgery,
+        );
       }
       const inspection = a.restore_overworld_session({ compact_context: true, snapshot });
       const reviewed = a.get_overworld_session_context({
@@ -1178,30 +1314,58 @@ describe("MCP journey surface", () => {
         argument: "option_id",
         readOnly: true,
       });
+      for (const option of compactInspection.story.options) {
+        expect(option).not.toHaveProperty("situationalBoundary");
+      }
+      expect(JSON.stringify(compactInspection.story)).not.toContain("May never trigger");
+      const exactCandidateId =
+        kind === "preparation"
+          ? "albany:prep_relief_protocol"
+          : kind === "ally"
+            ? "albany:ally_june_cattle_first"
+            : compactInspection.story.options[0]!.id;
       const optionInspection = a.inspect_overworld_session_story({
         session_id: inspection.session_id,
         ...compactInspection.story.reviewOption.arguments,
-        option_id: compactInspection.story.options[0]!.id,
+        option_id: exactCandidateId,
         compact_context: true,
         compact_result: true,
       });
-      expectInspectionRecall(optionInspection);
+      expectInspectionRecall(optionInspection, true);
+      const canonicalOption = fullInspection.story.options.find(
+        (option) => option.id === exactCandidateId,
+      );
+      if (!canonicalOption) throw new Error(`expected canonical ${kind} option`);
+      expect(optionInspection.story.inspectedOption?.consequence).toBe(canonicalOption.consequence);
+      if (kind === "preparation") {
+        expect(optionInspection.story.inspectedOption?.situationalBoundary).toBe(
+          "May never trigger. In LURE, foul the first feed cast, fail the public wedge, spend the split-rail guard to redirect the yearling alive, then return to Cade before the loft cast. A clean cast, braced rail, or other recovery gets no benefit.",
+        );
+      } else if (kind === "ally") {
+        expect(optionInspection.story.inspectedOption?.situationalBoundary).toBe(
+          "May never trigger. June lowers cattle alarm when a recovered LURE leaves the herd pressing, or prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized failed first FORTIFY seal at pressure 3+. Clean DRIVE, pressure-2/mobile-stabilized FORTIFY gain nothing; no combat help; first wolf death ends her help.",
+        );
+      } else {
+        expect(optionInspection.story.inspectedOption).not.toHaveProperty("situationalBoundary");
+      }
       expect(optionInspection.departure_recap_terms).toEqual(
         compactOpeningDepartureRecapTerms(expectedFull),
       );
+      expect(optionInspection).not.toHaveProperty("departure_recap");
       expect(optionInspection.legend_delta).toHaveProperty("departure_recap_terms");
       expect(JSON.stringify(optionInspection).length).toBeLessThanOrEqual(2_048);
       expect(optionInspection.snapshot_hash).toBe(compactInspection.snapshot_hash);
       const repeatedOptionInspection = a.inspect_overworld_session_story({
         session_id: inspection.session_id,
         ...compactInspection.story.reviewOption.arguments,
-        option_id: compactInspection.story.options[0]!.id,
+        option_id: exactCandidateId,
         compact_context: true,
         compact_result: true,
       });
       expect(repeatedOptionInspection.departure_recap_terms).toEqual(
         compactOpeningDepartureRecapTerms(expectedFull),
       );
+      expect(repeatedOptionInspection).not.toHaveProperty("departure_recap");
       expect(repeatedOptionInspection).not.toHaveProperty("legend_delta");
       const afterInspection = a.export_overworld_session({ session_id: inspection.session_id });
       expect(afterInspection.ok).toBe(true);
@@ -1227,6 +1391,34 @@ describe("MCP journey surface", () => {
     source.chooseJourneyStory("albany:prep_works_fortification", PREPARATION_STORY_ID);
     assertMcpRecall(RELIEF_ALLOCATION_STORY_ID, "relief_allocation");
     source.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID, RELIEF_ALLOCATION_STORY_ID);
+    const directTalkSession = a.restore_overworld_session({
+      compact_context: true,
+      snapshot: source.snapshot(),
+    });
+    const directTalkReview = a.get_overworld_session_context({
+      session_id: directTalkSession.session_id,
+      reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+    });
+    if (!("context" in directTalkReview)) {
+      throw new Error("expected revealed Station support for the field-team action");
+    }
+    const directTalkAction = directTalkReview.context.station_dispatch_board?.[4].find(
+      ([slot]) => slot === "field_team",
+    )?.[4];
+    if (directTalkAction?.[0] !== "talk") {
+      throw new Error("expected an authenticated revealed field-team action");
+    }
+    const directTalk = a.talk_overworld_session_contact({
+      session_id: directTalkSession.session_id,
+      character_id: directTalkAction[1],
+      compact_context: true,
+      compact_result: true,
+    });
+    expect(directTalk.journey.storyChoice).toMatchObject({
+      id: WORLD.opening_ally!.id,
+      kind: "ally",
+    });
+    expect(directTalk.context).not.toHaveProperty("station_dispatch_support");
     source.talkToCharacter(WORLD.opening_ally!.contact);
     expect(source.journey().storyChoice?.kind).toBe("ally");
     assertMcpRecall(WORLD.opening_ally!.id, "ally");
@@ -1247,11 +1439,8 @@ describe("MCP journey surface", () => {
     }).journey.storyChoice;
     if (!compactPresented) throw new Error("expected a currently presented registration");
     expect(compactPresented).toMatchObject({ id: registration.id, kind: "registration" });
-    expect(
-      compactPresented.options.every(
-        (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
-      ),
-    ).toBe(true);
+    expect(compactPresented.options.every((option) => option.consequence === "")).toBe(true);
+    expect(compactPresented.message).toContain(JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION);
     const canonical = a.get_overworld_session({
       session_id: started.session_id,
       include_observation: true,
@@ -1351,9 +1540,18 @@ describe("MCP journey surface", () => {
     });
     expect(inspectedChoice.snapshot_hash).toBe(directChoice.snapshot_hash);
     expect(inspectedChoice.result).toEqual(directChoice.result);
+    expect(directChoice.result).toMatchObject({
+      displaySummary: expect.stringContaining(`Background chosen — ${selected.label}.`),
+      consequence: selected.consequence,
+    });
+    expect(directChoice.result.displaySummary).not.toContain(selected.consequence);
+    const compactResultJson = JSON.stringify(directChoice.result);
+    expect(compactResultJson.indexOf('"displaySummary"')).toBeLessThan(
+      compactResultJson.indexOf('"consequence"'),
+    );
   });
 
-  it("offers the role shortcut immediately and expands custom duties read-only without leaking oath cards", () => {
+  it("offers the ready-made dispatch immediately and expands custom promises read-only without leaking oath cards", () => {
     const a = api();
     const registration = WORLD.opening_registration;
     const oath = WORLD.opening_relief_oath;
@@ -1381,11 +1579,10 @@ describe("MCP journey surface", () => {
     >();
     expect(compactOath.revealOption).toMatchObject({
       id: "customize_duty_and_evidence",
-      label: expect.stringContaining("Customize duty and evidence"),
-      description: expect.stringMatching(
-        /HUNT[^]*defends herd and relief stores[^]*wolves may die[^]*LURE[^]*keep herd and pack alive[^]*spends Cade's last feed[^]*DRIVE[^]*moves people and the living pack clear[^]*abandons the outer line[^]*FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals[^]*No plan is recommended or committed/i,
-      ),
+      label: OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+      description: OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
     });
+    expect(JSON.stringify(compactOath)).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     const canonical = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,
@@ -1394,6 +1591,11 @@ describe("MCP journey surface", () => {
     expectTypeOf(canonical.progressiveDisclosure).not.toEqualTypeOf<undefined>();
     const disclosure = canonical.progressiveDisclosure;
     if (!disclosure) throw new Error("expected staged custom oath disclosure");
+    expect(disclosure.reveal).toMatchObject({
+      label: OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+      description: OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
+    });
+    expect(JSON.stringify(canonical)).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     const shortcutId = doctrine.id;
     const hiddenId = oath.options[0]!.id;
 
@@ -1428,6 +1630,9 @@ describe("MCP journey surface", () => {
 
     const before = a.export_overworld_session({ session_id: started.session_id });
     if (!before.ok) throw new Error("expected an exportable oath comparison");
+    const beforeRevealJourney = a.get_overworld_session_context({
+      session_id: started.session_id,
+    }).journey;
     const initial = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,
@@ -1441,7 +1646,7 @@ describe("MCP journey surface", () => {
     expect(initial.story.options).toHaveLength(1);
     expect(initial.story.options[0]).toMatchObject({
       id: shortcutId,
-      label: expect.stringContaining("Role shortcut"),
+      label: expect.stringContaining("Ready-made dispatch"),
     });
     const initialJson = JSON.stringify(initial.story);
     expect(initialJson.indexOf('"revealOption"')).toBeLessThan(initialJson.indexOf('"options"'));
@@ -1460,10 +1665,7 @@ describe("MCP journey surface", () => {
     // Opening the compass is now RECORDED. The gate that gives duty selection its
     // legality reads this, and legality in this engine is a function of state — so the
     // receipt lives in the snapshot and moves the hash, rather than in a WeakMap that a
-    // restore silently empties. The story projection itself is unchanged.
-    expect(expanded.story).toEqual(
-      compactJourneyStoryChoiceComparison(canonical, undefined, disclosure.reveal.id),
-    );
+    // restore silently empties. Only that authenticated boundary adds the full compass.
     const revealedHash = expanded.snapshot_hash;
     expect(revealedHash).not.toBe(before.snapshot_hash);
     expect(expanded.story.options.map((option) => option.id)).toEqual([
@@ -1471,15 +1673,38 @@ describe("MCP journey surface", () => {
       ...disclosure.reveal.optionIds,
     ]);
     expect(expanded.story).not.toHaveProperty("revealOption");
+    expect(expanded.story.message).toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     const fullReveal = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,
       reveal_id: disclosure.reveal.id,
       ...FULL_OVERWORLD,
     });
-    expect(fullReveal.story).toEqual(canonical);
+    const { progressiveDisclosure: _progressiveDisclosure, ...canonicalWithoutDisclosure } =
+      canonical;
+    expect(fullReveal.story).toEqual({
+      ...canonicalWithoutDisclosure,
+      message: `${canonical.message} ${OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS}`,
+    });
+    expect(fullReveal.story).not.toHaveProperty("progressiveDisclosure");
+    expect(expanded.story).toEqual(compactJourneyStoryChoiceComparison(fullReveal.story));
     // Re-opening the same reveal is genuinely idempotent — the receipt is a set.
     expect(fullReveal.snapshot_hash).toBe(revealedHash);
+
+    const refreshedReveal = a.get_overworld_session_context({
+      session_id: started.session_id,
+    });
+    const refreshedStory = refreshedReveal.journey.storyChoice;
+    if (!refreshedStory) throw new Error("expected the revealed oath after compact refresh");
+    expect(refreshedReveal.snapshot_hash).toBe(revealedHash);
+    expect(refreshedReveal.journey.acceptedDecisions).toBe(beforeRevealJourney.acceptedDecisions);
+    expect(refreshedReveal.journey.goal).toEqual(beforeRevealJourney.goal);
+    expect(refreshedStory.options.map((option) => option.id)).toEqual(
+      expanded.story.options.map((option) => option.id),
+    );
+    expect(refreshedStory.options.every((option) => option.consequence === "")).toBe(true);
+    expect(refreshedStory).not.toHaveProperty("revealOption");
+    expect(JSON.stringify(refreshedStory).match(/HUNT — Outcome/gu)).toHaveLength(1);
 
     const detail = a.inspect_overworld_session_story({
       session_id: started.session_id,
@@ -1528,6 +1753,19 @@ describe("MCP journey surface", () => {
     // who opened the compass, exported, and restored could no longer take the choice they
     // had unlocked — an exported session was not fully resumable.
     const resumedRevealed = a.restore_overworld_session({ snapshot: afterReveal.snapshot });
+    expect(resumedRevealed.snapshot_hash).toBe(afterReveal.snapshot_hash);
+    expect(resumedRevealed.journey.storyChoice?.options.map((option) => option.id)).toEqual(
+      expanded.story.options.map((option) => option.id),
+    );
+    expect(resumedRevealed.journey.storyChoice).not.toHaveProperty("revealOption");
+    expect(
+      JSON.stringify(resumedRevealed.journey.storyChoice).match(/HUNT — Outcome/gu),
+    ).toHaveLength(1);
+    const resumedRefresh = a.get_overworld_session_context({
+      session_id: resumedRevealed.session_id,
+    });
+    expect(resumedRefresh.snapshot_hash).toBe(afterReveal.snapshot_hash);
+    expect(resumedRefresh.journey).toEqual(resumedRevealed.journey);
     expect(() =>
       a.inspect_overworld_session_story({
         session_id: resumedRevealed.session_id,
@@ -1566,6 +1804,52 @@ describe("MCP journey surface", () => {
       story_choice_id: oath.id,
       choice: shortcutId,
     });
+    const profile = registration.profiles.find(
+      (candidate) => candidate.id === doctrine.profile_id,
+    )!;
+    const oathOption = oath.options.find(
+      (candidate) => candidate.id === doctrine.relief_oath_option_id,
+    )!;
+    const sourceOption = WORLD.opening_lead_source!.options.find(
+      (candidate) => candidate.id === doctrine.lead_source_option_id,
+    )!;
+    const exactReceipt =
+      `${doctrine.preview} Exact opening cost: ${doctrine.immediate_cost}. ` +
+      `${doctrine.consequence} Registered role — ${profile.title}. ` +
+      `Packet commitments: duty — ${oathOption.title}; source — ${sourceOption.title}.`;
+    expect(directShortcutChoice.result.consequence).toBe(exactReceipt);
+    expect(directShortcutChoice.result.displaySummary).toBe(
+      `Ready-made dispatch chosen — Background: ${profile.title}; ` +
+        `Wolf-Winter promise: ${oathOption.title.replace(/\bDuty\b/gu, "Promise")}; ` +
+        `Report: ${sourceOption.title}. Optional field kit, relief wagon, second rider, and road remain open.`,
+    );
+    expect(directShortcutChoice.result.displaySummary).not.toMatch(
+      /\b(role|duty|source|preparation|relief allocation|field-team)\b/iu,
+    );
+    const compactShortcutJson = JSON.stringify(directShortcutChoice.result);
+    expect(compactShortcutJson.indexOf('"displaySummary"')).toBeLessThan(
+      compactShortcutJson.indexOf('"consequence"'),
+    );
+    const fullShortcutBranch = a.restore_overworld_session({ snapshot: before.snapshot });
+    const fullShortcutChoice = a.choose_overworld_session_story({
+      session_id: fullShortcutBranch.session_id,
+      story_choice_id: oath.id,
+      choice: shortcutId,
+      ...FULL_OVERWORLD,
+    });
+    expect(fullShortcutChoice.result).toMatchObject({
+      consequence: exactReceipt,
+      displaySummary: directShortcutChoice.result.displaySummary,
+      entry: {
+        title: `Quick setup confirmed: ${doctrine.title}`,
+        text: exactReceipt,
+      },
+    });
+    const fullShortcutJson = JSON.stringify(fullShortcutChoice.result);
+    expect(fullShortcutJson.indexOf('"displaySummary"')).toBeLessThan(
+      fullShortcutJson.indexOf('"consequence"'),
+    );
+    expect(fullShortcutChoice.snapshot_hash).toBe(directShortcutChoice.snapshot_hash);
     a.inspect_overworld_session_story({
       session_id: expandedBranch.session_id,
       story_choice_id: oath.id,
@@ -1773,6 +2057,12 @@ describe("MCP journey surface", () => {
     )!.summary!;
     expect(firstSummary).not.toHaveProperty("checkFit");
     expect(secondSummary).not.toHaveProperty("checkFit");
+    expect(firstSummary.highlights).toEqual([
+      { label: "Governing skill", value: "Repair +0 vs DC 12" },
+    ]);
+    expect(secondSummary.highlights).toEqual([
+      { label: "Governing skill", value: "Streetwise +0 vs DC 12" },
+    ]);
     const firstReceipt =
       `Benefit: ${firstProfile.trigger_category ?? firstProfile.title} ` +
       `Cost: ${firstSummary.immediateCost}. Boundary: ${firstProfile.tradeoff}`;
@@ -1984,6 +2274,50 @@ describe("MCP journey surface", () => {
     }
   });
 
+  it("bounds the exhaustive-audit worst-case exact June inspection", () => {
+    const registration = WORLD.opening_registration;
+    const oath = WORLD.opening_relief_oath;
+    const source = WORLD.opening_lead_source;
+    const preparation = WORLD.opening_preparation;
+    const allocation = WORLD.opening_relief_allocation;
+    const ally = WORLD.opening_ally;
+    if (!registration || !oath || !source || !preparation || !allocation || !ally) {
+      throw new Error("expected the complete Albany Station setup");
+    }
+    const session = new OverworldSession(WORLD);
+    session.scoutPoi(session.view().pois[0]!.id);
+    session.talkToCharacter(registration.contact);
+    session.chooseJourneyStory("albany:unaffiliated_courier", registration.id);
+    revealCurrentJourneyStoryOptions(session, oath.id);
+    session.chooseJourneyStory("albany:oath_limited_aid_only", oath.id);
+    session.chooseJourneyStory("albany:source_hayden_frost_report", source.id);
+    moveUiSessionToArea(session, preparation.area);
+    session.chooseJourneyStory("albany:prep_relief_protocol", preparation.id);
+    session.chooseJourneyStory("albany:relief_cade_fodder", allocation.id);
+    session.talkToCharacter(ally.contact);
+
+    const a = api();
+    const restored = a.restore_overworld_session({
+      compact_context: true,
+      snapshot: session.snapshot(),
+    });
+    const inspected = a.inspect_overworld_session_story({
+      session_id: restored.session_id,
+      story_choice_id: ally.id,
+      option_id: "albany:ally_june_cattle_first",
+      compact_context: true,
+      compact_result: true,
+    });
+
+    expect(inspected).not.toHaveProperty("departure_recap");
+    expect(inspected.departure_recap_terms).toBeDefined();
+    expect(inspected.story.inspectedOption?.situationalBoundary).toContain("May never trigger.");
+    // An exhaustive audit covered all 4*3*3*3*3 = 324 legal Station setups;
+    // this setup was the largest exact June response.
+    expect(JSON.stringify(inspected).length).toBe(2_034);
+    expect(JSON.stringify(inspected).length).toBeLessThanOrEqual(2_048);
+  });
+
   it("makes a pending parent choice the only legal move inside an embedded quest", () => {
     const { a, overworldSessionId, rpgSessionId, checkpoint, checkpointJourney, fullRpgStateHash } =
       mcpWolfWinterCheckpointInsideQuest();
@@ -2114,15 +2448,13 @@ describe("MCP journey surface", () => {
     if (!resumed) throw new Error("expected compact Continue to resume the embedded quest");
     expectTypeOf(resumed.journey).toEqualTypeOf<EmbeddedJourneyFocus>();
     expect(resumed.state_hash).toBe(continuedRun.checkpoint.state_hash);
-    expect(resumed.context.actions).toEqual([
-      "go_north",
-      "go_south",
-      "examine_paling_rail",
-      "examine_relief_spear",
-      "set_paling_rail",
-      "look_around",
-      "inventory",
-    ]);
+    const fullReread = continuedRun.a.get_observation({
+      session_id: continuedRun.rpgSessionId,
+      compact_observation: false,
+    });
+    expect(resumed.context.actions).toEqual(
+      fullReread.observation.available_actions.map((action) => action.id),
+    );
     const compactReread = continuedRun.a.get_observation({
       session_id: continuedRun.rpgSessionId,
       compact_observation: true,

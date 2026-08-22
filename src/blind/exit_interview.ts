@@ -39,6 +39,11 @@ const ExitInterviewFields = {
   verdict: z.string().min(20),
 } as const;
 
+export const ISSUE_CONSISTENCY_VERSION = 1 as const;
+const IssueConsistencyVersionField = {
+  issue_consistency_version: z.literal(ISSUE_CONSISTENCY_VERSION).optional(),
+} as const;
+
 /** Pre-contract reports. Absence of schema_version is the durable legacy tag. */
 export const SubjectiveExitInterviewSchema = z.object(ExitInterviewFields).strict();
 export const LegacyExitInterviewSchema = SubjectiveExitInterviewSchema;
@@ -483,6 +488,7 @@ export const JourneyExitReceiptSchema = z.union([
 export const PureExitInterviewV2Schema = z
   .object({
     schema_version: z.literal(2),
+    ...IssueConsistencyVersionField,
     play_mode: z.literal("pure"),
     start_surface: z.literal("fresh_overworld"),
     retention_eligible: z.literal(true),
@@ -494,6 +500,7 @@ export const PureExitInterviewV2Schema = z
 export const StructuralExitInterviewV2Schema = z
   .object({
     schema_version: z.literal(2),
+    ...IssueConsistencyVersionField,
     play_mode: z.literal("structural"),
     start_surface: z.enum(["fresh_overworld", "direct_quest"]),
     retention_eligible: z.literal(false),

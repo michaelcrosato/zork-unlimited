@@ -33,6 +33,45 @@ function completeReport(interview = INTERVIEW): string {
 ${interview}`;
 }
 
+function consistencyInterview(
+  bugs: Array<{ where: string; severity: "S0" | "S1" | "S2" | "S3" | "S4"; note: string }>,
+): string {
+  return INTERVIEW.replace(
+    '"clarity": 4,',
+    [
+      '"schema_version": 2,',
+      '  "issue_consistency_version": 1,',
+      '  "play_mode": "structural",',
+      '  "start_surface": "direct_quest",',
+      '  "retention_eligible": false,',
+      '  "structural_kind": "smoke",',
+      '  "clarity": 4,',
+    ].join("\n  "),
+  ).replace('"bugs": []', `"bugs": ${JSON.stringify(bugs)}`);
+}
+
+function issueReport(section: string, interview: string): string {
+  return `
+## Playthrough log
+I followed the visible lead and ended at the offered journey choice.
+
+## Did it work mechanically?
+State and legal choices advanced normally.
+
+## Understandable & fun?
+Clarity 4/5 and enjoyment 4/5.
+
+## Confusion / friction points
+One surface deserved a closer look.
+
+## Bugs or design flaws
+${section}
+
+## Verdict
+A real player could finish and make an informed replay choice.
+${interview}`;
+}
+
 describe("blind report verifier", () => {
   it("rejects Claude success payloads that only report missing AdventureForge MCP tools", () => {
     const result =
@@ -217,5 +256,264 @@ ${bad}`);
     if (!result.ok) {
       expect(result.reason).toContain("severity");
     }
+  });
+
+  it("keeps historical interviews readable unless certification explicitly requires the forward contract", () => {
+    const historical = issueReport(
+      "Station departure board — S2: support purpose was hard to scan.",
+      INTERVIEW,
+    );
+    expect(verifyBlindReportText(historical).ok).toBe(true);
+
+    const certification = verifyBlindReportText(historical, {
+      requireStructuredIssueConsistency: true,
+    });
+    expect(certification).toEqual({
+      ok: false,
+      reason: "certification report requires issue_consistency_version 1",
+    });
+  });
+
+  it("ignores negated, historical, range, and praise uses of severity labels", () => {
+    const result = verifyBlindReportText(
+      issueReport(
+        [
+          "The prior S2 Station issue is now fixed.",
+          "S3-level resilience was excellent during the recovery.",
+          "No S1-S4 findings remain.",
+          "None encountered at S1+ severity.",
+          "The small wording wrinkle was not an S1 concern.",
+          "The map ambiguity was not S1.",
+          "The transition isn't S1.",
+          "The remaining friction is below S1.",
+        ].join("\n\n"),
+        consistencyInterview([]),
+      ),
+      { requireStructuredIssueConsistency: true },
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("does not treat an annotated severity rubric in the section heading as findings", () => {
+    const report = issueReport("None found.", consistencyInterview([])).replace(
+      "## Bugs or design flaws",
+      "## 5. Bugs or design flaws — concrete, each tagged by severity S0(cosmetic)–S4(blocking).",
+    );
+    expect(verifyBlindReportText(report, { requireStructuredIssueConsistency: true }).ok).toBe(
+      true,
+    );
+  });
+
+  it("accepts the comma-qualified Bugs heading prescribed by the player prompt", () => {
+    const heading =
+      "## Bugs or design flaws, each with the player-visible place/scene and severity S0 (cosmetic) through S4 (blocking)";
+    const report = issueReport("None found.", consistencyInterview([])).replace(
+      "## Bugs or design flaws",
+      heading,
+    );
+    expect(verifyBlindReportText(report, { requireStructuredIssueConsistency: true }).ok).toBe(
+      true,
+    );
+
+    const unstructuredFinding = report.replace(
+      "None found.",
+      "Station departure board — S1: support purpose was hard to scan.",
+    );
+    const mismatch = verifyBlindReportText(unstructuredFinding, {
+      requireStructuredIssueConsistency: true,
+    });
+    expect(mismatch.ok).toBe(false);
+    if (!mismatch.ok) expect(mismatch.reason).toContain("severity-bearing prose finding");
+  });
+
+  it.each([
+    "Not mechanically blocking, but S1: the Station board is opaque.",
+    "No crash occurred, but this is an S2 clarity defect at Station.",
+    "The prior S2 was fixed, but the current Station support is an S2 clarity defect.",
+  ])("does not let nearby negation or history hide a current finding: %s", (finding) => {
+    const result = verifyBlindReportText(issueReport(finding, consistencyInterview([])), {
+      requireStructuredIssueConsistency: true,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("severity-bearing prose finding");
+  });
+
+  it.each([
+    [
+      "Confusion / friction points",
+      "One surface deserved a closer look.",
+      "Station setup — S2: the information density obscured the first decision.",
+    ],
+    [
+      "Verdict",
+      "A real player could finish and make an informed replay choice.",
+      "The run was promising, but S1: Station support remained hard to scan.",
+    ],
+  ])("requires a structured bug for severity findings in %s", (_section, original, finding) => {
+    const report = issueReport("None found.", consistencyInterview([])).replace(original, finding);
+    const result = verifyBlindReportText(report, { requireStructuredIssueConsistency: true });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("severity-bearing prose finding");
+  });
+
+  it("does not treat severity-shaped fixture data in a fenced block as report prose", () => {
+    const report = issueReport("None found.", consistencyInterview([])).replace(
+      "I followed the visible lead and ended at the offered journey choice.",
+      "I followed the visible lead and ended at the offered journey choice.\n\n```text\nS4 fixture: deliberately blocked\n```",
+    );
+    expect(verifyBlindReportText(report, { requireStructuredIssueConsistency: true }).ok).toBe(
+      true,
+    );
+  });
+
+  it("matches paraphrased issue identity while keeping severity exact", () => {
+    const bugs = [
+      {
+        where: "Albany Station Quarter",
+        severity: "S1" as const,
+        note: "Field-kit and relief support purpose is difficult to scan on the departure board.",
+      },
+    ];
+    expect(
+      verifyBlindReportText(
+        issueReport(
+          "S1 — Station departure board: optional support rows obscure what each resource protects.",
+          consistencyInterview(bugs),
+        ),
+        { requireStructuredIssueConsistency: true },
+      ).ok,
+    ).toBe(true);
+
+    const wrongSeverity = [{ ...bugs[0]!, severity: "S0" as const }];
+    const mismatch = verifyBlindReportText(
+      issueReport(
+        "S1 — Station departure board: optional support rows obscure what each resource protects.",
+        consistencyInterview(wrongSeverity),
+      ),
+      { requireStructuredIssueConsistency: true },
+    );
+    expect(mismatch.ok).toBe(false);
+    if (!mismatch.ok) expect(mismatch.reason).toContain("severity-bearing prose finding");
+  });
+
+  it("requires distinct structured entries for duplicate prose severities", () => {
+    const prose = [
+      "Station departure board — S1: support purpose was hard to scan.",
+      "Moor Trail checkpoint — S1: stale route guidance briefly displaced the active quest.",
+    ].join("\n");
+    const station = {
+      where: "Albany Station departure board",
+      severity: "S1" as const,
+      note: "The support purpose was hard to scan.",
+    };
+    const trail = {
+      where: "Moor Trail checkpoint",
+      severity: "S1" as const,
+      note: "Stale route guidance displaced the active quest.",
+    };
+    expect(
+      verifyBlindReportText(issueReport(prose, consistencyInterview([station, trail])), {
+        requireStructuredIssueConsistency: true,
+      }).ok,
+    ).toBe(true);
+
+    const undercounted = verifyBlindReportText(
+      issueReport(prose, consistencyInterview([station])),
+      { requireStructuredIssueConsistency: true },
+    );
+    expect(undercounted.ok).toBe(false);
+    if (!undercounted.ok) expect(undercounted.reason).toContain("distinct matching bugs[] entry");
+  });
+
+  it("does not let the same place and severity hide a different concern", () => {
+    const mismatch = verifyBlindReportText(
+      issueReport(
+        "S1 — Station departure board: optional support rows obscure what each resource protects.",
+        consistencyInterview([
+          {
+            where: "Albany Station Quarter",
+            severity: "S1",
+            note: "The view resets scroll position and hides the next tactical action.",
+          },
+        ]),
+      ),
+      { requireStructuredIssueConsistency: true },
+    );
+    expect(mismatch.ok).toBe(false);
+    if (!mismatch.ok) expect(mismatch.reason).toContain("severity-bearing prose finding");
+  });
+
+  it("accepts a strong concern identity when prose omits the structured place", () => {
+    const result = verifyBlindReportText(
+      issueReport(
+        "S1 — Character setup was information-dense and slowed the first decision.",
+        consistencyInterview([
+          {
+            where: "Albany opening",
+            severity: "S1",
+            note: "Character setup text was information-dense before the first choice.",
+          },
+        ]),
+      ),
+      { requireStructuredIssueConsistency: true },
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("lets one structured bug cover repeated mentions of the same concern", () => {
+    const report = issueReport(
+      "Station departure board — S1: the support purpose remains opaque.",
+      consistencyInterview([
+        {
+          where: "Albany Station Quarter",
+          severity: "S1",
+          note: "The support purpose is opaque on the departure board.",
+        },
+      ]),
+    ).replace(
+      "One surface deserved a closer look.",
+      "S1 — Station support purpose required a second reading.",
+    );
+    expect(verifyBlindReportText(report, { requireStructuredIssueConsistency: true }).ok).toBe(
+      true,
+    );
+  });
+
+  it("does not merge different same-place concerns into one structured bug", () => {
+    const report = issueReport(
+      "Station departure board — S1: the support purpose remains opaque.",
+      consistencyInterview([
+        {
+          where: "Albany Station Quarter",
+          severity: "S1",
+          note: "The support purpose is opaque on the departure board.",
+        },
+      ]),
+    ).replace(
+      "One surface deserved a closer look.",
+      "S1 — Station scroll reset hid the next tactical action.",
+    );
+    const result = verifyBlindReportText(report, { requireStructuredIssueConsistency: true });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("distinct matching bugs[] entry");
+  });
+
+  it("does not use generic clarity language to merge different same-place concerns", () => {
+    const report = issueReport(
+      "Station departure board — S1: the support panel was hard to scan.",
+      consistencyInterview([
+        {
+          where: "Albany Station Quarter",
+          severity: "S1",
+          note: "The support panel was hard to scan on the departure board.",
+        },
+      ]),
+    ).replace(
+      "One surface deserved a closer look.",
+      "Station — S1: the travel schedule was hard to scan.",
+    );
+    const result = verifyBlindReportText(report, { requireStructuredIssueConsistency: true });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("distinct matching bugs[] entry");
   });
 });

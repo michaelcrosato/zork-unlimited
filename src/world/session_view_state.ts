@@ -84,6 +84,7 @@ export type OverworldSessionViewModelState = {
   departureContactLeads: readonly OverworldDepartureContactLead[];
   departureRecap: OpeningDepartureRecap | null;
   stationDispatchBoard: StationDispatchBoard | null;
+  stationDispatchSupportRevealed: boolean;
   roads: readonly OverworldExit[];
   directRoadTravelLegs: ReadonlyMap<string, OverworldTravelLegResult>;
   areaExits: readonly OverworldAreaExit[];
@@ -125,6 +126,7 @@ export type OverworldSessionViewModelSourceState = {
   departureInteractions: readonly OverworldDepartureInteraction[];
   departureContactLeads: readonly OverworldDepartureContactLead[];
   departureRecap: OpeningDepartureRecap | null;
+  stationDispatchSupportRevealed?: boolean;
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   localState: OverworldSessionViewLocalContentState;
@@ -259,6 +261,7 @@ export function buildOverworldSessionViewModelState(
       departureContactLeads: [],
       departureRecap: null,
       stationDispatchBoard: null,
+      stationDispatchSupportRevealed: false,
       roads: [],
       directRoadTravelLegs: new Map(),
       areaExits: [],
@@ -375,6 +378,7 @@ export function buildOverworldSessionViewModelState(
     departureContactLeads: source.departureContactLeads,
     departureRecap: source.departureRecap,
     stationDispatchBoard,
+    stationDispatchSupportRevealed: source.stationDispatchSupportRevealed === true,
     roads: source.roads,
     directRoadTravelLegs,
     areaExits: source.areaExits,
@@ -430,6 +434,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     departureContactLeads: state.departureContactLeads,
     departureRecap: state.departureRecap,
     stationDispatchBoard: state.stationDispatchBoard,
+    stationDispatchSupportRevealed: state.stationDispatchSupportRevealed,
     roads: state.roads,
     directRoadTravelLegs: state.directRoadTravelLegs,
     areaExits: state.areaExits,

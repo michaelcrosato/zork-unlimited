@@ -60,6 +60,10 @@ describe("compact legends", () => {
       43: "8781a5bab9c143dceec4dd6f64eea9bfd600a909bc4a7472862d849d00693ac7",
       44: "9877e73471b10cda5e10af871b621c731fff97a935984f46ac312470bc081d53",
       45: "9877e73471b10cda5e10af871b621c731fff97a935984f46ac312470bc081d53",
+      46: "b93524fb7e965a094bf2dfb1909f901c339e8fcd1018ee5dccaeb072c82e2ac5",
+      47: "04e4a1a44b2ce7e3131a09e143add5fd5b599502715f901758da3ca681ccc1e6",
+      48: "8c7f281cab4e663cc1fc0fac73d0af68e26499ff5bf67bfb63a7a74b240aa838",
+      49: "ff1e6f0fa60641609dacce89ea162da62ead7952dd1c27818ba78452c033487d",
     } as const;
     const signature = createHash("sha256")
       .update(
@@ -70,7 +74,7 @@ describe("compact legends", () => {
       )
       .digest("hex");
 
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(45);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(49);
     expect(signature).toBe(expectedSignatureByVersion[OVERWORLD_COMPACT_VIEW_VERSION]);
   });
 
@@ -151,14 +155,27 @@ describe("compact legends", () => {
     expect(OVERWORLD_COMPACT_LEGEND.service_offers).toContain("present and available");
 
     expect(OVERWORLD_COMPACT_LEGEND.departure_contact_leads).toContain(
-      "before or after preparation or relief allocation",
+      "before or after field kit (preparation) or relief wagon (relief_allocation)",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_contact_leads).toContain(
       "legacy requires_preparation has no available action",
     );
+    const stationSlotMap =
+      "role=background; duty=Wolf-Winter promise; evidence=report; preparation=field kit; relief_allocation=relief wagon; field_team=second rider";
+    expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain(stationSlotMap);
+    const compactStationSlotMap =
+      "role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider";
+    expect(OVERWORLD_COMPACT_LEGEND.station_dispatch_board).toContain(compactStationSlotMap);
+    expect(OVERWORLD_COMPACT_LEGEND.departure_recap_terms).toContain(compactStationSlotMap);
+    expect(OVERWORLD_COMPACT_LEGEND.station_dispatch_support).toContain(
+      "preparation=field kit, relief_allocation=relief wagon, field_team=second rider",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
+      "Field-kit (preparation), relief-wagon (relief_allocation), and second-rider (ally/field_team)",
+    );
     expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain("independent optional choices");
     expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain(
-      "omits their redundant open_optional rows",
+      "omits redundant open_optional rows",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain("in any order or skipped at launch");
     expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain(

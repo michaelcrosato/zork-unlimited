@@ -70,7 +70,10 @@ time (see below), so nothing else is needed at runtime.
 - **Quests are data.** Vite bundles the shipped `content/rpg/quests/*.yaml` and
   `content/world/new_york_overworld.json` as raw text; the browser never touches
   the filesystem and content never runs as code (§16).
-- **Reloads do not orphan quests.** Quest progress is tab-local for now. The UI
-  holds the exact pre-quest overworld save until the quest reaches a canonical
-  ending, so a mid-quest reload returns to a relaunchable lead rather than an
-  already-started dead end.
+- **Reloads preserve active quests.** The versioned browser save keeps a
+  canonical pre-quest campaign snapshot, the accepted action/continue trail,
+  and a content-bound quest save. Restore deterministically replays that trail
+  and verifies both session hashes before showing play. A schema, content,
+  launch-seed, or replay mismatch fails closed on a clear recovery screen; it
+  never silently rolls the player back to an older campaign save. Existing v1
+  road saves are read once and migrated on the next successful autosave.

@@ -13,6 +13,7 @@ import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
 import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const LEAD_SOURCE =
@@ -23,7 +24,13 @@ const LEAD_SOURCE =
 
 const loadedWolf = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loadedWolf.ok) throw new Error("Wolf-Winter must compile.");
-const wolfIndex = indexRpgPack(loadedWolf.compiled.pack);
+const wolfPack = loadedWolf.compiled.pack;
+const wolfIndex = indexRpgPack(wolfPack);
+const ORDINARY_HUNT_FLAG = "opening_condition_open_ash_lane";
+const ORDINARY_HUNT_SEED = seedForSeededOpeningFlag(
+  wolfPack.meta.seeded_opening_flags,
+  ORDINARY_HUNT_FLAG,
+);
 
 const FULL_OVERWORLD = { compact_context: false, compact_result: false } as const;
 const ROWAN_ID = "albany_city__civic_core__contact";
@@ -168,12 +175,14 @@ function launchMcpWolf(
     session_id: pending.sessionId,
     quest_id: wolf.id,
     approach_id: "albany:wolf_approach_sheltered_stockway",
-    seed: 505,
+    seed: ORDINARY_HUNT_SEED,
   });
+  const state = structuredClone(api.sessions.get(launched.rpg_session_id).state);
+  expect(state.flags[ORDINARY_HUNT_FLAG]).toBe(true);
   return {
     api,
     overworldSessionId: pending.sessionId,
-    state: structuredClone(api.sessions.get(launched.rpg_session_id).state),
+    state,
   };
 }
 
@@ -313,6 +322,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(selected.result).toEqual({
       storyChoiceId: LEAD_SOURCE.id,
       choiceId: ROWAN_SOURCE,
+      displaySummary: "Report chosen — Leave on Rowan's Civic Docket. Cost: no added time and $0.",
       consequence: sourceOption.consequence,
       goal: pending.pendingJourney.goal,
       entry: {
@@ -324,6 +334,11 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       journeyDecision: expectedJourneyDecision,
     });
     expect(selected.journeyDecision).toEqual(expectedJourneyDecision);
+    expect(selected.result.displaySummary).not.toContain(selected.result.consequence);
+    const serializedResult = JSON.stringify(selected.result);
+    expect(serializedResult.indexOf('"displaySummary"')).toBeLessThan(
+      serializedResult.indexOf('"consequence"'),
+    );
     expect(selected.journey.acceptedDecisions).toBe(pending.pendingJourney.acceptedDecisions + 1);
     expect(selected.journey.storyChoice).toBeNull();
     expect(questIds(selected.observation)).toContain(WOLF_ID);
@@ -332,6 +347,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(
       accepted.snapshot.journalEntries.find((entry) => entry.id === expectedJournal.id)?.text,
     ).toBe(expectedJournal.text);
+    expect(JSON.stringify(accepted.snapshot)).not.toContain(selected.result.displaySummary);
     expect(() =>
       api.choose_overworld_session_story({
         ...FULL_OVERWORLD,
@@ -583,7 +599,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(haydenBlockedLoft).toEqual({
       direction: "up",
       message:
-        "Before the flank-wolf falls, settle the yearling. Then take the crawlboard named by certified testimony or Cade's committed plan, or bind a split rail; leave the sound rail wedged.",
+        "Before the flank-wolf falls, settle the yearling. Then take the crawlboard named by certified testimony or Cade's committed plan, or bind a split rail; leave the sound rail set.",
     });
     expect(haydenBlockedLoft?.message).not.toMatch(/in your packet/i);
     expect(haydenCombatStore.description).not.toMatch(/Jamie's certified testimony/i);

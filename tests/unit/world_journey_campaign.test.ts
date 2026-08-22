@@ -572,7 +572,7 @@ describe("journey campaign", () => {
         ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX,
       );
       expect(context?.continueConsequencePrefix).toBe(
-        "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through.",
+        "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through.",
       );
       expect(context?.storyChoice).toBeNull();
       expect(context?.continuationPreview).toEqual(
@@ -624,6 +624,8 @@ describe("journey campaign", () => {
     expect(context?.continueConsequencePrefix).toBeNull();
     expect(context?.storyChoice).toMatchObject({
       id: "albany_dawn_dispatch",
+      message:
+        "Wolf-Winter is complete. First choose where Albany's only dawn relief wagon goes: back to Cade or north with the wardens. After this choice, the displayed goal is to reach Hedrick Cradoc in Queensbury and see The Gallowmere through.",
     });
     expect(context?.storyChoice).not.toHaveProperty("title");
     expect(context?.storyChoice).not.toHaveProperty("prompt");

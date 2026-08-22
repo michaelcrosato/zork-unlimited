@@ -59,6 +59,7 @@ export type OverworldMcpResponseOptions = OverworldMcpSnapshotGuardOptions & {
   compact_result?: boolean;
   include_departure_recap_terms?: boolean;
   include_station_dispatch_support?: boolean;
+  reveal_station_dispatch_support?: string;
   include_ids?: boolean;
   include_route_options?: boolean;
   include_world_name?: boolean;
@@ -164,6 +165,7 @@ export type OverworldMcpReadArgs = {
   include_observation?: boolean;
   include_departure_recap_terms?: boolean;
   include_station_dispatch_support?: boolean;
+  reveal_station_dispatch_support?: string;
   include_ids?: boolean;
   include_route_options?: boolean;
   include_world_name?: boolean;
@@ -646,10 +648,14 @@ export class OverworldMcpSessionStore {
 
   read<Args extends OverworldMcpReadArgs>(args: Args): OverworldMcpReadResponse<Args> {
     const session = this.get(args.session_id);
+    if (args.reveal_station_dispatch_support !== undefined) {
+      session.revealStationDispatchSupport(args.reveal_station_dispatch_support);
+    }
     const snapshotHash = this.fullSnapshotHash(session);
     if (
       args.include_departure_recap_terms !== true &&
       args.include_station_dispatch_support !== true &&
+      args.reveal_station_dispatch_support === undefined &&
       args.if_snapshot_hash !== undefined &&
       overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
     ) {
@@ -679,10 +685,14 @@ export class OverworldMcpSessionStore {
 
   readContext<Args extends OverworldMcpReadArgs>(args: Args): OverworldMcpContextResponse<Args> {
     const session = this.get(args.session_id);
+    if (args.reveal_station_dispatch_support !== undefined) {
+      session.revealStationDispatchSupport(args.reveal_station_dispatch_support);
+    }
     const snapshotHash = this.fullSnapshotHash(session);
     if (
       args.include_departure_recap_terms !== true &&
       args.include_station_dispatch_support !== true &&
+      args.reveal_station_dispatch_support === undefined &&
       args.if_snapshot_hash !== undefined &&
       overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
     ) {

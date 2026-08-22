@@ -148,15 +148,19 @@ function deriveDispatchRecap(
  * Roleplay-first receipts defer field mechanics until their actual consumer, so
  * the recap keeps the selected promise's concise "give up" term instead.
  */
-function selectedFieldTerm(prompt: JourneyStoryChoicePrompt, selectedId: string): string {
+function selectedPresentedOption(prompt: JourneyStoryChoicePrompt, selectedId: string) {
   const selected = prompt.options.find((option) => option.id === selectedId);
-  if (!selected?.summary) {
-    throw new Error(`Opening departure recap cannot resolve selected field term "${selectedId}".`);
+  if (!selected) {
+    throw new Error(`Opening departure recap cannot resolve selected option "${selectedId}".`);
   }
-  const value =
-    selected.summary.fieldTriggerScope === "category" && selected.summary.fieldTrigger
-      ? selected.summary.fieldTrigger
-      : selected.summary.tradeoff;
+  return selected;
+}
+
+function selectedTitle(prompt: JourneyStoryChoicePrompt, selectedId: string): string {
+  return selectedPresentedOption(prompt, selectedId).label;
+}
+
+function boundedFieldTerm(value: string): string {
   if (value.length > OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT) {
     throw new Error(
       `Opening departure recap field term exceeds ${String(
@@ -165,6 +169,18 @@ function selectedFieldTerm(prompt: JourneyStoryChoicePrompt, selectedId: string)
     );
   }
   return value;
+}
+
+function selectedFieldTerm(prompt: JourneyStoryChoicePrompt, selectedId: string): string {
+  const selected = selectedPresentedOption(prompt, selectedId);
+  if (!selected.summary) {
+    throw new Error(`Opening departure recap cannot resolve selected field term "${selectedId}".`);
+  }
+  const value =
+    selected.summary.fieldTriggerScope === "category" && selected.summary.fieldTrigger
+      ? selected.summary.fieldTrigger
+      : selected.summary.tradeoff;
+  return boundedFieldTerm(value);
 }
 
 /**
@@ -276,79 +292,79 @@ export function deriveOpeningDepartureRecap(
         choices: selectedSupport,
         beforeJournalIndex: journalIndex,
       });
+    const registrationPresentation = presentOpeningRegistration(chain.registration);
+    const reliefOathPresentation = presentOpeningReliefOath(
+      chain.reliefOath,
+      registrationProof.profile.character,
+    );
+    const leadSourcePresentation = presentOpeningLeadSource(
+      chain.leadSource,
+      reliefOathProof.characterAfterOath,
+    );
+    const preparationPresentation = preparationProof.profile
+      ? presentOpeningPreparation(
+          chain.preparation,
+          characterBeforeSupport(preparationProof.journalIndex!),
+        )
+      : null;
+    const reliefAllocationPresentation = reliefAllocationProof.option
+      ? presentOpeningReliefAllocation(
+          chain.reliefAllocation,
+          characterBeforeSupport(reliefAllocationProof.journalIndex!),
+        )
+      : null;
+    const allyPresentation = allyProof.option
+      ? presentOpeningAlly(chain.ally, characterBeforeSupport(allyProof.journalIndex!))
+      : null;
     const entries = Object.freeze([
       recapEntry(
         "role",
-        "Role",
+        "Background",
         "selected",
-        registrationProof.profile.title,
-        selectedFieldTerm(
-          presentOpeningRegistration(chain.registration),
-          registrationProof.profile.id,
-        ),
+        selectedTitle(registrationPresentation, registrationProof.profile.id),
+        boundedFieldTerm(registrationProof.profile.tradeoff),
       ),
       recapEntry(
         "duty",
-        "Duty",
+        "Wolf-Winter promise",
         "selected",
-        reliefOathProof.option.title,
-        selectedFieldTerm(
-          presentOpeningReliefOath(chain.reliefOath, registrationProof.profile.character),
-          reliefOathProof.option.id,
-        ),
+        selectedTitle(reliefOathPresentation, reliefOathProof.option.id),
+        selectedFieldTerm(reliefOathPresentation, reliefOathProof.option.id),
       ),
       recapEntry(
         "evidence",
-        "Evidence",
+        "Report",
         "selected",
-        leadSourceProof.option.title,
-        selectedFieldTerm(
-          presentOpeningLeadSource(chain.leadSource, reliefOathProof.characterAfterOath),
-          leadSourceProof.option.id,
-        ),
+        selectedTitle(leadSourcePresentation, leadSourceProof.option.id),
+        selectedFieldTerm(leadSourcePresentation, leadSourceProof.option.id),
       ),
       preparationProof.profile
         ? recapEntry(
             "preparation",
-            "Preparation",
+            "Field kit",
             "selected",
-            preparationProof.profile.title,
-            selectedFieldTerm(
-              presentOpeningPreparation(
-                chain.preparation,
-                characterBeforeSupport(preparationProof.journalIndex!),
-              ),
-              preparationProof.profile.id,
-            ),
+            selectedTitle(preparationPresentation!, preparationProof.profile.id),
+            selectedFieldTerm(preparationPresentation!, preparationProof.profile.id),
           )
-        : recapEntry("preparation", "Preparation", "open_optional", null),
+        : recapEntry("preparation", "Field kit", "open_optional", null),
       reliefAllocationProof.option
         ? recapEntry(
             "relief_allocation",
-            "Relief allocation",
+            "Relief wagon",
             "selected",
-            reliefAllocationProof.option.title,
-            selectedFieldTerm(
-              presentOpeningReliefAllocation(
-                chain.reliefAllocation,
-                characterBeforeSupport(reliefAllocationProof.journalIndex!),
-              ),
-              reliefAllocationProof.option.id,
-            ),
+            selectedTitle(reliefAllocationPresentation!, reliefAllocationProof.option.id),
+            selectedFieldTerm(reliefAllocationPresentation!, reliefAllocationProof.option.id),
           )
-        : recapEntry("relief_allocation", "Relief allocation", "open_optional", null),
+        : recapEntry("relief_allocation", "Relief wagon", "open_optional", null),
       allyProof.option
         ? recapEntry(
             "field_team",
-            "Field team",
+            "Second rider",
             "selected",
-            allyProof.option.title,
-            selectedFieldTerm(
-              presentOpeningAlly(chain.ally, characterBeforeSupport(allyProof.journalIndex!)),
-              allyProof.option.id,
-            ),
+            selectedTitle(allyPresentation!, allyProof.option.id),
+            selectedFieldTerm(allyPresentation!, allyProof.option.id),
           )
-        : recapEntry("field_team", "Field team", "open_optional", null),
+        : recapEntry("field_team", "Second rider", "open_optional", null),
     ]);
 
     return Object.freeze({

@@ -20,15 +20,19 @@ import type { McpObservation } from "./types.js";
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
 const COMPACT_MORE_CHOICES_INDEX = 12;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 10 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 11 as const;
+export const JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT = 320;
+export const JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT = 50;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Technical detail and complete terms are staged; inspect this exact option before choosing if you need them." as const;
+export const JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION =
+  "Choose from the player-facing summaries, or inspect one visible option for exact terms; inspection is read-only and commits nothing." as const;
 
 export type JourneyStoryChoiceComparisonOption = Readonly<{
   id: string;
   label: string;
   group?: JourneyStoryChoiceOption["group"];
-  /** Human stakes and cost only; check math is staged with the exact option detail. */
+  /** Human stakes and cost; preparation also carries its governing check as one highlight. */
   summary?: Omit<JourneyStoryChoiceSummary, "checkFit">;
 }>;
 
@@ -39,6 +43,7 @@ export type JourneyStoryChoiceDetailOption = Readonly<{
   checkFit?: string;
   dispatchForecast?: JourneyStoryChoiceDispatchForecast;
   dispatchImpact?: JourneyStoryChoiceDispatchImpact;
+  situationalBoundary?: string;
   consequence: string;
 }>;
 
@@ -176,6 +181,19 @@ function progressiveDisclosureRevealAffordance(
   });
 }
 
+function storyChoiceReviewAffordance(
+  prompt: JourneyStoryChoicePrompt,
+): JourneyStoryChoiceReviewAffordance {
+  return Object.freeze({
+    tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+    storyChoiceId: prompt.id,
+    arguments: Object.freeze({ story_choice_id: prompt.id }),
+    argument: "option_id",
+    valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+    readOnly: true,
+  });
+}
+
 export function journeyBlocksGameplay(
   journey: JourneyPresentation | CompactJourneyPresentation,
 ): boolean {
@@ -232,21 +250,54 @@ export function journeyStoryChoiceOptionById(
   return option;
 }
 
-/** Keep the first tier on human stakes; exact check arithmetic is read-only detail. */
+function exactStationSituationalBoundary(
+  prompt: Pick<JourneyStoryChoicePrompt, "id" | "kind">,
+  option: Pick<JourneyStoryChoiceOption, "id" | "label">,
+): string | undefined {
+  const boundary =
+    prompt.id === "albany:wolf_preparation" &&
+    prompt.kind === "preparation" &&
+    option.id === "albany:prep_relief_protocol" &&
+    option.label === "Jamie's Relief Protocol"
+      ? "May never trigger. In LURE, foul the first feed cast, fail the public wedge, spend the split-rail guard to redirect the yearling alive, then return to Cade before the loft cast. A clean cast, braced rail, or other recovery gets no benefit."
+      : prompt.id === "albany:wolf_ally_commitment" &&
+          prompt.kind === "ally" &&
+          option.id === "albany:ally_june_cattle_first" &&
+          option.label === "Grant June Cattle-First Authority"
+        ? "May never trigger. June lowers cattle alarm when a recovered LURE leaves the herd pressing, or prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized failed first FORTIFY seal at pressure 3+. Clean DRIVE, pressure-2/mobile-stabilized FORTIFY gain nothing; no combat help; first wolf death ends her help."
+        : undefined;
+  if (boundary === undefined) return undefined;
+  if (boundary.length > JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT) {
+    throw new Error("Station situational boundary exceeds its compact character limit.");
+  }
+  const wordCount = boundary.trim().split(/\s+/u).length;
+  if (wordCount > JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT) {
+    throw new Error("Station situational boundary exceeds its compact word limit.");
+  }
+  return boundary;
+}
+
+/** Keep the first tier on human stakes; preparation also names its governing check before purchase. */
 function compactJourneyStoryChoiceBriefSummary(
   summary: JourneyStoryChoiceSummary,
+  kind: JourneyStoryChoicePrompt["kind"],
 ): Omit<JourneyStoryChoiceSummary, "checkFit"> {
+  const highlights =
+    summary.highlights ??
+    (kind === "preparation" && summary.checkFit
+      ? ([Object.freeze({ label: "Governing skill", value: summary.checkFit })] as const)
+      : undefined);
   return Object.freeze({
     commitment: summary.commitment,
     ...(summary.fieldTrigger === undefined ? {} : { fieldTrigger: summary.fieldTrigger }),
     ...(summary.fieldTriggerScope === undefined
       ? {}
       : { fieldTriggerScope: summary.fieldTriggerScope }),
-    ...(summary.highlights === undefined
+    ...(highlights === undefined
       ? {}
       : {
           highlights: Object.freeze(
-            summary.highlights.map((highlight) => Object.freeze({ ...highlight })),
+            highlights.map((highlight) => Object.freeze({ ...highlight })),
           ) as NonNullable<JourneyStoryChoiceSummary["highlights"]>,
         }),
     immediateCost: summary.immediateCost,
@@ -258,15 +309,22 @@ function compactJourneyStoryChoiceBriefSummary(
 export function compactJourneyStoryChoicePrompt(
   prompt: JourneyStoryChoicePrompt,
 ): CompactJourneyStoryChoicePrompt {
-  const options = journeyStoryChoiceOptionsForPresentation(prompt).map((option) =>
-    Object.freeze({
+  const usesPromptLevelReview =
+    prompt.kind !== undefined && prompt.options.every((option) => option.summary !== undefined);
+  const options = journeyStoryChoiceOptionsForPresentation(prompt).map((option) => {
+    const projected = {
       id: option.id,
       label: option.label,
       ...(option.group === undefined ? {} : { group: option.group }),
-      ...(option.summary ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary) } : {}),
-      consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
-    }),
-  );
+      ...(option.summary
+        ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary, prompt.kind) }
+        : {}),
+      ...(usesPromptLevelReview
+        ? { consequence: "" }
+        : { consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE }),
+    };
+    return Object.freeze(projected);
+  });
   const {
     progressiveDisclosure: _progressiveDisclosure,
     options: _canonicalOptions,
@@ -275,6 +333,9 @@ export function compactJourneyStoryChoicePrompt(
   const revealOption = progressiveDisclosureRevealAffordance(prompt);
   return Object.freeze({
     ...withoutProgressiveDisclosure,
+    message: usesPromptLevelReview
+      ? `${prompt.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`
+      : prompt.message,
     ...(revealOption ? { revealOption } : {}),
     options: Object.freeze(options),
   }) as CompactJourneyStoryChoicePrompt;
@@ -321,6 +382,7 @@ export function compactJourneyStoryChoiceComparison(
     const inspectedSource = compactJourneyStoryChoiceOption(
       journeyStoryChoiceOptionById(prompt, optionId),
     );
+    const situationalBoundary = exactStationSituationalBoundary(prompt, inspectedSource);
     return Object.freeze({
       ...base,
       inspectedOption: Object.freeze({
@@ -343,6 +405,7 @@ export function compactJourneyStoryChoiceComparison(
         ...(inspectedSource.dispatchImpact
           ? { dispatchImpact: Object.freeze({ ...inspectedSource.dispatchImpact }) }
           : {}),
+        ...(situationalBoundary === undefined ? {} : { situationalBoundary }),
         consequence: inspectedSource.consequence,
       }),
     });
@@ -352,7 +415,9 @@ export function compactJourneyStoryChoiceComparison(
       id: option.id,
       label: option.label,
       ...(option.group === undefined ? {} : { group: option.group }),
-      ...(option.summary ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary) } : {}),
+      ...(option.summary
+        ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary, prompt.kind) }
+        : {}),
     }),
   );
   const revealOption =
@@ -362,14 +427,7 @@ export function compactJourneyStoryChoiceComparison(
     message: prompt.message,
     ...(revealOption ? { revealOption } : {}),
     options: Object.freeze(options),
-    reviewOption: Object.freeze({
-      tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
-      storyChoiceId: prompt.id,
-      arguments: Object.freeze({ story_choice_id: prompt.id }),
-      argument: "option_id",
-      valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
-      readOnly: true,
-    }),
+    reviewOption: storyChoiceReviewAffordance(prompt),
     inspectedOption: null,
   });
 }

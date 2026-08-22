@@ -18,6 +18,7 @@ import {
   indexRpgPack,
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
+import { seededOpeningFlagForSeed } from "../../src/rpg/seeded_opening.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 import {
@@ -36,6 +37,21 @@ const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const ORDINARY_WEDGE_OPENING_FLAG = "opening_condition_steady_scent_channel";
+const openingFlags = pack.meta.seeded_opening_flags;
+if (!openingFlags?.includes(ORDINARY_WEDGE_OPENING_FLAG)) {
+  throw new Error("wolf_winter must include the ordinary-wedge scent-channel opening");
+}
+const ORDINARY_WEDGE_SEED = (() => {
+  const seed = Array.from({ length: 1_000 }, (_, index) => index + 1).find(
+    (candidate) =>
+      seededOpeningFlagForSeed(openingFlags, candidate) === ORDINARY_WEDGE_OPENING_FLAG,
+  );
+  if (seed === undefined) {
+    throw new Error("expected a small generic seed for the ordinary-wedge opening");
+  }
+  return seed;
+})();
 
 function rolls(...values: number[]): Rng {
   let cursor = 0;
@@ -68,7 +84,9 @@ function act(state: GameState, id: string, ...fixedRolls: number[]): GameState {
 }
 
 function fullyPrepared(): GameState {
-  let state = initStateForRpgPack(index, 505);
+  let state = initStateForRpgPack(index, ORDINARY_WEDGE_SEED);
+  expect(state.flags[ORDINARY_WEDGE_OPENING_FLAG]).toBe(true);
+  expect(state.flags.opening_condition_firm_frozen_rail).not.toBe(true);
   for (const id of [
     "go_north",
     "read_day_book",
@@ -255,7 +273,7 @@ function launchAlbanyWolf(api: ToolApi): {
     session_id: overworldSessionId,
     quest_id: quest.id,
     approach_id: "albany:wolf_approach_sheltered_stockway",
-    seed: 505,
+    seed: ORDINARY_WEDGE_SEED,
   });
   return { overworldSessionId, rpgSessionId: launched.rpg_session_id };
 }
@@ -531,7 +549,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       session_id: sessionId,
       quest_id: quest.id,
       approach_id: "albany:wolf_approach_sheltered_stockway",
-      seed: 505,
+      seed: ORDINARY_WEDGE_SEED,
     });
     expect(launched.journey.acceptedDecisions).toBe(39);
     api.sessions.update(launched.rpg_session_id, retainSplitGuard());

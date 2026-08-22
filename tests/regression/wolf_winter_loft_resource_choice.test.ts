@@ -19,12 +19,28 @@ import {
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
 import { enemyHpVar } from "../../src/rpg/schema.js";
+import { seededOpeningFlagForSeed } from "../../src/rpg/seeded_opening.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
+const ORDINARY_WEDGE_OPENING_FLAG = "opening_condition_steady_scent_channel";
+const openingFlags = loaded.compiled.pack.meta.seeded_opening_flags;
+if (!openingFlags?.includes(ORDINARY_WEDGE_OPENING_FLAG)) {
+  throw new Error("wolf_winter must include the ordinary-wedge scent-channel opening");
+}
+const ORDINARY_WEDGE_SEED = (() => {
+  const seed = Array.from({ length: 1_000 }, (_, index) => index + 1).find(
+    (candidate) =>
+      seededOpeningFlagForSeed(openingFlags, candidate) === ORDINARY_WEDGE_OPENING_FLAG,
+  );
+  if (seed === undefined) {
+    throw new Error("expected a small generic seed for the ordinary-wedge opening");
+  }
+  return seed;
+})();
 
 function rolls(...values: number[]): Rng {
   let cursor = 0;
@@ -60,7 +76,9 @@ function act(state: GameState, id: string, ...fixedRolls: number[]): GameState {
 }
 
 function fullyPrepared(): GameState {
-  let state = initStateForRpgPack(index, 503);
+  let state = initStateForRpgPack(index, ORDINARY_WEDGE_SEED);
+  expect(state.flags[ORDINARY_WEDGE_OPENING_FLAG]).toBe(true);
+  expect(state.flags.opening_condition_firm_frozen_rail).not.toBe(true);
   for (const id of [
     "go_north",
     "talk_houndsman",
@@ -140,7 +158,7 @@ describe("Wolf-Winter loft route and split-guard resource choice", () => {
     );
     expect(blockedLoft).toBeDefined();
     expect(blockedLoft?.message).toMatch(
-      /before the flank-wolf falls[^]*settle the yearling[^]*crawlboard named by certified testimony or Cade's committed plan[^]*or bind a split rail[^]*sound rail wedged/i,
+      /before the flank-wolf falls[^]*settle the yearling[^]*crawlboard named by certified testimony or Cade's committed plan[^]*or bind a split rail[^]*sound rail set/i,
     );
     expect(blockedLoft?.message).not.toMatch(/in your packet|Jamie|Hayden/i);
     expect(blockedLoft?.message).not.toMatch(/brace-stake|saved stake/i);

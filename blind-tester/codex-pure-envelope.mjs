@@ -39,12 +39,15 @@ const SPARK_CODE_MODE_METADATA_WARNING =
 const CODEX_0146_EXPLICIT_ONLY_MODE_BLOCK =
   "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>";
 const CODEX_0146_CLI_VERSION = "0.146.0";
-export const CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS =
+export const CODEX_GAME_PLAYER_BASE_INSTRUCTIONS =
   "You are an autonomous first-time player of an AdventureForge text TTRPG. Follow the user play request. Use only preloaded AdventureForge gameplay functions and exact current player-visible values. Never use coding, planning, search, or MCP resource tools.";
+export const CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS = CODEX_GAME_PLAYER_BASE_INSTRUCTIONS;
 const CODEX_SPARK_PLAYER_COMP_HASH = "2911";
+const CODEX_TERRA_PLAYER_COMP_HASH = "3000";
 export const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1";
 export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2";
 export const CODEX_SPARK_DIRECT_MCP_CONTRACT = "spark-direct-mcp-v1";
+export const CODEX_GAME_DIRECT_MCP_CONTRACT = "game-direct-mcp-v1";
 const DIRECT_MCP_NAMESPACE = "mcp__adventureforge";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const V2_MULTI_AGENT_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra"]);
@@ -115,7 +118,7 @@ const PURE_MCP_TOOL_CATALOG_SHA256 = new Map([
   ["get_overworld_session", "92a177f601d9cb30553a45a6d356e0727981cdcb8a9c1da776378bf7eebe070b"],
   [
     "get_overworld_session_context",
-    "4e4c8a1bb5e8af5e4316d4669513f96f1e0eef7ae23fd895e580c3d3aff6d5f8",
+    "70aae7668c20c7e676cc40d356adfed4f5b4407fb71ac490fd5f3e7062c01eed",
   ],
   [
     "explain_overworld_session_opportunity",
@@ -324,8 +327,11 @@ function gameplayResult(payload) {
   return result;
 }
 
-function isSparkDirectMcpContract(transportContract) {
-  return transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT;
+function isDirectMcpContract(transportContract) {
+  return (
+    transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT ||
+    transportContract === CODEX_GAME_DIRECT_MCP_CONTRACT
+  );
 }
 
 function validCodexTransportContract(transportContract) {
@@ -333,18 +339,20 @@ function validCodexTransportContract(transportContract) {
     transportContract === null ||
     transportContract === CODEX_HISTORICAL_STRICT_CONTRACT ||
     transportContract === CODEX_STRICT_CURRENT_CONTRACT ||
-    transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT
+    transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT ||
+    transportContract === CODEX_GAME_DIRECT_MCP_CONTRACT
   );
 }
 
 function transportMatchesRequestedModel(transportContract, expectedModel) {
   if (!validCodexTransportContract(transportContract)) return false;
-  if (isSparkDirectMcpContract(transportContract)) return expectedModel === SPARK_DISABLED_MODEL;
-  return !(
-    transportContract !== null &&
-    expectedModel === SPARK_DISABLED_MODEL &&
-    transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT
-  );
+  if (transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT) {
+    return expectedModel === SPARK_DISABLED_MODEL;
+  }
+  if (transportContract === CODEX_GAME_DIRECT_MCP_CONTRACT) {
+    return expectedModel === "gpt-5.6-terra";
+  }
+  return true;
 }
 
 function objectPropertyName(name) {
@@ -639,6 +647,7 @@ export const CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES = Object.freeze({
     "direct_fresh_start_order",
     "direct_missing_completion",
     "direct_missing_result",
+    "direct_failed_fresh_start",
     "direct_output_mismatch",
     "forbidden_response_item",
     "orphan_tool_lifecycle",
@@ -940,21 +949,51 @@ function validNativeCollaborationMode(turnContext, expectedModel) {
   );
 }
 
-function validSparkDirectRuntimeProfile(sessionMeta, turnContext) {
+function validDirectRuntimeProfile(sessionMeta, turnContext, transportContract) {
+  const expectedCompHash =
+    transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT
+      ? CODEX_SPARK_PLAYER_COMP_HASH
+      : transportContract === CODEX_GAME_DIRECT_MCP_CONTRACT
+        ? CODEX_TERRA_PLAYER_COMP_HASH
+        : null;
   return (
     isRecord(sessionMeta) &&
     isRecord(sessionMeta.base_instructions) &&
     hasOnlyKeys(sessionMeta.base_instructions, ["text"]) &&
-    sessionMeta.base_instructions.text === CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS &&
+    sessionMeta.base_instructions.text === CODEX_GAME_PLAYER_BASE_INSTRUCTIONS &&
     isRecord(turnContext) &&
-    turnContext.comp_hash === CODEX_SPARK_PLAYER_COMP_HASH
+    expectedCompHash !== null &&
+    turnContext.comp_hash === expectedCompHash &&
+    // Codex 0.146 serializes this compatibility-only rollout field as `auto`
+    // even when the effective request summary is pinned to `none`.
+    (transportContract !== CODEX_GAME_DIRECT_MCP_CONTRACT || turnContext.summary === "auto")
   );
 }
 
-function codexCaptureProfile(turnContext, expectedModel, expectedCliVersion, capturedCliVersion) {
+function codexCaptureProfile(
+  turnContext,
+  expectedModel,
+  expectedCliVersion,
+  capturedCliVersion,
+  transportContract,
+) {
   if (!isRecord(turnContext) || typeof turnContext.model !== "string") return null;
   if (expectedModel !== undefined && turnContext.model !== expectedModel) return null;
   if (!validNativeCollaborationMode(turnContext, expectedModel)) return null;
+  if (transportContract === CODEX_GAME_DIRECT_MCP_CONTRACT) {
+    return turnContext.model === "gpt-5.6-terra" &&
+      turnContext.multi_agent_version === "disabled" &&
+      !Object.hasOwn(turnContext, "multi_agent_mode") &&
+      expectedCliVersion === CODEX_0146_CLI_VERSION &&
+      capturedCliVersion === CODEX_0146_CLI_VERSION
+      ? {
+          kind: "terra_game_direct_disabled_0146",
+          preludeCount: 1,
+          requiresItemIds: true,
+          exactModeBlock: null,
+        }
+      : null;
+  }
   if (
     turnContext.model === LUNA_V1_MODEL &&
     turnContext.multi_agent_version === "v1" &&
@@ -1259,7 +1298,7 @@ function inspectCodexRolloutStructure(
   expectedCliVersion,
   { transportContract = null } = {},
 ) {
-  const directMcp = isSparkDirectMcpContract(transportContract);
+  const directMcp = isDirectMcpContract(transportContract);
   if (!Array.isArray(rows) || rows.length === 0) return rolloutReject("rollout is empty");
   const indices = {
     sessions: [],
@@ -1367,7 +1406,7 @@ function inspectCodexRolloutStructure(
     (expectedCliVersion !== CODEX_0146_CLI_VERSION || capturedCliVersion !== CODEX_0146_CLI_VERSION)
   ) {
     return rolloutReject(
-      `Spark direct MCP rollout requires authenticated and captured Codex CLI ${CODEX_0146_CLI_VERSION}`,
+      `${transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT ? "Spark direct MCP" : "game direct MCP"} rollout requires authenticated and captured Codex CLI ${CODEX_0146_CLI_VERSION}`,
     );
   }
   const profile = codexCaptureProfile(
@@ -1375,12 +1414,13 @@ function inspectCodexRolloutStructure(
     expectedModel,
     expectedCliVersion,
     capturedCliVersion,
+    transportContract,
   );
   if (profile === null) {
     return rolloutReject("rollout model and multi-agent capture profile is unsupported");
   }
-  const reducedSparkDirectPrelude = directMcp && profile.kind === "spark_disabled_0146";
-  const preludeCount = reducedSparkDirectPrelude ? 1 : profile.preludeCount;
+  const reducedDirectPrelude = directMcp;
+  const preludeCount = reducedDirectPrelude ? 1 : profile.preludeCount;
   const preludeIndices = Array.from(
     { length: preludeCount },
     (_, index) => indices.taskStarts[0] + index + 1,
@@ -1393,7 +1433,7 @@ function inspectCodexRolloutStructure(
     !profile.requiresItemIds ||
     (responseItemIds.every((id) => validItemId(id)) &&
       new Set(responseItemIds).size === responseItemIds.length);
-  const validPrelude = reducedSparkDirectPrelude
+  const validPrelude = reducedDirectPrelude
     ? validPrivateInputMessage(
         rows[preludeIndices[0]]?.payload,
         "user",
@@ -1448,10 +1488,11 @@ function inspectCodexRolloutStructure(
     rows[indices.taskCompletes[0]]?.payload?.turn_id !== turnId ||
     !sameJsonValue(indices.promptMessages, expectedPromptIndices) ||
     !validPrelude ||
-    (reducedSparkDirectPrelude &&
-      !validSparkDirectRuntimeProfile(
+    (reducedDirectPrelude &&
+      !validDirectRuntimeProfile(
         rows[indices.sessions[0]]?.payload,
         rows[initialTurnContext]?.payload,
+        transportContract,
       )) ||
     !validResponseItemIds ||
     !validPrivateInputMessage(promptMessage, "user", turnId, profile.requiresItemIds) ||
@@ -1673,11 +1714,11 @@ function exactDirectMcpOutput(output, result) {
 }
 
 /**
- * Spark's native MCP transport has no model-authored JavaScript wrapper. It
+ * A game-direct MCP transport has no model-authored JavaScript wrapper. It
  * admits only preloaded native function/MCP/output triplets, preserving the
  * same result-before-next-action guarantee as the code-mode transport.
  */
-function scanCodexSparkDirectMcp(rows, { allowIncompletePrefix = false } = {}) {
+function scanCodexDirectMcp(rows, { allowIncompletePrefix = false } = {}) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return allowIncompletePrefix
       ? { ok: true, completedGameplayCalls: 0, gameplayCalls: [], pending: null }
@@ -1755,6 +1796,9 @@ function scanCodexSparkDirectMcp(rows, { allowIncompletePrefix = false } = {}) {
         if (!result) {
           return rolloutReject(`direct MCP call ${ordinal} has no auditable immediate result`);
         }
+        if (gameplayCalls.length === 0 && result.isError === true) {
+          return rolloutReject("direct MCP fresh start completed with an error");
+        }
 
         const output = rows[index + 2];
         if (output === undefined && allowIncompletePrefix) {
@@ -1815,8 +1859,8 @@ export function inspectCodexGameplayResultForwardingPrefix(
   rows,
   { codeModeContract = null, transportContract = codeModeContract } = {},
 ) {
-  if (isSparkDirectMcpContract(transportContract)) {
-    return scanCodexSparkDirectMcp(rows, { allowIncompletePrefix: true });
+  if (isDirectMcpContract(transportContract)) {
+    return scanCodexDirectMcp(rows, { allowIncompletePrefix: true });
   }
   return scanCodexGameplayResultForwarding(rows, {
     codeModeContract: transportContract,
@@ -1828,8 +1872,8 @@ export function inspectCodexGameplayResultForwarding(
   rows,
   { codeModeContract = null, transportContract = codeModeContract } = {},
 ) {
-  if (isSparkDirectMcpContract(transportContract)) {
-    const direct = scanCodexSparkDirectMcp(rows);
+  if (isDirectMcpContract(transportContract)) {
+    const direct = scanCodexDirectMcp(rows);
     if (!direct.ok) return direct;
     return {
       ok: true,
@@ -2037,7 +2081,7 @@ export function inspectCodexPureEventPrefix(
     // Strict-current startup notices are public `error` items. Their exact
     // count/order remains terminal-audit authority; they carry no tool action.
     if (item.type === "error") {
-      if (isSparkDirectMcpContract(transportContract)) {
+      if (isDirectMcpContract(transportContract)) {
         return reject("Codex direct MCP run used an unexpected startup error");
       }
       continue;
@@ -2078,7 +2122,7 @@ export function inspectCodexPureEvents(
   if (!transportMatchesRequestedModel(transportContract, expectedModel)) {
     return reject("Codex pure run has an unsupported transport for its requested model");
   }
-  const directMcp = isSparkDirectMcpContract(transportContract);
+  const directMcp = isDirectMcpContract(transportContract);
   const allowedCodeModePrelude = directMcp ? [] : codeModePrelude(rows, expectedModel);
   const expectedPreludeLength = directMcp ? 0 : expectedModel === SPARK_DISABLED_MODEL ? 2 : 1;
   if (transportContract !== null && allowedCodeModePrelude.length !== expectedPreludeLength) {
@@ -2285,7 +2329,7 @@ export function inspectCodexPureEvidence(
   if (
     !sameJsonValue(
       publicGameplayAssistantTimeline(publicRows),
-      privateGameplayAssistantTimeline(rolloutRows, isSparkDirectMcpContract(transportContract)),
+      privateGameplayAssistantTimeline(rolloutRows, isDirectMcpContract(transportContract)),
     )
   ) {
     return reject("Codex public/private gameplay and agent-message timeline differs");
@@ -2401,7 +2445,7 @@ function main() {
     effectiveTransportContract === CODEX_HISTORICAL_STRICT_CONTRACT
   ) {
     console.error(
-      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --cli-version <semver> --started-at-ms <n> (--code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}|--transport-contract ${CODEX_SPARK_DIRECT_MCP_CONTRACT})`,
+      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --cli-version <semver> --started-at-ms <n> (--code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}|--transport-contract ${CODEX_SPARK_DIRECT_MCP_CONTRACT}|${CODEX_GAME_DIRECT_MCP_CONTRACT})`,
     );
     process.exit(2);
   }

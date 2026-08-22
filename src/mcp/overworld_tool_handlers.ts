@@ -963,7 +963,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         // The story projection is read-only; `unchanged` describes the JOURNEY, which a
         // reveal does not advance — no decision is recorded and no goal moves.
         unchanged: true,
-        ...(departureRecap ? { departure_recap: departureRecap } : {}),
+        ...(departureRecap && departureRecapTerms === null
+          ? { departure_recap: departureRecap }
+          : {}),
         ...(departureRecapTerms
           ? {
               ...overworldSessions.resultLegendField(guarded.session, ["departure_recap_terms"]),
@@ -974,7 +976,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           args.option_id !== undefined
             ? compactJourneyStoryChoiceComparison(story, args.option_id)
             : args.reveal_id !== undefined
-              ? compactJourneyStoryChoiceComparison(story, undefined, args.reveal_id)
+              ? story.progressiveDisclosure
+                ? compactJourneyStoryChoiceComparison(story, undefined, args.reveal_id)
+                : compactJourneyStoryChoiceComparison(story)
               : compactJourneyStoryChoiceComparison(story),
       } as OverworldJourneyStoryInspectionResponse<Args>;
       return response;

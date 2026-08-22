@@ -4,7 +4,7 @@ import { renderTerminalStoryChoiceComparison } from "../../bin/terminal_story_ch
 import {
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
-  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
 } from "../../src/mcp/journey_projection.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -20,23 +20,19 @@ const REGISTRATION =
 const EXPECTED = {
   "albany:road_warden": {
     starter: "Fieldcraft 4; weatherproof field kit",
-    obligation: "return Hayden's winter packet with an honest account",
-    def: "Starting DEF 3 → 4 when the authored campaign import applies.",
+    obligation: "Return Hayden's winter packet with an honest account",
   },
   "albany:ledger_advocate": {
     starter: "Mediation 4; sealed evidence folio",
-    obligation: "return a truthful relief account to Rowan",
-    def: "No Road-Warden Fieldcraft import; the quest keeps its authored starting DEF.",
+    obligation: "Return a truthful relief account to Rowan",
   },
   "albany:ironhands_repairer": {
     starter: "Repair 4; insulated repair roll",
-    obligation: "return Reese's borrowed diagnostic tools intact",
-    def: "No Road-Warden Fieldcraft import; the quest keeps its authored starting DEF.",
+    obligation: "Return Reese's borrowed diagnostic tools intact",
   },
   "albany:unaffiliated_courier": {
     starter: "Streetwise 4; unmarked courier satchel",
-    obligation: "return or publicly void the emergency tag; no unchanged refusal retry",
-    def: "No Road-Warden Fieldcraft import; the quest keeps its authored starting DEF.",
+    obligation: "Return or publicly void the emergency tag; no unchanged refusal retry",
   },
 } as const;
 
@@ -49,7 +45,7 @@ function presentedSession(): OverworldSession {
 }
 
 describe("Albany registration progressive disclosure", () => {
-  it("projects permanent identity, starter package, obligation, and quest DEF before choice", () => {
+  it("projects only permanent identity, starter package, cash, and return obligation before choice", () => {
     const canonical = presentedSession().journey().storyChoice;
     if (!canonical) throw new Error("Expected the canonical registration prompt.");
     const compact = compactJourneyStoryChoicePrompt(canonical);
@@ -63,33 +59,33 @@ describe("Albany registration progressive disclosure", () => {
         throw new Error(`Missing compact registration profile "${profile.id}".`);
       }
       expect(option.summary).toEqual({
-        commitment: profile.summary,
-        fieldTrigger: expected.starter,
-        fieldTriggerScope: "starter",
-        highlights: [
-          { label: "Permanent role", value: profile.title },
-          { label: "Role experience", value: profile.summary },
-          { label: "Return obligation — ACTIVE", value: expected.obligation },
-          { label: "Quest DEF", value: expected.def },
-        ],
-        immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
-        tradeoff: profile.tradeoff,
+        commitment: `Permanent background — ${profile.summary}`,
+        highlights: [{ label: "Starts with", value: expected.starter }],
+        immediateCost: `no fee or delay; start with $${String(profile.character.money)}`,
+        tradeoff: expected.obligation,
       });
+      expect(option.summary).not.toHaveProperty("fieldTrigger");
+      expect(option.summary).not.toHaveProperty("fieldTriggerScope");
       expect(compared.summary).toEqual(option.summary);
-      expect(option.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      expect(option.consequence).toBe("");
     }
 
     const compactJson = JSON.stringify(compact);
+    expect(compact.message).toBe(`${canonical.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`);
     for (const profile of REGISTRATION.profiles) {
       expect(compactJson).not.toContain(profile.preview);
       expect(compactJson).not.toContain(profile.consequence);
     }
     const terminal = renderTerminalStoryChoiceComparison(canonical);
     expect(terminal).toContain(
-      "Starter package / field edge: Fieldcraft 4; weatherproof field kit",
+      `Background: Permanent background — ${REGISTRATION.profiles[0]!.summary}`,
     );
-    expect(terminal).toContain("Return obligation — ACTIVE:");
-    expect(terminal).toContain("Quest DEF: Starting DEF 3 → 4");
+    expect(terminal).toContain("Starts with: Fieldcraft 4; weatherproof field kit");
+    expect(terminal).toContain("Cost: no fee or delay; start with $12");
+    expect(terminal).toContain(
+      "Return obligation: Return Hayden's winter packet with an honest account",
+    );
+    expect(terminal).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
   });
 
   it("reveals only one selected profile's exact authored terms without changing state", () => {

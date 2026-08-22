@@ -24,7 +24,7 @@ const WOLF = WORLD.quests.find((quest) => quest.id === LEAD.target_quest)!;
 const APPROACH = WOLF.launch!.options[0]!.id;
 const FULL = { compact_context: false, compact_result: false } as const;
 const JUNE_TIMING =
-  "Talking takes 15 minutes. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.";
+  "Talking takes 15 minutes. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.";
 
 function moveToStation(session: OverworldSession): void {
   if (session.view().currentArea?.id === PREPARATION.area) return;
@@ -60,7 +60,7 @@ function chooseSupportSpoke(session: OverworldSession, spoke: SupportSpoke): voi
   }
   session.talkToCharacter(ALLY.contact);
   expect(session.journey().storyChoice).toMatchObject({ id: ALLY.id, kind: "ally" });
-  expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/field-team commitment/i);
+  expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/second rider/i);
   session.chooseJourneyStory(ALLY.options[0]!.id);
 }
 
@@ -134,7 +134,7 @@ describe("optional Station departure interactions", () => {
       {
         id: PREPARATION.id,
         kind: "preparation",
-        title: PREPARATION.title,
+        title: "Field kit",
         inspect: {
           tool: "inspect_overworld_session_story",
           storyChoiceId: PREPARATION.id,
@@ -151,7 +151,7 @@ describe("optional Station departure interactions", () => {
       {
         id: ALLOCATION.id,
         kind: "relief_allocation",
-        title: ALLOCATION.title,
+        title: "Relief wagon",
         inspect: {
           tool: "inspect_overworld_session_story",
           storyChoiceId: ALLOCATION.id,
@@ -168,19 +168,28 @@ describe("optional Station departure interactions", () => {
     ]);
     const compact = session.compactView();
     expect(compact.departure_interactions).toBeUndefined();
-    expect(compact.station_dispatch_board?.[0]).toBe(3);
-    expect(compact.station_dispatch_board?.[4]).toEqual(
-      expect.arrayContaining([
-        ["preparation", "open_optional", null, null, null],
-        ["relief_allocation", "open_optional", null, null, null],
-      ]),
+    expect(compact.station_dispatch_board?.[0]).toBe(6);
+    expect(compact.station_dispatch_board?.[3]?.[3]).toBe(3);
+    expect(compact.station_dispatch_board?.[4].map(([slot]) => slot)).not.toEqual(
+      expect.arrayContaining(["preparation", "relief_allocation", "field_team"]),
     );
+    expect(compact.station_dispatch_board?.[5]).toEqual([
+      "station_dispatch:review_optional_support",
+      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+    ]);
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toEqual(
       expect.arrayContaining([
         ["preparation", expect.any(String), ["inspect", PREPARATION.id]],
         ["relief_allocation", expect.any(String), ["inspect", ALLOCATION.id]],
       ]),
     );
+    expect(
+      session
+        .view()
+        .stationDispatchBoard?.support.flatMap((row) =>
+          row.action?.kind === "inspect" ? [row.action.title] : [],
+        ),
+    ).toEqual(["Field kit", "Relief wagon"]);
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
       "inspect_overworld_session_story(story_choice_id)",
     );
@@ -234,11 +243,15 @@ describe("optional Station departure interactions", () => {
       ALLOCATION.id,
     ]);
     expect(session.compactView().departure_interactions).toBeUndefined();
-    expect(
-      session
-        .compactView()
-        .station_dispatch_board?.[4].find(([slot]) => slot === "relief_allocation"),
-    ).toEqual(["relief_allocation", "open_optional", null, null, null]);
+    const afterPreparationBoard = session.compactView().station_dispatch_board;
+    expect(afterPreparationBoard?.[3]?.[3]).toBe(2);
+    expect(afterPreparationBoard?.[4].find(([slot]) => slot === "relief_allocation")).toBe(
+      undefined,
+    );
+    expect(afterPreparationBoard?.[5]).toEqual([
+      "station_dispatch:review_optional_support",
+      "Optional support: Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+    ]);
 
     session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
     expect(session.view().departureInteractions).toEqual([]);
@@ -257,7 +270,7 @@ describe("optional Station departure interactions", () => {
       {
         id: ALLY.id,
         kind: "ally",
-        title: ALLY.title,
+        title: "Second rider",
         contactId: june.id,
         contactName: june.name,
         questId: WOLF.id,
@@ -274,7 +287,7 @@ describe("optional Station departure interactions", () => {
     expect(session.compactView().departure_contact_leads).toBeUndefined();
     expect(
       session.compactView().station_dispatch_board?.[4].find(([slot]) => slot === "field_team"),
-    ).toEqual(["field_team", "open_optional", null, null, null]);
+    ).toBeUndefined();
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toContainEqual(
       ["field_team", expect.any(String), ["talk", june.id, june.name]],
     );
@@ -296,10 +309,8 @@ describe("optional Station departure interactions", () => {
     const ready = session.view().departureContactLeads[0];
     expect(ready).toEqual(beforePreparation[0]);
     expect(
-      session
-        .compactView()
-        .station_dispatch_board?.[4].find(([slot]) => slot === "field_team")?.[4],
-    ).toBeNull();
+      session.compactView().station_dispatch_board?.[4].find(([slot]) => slot === "field_team"),
+    ).toBeUndefined();
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toContainEqual(
       ["field_team", expect.any(String), ["talk", june.id, june.name]],
     );
@@ -317,7 +328,7 @@ describe("optional Station departure interactions", () => {
     expect(session.view().departureContactLeads).toEqual([]);
     expect(session.compactView().departure_contact_leads).toBeUndefined();
     expect(session.journey().storyChoice).toMatchObject({ id: ALLY.id, kind: "ally" });
-    expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/field-team commitment/i);
+    expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/second rider/i);
   });
 
   it.each(ALLY.options.map((option) => [option.id, option.terms.minutes] as const))(
@@ -380,16 +391,9 @@ describe("optional Station departure interactions", () => {
       ...preparationInteraction.inspect.arguments,
     });
     expect(inspected.story).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
-    expect(inspected.story.message).toContain(`${WOLF.title} · optional preparation.`);
-    expect(inspected.story.message).toContain(
-      "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
-    );
-    expect(inspected.story.message).toContain(
-      `Route costs and tactics remain on ${WOLF.title}'s launch card.`,
-    );
-    expect(inspected.story.message).toContain(
-      "Compare field priority, exact cost, and tradeoff. " +
-        "Field checks surface with their action before resolution.",
+    expect(inspected.story.message).toBe(
+      "Albany Station: ready to depart now, or choose one field kit; " +
+        "relief-wagon and riding choices are separate.",
     );
     expect(inspected.story.message).not.toMatch(
       /field packet|inspect a card|exact check|recovery/i,
@@ -451,13 +455,9 @@ describe("optional Station departure interactions", () => {
       session_id: sessionId,
       ...allocationInteraction.inspect.arguments,
     });
-    expect(allocationStory.story.message).toContain(`${WOLF.title} · optional relief priority.`);
-    expect(allocationStory.story.message).toContain(
-      "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
-    );
-    expect(allocationStory.story.message).toContain(
-      "Compare who is protected, exact cost, and what remains exposed. " +
-        "Field checks surface with their action before resolution.",
+    expect(allocationStory.story.message).toBe(
+      "Albany Station: ready to depart now, or choose the relief wagon's job; " +
+        "field-kit and riding choices are separate.",
     );
     expect(allocationStory.story.message).not.toMatch(/relief-capacity choice|inspect a card/i);
     expect(allocationStory.story.message).not.toMatch(

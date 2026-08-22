@@ -157,16 +157,19 @@ describe("Station dispatch impact cards", () => {
     const rendered = renderTerminalStoryChoiceComparison(full);
     expect(rendered).not.toContain("Dispatch: +5m delay → 65m committed (delayed).");
     expect(rendered).toContain(
-      "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
+      "Albany Station: ready to depart now, or choose the relief wagon's job; " +
+        "field-kit and riding choices are separate.",
     );
-    expect(rendered.indexOf("Purpose:")).toBeLessThan(rendered.indexOf("Promise / priority:"));
+    expect(rendered).not.toContain("Purpose:");
+    expect(rendered.indexOf("Albany Station:")).toBeLessThan(rendered.indexOf("Relief wagon:"));
     const firstOption = full.options[0]!;
     const stagedDetail = compactJourneyStoryChoiceComparison(full, firstOption.id).inspectedOption;
     expect(stagedDetail).toMatchObject({ dispatchImpact: firstOption.dispatchImpact });
     expect(JSON.stringify(stagedDetail).length).toBeLessThanOrEqual(650);
-    expect(renderTerminalStoryChoiceDetail(full, firstOption)).toContain(
-      "Dispatch: +5m delay → 65m committed (delayed).",
-    );
+    const detail = renderTerminalStoryChoiceDetail(full, firstOption);
+    expect(detail).toContain(`Relief wagon: ${firstOption.summary!.commitment}`);
+    expect(detail).not.toContain("Promise / priority:");
+    expect(detail).toContain("Dispatch: +5m delay → 65m committed (delayed).");
 
     const api = createToolApi({ root: process.cwd() });
     const started = api.start_overworld({ compact_context: false });

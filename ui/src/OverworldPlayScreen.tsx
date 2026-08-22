@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef, type RefObject } from "react";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { Compass } from "@phosphor-icons/react/Compass";
 import { Crosshair } from "@phosphor-icons/react/Crosshair";
@@ -16,6 +16,7 @@ import { DepartureRecap } from "./DepartureRecap.js";
 import { NightWatchDock, NightWatchMasthead, type NightWatchPanel } from "./NightWatchChrome.js";
 import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 import type { OverworldView } from "./overworld.js";
+import { useStagePanelNavigation } from "./stageNavigation.js";
 
 export type WorldActionTone = "ice" | "ember" | "lichen";
 
@@ -30,6 +31,8 @@ export type WorldActionCard = {
   tone: WorldActionTone;
   disabledReason?: string;
   onChoose: () => void;
+  goalRelevant?: boolean;
+  optionalSupport?: boolean;
 };
 
 export type WorldActionSection = {
@@ -39,6 +42,36 @@ export type WorldActionSection = {
   actions: readonly WorldActionCard[];
 };
 
+export function focusedWorldActions(
+  sections: readonly WorldActionSection[],
+  prioritySectionIds: readonly string[],
+): WorldActionCard[] {
+  const prioritySections = prioritySectionIds
+    .map((id) => sections.find((section) => section.id === id))
+    .filter((section): section is WorldActionSection => section !== undefined);
+  return prioritySections
+    .flatMap((section) =>
+      [...section.actions]
+        .sort(
+          (left, right) => Number(right.goalRelevant === true) - Number(left.goalRelevant === true),
+        )
+        .filter((action) => action.disabledReason === undefined && action.optionalSupport !== true)
+        .slice(0, section.id === "dispatch" || section.id === "encounter" ? 6 : 1),
+    )
+    .slice(0, 6);
+}
+
+export function focusedOptionalSupportActions(
+  sections: readonly WorldActionSection[],
+  prioritySectionIds: readonly string[],
+): WorldActionCard[] {
+  return prioritySectionIds
+    .map((id) => sections.find((section) => section.id === id))
+    .filter((section): section is WorldActionSection => section !== undefined)
+    .flatMap((section) => section.actions.filter((action) => action.optionalSupport === true))
+    .slice(0, 6);
+}
+
 type OverworldPlayScreenProps = {
   world: OverworldView;
   journey: JourneyPresentation;
@@ -47,6 +80,7 @@ type OverworldPlayScreenProps = {
   sections: readonly WorldActionSection[];
   prioritySectionIds: readonly string[];
   panel: NightWatchPanel;
+  saveStatus: "pending" | "saved" | "unavailable";
   error: string | null;
   opportunityExplanation?: JourneyOpportunityExplanation | null;
   onExplainOpportunity?: (kind: JourneyOpportunityKind, id: string) => void;
@@ -88,6 +122,7 @@ function ActionCard({ action }: { action: WorldActionCard }): JSX.Element {
 
 function WorldUtility({
   panel,
+  saveStatus,
   world,
   journey,
   log,
@@ -95,10 +130,18 @@ function WorldUtility({
   onClose,
   onNewJourney,
   onOpenTutorial,
+  headingRef,
 }: Pick<
   OverworldPlayScreenProps,
-  "panel" | "world" | "journey" | "log" | "sections" | "onNewJourney" | "onOpenTutorial"
-> & { onClose: () => void }): JSX.Element | null {
+  | "panel"
+  | "saveStatus"
+  | "world"
+  | "journey"
+  | "log"
+  | "sections"
+  | "onNewJourney"
+  | "onOpenTutorial"
+> & { headingRef: RefObject<HTMLHeadingElement>; onClose: () => void }): JSX.Element | null {
   if (panel === "scene") return null;
   const routes = sections.find((section) => section.id === "roads");
 
@@ -107,7 +150,9 @@ function WorldUtility({
       <header>
         <div>
           <p className="nw-kicker">Campaign reference</p>
-          <h2>{panel === "terms" ? "Exact terms" : panel}</h2>
+          <h2 ref={headingRef} tabIndex={-1}>
+            {panel === "terms" ? "Exact terms" : panel}
+          </h2>
         </div>
         <button className="nw-text-button" type="button" onClick={onClose}>
           Return to scene
@@ -217,10 +262,14 @@ function WorldUtility({
         <div className="nw-menu-grid">
           <article className="nw-reference-card">
             <p className="nw-kicker">Journey</p>
-            <h3>Saved automatically</h3>
+            <h3>Browser autosave</h3>
             <p>
-              Campaign state is saved in this browser after every projected view change. A new
-              journey clears that record and begins again in the authored starting town.
+              {saveStatus === "saved"
+                ? "Campaign state is saved in this browser. Active quest progress is saved and verified too."
+                : saveStatus === "pending"
+                  ? "The latest campaign state is being saved in this browser."
+                  : "Browser saving is unavailable. Keep this tab open or begin again after storage is restored."}{" "}
+              A new journey clears any usable record and begins again in the authored starting town.
             </p>
             <button className="nw-danger-button" type="button" onClick={onNewJourney}>
               Begin a new journey
@@ -252,6 +301,7 @@ export function OverworldPlayScreen({
   sections,
   prioritySectionIds,
   panel,
+  saveStatus,
   error,
   opportunityExplanation = null,
   onExplainOpportunity,
@@ -259,21 +309,16 @@ export function OverworldPlayScreen({
   onNewJourney,
   onOpenTutorial,
 }: OverworldPlayScreenProps): JSX.Element {
-  const stageRef = useRef<HTMLDivElement>(null);
-  const prioritySections = prioritySectionIds
-    .map((id) => sections.find((section) => section.id === id))
-    .filter((section): section is WorldActionSection => section !== undefined);
-  const priorityActions = prioritySections
-    .flatMap((section) =>
-      section.actions
-        .filter((action) => action.disabledReason === undefined)
-        .slice(0, section.id === "dispatch" || section.id === "encounter" ? 6 : 1),
-    )
-    .slice(0, 6);
-
-  useEffect(() => {
-    stageRef.current?.scrollTo({ top: 0 });
-  }, [latestConsequence, panel]);
+  const decisionRef = useRef<HTMLElement>(null);
+  const optionalSupportRef = useRef<HTMLDetailsElement>(null);
+  const sceneIdentity = `${world.current.id}:${world.currentArea?.id ?? "town-center"}`;
+  const { sceneHeadingRef, stageRef, utilityHeadingRef } = useStagePanelNavigation(
+    panel,
+    sceneIdentity,
+  );
+  const priorityActions = focusedWorldActions(sections, prioritySectionIds);
+  const optionalSupportActions = focusedOptionalSupportActions(sections, prioritySectionIds);
+  const hasFocusedActions = priorityActions.length > 0 || optionalSupportActions.length > 0;
 
   return (
     <main className="nw-app nw-world-app">
@@ -281,7 +326,13 @@ export function OverworldPlayScreen({
         context={journey.goal.status === "completed" ? "Goal complete" : "Open road"}
         location={world.current.name}
         time={world.timeLabel}
-        sessionStatus="Road record saved"
+        sessionStatus={
+          saveStatus === "saved"
+            ? "Campaign progress saved"
+            : saveStatus === "pending"
+              ? "Saving campaign progress…"
+              : "Save unavailable · keep this tab open"
+        }
         health={`${world.character.health.current}/${world.character.health.max}`}
         supplies={`${world.supplies}/${world.maxSupplies}`}
         fatigue={`${world.fatigue}`}
@@ -291,6 +342,7 @@ export function OverworldPlayScreen({
       <div className="nw-stage" ref={stageRef}>
         <WorldUtility
           panel={panel}
+          saveStatus={saveStatus}
           world={world}
           journey={journey}
           log={log}
@@ -298,6 +350,7 @@ export function OverworldPlayScreen({
           onClose={() => onPanelChange("scene")}
           onNewJourney={onNewJourney}
           onOpenTutorial={onOpenTutorial}
+          headingRef={utilityHeadingRef}
         />
 
         {panel === "scene" && (
@@ -307,7 +360,9 @@ export function OverworldPlayScreen({
                 <p className="nw-kicker">
                   {world.current.kind.replaceAll("_", " ")} · {world.current.region}
                 </p>
-                <h1>{world.current.name}</h1>
+                <h1 ref={sceneHeadingRef} tabIndex={-1}>
+                  {world.current.name}
+                </h1>
                 <div className="nw-scene-prose">
                   <p>{world.current.description}</p>
                 </div>
@@ -368,18 +423,47 @@ export function OverworldPlayScreen({
               <span>{error ? `Could not continue: ${error}` : latestConsequence}</span>
             </section>
 
+            {hasFocusedActions && (
+              <button
+                className="nw-decision-shortcut"
+                type="button"
+                onClick={() =>
+                  (decisionRef.current ?? optionalSupportRef.current)?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+                }
+              >
+                Next decision <ArrowRight aria-hidden="true" />
+              </button>
+            )}
+
             {priorityActions.length > 0 ? (
-              <section className="nw-decision-deck" aria-label="Relevant actions">
+              <section className="nw-decision-deck" aria-label="Relevant actions" ref={decisionRef}>
                 {priorityActions.map((action) => (
                   <ActionCard action={action} key={action.id} />
                 ))}
               </section>
-            ) : (
+            ) : optionalSupportActions.length === 0 ? (
               <section className="nw-empty-deck">
                 <Signpost aria-hidden="true" />
                 <h2>No immediate local action</h2>
                 <p>Open the Atlas for roads or Exact terms for every projected action.</p>
               </section>
+            ) : null}
+
+            {optionalSupportActions.length > 0 && (
+              <details className="nw-optional-support" ref={optionalSupportRef}>
+                <summary>Review optional support ({optionalSupportActions.length})</summary>
+                <p>
+                  Open only if you want to compare these optional commitments before choosing a
+                  projected departure.
+                </p>
+                <div className="nw-optional-support-grid">
+                  {optionalSupportActions.map((action) => (
+                    <ActionCard action={action} key={action.id} />
+                  ))}
+                </div>
+              </details>
             )}
           </>
         )}

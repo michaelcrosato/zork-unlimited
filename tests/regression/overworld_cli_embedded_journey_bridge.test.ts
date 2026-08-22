@@ -258,7 +258,7 @@ describe("persistent CLI embedded-quest journey bridge", () => {
       const resumed = runCli(savePath, "choose continue; actions");
       const resumedOutput = `${resumed.stdout ?? ""}\n${resumed.stderr ?? ""}`;
       expect(resumed.status, resumedOutput).toBe(0);
-      expect(resumedOutput).toContain("Chosen: Continue toward checkpoint 80.");
+      expect(resumedOutput).toContain("Chosen: Continue from this exact state.");
       expect(resumedOutput).toContain("[quest: The Wolf-Winter]");
       expect(resumedOutput).toContain("You can:");
     } finally {

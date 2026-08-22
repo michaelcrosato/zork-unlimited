@@ -10,7 +10,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { RPG_STATE_HASH_MISMATCH_REASON } from "../../src/mcp/rpg_state_guards.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
 import { COMPACT_DESCRIPTION_CHAR_LIMIT } from "../../src/mcp/compact_rpg_observation.js";
-import { JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE } from "../../src/mcp/journey_projection.js";
+import { JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION } from "../../src/mcp/journey_projection.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
@@ -659,19 +659,24 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       include_actions: true,
     });
     expect(read.context).not.toHaveProperty("actions");
-    expect(read.journey?.storyChoice).toMatchObject({
+    const compactStory = read.journey?.storyChoice;
+    expect(compactStory).toMatchObject({
       id: "albany:wolf_ally_commitment",
       kind: "ally",
-      options: expect.arrayContaining([
-        expect.objectContaining({
-          id: "albany:ally_june_cattle_first",
-          consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
-        }),
-      ]),
+      message: `${fullStory.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
     });
-    expect(JSON.stringify(read.journey?.storyChoice)).not.toContain(
-      fullStory.options[0]!.consequence,
+    expect(compactStory?.options).toEqual(
+      fullStory.options.map((option) => ({
+        id: option.id,
+        label: option.label,
+        summary: option.summary,
+        consequence: "",
+      })),
     );
+    const compactStoryJson = JSON.stringify(compactStory);
+    for (const option of fullStory.options) {
+      expect(compactStoryJson).not.toContain(option.consequence);
+    }
 
     const listed = a.list_legal_actions({
       session_id: launched.rpg_session_id,

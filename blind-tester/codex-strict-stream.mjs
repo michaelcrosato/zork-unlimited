@@ -20,6 +20,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL, URL } from "node:url";
 import {
   CODEX_GAMEPLAY_WRAPPER_FAILURES,
+  CODEX_GAME_DIRECT_MCP_CONTRACT,
   CODEX_SPARK_DIRECT_MCP_CONTRACT,
   CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES,
   CODEX_STRICT_CURRENT_CONTRACT,
@@ -255,6 +256,9 @@ function classifyPrivateDirectRejection(reason) {
     return "direct_missing_completion";
   }
   if (reason.includes("has no auditable immediate result")) return "direct_missing_result";
+  if (reason.includes("direct MCP fresh start completed with an error")) {
+    return "direct_failed_fresh_start";
+  }
   if (reason.includes("has a missing, mismatched, or truncated output")) {
     return "direct_output_mismatch";
   }
@@ -321,11 +325,15 @@ export function writeStreamRejectionDiagnostic(config, detail) {
     !validStrictRejectionDiagnosticConfig(config) ||
     !Array.isArray(failures) ||
     !failures.includes(detail?.failure) ||
-    ![CODEX_STRICT_CURRENT_CONTRACT, CODEX_SPARK_DIRECT_MCP_CONTRACT].includes(
-      detail?.transportContract,
-    ) ||
+    ![
+      CODEX_STRICT_CURRENT_CONTRACT,
+      CODEX_SPARK_DIRECT_MCP_CONTRACT,
+      CODEX_GAME_DIRECT_MCP_CONTRACT,
+    ].includes(detail?.transportContract) ||
     (detail.surface === "private_rollout" &&
-      detail.transportContract !== CODEX_SPARK_DIRECT_MCP_CONTRACT) ||
+      ![CODEX_SPARK_DIRECT_MCP_CONTRACT, CODEX_GAME_DIRECT_MCP_CONTRACT].includes(
+        detail.transportContract,
+      )) ||
     typeof detail?.threadId !== "string" ||
     !THREAD_ID_RE.test(detail.threadId) ||
     typeof detail?.identity?.dev !== "bigint" ||
@@ -800,7 +808,11 @@ export async function superviseCodexStrictStream({
                 privateDecoder.rows[privateInspection.strictRejection.rowIndex],
                 privateInspection.strictRejection.failure,
               );
-            } else if (transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT) {
+            } else if (
+              [CODEX_SPARK_DIRECT_MCP_CONTRACT, CODEX_GAME_DIRECT_MCP_CONTRACT].includes(
+                transportContract,
+              )
+            ) {
               writeStreamRejectionDiagnostic(strictRejection, {
                 surface: "private_rollout",
                 failure: classifyPrivateDirectRejection(rejection),
@@ -868,7 +880,11 @@ async function main() {
     !eventsPath ||
     !providerStderrPath ||
     !model ||
-    ![CODEX_STRICT_CURRENT_CONTRACT, CODEX_SPARK_DIRECT_MCP_CONTRACT].includes(transportContract) ||
+    ![
+      CODEX_STRICT_CURRENT_CONTRACT,
+      CODEX_SPARK_DIRECT_MCP_CONTRACT,
+      CODEX_GAME_DIRECT_MCP_CONTRACT,
+    ].includes(transportContract) ||
     !Number.isSafeInteger(timeoutSeconds) ||
     timeoutSeconds <= 0 ||
     providerArgs.length === 0

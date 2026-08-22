@@ -573,6 +573,9 @@ export const OverworldSessionSnapshotV10Schema = OverworldSessionSnapshotBaseSch
 
 export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotBaseSchema.extend({
   version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
+  stationDispatchSupportReveals: z
+    .array(z.tuple([z.string().min(1), z.string().min(1)]))
+    .optional(),
 })
   .strict()
   .superRefine((snapshot, ctx) => {
@@ -831,6 +834,9 @@ export function cloneOverworldSessionSnapshot(
     completedRegionalArcIds: [...snapshot.completedRegionalArcIds],
     ...(snapshot.inspectedStoryReveals
       ? { inspectedStoryReveals: cloneStringArrayTuples(snapshot.inspectedStoryReveals) }
+      : {}),
+    ...(snapshot.stationDispatchSupportReveals
+      ? { stationDispatchSupportReveals: cloneStringTuples(snapshot.stationDispatchSupportReveals) }
       : {}),
     pendingRoadEncounter: snapshot.pendingRoadEncounter
       ? { ...snapshot.pendingRoadEncounter }

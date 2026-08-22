@@ -5,7 +5,8 @@
  * quests still run through the existing deterministic engine, but they are now
  * local opportunities discovered at towns in the road graph.
  */
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { z } from "zod";
 import { GameSession, type View } from "./engine.js";
 import {
   hasLiveOverworldEventChoice,
@@ -57,7 +58,38 @@ const packsByPath = new Map(PACKS.map((pack) => [normalizePackPath(pack.path), p
 // The session exposes quests as OverworldQuestView (no pack source — the view
 // is what a PLAYER knows); the pack path lives only on the manifest quest.
 const questsById = new Map<string, OverworldQuest>(OVERWORLD.quests.map((q) => [q.id, q]));
-const OVERWORLD_SAVE_KEY = "adventureforge:new-york-overworld:v1";
+const BROWSER_QUEST_SEED = 1;
+export const LEGACY_OVERWORLD_SAVE_KEY = "adventureforge:new-york-overworld:v1";
+export const JOURNEY_SAVE_KEY = "adventureforge:new-york-journey:v2";
+const BROWSER_SAVE_VERSION = 2 as const;
+
+const BrowserRoadSaveSchema = z
+  .object({
+    browserSaveVersion: z.literal(BROWSER_SAVE_VERSION),
+    phase: z.literal("road"),
+    world: z.unknown(),
+  })
+  .strict();
+const BrowserQuestTrailEntrySchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("quest"), actionId: z.string().min(1) }).strict(),
+  z.object({ kind: z.literal("journey"), choice: z.enum(["continue", "end"]) }).strict(),
+]);
+const BrowserQuestSaveSchema = z
+  .object({
+    browserSaveVersion: z.literal(BROWSER_SAVE_VERSION),
+    phase: z.literal("quest"),
+    questId: z.string().min(1),
+    approachId: z.string().min(1).nullable(),
+    preQuestWorld: z.unknown(),
+    trail: z.array(BrowserQuestTrailEntrySchema),
+    questSave: z.string().min(1),
+    worldSnapshotHash: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict();
+const BrowserJourneySaveSchema = z.discriminatedUnion("phase", [
+  BrowserRoadSaveSchema,
+  BrowserQuestSaveSchema,
+]);
 
 function jobChoiceKey(jobId: string, optionId: string): string {
   return JSON.stringify([jobId, optionId]);
@@ -67,11 +99,81 @@ function eventChoiceKey(eventId: string, optionId: string): string {
   return JSON.stringify([eventId, optionId]);
 }
 
-type InitialWorldSession = {
+export type InitialWorldSession = {
   session: OverworldSession;
-  origin: "new" | "resume";
+  origin: "new" | "resume" | "blocked";
   notice: string | null;
+  questSession: GameSession | null;
+  activeQuest: OverworldQuestView | null;
+  activeQuestSave: ActiveQuestSaveState | null;
+  recoveryError: string | null;
+  storageAvailable: boolean;
 };
+
+export type ActiveQuestSaveState = {
+  questId: string;
+  approachId: string | null;
+  preQuestWorld: OverworldSessionSnapshot;
+  trail: z.infer<typeof BrowserQuestTrailEntrySchema>[];
+};
+
+type BrowserSaveStatus = "pending" | "saved" | "unavailable";
+
+type QuestStageMemory = {
+  scrollTop: number;
+  restoreDecisionFocus: boolean;
+};
+
+type RestoredQuestEnding = NonNullable<ReturnType<GameSession["ending"]>>;
+
+function normalizedGoalPhrase(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function containsGoalPhrase(goalCopy: string, candidate: string): boolean {
+  return candidate.length > 0 && ` ${goalCopy} `.includes(` ${candidate} `);
+}
+
+/** Resolve destination ids from visible goal copy without hard-coding a quest or area. */
+export function goalRelevantAreaIds(
+  goalText: string,
+  goalGuidance: string | null | undefined,
+  quests: readonly Pick<OverworldQuest, "title" | "area">[],
+): ReadonlySet<string> {
+  const goalCopy = normalizedGoalPhrase(`${goalText} ${goalGuidance ?? ""}`);
+  return new Set(
+    quests
+      .filter((quest) => {
+        const title = normalizedGoalPhrase(quest.title).replace(/^the\s+/, "");
+        return containsGoalPhrase(goalCopy, title);
+      })
+      .map((quest) => quest.area),
+  );
+}
+
+/** Apply the same authoritative campaign foldback used after a restored final scene. */
+export function applyRestoredQuestEnding(
+  session: OverworldSession,
+  questId: string,
+  ending: RestoredQuestEnding,
+): void {
+  if (ending.death) {
+    session.recordQuestCharacterDeath(questId, {
+      endingId: ending.id,
+      death: true,
+    });
+    return;
+  }
+  session.completeQuest(questId, {
+    endingId: ending.id,
+    endingTitle: ending.title,
+    death: false,
+  });
+}
 
 function browserStorage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -82,43 +184,235 @@ function browserStorage(): Storage | null {
   }
 }
 
-function loadInitialWorldSession(): InitialWorldSession {
+export function loadInitialWorldSession(): InitialWorldSession {
   const storage = browserStorage();
-  const raw = storage?.getItem(OVERWORLD_SAVE_KEY);
-  if (!raw) {
-    return { session: new OverworldSession(OVERWORLD), origin: "new", notice: null };
+  if (!storage) {
+    return {
+      session: new OverworldSession(OVERWORLD),
+      origin: "new",
+      notice: "Browser saving is unavailable. Keep this tab open to preserve this journey.",
+      questSession: null,
+      activeQuest: null,
+      activeQuestSave: null,
+      recoveryError: null,
+      storageAvailable: false,
+    };
+  }
+
+  let currentRaw: string | null;
+  let legacyRaw: string | null;
+  try {
+    currentRaw = storage.getItem(JOURNEY_SAVE_KEY);
+    legacyRaw = currentRaw === null ? storage.getItem(LEGACY_OVERWORLD_SAVE_KEY) : null;
+  } catch {
+    return {
+      session: new OverworldSession(OVERWORLD),
+      origin: "new",
+      notice: "Browser saving is unavailable. Keep this tab open to preserve this journey.",
+      questSession: null,
+      activeQuest: null,
+      activeQuestSave: null,
+      recoveryError: null,
+      storageAvailable: false,
+    };
+  }
+  const raw = currentRaw ?? legacyRaw;
+  if (raw === null) {
+    return {
+      session: new OverworldSession(OVERWORLD),
+      origin: "new",
+      notice: null,
+      questSession: null,
+      activeQuest: null,
+      activeQuestSave: null,
+      recoveryError: null,
+      storageAvailable: true,
+    };
   }
 
   try {
-    const snapshot = JSON.parse(raw) as OverworldSessionSnapshot;
-    const session = OverworldSession.restore(OVERWORLD, snapshot);
+    const decoded: unknown = JSON.parse(raw);
+    if (
+      decoded !== null &&
+      typeof decoded === "object" &&
+      Object.prototype.hasOwnProperty.call(decoded, "browserSaveVersion")
+    ) {
+      const saved = BrowserJourneySaveSchema.parse(decoded);
+      if (saved.phase === "quest") {
+        const session = OverworldSession.restore(OVERWORLD, saved.preQuestWorld);
+        const canonicalPreQuestWorld = session.snapshot();
+        const manifestQuest = questsById.get(saved.questId);
+        const source = manifestQuest ? normalizePackPath(manifestQuest.source) : undefined;
+        const pack = source ? packsByPath.get(source) : undefined;
+        if (!manifestQuest || !pack) {
+          throw new Error(
+            `Quest pack is missing for saved quest ${JSON.stringify(saved.questId)}.`,
+          );
+        }
+        const plan = session.prepareQuestStart(
+          saved.questId,
+          saved.approachId === null ? undefined : saved.approachId,
+        );
+        const activeQuest = session.commitQuestStart(plan);
+        const launchCharacter = session.questLaunchCharacterState(saved.questId);
+        if (!launchCharacter) throw new Error("Saved quest has no verified campaign launch.");
+        const restored = GameSession.restoreEmbedded(
+          pack.source,
+          saved.questId,
+          launchCharacter,
+          manifestQuest.campaign_imports,
+          BROWSER_QUEST_SEED,
+          saved.trail.flatMap((entry) => (entry.kind === "quest" ? [entry.actionId] : [])),
+          saved.questSave,
+        );
+        let decisionIndex = 0;
+        for (const entry of saved.trail) {
+          if (entry.kind === "journey") {
+            session.chooseJourney(entry.choice);
+            continue;
+          }
+          const decision = restored.decisions[decisionIndex++];
+          if (!decision || decision.actionId !== entry.actionId) {
+            throw new Error("Saved quest action trail is internally inconsistent.");
+          }
+          session.recordQuestDecision(
+            decision.actionId,
+            decision.classification,
+            decision.checkpointSafeBoundary,
+          );
+        }
+        if (decisionIndex !== restored.decisions.length) {
+          throw new Error("Saved quest action trail did not consume every replayed decision.");
+        }
+        if (session.snapshotHash() !== saved.worldSnapshotHash) {
+          throw new Error("Saved campaign record does not match the quest action trail.");
+        }
+        const restoredEnding = restored.session.ending();
+        if (restoredEnding) {
+          applyRestoredQuestEnding(session, saved.questId, restoredEnding);
+          return {
+            session,
+            origin: "resume",
+            notice: restoredEnding.death
+              ? `Recovered ${activeQuest.title}'s final scene and its character-death boundary.`
+              : `Recovered and completed ${activeQuest.title}. Its campaign consequences were verified.`,
+            questSession: null,
+            activeQuest: null,
+            activeQuestSave: null,
+            recoveryError: null,
+            storageAvailable: true,
+          };
+        }
+        return {
+          session,
+          origin: "resume",
+          notice: `Resumed ${activeQuest.title} at ${restored.session.view().title}. Quest progress and campaign decisions were verified.`,
+          questSession: restored.session,
+          activeQuest,
+          activeQuestSave: {
+            questId: saved.questId,
+            approachId: saved.approachId,
+            preQuestWorld: canonicalPreQuestWorld,
+            trail: saved.trail.map((entry) => ({ ...entry })),
+          },
+          recoveryError: null,
+          storageAvailable: true,
+        };
+      }
+
+      const session = OverworldSession.restore(OVERWORLD, saved.world);
+      const warnings = session.restoreWarnings();
+      return {
+        session,
+        origin: "resume",
+        notice: warnings.length > 0 ? `Warning: ${warnings.join(" ")}` : null,
+        questSession: null,
+        activeQuest: null,
+        activeQuestSave: null,
+        recoveryError: null,
+        storageAvailable: true,
+      };
+    }
+
+    // Compatibility with the original raw-overworld browser save.
+    const session = OverworldSession.restore(OVERWORLD, decoded);
     const warnings = session.restoreWarnings();
     return {
       session,
       origin: "resume",
       notice: warnings.length > 0 ? `Warning: ${warnings.join(" ")}` : null,
+      questSession: null,
+      activeQuest: null,
+      activeQuestSave: null,
+      recoveryError: null,
+      storageAvailable: true,
     };
   } catch (e) {
-    storage?.removeItem(OVERWORLD_SAVE_KEY);
     return {
       session: new OverworldSession(OVERWORLD),
-      origin: "new",
-      notice: `Discarded saved journey: ${(e as Error).message}`,
+      origin: "blocked",
+      notice: null,
+      questSession: null,
+      activeQuest: null,
+      activeQuestSave: null,
+      recoveryError: `Saved journey could not be verified: ${(e as Error).message}`,
+      storageAvailable: true,
     };
   }
 }
 
-function persistWorldSession(session: OverworldSession): void {
+export function persistWorldSession(session: OverworldSession): boolean {
   try {
-    browserStorage()?.setItem(OVERWORLD_SAVE_KEY, JSON.stringify(session.snapshot()));
+    const storage = browserStorage();
+    if (!storage) return false;
+    storage.setItem(
+      JOURNEY_SAVE_KEY,
+      JSON.stringify({
+        browserSaveVersion: BROWSER_SAVE_VERSION,
+        phase: "road",
+        world: session.snapshot(),
+      }),
+    );
+    storage.removeItem(LEGACY_OVERWORLD_SAVE_KEY);
+    return true;
   } catch {
-    // Autosave is best-effort; storage failures should not block play.
+    return false;
+  }
+}
+
+export function persistActiveQuest(
+  worldSession: OverworldSession,
+  questSession: GameSession,
+  active: ActiveQuestSaveState,
+): boolean {
+  try {
+    const storage = browserStorage();
+    if (!storage) return false;
+    storage.setItem(
+      JOURNEY_SAVE_KEY,
+      JSON.stringify({
+        browserSaveVersion: BROWSER_SAVE_VERSION,
+        phase: "quest",
+        questId: active.questId,
+        approachId: active.approachId,
+        preQuestWorld: active.preQuestWorld,
+        trail: active.trail,
+        questSave: questSession.saveEmbedded(active.questId),
+        worldSnapshotHash: worldSession.snapshotHash(),
+      }),
+    );
+    storage.removeItem(LEGACY_OVERWORLD_SAVE_KEY);
+    return true;
+  } catch {
+    return false;
   }
 }
 
 function clearWorldSessionSave(): void {
   try {
-    browserStorage()?.removeItem(OVERWORLD_SAVE_KEY);
+    const storage = browserStorage();
+    storage?.removeItem(JOURNEY_SAVE_KEY);
+    storage?.removeItem(LEGACY_OVERWORLD_SAVE_KEY);
   } catch {
     // Ignore storage failures; the fresh in-memory session still replaces play state.
   }
@@ -344,6 +638,52 @@ export function DepartureLaunchPanel({
 
 type StationDispatchBoardView = NonNullable<OverworldView["stationDispatchBoard"]>;
 
+const STATION_SUPPORT_SLOT_LABELS: Readonly<
+  Record<StationDispatchBoardView["support"][number]["slot"], string>
+> = {
+  preparation: "field kit",
+  relief_allocation: "relief wagon",
+  field_team: "second rider",
+};
+
+export function stationSupportActionTitle(
+  slot: StationDispatchBoardView["support"][number]["slot"],
+): string {
+  const label = STATION_SUPPORT_SLOT_LABELS[slot];
+  return `${label[0]!.toUpperCase()}${label.slice(1)}`;
+}
+
+function formatStationSupportLabels(
+  support: readonly StationDispatchBoardView["support"][number][],
+): string {
+  const labels = support.map((entry) => STATION_SUPPORT_SLOT_LABELS[entry.slot]);
+  if (labels.length === 1) return labels[0]!;
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, or ${labels.at(-1)!}`;
+}
+
+type StationSupportTarget =
+  | { kind: "inspect"; storyChoiceId: string }
+  | { kind: "talk"; characterId: string };
+
+export function stationSupportPresentation(
+  board: StationDispatchBoardView | null,
+  target: StationSupportTarget,
+): { summary: string; terms: string } | null {
+  const support = board?.support.find((candidate) => {
+    if (candidate.status !== "open_optional" || candidate.selectedTitle !== null) return false;
+    const action = candidate.action;
+    if (!action || action.kind !== target.kind) return false;
+    if (action.kind === "inspect" && target.kind === "inspect") {
+      return action.storyChoiceId === target.storyChoiceId;
+    }
+    return action.kind === "talk" && target.kind === "talk"
+      ? action.characterId === target.characterId
+      : false;
+  });
+  return support ? { summary: support.purpose, terms: support.detailHint } : null;
+}
+
 function stationDispatchStatus(support: StationDispatchBoardView["support"][number]): string {
   if (support.selectedTitle) return `Selected: ${support.selectedTitle}`;
   switch (support.status) {
@@ -375,73 +715,122 @@ export function StationDispatchBoard({
   onTalk: (characterId: string) => void;
   children: ReactNode;
 }): JSX.Element {
+  const openSupport = board.support.filter(
+    (support) => support.status === "open_optional" && support.selectedTitle === null,
+  );
   return (
     <section className="station-dispatch-board" aria-label={`${board.questTitle} field briefing`}>
       <h3>{board.questTitle} field briefing</h3>
       <p>{board.guidance}</p>
       {children}
-      <details className="station-dispatch-support-details">
-        <summary>Review optional support — field kit, relief wagon, or second rider</summary>
-        <div className="station-dispatch-support">
-          {board.support.map((support) => {
-            const action = support.action;
-            return (
-              <article className="station-dispatch-support-row" key={support.slot}>
-                <h4>{support.label}</h4>
-                <p>
-                  <b>Status:</b> {stationDispatchStatus(support)}
-                </p>
-                <p>{support.purpose}</p>
-                <small>{support.detailHint}</small>
-                {action?.kind === "inspect" && (
-                  <button
-                    className="mini-command"
-                    type="button"
-                    onClick={() => onInspect(action.storyChoiceId)}
-                  >
-                    Inspect {action.title}
-                  </button>
-                )}
-                {action?.kind === "talk" && (
-                  <button
-                    className="mini-command"
-                    type="button"
-                    onClick={() => onTalk(action.characterId)}
-                  >
-                    Ask {action.contactName} about riding
-                  </button>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      </details>
+      {openSupport.length > 0 && (
+        <details className="station-dispatch-support-details">
+          <summary>Review optional support — {formatStationSupportLabels(openSupport)}</summary>
+          <div className="station-dispatch-support">
+            {openSupport.map((support) => {
+              const action = support.action;
+              return (
+                <article className="station-dispatch-support-row" key={support.slot}>
+                  <h4>{support.label}</h4>
+                  <p>
+                    <b>Status:</b> {stationDispatchStatus(support)}
+                  </p>
+                  <p>{support.purpose}</p>
+                  <small>{support.detailHint}</small>
+                  {action?.kind === "inspect" && (
+                    <button
+                      className="mini-command"
+                      type="button"
+                      onClick={() => onInspect(action.storyChoiceId)}
+                    >
+                      Review {STATION_SUPPORT_SLOT_LABELS[support.slot]}
+                    </button>
+                  )}
+                  {action?.kind === "talk" && (
+                    <button
+                      className="mini-command"
+                      type="button"
+                      onClick={() => onTalk(action.characterId)}
+                    >
+                      Ask {action.contactName} about riding
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </details>
+      )}
       {recap && (
         <details className="station-dispatch-recap">
-          <summary>Current commitments</summary>
-          <DepartureRecap recap={recap} />
+          <summary>What is already set</summary>
+          <DepartureRecap recap={recap} entryScope="already_set" />
         </details>
       )}
     </section>
   );
 }
 
+type JourneyStoryChoiceLogResult = ReturnType<OverworldSession["chooseJourneyStory"]>;
+
+export function journeyStoryChoiceLogEntries(
+  kind: JourneyStoryChoicePrompt["kind"] | undefined,
+  result: JourneyStoryChoiceLogResult,
+): string[] {
+  if (result.displaySummary) {
+    return [result.displaySummary, `Current goal: ${result.goal.text}`];
+  }
+  const prefix =
+    kind === "registration"
+      ? "Background chosen"
+      : kind === "lead_source"
+        ? "Report chosen"
+        : kind === "preparation"
+          ? "Field kit chosen"
+          : kind === "ally"
+            ? "Riding choice made"
+            : kind === "relief_allocation"
+              ? "Relief wagon choice made"
+              : kind === "relief_oath"
+                ? "Wolf-Winter promise chosen"
+                : "Story consequence";
+  return [
+    `${prefix}: ${result.consequence}`,
+    `${kind === undefined ? "New" : "Current"} goal: ${result.goal.text}`,
+  ];
+}
+
 export default function App(): JSX.Element {
   const [worldState, setWorldState] = useState(loadInitialWorldSession);
   const worldSession = worldState.session;
+  const questStageMemoryRef = useRef<QuestStageMemory>({
+    scrollTop: 0,
+    restoreDecisionFocus: false,
+  });
   const [worldView, setWorldView] = useState<OverworldView>(() => worldSession.view());
-  const [questSession, setQuestSession] = useState<GameSession | null>(null);
-  const [questView, setQuestView] = useState<View | null>(null);
-  const [activeQuest, setActiveQuest] = useState<OverworldQuestView | null>(null);
+  const [questSession, setQuestSession] = useState<GameSession | null>(
+    () => worldState.questSession,
+  );
+  const [questView, setQuestView] = useState<View | null>(
+    () => worldState.questSession?.view() ?? null,
+  );
+  const [activeQuest, setActiveQuest] = useState<OverworldQuestView | null>(
+    () => worldState.activeQuest,
+  );
+  const [activeQuestSave, setActiveQuestSave] = useState<ActiveQuestSaveState | null>(
+    () => worldState.activeQuestSave,
+  );
   const [tutorialOpen, setTutorialOpen] = useState(() => worldState.origin === "new");
   const [inspectedDepartureStory, setInspectedDepartureStory] =
     useState<JourneyStoryChoicePrompt | null>(null);
   const [log, setLog] = useState<string[]>(() => {
     const opener =
       worldState.origin === "resume"
-        ? `Resumed in ${worldView.current.name}.`
+        ? (worldState.notice ?? `Resumed in ${worldView.current.name}.`)
         : `You begin in ${worldView.current.name}. Roads leave town, but the work is local until you find it.`;
-    return worldState.notice ? [worldState.notice, opener] : [opener];
+    return worldState.notice && worldState.notice !== opener
+      ? [worldState.notice, opener]
+      : [opener];
   });
   const [error, setError] = useState<string | null>(null);
   const [opportunityInspection, setOpportunityInspection] = useState<{
@@ -449,13 +838,39 @@ export default function App(): JSX.Element {
     explanation: JourneyOpportunityExplanation;
   } | null>(null);
   const [nightWatchPanel, setNightWatchPanel] = useState<NightWatchPanel>("scene");
+  const [saveStatus, setSaveStatus] = useState<BrowserSaveStatus>(() =>
+    !worldState.storageAvailable
+      ? "unavailable"
+      : worldState.origin === "resume"
+        ? "saved"
+        : "pending",
+  );
   const journey = worldSession.journey();
 
+  const rememberQuestStageScroll = useCallback((scrollTop: number): void => {
+    questStageMemoryRef.current.scrollTop = scrollTop;
+  }, []);
+  const acknowledgeQuestStageRestore = useCallback((): void => {
+    questStageMemoryRef.current.restoreDecisionFocus = false;
+  }, []);
+
+  function resetQuestStageMemory(): void {
+    questStageMemoryRef.current = { scrollTop: 0, restoreDecisionFocus: false };
+  }
+
   useEffect(() => {
-    // Quest state is currently tab-local. Hold the last pre-quest road save so
-    // a reload loses quest progress but never strands a started quest.
-    if (questSession === null) persistWorldSession(worldSession);
-  }, [questSession, worldSession, worldView]);
+    if (!worldState.storageAvailable) {
+      setSaveStatus("unavailable");
+    } else if (questSession === null && worldState.recoveryError === null) {
+      setSaveStatus(persistWorldSession(worldSession) ? "saved" : "unavailable");
+    }
+  }, [
+    questSession,
+    worldSession,
+    worldState.recoveryError,
+    worldState.storageAvailable,
+    worldView,
+  ]);
 
   const legalJobChoiceKeys = useMemo(
     () => new Set(worldView.jobChoices.map(([jobId, optionId]) => jobChoiceKey(jobId, optionId))),
@@ -517,6 +932,7 @@ export default function App(): JSX.Element {
       return;
     }
     try {
+      const preQuestWorld = worldSession.snapshot();
       // Keep launch failure-atomic: all quest eligibility, pack compilation,
       // target validation, and imported-state construction happen before the
       // overworld records that the quest has started.
@@ -525,19 +941,28 @@ export default function App(): JSX.Element {
         pack.source,
         plan.characterAfter,
         manifestQuest.campaign_imports,
-        1,
+        BROWSER_QUEST_SEED,
       );
-      // Freeze a relaunchable road snapshot immediately before the canonical
-      // quest-start commit. While the quest is active, the save effect above
-      // deliberately leaves this snapshot in place.
-      persistWorldSession(worldSession);
       const localQuest = worldSession.commitQuestStart(plan);
       const selectedApproach = localQuest.launch?.options.find(
         (option) => option.id === localQuest.launch?.selected?.optionId,
       );
       setQuestSession(session);
+      resetQuestStageMemory();
       setQuestView(session.view());
       setActiveQuest(localQuest);
+      const activeSave = {
+        questId: localQuest.id,
+        approachId: plan.approachId,
+        preQuestWorld,
+        trail: [],
+      };
+      setActiveQuestSave(activeSave);
+      setSaveStatus(
+        worldState.storageAvailable && persistActiveQuest(worldSession, session, activeSave)
+          ? "saved"
+          : "unavailable",
+      );
       setNightWatchPanel("scene");
       setWorldView(worldSession.view());
       setLog((prev) => [
@@ -621,7 +1046,7 @@ export default function App(): JSX.Element {
   }
 
   function choose(id: string, label: string): void {
-    if (!questSession) return;
+    if (!questSession || !activeQuestSave) return;
     setError(null);
     try {
       const out = questSession.choose(id);
@@ -640,6 +1065,20 @@ export default function App(): JSX.Element {
           questSession.isCheckpointSafeBoundary(),
         );
         setWorldView(worldSession.view());
+        const nextActiveSave = {
+          ...activeQuestSave,
+          trail: [
+            ...activeQuestSave.trail,
+            { kind: "quest" as const, actionId: out.journeyActionId },
+          ],
+        };
+        setActiveQuestSave(nextActiveSave);
+        setSaveStatus(
+          worldState.storageAvailable &&
+            persistActiveQuest(worldSession, questSession, nextActiveSave)
+            ? "saved"
+            : "unavailable",
+        );
       }
       // Close a finished quest back into the overworld (MCP-bridge parity,
       // src/mcp/overworld_quest_bridge.ts): a non-death ending completes the lead
@@ -654,7 +1093,12 @@ export default function App(): JSX.Element {
               endingTitle: ending.title,
               death: ending.death,
             });
-            persistWorldSession(worldSession);
+            setSaveStatus(
+              worldState.storageAvailable && persistWorldSession(worldSession)
+                ? "saved"
+                : "unavailable",
+            );
+            setActiveQuestSave(null);
             setWorldView(worldSession.view());
             lines.unshift(`Completed ${result.quest.title}: ${result.entry.text}`);
           } catch (e) {
@@ -665,7 +1109,12 @@ export default function App(): JSX.Element {
             endingId: ending.id,
             death: ending.death,
           });
-          persistWorldSession(worldSession);
+          setSaveStatus(
+            worldState.storageAvailable && persistWorldSession(worldSession)
+              ? "saved"
+              : "unavailable",
+          );
+          setActiveQuestSave(null);
           setWorldView(worldSession.view());
           lines.unshift(
             `${activeQuest.title} ends in death — this journey must now be ended with its unfinished goal preserved.`,
@@ -688,22 +1137,39 @@ export default function App(): JSX.Element {
       return;
     }
     setQuestSession(null);
+    resetQuestStageMemory();
     setQuestView(null);
     setActiveQuest(null);
+    setActiveQuestSave(null);
+    setSaveStatus(
+      worldState.storageAvailable && persistWorldSession(worldSession) ? "saved" : "unavailable",
+    );
     setLog((prev) => [`Returned to ${worldView.current.name}.`, ...prev]);
   }
 
   function startNewJourney(): void {
     const session = new OverworldSession(OVERWORLD);
     clearWorldSessionSave();
-    setWorldState({ session, origin: "new", notice: null });
+    setWorldState({
+      session,
+      origin: "new",
+      notice: null,
+      questSession: null,
+      activeQuest: null,
+      activeQuestSave: null,
+      recoveryError: null,
+      storageAvailable: worldState.storageAvailable,
+    });
     setWorldView(session.view());
     setQuestSession(null);
+    resetQuestStageMemory();
     setQuestView(null);
     setActiveQuest(null);
+    setActiveQuestSave(null);
     setInspectedDepartureStory(null);
     setOpportunityInspection(null);
     setNightWatchPanel("scene");
+    setSaveStatus(worldState.storageAvailable ? "pending" : "unavailable");
     setLog([
       `Started a new journey in ${session.view().current.name}. Roads leave town, but the work is local until you find it.`,
     ]);
@@ -715,7 +1181,23 @@ export default function App(): JSX.Element {
     const option = journey.pendingChoice?.options.find((candidate) => candidate.id === choice);
     try {
       worldSession.chooseJourney(choice);
+      if (choice === "continue" && questSession && activeQuestSave) {
+        questStageMemoryRef.current.restoreDecisionFocus = true;
+      }
       setWorldView(worldSession.view());
+      if (questSession && activeQuestSave) {
+        const nextActiveSave = {
+          ...activeQuestSave,
+          trail: [...activeQuestSave.trail, { kind: "journey" as const, choice }],
+        };
+        setActiveQuestSave(nextActiveSave);
+        setSaveStatus(
+          worldState.storageAvailable &&
+            persistActiveQuest(worldSession, questSession, nextActiveSave)
+            ? "saved"
+            : "unavailable",
+        );
+      }
       if (option) setLog((previous) => [option.consequence, ...previous]);
       setError(null);
     } catch (e) {
@@ -739,59 +1221,14 @@ export default function App(): JSX.Element {
 
   function chooseJourneyStory(choiceId: string): void {
     const storyChoice = inspectedDepartureStory ?? journey.storyChoice;
-    const isRegistration = storyChoice?.kind === "registration";
-    const isLeadSource = storyChoice?.kind === "lead_source";
-    const isPreparation = storyChoice?.kind === "preparation";
-    const isAlly = storyChoice?.kind === "ally";
-    const isReliefAllocation = storyChoice?.kind === "relief_allocation";
-    const isReliefOath = storyChoice?.kind === "relief_oath";
     try {
       const result = worldSession.chooseJourneyStory(choiceId, inspectedDepartureStory?.id);
       setWorldView(worldSession.view());
       setInspectedDepartureStory(null);
-      setLog((previous) =>
-        isRegistration
-          ? [
-              `Character registered: ${result.consequence}`,
-              `Current goal: ${result.goal.text}`,
-              ...previous,
-            ]
-          : isLeadSource
-            ? [
-                `Lead source certified: ${result.consequence}`,
-                `Current goal: ${result.goal.text}`,
-                ...previous,
-              ]
-            : isPreparation
-              ? [
-                  `Preparation committed: ${result.consequence}`,
-                  `Current goal: ${result.goal.text}`,
-                  ...previous,
-                ]
-              : isAlly
-                ? [
-                    `Field team committed: ${result.consequence}`,
-                    `Current goal: ${result.goal.text}`,
-                    ...previous,
-                  ]
-                : isReliefAllocation
-                  ? [
-                      `Relief capacity committed: ${result.consequence}`,
-                      `Current goal: ${result.goal.text}`,
-                      ...previous,
-                    ]
-                  : isReliefOath
-                    ? [
-                        `Relief terms bound: ${result.consequence}`,
-                        `Current goal: ${result.goal.text}`,
-                        ...previous,
-                      ]
-                    : [
-                        `Story consequence: ${result.consequence}`,
-                        `New goal: ${result.goal.text}`,
-                        ...previous,
-                      ],
-      );
+      setLog((previous) => [
+        ...journeyStoryChoiceLogEntries(storyChoice?.kind, result),
+        ...previous,
+      ]);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -818,6 +1255,25 @@ export default function App(): JSX.Element {
       setError((e as Error).message);
       return false;
     }
+  }
+
+  if (worldState.recoveryError) {
+    return (
+      <main className="save-recovery-page">
+        <section className="save-recovery-card" aria-labelledby="save-recovery-title">
+          <p className="nw-kicker">Save recovery stopped</p>
+          <h1 id="save-recovery-title">Your saved journey was not rolled back</h1>
+          <p>{worldState.recoveryError}</p>
+          <p>
+            AdventureForge did not load an earlier road checkpoint. This protects active quest and
+            campaign decisions when saved data, content, or replay evidence no longer agree.
+          </p>
+          <button type="button" onClick={startNewJourney}>
+            Discard this save and begin a new journey
+          </button>
+        </section>
+      </main>
+    );
   }
 
   if (tutorialOpen) {
@@ -871,10 +1327,15 @@ export default function App(): JSX.Element {
         error={error}
         log={log}
         panel={nightWatchPanel}
+        saveStatus={saveStatus}
         onPanelChange={setNightWatchPanel}
         onChoose={choose}
         canLeave={canLeaveQuest}
         onLeave={returnToRoad}
+        initialStageScrollTop={questStageMemoryRef.current.scrollTop}
+        restoreDecisionFocus={questStageMemoryRef.current.restoreDecisionFocus}
+        onStageRestore={acknowledgeQuestStageRestore}
+        onStageScrollTopChange={rememberQuestStageScroll}
       />
     );
   }
@@ -970,6 +1431,7 @@ export default function App(): JSX.Element {
           consequence: passage.stopRule,
           buttonLabel: "Follow goal",
           tone: "ice",
+          goalRelevant: true,
           onChoose: followGoalPassage,
         },
       ],
@@ -978,26 +1440,42 @@ export default function App(): JSX.Element {
 
   const dispatchActions = questActionCards(departureQuest ? [departureQuest] : [], "Dispatch");
   for (const interaction of worldView.departureInteractions) {
+    const support = stationSupportPresentation(worldView.stationDispatchBoard, {
+      kind: "inspect",
+      storyChoiceId: interaction.id,
+    });
     dispatchActions.push({
       id: `dispatch:${interaction.id}`,
       group: "Optional support",
-      title: interaction.title,
-      summary: `Review the ${interaction.kind.replaceAll("_", " ")} commitment before departure.`,
-      terms: "Inspect before committing",
+      title: stationSupportActionTitle(interaction.kind),
+      summary:
+        support?.summary ??
+        `Review the ${interaction.kind === "preparation" ? "field kit" : "relief wagon"} before departure.`,
+      terms: support?.terms ?? "Inspect before committing",
       buttonLabel: "Review support",
       tone: "ice",
+      optionalSupport: true,
       onChoose: () => inspectDepartureStory(interaction.id),
     });
   }
   for (const lead of worldView.departureContactLeads) {
+    const support = lead.action
+      ? stationSupportPresentation(worldView.stationDispatchBoard, {
+          kind: "talk",
+          characterId: lead.action.arguments.character_id,
+        })
+      : null;
     dispatchActions.push({
       id: `dispatch:${lead.id}`,
       group: "Optional support",
-      title: lead.title,
-      summary: lead.guidance,
-      terms: lead.action ? `Talk with ${lead.contactName}` : "Choose a field kit first",
+      title: stationSupportActionTitle("field_team"),
+      summary: support?.summary ?? lead.guidance,
+      terms:
+        support?.terms ??
+        (lead.action ? `Talk with ${lead.contactName}` : "Choose a field kit first"),
       buttonLabel: "Ask about riding",
       tone: "lichen",
+      optionalSupport: true,
       ...(!lead.action
         ? { disabledReason: `Choose a field kit before asking ${lead.contactName}.` }
         : {}),
@@ -1018,16 +1496,30 @@ export default function App(): JSX.Element {
     });
   }
 
-  const areaActions: WorldActionCard[] = worldView.areaExits.map((exit) => ({
-    id: `area-route:${exit.id}`,
-    group: "Local route",
-    title: exit.destination.name,
-    summary: exit.destination.summary,
-    terms: `${exit.route} · ${exit.travel_minutes} min`,
-    buttonLabel: "Move locally",
-    tone: "ice",
-    onChoose: () => moveArea(exit.id),
-  }));
+  const visibleGoalText = normalizedGoalPhrase(
+    `${journey.goal.text} ${journey.goalGuidance ?? ""}`,
+  );
+  const goalAreaIds = goalRelevantAreaIds(
+    journey.goal.text,
+    journey.goalGuidance,
+    OVERWORLD.quests,
+  );
+  const areaActions: WorldActionCard[] = worldView.areaExits.map((exit) => {
+    const goalRelevant =
+      goalAreaIds.has(exit.destination.id) ||
+      containsGoalPhrase(visibleGoalText, normalizedGoalPhrase(exit.destination.name));
+    return {
+      id: `area-route:${exit.id}`,
+      group: goalRelevant ? "Next for current goal" : "Local route",
+      title: exit.destination.name,
+      summary: exit.destination.summary,
+      terms: `${exit.route} · ${exit.travel_minutes} min`,
+      buttonLabel: goalRelevant ? "Continue toward goal" : "Move locally",
+      tone: "ice",
+      ...(goalRelevant ? { goalRelevant: true } : {}),
+      onChoose: () => moveArea(exit.id),
+    };
+  });
   for (const area of worldView.areas) {
     if (worldView.currentArea?.id !== area.id || worldView.visitedAreaIds.includes(area.id))
       continue;
@@ -1261,6 +1753,7 @@ export default function App(): JSX.Element {
       sections={worldActionSections}
       prioritySectionIds={prioritySectionIds}
       panel={nightWatchPanel}
+      saveStatus={saveStatus}
       error={error}
       opportunityExplanation={
         opportunityInspection?.snapshotHash === worldSession.snapshotHash()

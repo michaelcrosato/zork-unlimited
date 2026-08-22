@@ -8,8 +8,8 @@ import { DepartureRecap } from "./DepartureRecap.js";
 import type { OverworldView } from "./overworld.js";
 
 const REGISTRATION_OPTION_GROUPS = [
-  ["doctrine", "Start with a doctrine"],
-  ["custom_role", "Build a custom role"],
+  ["doctrine", "Choose a ready-made background"],
+  ["custom_role", "Build a custom background"],
 ] as const;
 
 type JourneyStoryChoiceScreenProps = {
@@ -79,32 +79,53 @@ export function JourneyStoryChoiceScreen({
         })).filter((group) => group.options.length > 0)
       : null;
   const currentObjectiveGuidance = registrationGroups
-    ? "A doctrine commits your role, oath, and source; a custom role continues step-by-step."
+    ? "Choose a background. Next, choose a ready-made promise/report pair or customize it."
     : requiresOutcomeComparison
-      ? "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a duty or role shortcut."
+      ? "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a Wolf-Winter promise or ready-made dispatch."
       : hasRoleShortcut
-        ? "The role-shortcut card binds duty and evidence together; the duty comparison is read-only."
-        : usesRoleplayReceipts
-          ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
-          : isRegistration
-            ? "Your registered history persists into the journey; choose the experience and obligations you will carry."
-            : isLeadSource
-              ? "Your source changes the evidence and approaches you can carry forward; it does not replace this objective."
-              : isPreparation
-                ? "Your finite allocation changes later actions and the service Albany can release on your return; it does not replace this objective."
-                : isAlly
-                  ? "Compare the field capability, binding condition, and actual cost in these terms; your commitment changes who can act independently without replacing this objective."
-                  : isReliefAllocation
-                    ? "Albany can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
-                    : isReliefOath
-                      ? "Compare each term's access, duty, actual cost, field consequence, and return promise. This binds the dispatch without replacing your current objective."
+        ? "The ready-made dispatch pairs one Wolf-Winter promise with one report; the promise comparison is read-only."
+        : isRegistration
+          ? "Your background persists into the journey; choose the experience and return promise you will carry."
+          : isLeadSource
+            ? "Your report changes the approaches you can carry forward; it does not replace this objective."
+            : isPreparation
+              ? "Your field kit changes later actions and the service Albany can release on your return; it does not replace this objective."
+              : isAlly
+                ? "Compare what the second rider can do, their binding condition, and actual cost; this does not replace your objective."
+                : isReliefAllocation
+                  ? "Albany's relief wagon can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
+                  : isReliefOath
+                    ? "Compare each promise's access, actual cost, field consequence, and return terms. This binds the dispatch without replacing your current objective."
+                    : usesRoleplayReceipts
+                      ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
                       : "Choose the consequence that sets your next objective.";
+  const roleplaySummaryLabel = (optionId: string): string =>
+    progressiveDisclosure?.initialOptionIds.includes(optionId)
+      ? "Ready-made dispatch:"
+      : isRegistration
+        ? "Background:"
+        : isReliefOath
+          ? "Wolf-Winter promise:"
+          : isLeadSource
+            ? "Report:"
+            : isPreparation
+              ? "Field kit:"
+              : isReliefAllocation
+                ? "Relief wagon:"
+                : isAlly
+                  ? "Riding choice:"
+                  : "Promise / priority:";
   const renderOption = (option: (typeof initialOptions)[number]): JSX.Element => {
     const conciseSummary = option.summary;
     const usesRoleplayReceipt =
       conciseSummary !== undefined && conciseSummary.fieldTrigger === undefined;
     const usesTriggerCategory = conciseSummary?.fieldTriggerScope === "category";
     const usesStarterPackage = conciseSummary?.fieldTriggerScope === "starter";
+    const usesAdventureSetupCard =
+      usesRoleplayReceipt &&
+      (isRegistration ||
+        isPreparation ||
+        progressiveDisclosure?.initialOptionIds.includes(option.id));
     return (
       <div key={option.id} className="journey-choice-card">
         <button type="button" onClick={() => onChoose(option.id)}>
@@ -113,7 +134,7 @@ export function JourneyStoryChoiceScreen({
             <span className="journey-choice-summary">
               <b>
                 {usesRoleplayReceipt
-                  ? "Promise / priority:"
+                  ? roleplaySummaryLabel(option.id)
                   : usesTriggerCategory
                     ? "Purpose:"
                     : "Commitment:"}
@@ -140,9 +161,24 @@ export function JourneyStoryChoiceScreen({
               <b>{highlight.label}:</b> {highlight.value}
             </small>
           ))}
-          {conciseSummary && usesRoleplayReceipt && (
+          {isPreparation && conciseSummary?.checkFit && (
+            <small className="journey-choice-highlight">
+              <b>Governing skill:</b> {conciseSummary.checkFit}
+            </small>
+          )}
+          {conciseSummary && usesRoleplayReceipt && !usesAdventureSetupCard && (
             <small className="journey-choice-cost">
               <b>Cost / give up:</b> {conciseSummary.immediateCost}; {conciseSummary.tradeoff}
+            </small>
+          )}
+          {conciseSummary && usesAdventureSetupCard && (
+            <small className="journey-choice-cost">
+              <b>Cost:</b> {conciseSummary.immediateCost}
+            </small>
+          )}
+          {conciseSummary && usesAdventureSetupCard && (
+            <small className="journey-choice-tradeoff">
+              <b>{isRegistration ? "Return obligation:" : "Give up:"}</b> {conciseSummary.tradeoff}
             </small>
           )}
           {conciseSummary && !usesRoleplayReceipt && (
@@ -163,7 +199,7 @@ export function JourneyStoryChoiceScreen({
                 ? `Inspect exact receipt for ${option.label}`
                 : `Full terms and consequence for ${option.label}`}
             </summary>
-            {conciseSummary.checkFit && (
+            {conciseSummary.checkFit && !isPreparation && (
               <p className="journey-choice-check-fit">
                 <b>Check fit:</b> {conciseSummary.checkFit}
               </p>
@@ -192,38 +228,38 @@ export function JourneyStoryChoiceScreen({
       >
         <p className="kicker">
           {isRegistration
-            ? "Character registration"
+            ? "Choose your background"
             : isLeadSource
-              ? "Albany evidence source"
+              ? "Wolf-Winter report"
               : isPreparation
-                ? "Albany preparation budget"
+                ? "Optional field kit"
                 : isAlly
-                  ? "Field-team commitment"
+                  ? "Optional second rider"
                   : isReliefAllocation
-                    ? "Albany relief capacity"
+                    ? "Optional relief wagon"
                     : isReliefOath
-                      ? "Relief terms"
+                      ? "Wolf-Winter promise"
                       : "Journey consequence"}
         </p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
           {isRegistration
             ? registrationGroups
               ? "Choose how to begin"
-              : "Choose your lived background"
+              : "Choose your background"
             : isLeadSource
-              ? "Choose your Albany lead source"
+              ? "Choose the report you trust"
               : isPreparation
-                ? "Choose what Albany prepares"
+                ? "Choose one field kit"
                 : isAlly
-                  ? "Choose who leaves Albany"
+                  ? "Choose a second rider or ride alone"
                   : isReliefAllocation
-                    ? "Choose what Albany can protect"
+                    ? "Choose where Albany's relief wagon goes"
                     : isReliefOath
                       ? requiresOutcomeComparison
                         ? "Compare what must stand at dawn"
                         : hasRoleShortcut
-                          ? "Choose a role shortcut or compare duties"
-                          : "Choose one binding term"
+                          ? "Choose a ready-made dispatch or compare promises"
+                          : "Choose one Wolf-Winter promise"
                       : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">

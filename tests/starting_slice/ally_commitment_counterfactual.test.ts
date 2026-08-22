@@ -201,7 +201,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     const direct = reachAlly();
     // Rebuild without talking to June: start now is the explicitly disclosed solo default.
     const pending = direct.snapshot();
-    expect(() => direct.startQuest(WOLF.id, SHELTERED)).toThrow(/field-team commitment/i);
+    expect(() => direct.startQuest(WOLF.id, SHELTERED)).toThrow(/second rider/i);
 
     const solo = OverworldSession.restore(WORLD, pending);
     solo.chooseJourneyStory(SOLO);
@@ -543,7 +543,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       hide_graph: true,
     });
     expect(dialogueCompact.context.dialogue?.[1]).toMatch(
-      /Choose by outcome[^]*HUNT holds Cade's ground[^]*LURE relocates the pack[^]*DRIVE evacuates the outer line[^]*FORTIFY keeps household, herd, and pack apart[^]*release me now[^]*preserve our agreement without field aid[^]*keep me on cattle[^]*first wolf death breaks it[^]*Crossing north commits HUNT/i,
+      /Choose by outcome[^]*Cade's four cards are comparisons[^]*support cards do not commit[^]*LURE, DRIVE, or FORTIFY final before the breach[^]*HUNT is separate[^]*release me now[^]*HUNT commits immediately[^]*preserving our agreement[^]*losing my field aid[^]*keep me on cattle[^]*HUNT stays uncommitted until you cross north/i,
     );
     expect(dialogueCompact.context.dialogue?.[1]).not.toMatch(/living plan|living turn/i);
     const beforeTerms = api.get_state({ session_id: rpgSessionId, include_state: true });

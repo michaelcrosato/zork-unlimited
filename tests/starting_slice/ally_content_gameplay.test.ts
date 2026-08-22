@@ -21,6 +21,7 @@ import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { applyOpeningAllyOption } from "../../src/world/opening_ally.js";
 import { assertOverworldIntegrity } from "../../src/world/overworld.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const world = loadOverworldManifest(process.cwd());
 const ally =
@@ -47,6 +48,11 @@ const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const ORDINARY_LURE_FLAG = "opening_condition_open_ash_lane";
+const ORDINARY_LURE_SEED = seedForSeededOpeningFlag(
+  pack.meta.seeded_opening_flags,
+  ORDINARY_LURE_FLAG,
+);
 
 const ACCEPT = "albany:ally_june_cattle_first";
 const RELAY = "albany:ally_june_relay_only";
@@ -125,7 +131,9 @@ function optionState(optionId?: string): GameState {
           character: roadWarden.character,
           optionId,
         }).characterAfter;
-  return initStateForRpgPack(index, 504, { character, imports });
+  const state = initStateForRpgPack(index, ORDINARY_LURE_SEED, { character, imports });
+  expect(state.flags[ORDINARY_LURE_FLAG]).toBe(true);
+  return state;
 }
 
 function foulFirstCast(state: GameState): GameState {
@@ -314,7 +322,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
           rule.target_flag === "june_pike_present",
       ),
     ).toBe(true);
-    expect(initStateForRpgPack(index, 504).flags.june_pike_present).not.toBe(true);
+    expect(initStateForRpgPack(index, ORDINARY_LURE_SEED).flags.june_pike_present).not.toBe(true);
   });
 
   it("makes the hidden paling commitment explicit before June permits an ordinary combat line", () => {
@@ -404,7 +412,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(acknowledged.flags.june_combat_line_acknowledged).toBe(true);
     expect(acknowledged.flags.june_blood_condition_broken).not.toBe(true);
     expect(acknowledged.journal.at(-1)).toMatch(
-      /ordinary rail means combat[^]*without a living plan[^]*first wolf death ends/i,
+      /rail is only a combat funnel[^]*firm-braced[^]*ordinarily wedged and bound[^]*without a living plan[^]*first wolf death ends/i,
     );
     expect(buildRpgObservation(index, acknowledged).dialogue).toBeNull();
     expect(actionIds(acknowledged)).toContain("go_north");
