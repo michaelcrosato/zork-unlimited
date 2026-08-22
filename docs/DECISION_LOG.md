@@ -1637,3 +1637,62 @@ checks, outcomes, and commitments remain unchanged. The final commands are
 compiled hash is `08ddb7ce`, its relabeled twin is `fe16b368`, and only a fresh
 exact-build pilot can test clarity, strategy diversity, certification, causal,
 or human-quality lift.
+
+### Ultraplan re-aim — 2026-08-22 (HEAD = 360ada1e; next move = Road-Warden confirmation disclosure)
+
+**The peer-card correction passed its structural goals, but Albany still
+front-loaded one branch manual after the player had already selected a
+dispatch.** The valid, no-retry ten-player Terra pilot
+`starting-slice-terra-pilot-360ada1e-20260822T095519Z` bound exact clean
+`360ada1eeb71dfa47bcbb223de524befa6fb3975`, official Codex 0.146.0,
+authority `a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8`,
+and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All ten completed Wolf-Winter, none got stuck, p50 was 24 accepted decisions,
+7/10 continued after the initial goal, and HUNT/LURE/DRIVE/FORTIFY were
+1/6/0/3. Clarity 39/50 and enjoyment 40/50 failed the required quality gates;
+the pilot is diagnostic predecessor evidence and cannot authorize a larger
+fleet.
+
+Seven authenticated chronologies selected the exact 9,181-byte Road-Warden
+ready-dispatch response, each with the 432-byte preview once. Seed
+`822095519002` filed the direct S1 in four-plan language; its authenticated
+receipt itself contained `HUNT` once and `LURE` once, not `DRIVE` or `FORTIFY`,
+plus the full conditional brace branch before Cade introduced those plans.
+Seed `822095519000`, the cohort's only 3/5 clarity report, selected the same
+receipt, skipped Station support review, and still named route, support, and
+conditional-plan terminology as its worst moment. The two adjacent direct S1s
+were lower-exposure Station boundaries: board V6 at 1/10 and support disclosure
+at 1/9 versus this receipt at 1/7. V6 already reduced mismatched preparation
+inspection and remains closed; Cade's cards were just corrected, reached all
+ten, and did not form a fresh direct S1. The passing 1/6/0/3 strategy spread is
+not a prompt to rebalance or steer plan choice.
+
+The accepted compile `20260822T090736Z` still recommends legitimate but
+out-of-slice Gallowmere hotspot `ea53b6c1`; its six Wolf-Winter singletons retain
+the wider dispatch-density evidence. The newer exact-build diagnostic compile
+`20260822T103030Z` is provisional and assessor-inert until a later seal. It ranks
+broad Albany-chain hotspot `fbba1f54` first, but independently emits the exact
+receipt hotspot `9e766750` from seed `822095519002`. That corroborates this
+smallest surface without turning the broad report into a multi-surface rewrite.
+Because `9e766750` was not an accepted candidate at this cycle's assessment,
+this correction remains off-list and the frozen selection stays `null`.
+
+**Chosen move — defer the branch manual to its existing read boundaries.**
+Rewrite only the Road-Warden doctrine `preview`. Keep defense 4, summarize the
+Aid-Only clean/foul cattle-alarm boundary, and say only that Hayden matters when
+holding Cade's ground; the selected confirmation no longer repeats plan aliases,
+the attempted public brace, frost split, loose rail, yearling death, bare spear,
+or Works/skip/bind exclusions. The exact `trigger_category` remains
+byte-identical on read-only option inspection, and the steading states all exact
+brace terms before `paling_gap` commits HUNT. The preview is 286 ASCII bytes and
+48 words, down 146 bytes from its 432-byte/79-word predecessor. Each exact pilot
+response deterministically reconstructs at 9,035 bytes under the unchanged
+9,250 cap; the Road-Warden registration response stays 6,330 under 6,400. The
+world hash advances from `aa805dfa` to `977ef1ef`; the world file SHA advances
+from `c6ce8ffc` to `3288f968`, and its Git blob from `0960d53e` to `4ddcedcb`.
+IDs, order, triggers, costs, timing, decisions, mechanics, checks, aliases,
+strategies, outcomes, Station V6, Continue/End, and Gallowmere remain unchanged.
+Response shrink is a no-growth witness, not the reason for the copy or evidence
+of clarity, enjoyment, continuation, certification, causal, or human-quality
+lift.

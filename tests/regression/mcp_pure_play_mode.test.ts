@@ -728,7 +728,7 @@ describe("MCP pure play mode", () => {
     }
   }, 120_000);
 
-  it("keeps the universal Road-Warden receipts narrative-first and no larger than the failed pilot", async () => {
+  it("keeps the selected Road-Warden receipt summary-first while exact branch terms stay opt-in", async () => {
     const dir = mkdtempSync(join(tmpdir(), "mcp-road-warden-receipt-"));
     const evidence = join(dir, "run.jsonl");
     try {
@@ -809,21 +809,19 @@ describe("MCP pure play mode", () => {
         ).toBe(true);
         expect(selectedDispatchText.split(readyDispatchStatus)).toHaveLength(3);
         expect(selectedDispatchText).not.toContain("optional Station support remains");
-        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(9_181);
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(9_035);
         expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBeLessThanOrEqual(9_250);
+        expect(selectedDispatchText).not.toMatch(/\b(?:HUNT|LURE|DRIVE|FORTIFY)\b/gu);
+        expect(selectedDispatchText).not.toMatch(/\bWorks\b/gu);
+        expect(selectedDispatchText).not.toMatch(
+          /public (?:fence )?(?:brace|wedge)|yearling|bare spear/gu,
+        );
         const consequence = (selectedDispatch.result as { consequence?: string }).consequence;
-        expect(consequence).toContain("Fieldcraft 4 starts Wolf-Winter at defense 4, not 3.");
         expect(consequence).toContain(
-          "After a clean first feed cast, Aid-Only prevents only the final ordinary +1 increase to cattle alarm; a foul keeps it (LURE).",
-        );
-        expect(consequence).toContain(
-          "Hayden helps only when you hold the ground (HUNT): try the public fence brace; if frost splits it, leave it loose, kill the yearling, and take the bare spear north.",
-        );
-        expect(consequence).toContain(
-          "Skip the brace, bind the rail, or use Works and the route closes; it never helps a lure.",
+          "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3. Aid-Only prevents one final ordinary rise in cattle alarm after a clean first feed; a foul still takes that rise. Hayden's report matters only if you hold Cade's ground; its exact brace terms appear before commitment at the steading.",
         );
         expect(consequence).not.toMatch(
-          /\bDEF\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation|clean LURE|split-rail HUNT/gu,
+          /\b(?:DEF|HUNT|LURE|DRIVE|FORTIFY|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
         );
         expect((selectedDispatch.journey as { acceptedDecisions?: number }).acceptedDecisions).toBe(
           5,

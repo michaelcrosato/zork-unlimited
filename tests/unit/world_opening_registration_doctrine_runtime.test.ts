@@ -254,16 +254,16 @@ describe("Albany background-first ready-made dispatch runtime", () => {
           "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3.",
         );
         expect(receipt.consequence).toContain(
-          "After a clean first feed cast, Aid-Only prevents only the final ordinary +1 increase to cattle alarm; a foul keeps it (LURE).",
+          "Aid-Only prevents one final ordinary rise in cattle alarm after a clean first feed; a foul still takes that rise.",
         );
         expect(receipt.consequence).toContain(
-          "Hayden helps only when you hold the ground (HUNT): try the public fence brace; if frost splits it, leave it loose, kill the yearling, and take the bare spear north.",
+          "Hayden's report matters only if you hold Cade's ground;",
         );
         expect(receipt.consequence).toContain(
-          "Skip the brace, bind the rail, or use Works and the route closes; it never helps a lure.",
+          "its exact brace terms appear before commitment at the steading.",
         );
         expect(receipt.consequence).not.toMatch(
-          /\bDEF\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation|clean LURE|split-rail HUNT/gu,
+          /\b(?:DEF|HUNT|LURE|DRIVE|FORTIFY|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
         );
       }
       expect(receipt.displaySummary).toBe(

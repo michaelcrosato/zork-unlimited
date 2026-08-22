@@ -460,18 +460,32 @@ provenance warning, after ordinary replay and integrity checks. Contract proof l
 [`mcp_journey_surface.test.ts`](../tests/unit/mcp_journey_surface.test.ts), and
 [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 
-The narrative-first selected-receipt follow-up leaves that disclosure boundary
-intact. The next valid ten-player pilot put every player through the same
+The first narrative-first selected-receipt follow-up left that disclosure
+boundary intact. Its valid ten-player pilot put every player through the same
 Road-Warden and ready-made Aid-Only/Hayden setup before four different
 Wolf-Winter strategies, yet every report still described front-loaded Albany
 terminology and the cohort missed clarity, enjoyment, and initial-goal
-continuation. The Road-Warden confirmation and matched dispatch now lead with
-the plain result—Wolf-Winter starts at defense 4 instead of 3—and explain the
-two later plan benefits before attaching their `LURE` and `HUNT` aliases. The
-exact Aid-Only clean-cast boundary and Hayden split-rail sequence remain
-unchanged. No glossary, new choice, mechanic, route, support expansion, or
-decision is added; exact source/presentation matching and the selected-receipt
-regressions keep this a copy-only correction.
+continuation. That correction led with the plain defense result and explained
+the later plan benefits before their `LURE` and `HUNT` aliases, but deliberately
+kept the complete Aid-Only and Hayden branch sequence in the selected receipt;
+it added no progressive-disclosure flow.
+
+The fresh exact-build follow-up on `360ada1e` completed Wolf-Winter 10/10 with
+no stuck run and passed continuation and strategy-distribution gates, but still
+missed clarity at 39/50 and enjoyment at 40/50. Seven players selected the exact
+ready-made Road-Warden receipt. One filed a direct S1 against its premature plan
+aliases and branch conditions; the cohort's only 3/5 clarity player also saw
+that receipt, skipped Station support review, and still named route/support/
+conditional-plan terminology as the worst moment. The selected preview now
+keeps only defense 4, the Aid-Only clean/foul boundary, and Hayden's relevance
+to holding Cade's ground. The byte-identical inspected card still carries the
+exact 132-character benefit, and Wolf-Winter still states the public brace,
+frost split, unbound rail, yearling, bare-spear, and Works exclusions at the
+steading before commitment. The preview falls from 432 to 286 ASCII bytes and
+the authenticated ready-dispatch counterfactual from 9,181 to 9,035 bytes under
+the unchanged 9,250-byte cap. No glossary, choice, mechanic, route, support,
+strategy, outcome, or decision changes; these are deterministic boundary
+witnesses, not evidence of a rating or human-quality lift.
 
 The following exact-build pilot diversified that opening into six Road-Wardens
 and four Ledger Advocates while preserving 10/10 Wolf-Winter completion, all

@@ -168,3 +168,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure audit: gameplay never invoked the proof-ledger helper, so the run is exact-build retention canary only and the unit regression remains causal; its report compresses the Gallowmere clue order and overstates per-action journey-hash advancement across noncausal interactions.
 - Feedback/next: pre-seal committed authority is 2/3 with no compile; null-selection seal preserves the already-consumed accepted bundle and appends this pure as pending report three, making compilation eligible only in the next cycle.
 - Guard: 4 focused tests, 566 traces/1,945 references, both 6,000-step crawls, full health (448 files/3,897 tests), UI typecheck, all 12 packs, exact pure provenance, hostile audits, and `1fde4cdc` cycle-start integrity are green.
+## AFK Cycle 2026-08-22T13-16-56-637Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-22T13-16-56-637Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-ea53b6c1 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
