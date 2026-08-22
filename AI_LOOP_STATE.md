@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 786 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260822T013300Z/hotspots.json","hotspots_sha256":"8ed53d55222e7edc7cb97ca70c2f4a7da2959930cb494d0333914f17ff274946","manifest_path":"ai-runs/feedback/20260822T013300Z/report-manifest.json","manifest_sha256":"da4c1fc93bd1608395d9f98c20fe109a4bf151f10be661117e56cd6d95e772cc"},"pending_cycle_reports":[{"evidence_sha256":"e4b50542eb144fa48c1598d792641eec275d6cd98d2bb347008502c1df77de20","report_id":"pure:0d343f9c77212374c33491f85cecd59a8ad5d01bc4f6f4a30ff7496b5fb2b493","report_sha256":"7fe5479494623accd66da2d68377307cb916343eb2588bbfc5688cda4044d345","run_id":"2026-08-21T22-27-12-381Z","sidecar_sha256":"8eb4f0dd701fc5e913a92c541e9ff63e91679b2cdbae9e4898ff313f3048b1a1","tested_commit":"d15f31020413b735b786a45708a55f3cb1b9bc48"}],"schema_version":1} -->
+<!-- historical_cycle_count: 787 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260822T052706Z/hotspots.json","hotspots_sha256":"08bc56f9aee1ec48b16e731e2cf88adbb6a44ccada3579bdc68531cfe43c05a3","manifest_path":"ai-runs/feedback/20260822T052706Z/report-manifest.json","manifest_sha256":"ac415e281d47927b118fc95e485debf252b085ccc02ca19846e748cb08688e06"},"pending_cycle_reports":[{"evidence_sha256":"8ee797746417b10b093eed0a578f87c308944c642c89700e225557924e201f8b","report_id":"pure:0d35dc78fef978c6ab2adf9978be3185a883a8324bec597658e1a5eff59c1666","report_sha256":"06306db3526fd8cc692382a6b6a4f56ed69a22602793e8bf6fe890de7ad969e1","run_id":"2026-08-22T03-00-51-815Z","sidecar_sha256":"139dd11267bd080a36ca64fc67ea22e9773dbc7abff8bc0569f072678b47e8c7","tested_commit":"977cc56ac15fae44c0c37179ee6e37fc5770e264"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - cade_plan_questions_plain_language_v1
+
+- Evidence choice: a valid no-retry ten-Terra pilot on `2c07598a` completed Wolf-Winter 10/10 with no stuck players and all four strategies, but failed clarity 40/50, enjoyment 41/50, and initial-goal continuation 5/10; all ten reached Cade's first menu and opened a plan detail, while four directly named Cade/plan terminology and a fifth separated support comparison from later commitment. Compile `20260822T030213Z` ranked Station `5b9a9a66` first only in a ten-way singleton-S1 tie, so this wider-exposure bounded correction is off-list and correctly froze selection `null`.
+- Surface/effect: only Cade's first-root explanation and the HUNT/LURE/DRIVE/FORTIFY peer question labels now state ordinary-language outcome, cost, and that asking does not choose; LURE, DRIVE, and FORTIFY stay byte-identical across the root and two support returns. Detailed plan/final/back/leave/support copy, ids, aliases, order, predicates, gotos, mechanics, four strategies, Albany return, Continue/End, and Gallowmere are unchanged; the Wolf-Winter hash advances `8981df5b…` → `99afa4a3…`.
+- Counterfactual: every plan question remains noncommitting; HUNT still commits only on the north crossing or offered `RELEASE JUNE`, and the other plans only through their existing final actions. Seeded roots remain 343/340/343/336 characters under 360, rendered commands are 159/151/143/159 under 160, and full/compact/MCP/terminal/browser witnesses plus bug0589 pin projection parity without weakening a limit or rewriting predecessor evidence.
+- Browser/crawl: a fresh 1440×1000 and 390×844 Albany→Station→Sheltered→Cade audit opened and backed out of all four questions with the new copy readable, no changed-card or page horizontal overflow, and no console warning/error; the known footer overlap and cramped mobile nav remained separate, nonblocking issues. The zero-finding 6,000-step candidate smoke covered Wolf-Winter, and the zero-finding 1,536,000-step provisional deep crawl covered its 8/8 rooms, 115/135 actions, and 12/17 endings.
+- Pure evidence: exact-clean Terra 0.146 seed `822030051815` on `977cc56a` chose Ledger Advocate/Aid-Only/Jamie's Relief Protocol and Sheltered Stockway, read the new Cade menu, chose LURE, and completed Wolf-Winter as `ending_pack_diverted` at decision 27; it continued there and at checkpoint 40, completed Gallowmere as `ending_hunt_won`, and ended at decision 49, with all 61 calls completing without rejection.
+- Self-critique: clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck; compact state density, cumulative Albany choices, the decision-40 interruption, and cross-quest role continuity still caused friction. One AI canary proves exact revision/lifecycle retention, not causal score or continuation lift, human validation, a fresh ten-player pilot pass, or certification.
+- Feedback/guard: candidate-bound compile `20260822T052706Z` (`ac415e28…`) admits 11 verified/actionable reports with zero mocks and excludes this pure until seal. Focused contracts and independent review, fresh browser QA, both candidate crawls, 580 traces, full candidate health (461 files/4,101 tests), and exact pure provenance are green; rotation, outer smoke/health, `2c07598a` integrity, pure reverify, seal, and the ledger-only commit remain fail-closed.
 
 ### Cycle result - station_dispatch_choice_boundary_v1
 
@@ -158,19 +168,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: post-quest contact freshness was rejected as unstated chronology that would reinterpret authored scenes/saves; decorator-object cloning and evidence temp-link hardening remain lower-risk follow-ups. The pre-edit pure is baseline only and cannot causally attest this verifier repair.
 - Feedback/next: committed status is 2 verified/actionable reports of 3, so no compile runs and this evidence-only report is not sealed into pending authority; next structural review should compare the shallow decoration snapshot with exclusive evidence publication rather than revive frozen content.
 - Guard: 4 focused matrix tests, 566 bug traces/1,945 references, 6,000-step post-crawl, full health (448 files/3,897 tests), UI typecheck, all 12 packs, exact pure provenance, independent hostile review, and `1fde4cdc` cycle-start integrity are green.
-
-### Cycle result - wolf_lure_root_commit_cue
-
-- Evidence choice: accepted `f75b8f23` repeated post-`bug_0549` LURE inspect→lesson→reselect friction; exact `hotspot-f75b8f23` was selected for a root-action scan cue, not path or mechanics reduction.
-- Surface/effect: the root LURE action now says to open or reopen the separate Commit LURE choice while preserving costs, optional lesson/reconsideration, action ids, predicates, effects, and state; Wolf hash advances `95a44131…` → `7008bead…`.
-- Counterfactual: full, compact, CLI, semantic, save, and hash guards pin the exact 150-character label without truncation, direct no-lesson commit, HUNT pivot, lesson return, and reselect→commit across 54 focused tests.
-- Red-gate correction: the first provisional pure exhausted provider context after gameplay, then two replacements made forbidden Codex resource probes before AdventureForge gameplay; all three were noncanonical, reset, and quarantined, while clean fourth commit `937a3925` alone binds evidence.
-- Pure evidence: exact-clean Spark seed 7 chose Ledger/Aid-Only/Rowan, entered sheltered Wolf-Winter, rendered the new LURE cue once, chose Cade FORTIFY, recovered one failed seal, and reached `ending_fortified_cade_terms` at 40/60 before End at decision 18.
-- Pure audit: 24/25 calls succeeded and one mistyped parent recovered unchanged; clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck. The cue was a direct render canary only—the player never entered LURE—and the report omitted the rejection and conflated foldback with the separate End choice.
-- Feedback/guard: status remains 1/3 with no compile; seal consumes `f75b8f23` and queues this pure second. Both 6,000-step crawls, full health (448 files/3,896 tests), 565 traces, cycle-start integrity, and exact pure provenance are green.
-## AFK Cycle 2026-08-22T03-00-51-815Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-22T03-00-51-815Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-5b1405e1 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
