@@ -18,11 +18,9 @@ const PREPARATION = WORLD.opening_preparation!;
 const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const READY_MADE_DISPATCH_LABELS: Readonly<Record<string, string>> = Object.freeze({
-  "albany:doctrine_fortify_breach":
-    "Ready-made dispatch — Full Compact promise + Rowan's civic report",
-  "albany:doctrine_road_warden_aid_route":
-    "Ready-made dispatch — Aid-Only promise + Hayden's frost report",
-  "albany:doctrine_independent_drive": "Ready-made dispatch — personal bond + Rowan's civic report",
+  "albany:doctrine_fortify_breach": "Ready-made setup — Full Compact + Rowan's report",
+  "albany:doctrine_road_warden_aid_route": "Ready-made setup — Aid-Only + Hayden's report",
+  "albany:doctrine_independent_drive": "Ready-made setup — Personal Bond + Rowan's report",
 });
 
 function atRegistration(world: OverworldManifest = WORLD): OverworldSession {
@@ -55,7 +53,7 @@ describe("Albany background-first ready-made dispatch runtime", () => {
       REGISTRATION.profiles.map((profile) => profile.id),
     );
     expect(registrationPrompt.options).toHaveLength(4);
-    expect(registrationPresentation.message).toContain("ready-made dispatch");
+    expect(registrationPresentation.message).toContain("ready-made promise and report");
     expect(registrationPresentation.message.toLowerCase()).not.toContain("standard packet");
     expect(registrationPrompt.options.every((option) => option.group === undefined)).toBe(true);
     expect(registrationPrompt.options.map((option) => option.id)).not.toEqual(
@@ -88,7 +86,7 @@ describe("Albany background-first ready-made dispatch runtime", () => {
           session.snapshot().character,
           { registration: REGISTRATION, leadSource: LEAD_SOURCE },
         );
-        expect(oathPresentation.message.toLowerCase()).toContain("ready-made dispatch");
+        expect(oathPresentation.message.toLowerCase()).toContain("ready-made promise and report");
         expect(oathPresentation.message.toLowerCase()).not.toContain("standard packet");
         expect(oathPrompt.progressiveDisclosure).toMatchObject({
           initialOptionIds: [matchedPacket.id],
@@ -100,13 +98,13 @@ describe("Albany background-first ready-made dispatch runtime", () => {
         expect(packetOption.label).toBe(READY_MADE_DISPATCH_LABELS[matchedPacket.id]);
         const expectedOutcome =
           matchedPacket.profile_id === "albany:ironhands_repairer"
-            ? "Reinforce Cade's failing boundary under Albany's public promise."
+            ? "Start with public authority and a stronger first FORTIFY Repair check."
             : matchedPacket.profile_id === "albany:road_warden"
-              ? "Carry winter-road judgment and flexible, life-first aid to Cade's steading."
-              : "Keep the dispatch independent and work through back roads and shutter signals.";
+              ? "Start with Defense 4, the clean-feed LURE benefit, and Hayden's conditional HUNT brace."
+              : "Start independent with an easier first DRIVE shutter-signal check.";
         expect(packetOption.summary?.commitment).toBe(expectedOutcome);
         expect(packetOption.summary?.tradeoff).toBe("Other promise/report pairs close.");
-        expect(packetOption.consequence).toContain("Boundary: Other duty/evidence pairs close.");
+        expect(packetOption.consequence).toContain("Tradeoff: Other promise/report pairs close.");
         expect(packetOption.consequence).toContain(`Benefit: ${matchedPacket.trigger_category}`);
         expect(packetOption.summary?.commitment).not.toContain(matchedPacket.trigger_category);
         expect(JSON.stringify(packetOption.summary)).not.toMatch(
@@ -143,7 +141,7 @@ describe("Albany background-first ready-made dispatch runtime", () => {
       .storyChoice!.options.find((candidate) => candidate.id === revisedDoctrine.id)!;
 
     expect(option.summary?.commitment).toBe(
-      "Pairs Negotiate Aid-Only Promise with Take Hayden's Frost-Heave Report.",
+      "Pairs Accept Aid-Only Terms with Use Hayden's Frost Report.",
     );
     expect(option.summary?.commitment).not.toContain(revisedCategory);
     expect(option.summary?.commitment).not.toContain("a bloodless LURE skips one alarm");
@@ -174,11 +172,11 @@ describe("Albany background-first ready-made dispatch runtime", () => {
       .storyChoice!.options.find((candidate) => candidate.id === revisedDoctrine.id)!;
 
     expect(option.label).toBe(
-      `Ready-made dispatch — Accept the Revised Aid promise + ${revisedSource.title}`,
+      `Ready-made setup — Accept the Revised Aid Duty + ${revisedSource.title}`,
     );
     expect(option.label).not.toContain("Hayden's frost report");
     expect(option.summary?.commitment).toBe(
-      `Pairs Accept the Revised Aid Promise with ${revisedSource.title}.`,
+      `Pairs Accept the Revised Aid Duty with ${revisedSource.title}.`,
     );
     expect(option.summary?.commitment).not.toContain(
       "Carry winter-road judgment and flexible, life-first aid",
@@ -203,10 +201,10 @@ describe("Albany background-first ready-made dispatch runtime", () => {
       .storyChoice!.options.find((candidate) => candidate.id === revisedDoctrine.id)!;
 
     expect(option.label).toBe(
-      "Ready-made dispatch — Negotiate Aid-Only promise + Take Hayden's Frost-Heave Report",
+      "Ready-made setup — Accept Aid-Only Terms + Use Hayden's Frost Report",
     );
     expect(option.summary?.commitment).toBe(
-      "Pairs Negotiate Aid-Only Promise with Take Hayden's Frost-Heave Report.",
+      "Pairs Accept Aid-Only Terms with Use Hayden's Frost Report.",
     );
     expect(option.summary?.commitment).not.toContain("winter-road judgment");
     expect(option.consequence).toContain(`Benefit: ${revisedDoctrine.trigger_category}`);
@@ -244,32 +242,27 @@ describe("Albany background-first ready-made dispatch runtime", () => {
         (option) => option.id === doctrine.lead_source_option_id,
       )!.title;
       const exactReceipt =
-        `${doctrine.preview} Exact opening cost: ${doctrine.immediate_cost}. ` +
-        `${doctrine.consequence} Registered role — ${profileTitle}. ` +
-        `Packet commitments: duty — ${oathTitle}; source — ${sourceTitle}.`;
+        `${doctrine.preview} Cost: ${doctrine.immediate_cost}. ` +
+        `${doctrine.consequence} Background: ${profileTitle}. ` +
+        `Promise: ${oathTitle}. Report: ${sourceTitle}.`;
       expect(receipt.consequence).toBe(exactReceipt);
       expect(receipt.entry.text).toBe(exactReceipt);
       if (doctrine.id === "albany:doctrine_road_warden_aid_route") {
+        expect(receipt.consequence).toContain("Defense starts at 4 instead of 3.");
         expect(receipt.consequence).toContain(
-          "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3.",
+          "If the first LURE feed succeeds, cattle alarm rises one less at the end.",
         );
         expect(receipt.consequence).toContain(
-          "Aid-Only prevents one final ordinary rise in cattle alarm after a clean first feed; a foul still takes that rise.",
-        );
-        expect(receipt.consequence).toContain(
-          "Hayden's report matters only if you hold Cade's ground;",
-        );
-        expect(receipt.consequence).toContain(
-          "its exact brace terms appear before commitment at the steading.",
+          "Hayden's report can unlock a HUNT brace after a rail splits.",
         );
         expect(receipt.consequence).not.toMatch(
-          /\b(?:DEF|HUNT|LURE|DRIVE|FORTIFY|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
+          /\b(?:DEF|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
         );
       }
       expect(receipt.displaySummary).toBe(
-        `Ready-made dispatch chosen — Background: ${profileTitle}; ` +
-          `Wolf-Winter promise: ${oathTitle.replace(/\bDuty\b/gu, "Promise")}; ` +
-          `Report: ${sourceTitle}. Optional field kit, relief wagon, second rider, and road remain open.`,
+        `Quick setup chosen. Background: ${profileTitle}. ` +
+          `Wolf-Winter promise: ${oathTitle}. Report: ${sourceTitle}. ` +
+          "You can still choose a field kit, relief wagon, second rider, and route.",
       );
       expect(receipt.displaySummary).not.toMatch(
         /\b(role|duty|source|preparation|relief allocation|field-team)\b/iu,

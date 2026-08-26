@@ -248,7 +248,7 @@ describe("Albany Station return filing standard", () => {
       expect(session.view().jobChoices).toEqual(expectedChoices(matching));
       expect(session.compactView().job_choices).toEqual(expectedChoices(matching));
       expect(session.view().jobChoices).not.toContainEqual([JOB, opposite]);
-      expect(() => session.workLocalJob(JOB, opposite)).toThrow(/not available/i);
+      expect(() => session.workLocalJob(JOB, opposite)).toThrow(/unavailable/i);
       expect(
         session.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
           ?.localSceneProof,
@@ -372,14 +372,14 @@ describe("Albany Station return filing standard", () => {
     expect(investigated.view().eventChoices).toEqual([]);
     expect(investigated.journey().opportunities?.leads.map((lead) => lead.id)).not.toContain(EVENT);
     expect(() => investigated.resolveEvent(EVENT, ROUTE_STANDARD)).toThrow(
-      /before completing local job.*transport_hub__job/i,
+      /event option closed when you completed job albany_city__transport_hub__job/i,
     );
 
     const uninvestigated = returnedHeld({ inspect: false });
     uninvestigated.workLocalJob(JOB, PALING);
     expect(uninvestigated.view().events.map((event) => event.id)).not.toContain(EVENT);
     expect(() => uninvestigated.investigateEvent(EVENT)).toThrow(
-      /before completing local job.*transport_hub__job/i,
+      /event option closed when you completed job albany_city__transport_hub__job/i,
     );
   });
 

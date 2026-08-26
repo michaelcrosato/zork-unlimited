@@ -240,12 +240,12 @@ export class GameSession {
     const bundle = load(savedQuest, c.contentHash, SAVE_MODE);
     if (bundle.source_ref[0] !== "wq" || bundle.source_ref[1] !== worldQuestId) {
       throw new SaveIntegrityError(
-        `Saved quest source does not match world quest ${JSON.stringify(worldQuestId)}.`,
+        `This save belongs to a different quest, not ${JSON.stringify(worldQuestId)}.`,
       );
     }
     if (bundle.state.seed !== expectedSeed) {
       throw new SaveIntegrityError(
-        `Saved quest seed does not match the campaign launch seed ${expectedSeed}.`,
+        `This save uses a different quest seed than the journey (${expectedSeed}).`,
       );
     }
     assertRpgStateReferences(index, bundle.state);
@@ -266,12 +266,10 @@ export class GameSession {
     });
     const savedContinuity = bundle.embedded_character_continuity?.character_continuity;
     if (!savedContinuity) {
-      throw new SaveIntegrityError("Saved embedded quest is missing campaign continuity.");
+      throw new SaveIntegrityError("This quest save is missing its journey character record.");
     }
     if (hashState(savedContinuity) !== hashState(expectedContinuity)) {
-      throw new SaveIntegrityError(
-        "Saved embedded quest continuity does not match its campaign launch.",
-      );
+      throw new SaveIntegrityError("This quest save does not match the character who started it.");
     }
 
     const session = new GameSession({
@@ -287,12 +285,12 @@ export class GameSession {
     const decisions: ReplayedEmbeddedQuestDecision[] = [];
     for (const actionId of actionIds) {
       if (typeof actionId !== "string" || actionId.length === 0) {
-        throw new SaveIntegrityError("Saved quest action trail contains an invalid action id.");
+        throw new SaveIntegrityError("This quest save contains an invalid recorded action.");
       }
       const outcome = session.choose(actionId);
       if (!outcome.ok || outcome.journeyActionId !== actionId) {
         throw new SaveIntegrityError(
-          `Saved quest action ${JSON.stringify(actionId)} is not legal during deterministic replay.`,
+          `The recorded action ${JSON.stringify(actionId)} cannot be replayed in this quest.`,
         );
       }
       decisions.push({
@@ -302,9 +300,7 @@ export class GameSession {
       });
     }
     if (session.view().stateHash !== bundle.stateHash) {
-      throw new SaveIntegrityError(
-        "Saved quest state does not match its deterministic action-trail replay.",
-      );
+      throw new SaveIntegrityError("The saved quest state does not match its recorded actions.");
     }
     return { session, decisions };
   }
@@ -312,7 +308,7 @@ export class GameSession {
   /** Canonical, content-bound bytes for the current embedded quest state. */
   saveEmbedded(worldQuestId: string): string {
     if (!this.characterContinuity) {
-      throw new SaveIntegrityError("Only a campaign-embedded quest can be saved as active play.");
+      throw new SaveIntegrityError("Only a quest started from this journey can be saved here.");
     }
     return save(this.state, this.contentHash, SAVE_MODE, {
       worldQuestId,
@@ -466,7 +462,7 @@ function signed(value: number): string {
 }
 
 function pressureFact(track: NonNullable<RpgObservation["pressure_tracks"]>[number]): string {
-  const next = track.next ? `; next ${track.next.label} at ${track.next.min}` : "; highest band";
+  const next = track.next ? `; next ${track.next.label} at ${track.next.min}` : "; at maximum";
   const description = track.band.description ? ` — ${track.band.description}` : "";
   return `pressure: ${track.title} — ${track.band.label} (${track.value}${next})${description}`;
 }

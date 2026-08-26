@@ -95,14 +95,13 @@ describe("overworld town service planning", () => {
       suppliesAfter: 2,
       fatigueBefore: 81,
       fatigueAfter: 0,
-      message:
-        "You spend 300 minutes recovering at a safe local service. Fatigue falls from 81 to 0.",
+      message: "You rest safely. Time: 300 minutes. Fatigue: 81 → 0.",
       entryDraft: {
         id: "service:rest",
         kind: "service",
         town: "Alden",
         title: "Rested in Alden",
-        text: "You spend 300 minutes recovering at a safe local service. Fatigue falls from 81 to 0.",
+        text: "You rest safely. Time: 300 minutes. Fatigue: 81 → 0.",
       },
     });
   });
@@ -151,13 +150,13 @@ describe("overworld town service planning", () => {
       suppliesAfter: OVERWORLD_MAX_SUPPLIES,
       fatigueBefore: 7,
       fatigueAfter: 7,
-      message: `You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 2 to ${OVERWORLD_MAX_SUPPLIES}.`,
+      message: `You buy food, lamp oil, and road gear. Time: 45 minutes. Supplies: 2 → ${OVERWORLD_MAX_SUPPLIES}.`,
       entryDraft: {
         id: "service:resupply",
         kind: "service",
         town: "Alden",
         title: "Resupplied in Alden",
-        text: `You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 2 to ${OVERWORLD_MAX_SUPPLIES}.`,
+        text: `You buy food, lamp oil, and road gear. Time: 45 minutes. Supplies: 2 → ${OVERWORLD_MAX_SUPPLIES}.`,
       },
     });
   });
@@ -179,13 +178,13 @@ describe("overworld town service planning", () => {
       fatigueBefore: 40,
       fatigueAfter: 0,
       message:
-        "An unused relief room is ready beside the dispatch desk. The service takes 30 minutes; fatigue falls from 40 to 0.",
+        "An unused relief room is ready beside the dispatch desk. Time: 30 minutes. Fatigue: 40 → 0.",
       entryDraft: {
         id: "service:rest",
         kind: "service",
         town: "Albany city",
         title: "Relief-room rest",
-        text: "An unused relief room is ready beside the dispatch desk. The service takes 30 minutes; fatigue falls from 40 to 0.",
+        text: "An unused relief room is ready beside the dispatch desk. Time: 30 minutes. Fatigue: 40 → 0.",
         serviceRuleId: "service:test_rest",
         serviceAreaId: "albany_city__transport_hub",
       },
@@ -209,7 +208,7 @@ describe("overworld town service planning", () => {
         serviceAreaId: "albany_city__transport_hub",
       },
     });
-    expect(resupply.message).toContain("The service takes 15 minutes");
+    expect(resupply.message).toContain("Time: 15 minutes");
   });
 
   it("rejects overlapping internal rules instead of choosing by manifest order", () => {
@@ -272,7 +271,7 @@ describe("overworld town service planning", () => {
       suppliesAfter: OVERWORLD_MAX_SUPPLIES,
       fatigueBefore: 7,
       fatigueAfter: 7,
-      message: `You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 2 to ${OVERWORLD_MAX_SUPPLIES}.`,
+      message: `You buy food, lamp oil, and road gear. Time: 45 minutes. Supplies: 2 → ${OVERWORLD_MAX_SUPPLIES}.`,
       minutesAfter: 525,
       stateChanged: true,
     });
@@ -282,7 +281,7 @@ describe("overworld town service planning", () => {
       town: "Alden",
       title: "Resupplied in Alden",
       recordedAt: "Day 1, 08:45",
-      text: `You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 2 to ${OVERWORLD_MAX_SUPPLIES}.`,
+      text: `You buy food, lamp oil, and road gear. Time: 45 minutes. Supplies: 2 → ${OVERWORLD_MAX_SUPPLIES}.`,
     });
     expect(state.journalEntries).toEqual([result.entry]);
     expect(state.journalEntriesById.get("service:resupply:525")).toBe(result.entry);
@@ -309,7 +308,7 @@ describe("overworld town service presentation", () => {
         suppliesAfter: OVERWORLD_MAX_SUPPLIES,
         fatigueBefore: 73,
         fatigueAfter: 73,
-        message: `You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 0 to ${OVERWORLD_MAX_SUPPLIES}.`,
+        message: `You buy food, lamp oil, and road gear. Time: 45 minutes. Supplies: 0 → ${OVERWORLD_MAX_SUPPLIES}.`,
         blockedReason: null,
       },
       {
@@ -323,8 +322,7 @@ describe("overworld town service presentation", () => {
         suppliesAfter: 0,
         fatigueBefore: 73,
         fatigueAfter: 0,
-        message:
-          "You spend 240 minutes recovering at a safe local service. Fatigue falls from 73 to 0.",
+        message: "You rest safely. Time: 240 minutes. Fatigue: 73 → 0.",
         blockedReason: null,
       },
     ]);
@@ -376,16 +374,16 @@ describe("overworld town service presentation", () => {
         suppliesAfter: 3,
         fatigueBefore: 20,
         fatigueAfter: 20,
-        message: "There is no market, inn, or stable here to resupply.",
-        blockedReason: "There is no market, inn, or stable here to resupply.",
+        message: "Resupply is unavailable here. This town has no market, inn, or stable.",
+        blockedReason: "Resupply is unavailable here. This town has no market, inn, or stable.",
       },
       {
         action: "rest",
         available: false,
         changed: false,
         minutes: 0,
-        message: "There is no inn or healer here to rest safely.",
-        blockedReason: "There is no inn or healer here to rest safely.",
+        message: "Rest is unavailable here. This town has no inn or healer.",
+        blockedReason: "Rest is unavailable here. This town has no inn or healer.",
       },
     ]);
 
@@ -411,7 +409,7 @@ describe("overworld town service presentation", () => {
       fatigueAfter: 7,
       blockedReason: null,
     });
-    expect(override[0]!.message).toContain("The service takes 15 minutes");
+    expect(override[0]!.message).toContain("Time: 15 minutes");
     expect(override[1]).toMatchObject({ action: "rest", available: false });
 
     const noOpOverride = presentOverworldServiceActions({

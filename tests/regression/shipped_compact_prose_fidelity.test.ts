@@ -213,17 +213,17 @@ type OpeningSourceOption = Readonly<{
 function openingStageDisplayTitle(kind: JourneyStoryChoicePrompt["kind"]): string {
   switch (kind) {
     case "registration":
-      return "choose one permanent background";
+      return "Choose one permanent background";
     case "relief_oath":
-      return "choose a ready-made promise/report pair";
+      return "use a ready-made promise and report";
     case "lead_source":
       return "choose one report";
     case "preparation":
       return "choose one field kit";
     case "relief_allocation":
-      return "choose the relief wagon's job";
+      return "assign the relief wagon";
     case "ally":
-      return "ready to depart now alone, or ask";
+      return "leave Albany Station alone or ask";
     case undefined:
       throw new Error("Expected an opening story kind.");
   }
@@ -234,7 +234,6 @@ function openingOptionDisplayLabel(
   sourceOption: OpeningSourceOption,
 ): string {
   if (kind === "relief_oath") return sourceOption.title.replace(/\bDuty\b/gu, "Promise");
-  if (kind === "ally" && sourceOption.id === "albany:ally_travel_solo") return "Ride alone";
   return sourceOption.title;
 }
 
@@ -341,7 +340,7 @@ function expectOpeningPromptExact(
       prompt.kind === "preparation" && checkFit
         ? {
             ...withoutCheckFit,
-            highlights: [{ label: "Governing skill", value: checkFit }],
+            highlights: [{ label: "Check skill", value: checkFit }],
           }
         : withoutCheckFit;
     expect(comparisonOption!.summary).toEqual(expectedCompactSummary);
@@ -351,14 +350,14 @@ function expectOpeningPromptExact(
       expect(inspectedOption!.consequence).toContain(sourceOption.consequence);
       if (sourceOption.trigger_category) {
         expect(inspectedOption!.consequence).toContain(
-          `Field trigger: ${sourceOption.trigger_category}`,
+          `Best for: ${sourceOption.trigger_category}`,
         );
       }
     } else {
       expect(inspectedOption!.consequence).toMatch(/^Benefit: \S/);
       expect(inspectedOption!.consequence).toContain(
         ` Cost: ${canonicalOption!.summary!.immediateCost}. ` +
-          `Boundary: ${canonicalOption!.summary!.tradeoff}`,
+          `Tradeoff: ${canonicalOption!.summary!.tradeoff}`,
       );
       expect(inspectedOption!.consequence).not.toContain(sourceOption.preview);
       expect(inspectedOption!.consequence).not.toContain(sourceOption.consequence);
@@ -643,7 +642,7 @@ describe("shipped compact prose fidelity", () => {
     session.talkToCharacter(ally.contact);
     const allyPrompt = currentStoryChoice(session);
     expect(allyPrompt.message).toBe(
-      "Albany Station: ready to depart now alone, or ask June Pike to ride; field kit and relief wagon choices are separate.",
+      "You can leave Albany Station alone or ask June Pike to join. The field kit and relief wagon are separate choices.",
     );
     choose(ally, ally.options, allyPrompt, false);
   });

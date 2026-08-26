@@ -63,75 +63,75 @@ const EXPECTED_CONSEQUENCES: Readonly<
 > = {
   pack_diverted: {
     send_wagon_to_cade:
-      "The wagon replaces the broken outer paling while Cade keeps the whole herd in; the diverted pack remains alive in the high wood. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon repairs Cade's outer fence. His whole herd stays home, and the living pack stays in the high wood. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade watches the whole herd behind the broken outer line with no winter feed left, while the diverted pack remains alive in the high wood. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade keeps the whole herd behind a broken fence with no winter feed. The living pack stays in the high wood. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   pack_diverted_cattle_scattered: {
     send_wagon_to_cade:
-      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; two cattle are still missing when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon repairs Cade's outer fence and searches for the two missing cattle. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture, while the diverted pack remains alive in the high wood. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade's outer fence remains broken, two cattle are missing, and the living pack stays in the high wood. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   pack_diverted_after_blood: {
     send_wagon_to_cade:
-      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; the yearling remains dead, the other two wolves remain alive, and two cattle are still missing when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon repairs Cade's outer fence and searches for the two missing cattle. The yearling wolf is dead; the other two live. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade's outer fence remains broken, and two cattle are missing. The yearling wolf is dead; the other two live in the high wood. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   bloodied_byre_evacuated: {
     send_wagon_to_cade:
-      "The wagon returns for Cade and every evacuated person, all safe on the road, then begins the search for two missing cattle and a safe line around the abandoned byre; the yearling and flank wolf remain dead, and the old grey still holds the byre when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon helps the evacuees, searches for two missing cattle, and marks a safe boundary around the abandoned barn. Two wolves are dead; the old grey still holds the barn. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade and every other person remain safe on the evacuation road, but two cattle are still missing, the yearling and flank wolf are dead, and the old grey remains in the abandoned byre. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. The evacuees remain safe, but two cattle are missing. Two wolves are dead, and the old grey remains in the abandoned barn. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   drive_cattle_wounded: {
     send_wagon_to_cade:
-      "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; your gate wound remains untreated and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon returns Cade's whole herd and repairs the abandoned outer boundary. All three wolves live outside it. Your gate wound is untreated, and the rig is in Albany for repair. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade keeps the whole herd on the evacuation road while all three wolves remain alive beyond the abandoned outer line, your gate wound remains untreated, and the spent signal-and-rope rig remains in Albany for repair. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade and the whole herd remain on the evacuation road. All three wolves live beyond the abandoned boundary. Your gate wound is untreated, and the rig is in Albany for repair. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   drive_person_cattle_lost: {
     send_wagon_to_cade:
-      "The wagon returns with Cade and every evacuated person to search for the scattered herd and repair the abandoned outer line; all three wolves remain alive beyond it and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon helps the evacuees search for the scattered herd and repair the abandoned boundary. All three wolves live outside it, and the rig is in Albany for repair. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade and every other person remain safe on the evacuation road, but the herd remains scattered, all three wolves remain alive beyond the abandoned outer line, and the spent signal-and-rope rig remains in Albany for repair. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. The evacuees remain safe, but the herd is scattered. All three wolves live beyond the abandoned boundary, and the rig is in Albany for repair. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   drive_reserve_spent: {
     send_wagon_to_cade:
-      "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; the cut-apart signal-and-rope rig did not return when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon returns Cade's whole herd and repairs the abandoned boundary. All three wolves live outside it, and the destroyed rig is gone. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade keeps the whole herd safe on the evacuation road while all three wolves remain alive beyond the abandoned outer line, but the cut-apart signal-and-rope rig did not return. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade and the whole herd remain safe on the evacuation road. All three wolves live beyond the abandoned boundary, and the destroyed rig is gone. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   fortified_cade_terms: {
     send_wagon_to_cade:
-      "The wagon returns to cover Cade's exposed outer property while the household and whole herd remain behind his shutters; Albany's public relief seals came home unused. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon protects Cade's exposed outer property. His household and herd stay behind the shutters, and Albany's seals remain unused. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade's household and whole herd remain secure behind his shutters, but the outer property stays exposed while Albany's unused public relief seals remain in reserve. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade's household and herd remain safe behind the shutters, but the outer property stays exposed. Albany's seals remain unused. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   fortified_albany_authority: {
     send_wagon_to_cade:
-      "The wagon checks the outer property you preserved under Albany seal; Cade's household and whole herd remain secure, but the public relief seals were spent and his refusal remains on the return board. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon checks the outer property protected by Albany's boundary. Cade's household and herd remain safe, but the public seals are spent and his refusal stays recorded. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade's household, whole herd, and outer property remain secure under Albany's sealed line, but the public relief seals are spent and Cade refused the recovery hand. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade's household, herd, and outer property remain safe behind Albany's boundary. The public seals are spent, and Cade refused to help. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   gate_barred: {
     send_wagon_to_cade:
-      "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon repairs the outer fence. The inner-gate timber remains Cade's last barrier. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade keeps the cattle behind the barred inner gate while the outer paling waits. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade keeps the cattle behind the barred inner gate, and the outer fence remains broken. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   timber_saved: {
     send_wagon_to_cade:
-      "The wagon and the saved timber close Cade's breach before the next night. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon uses the saved timber to repair Cade's fence before night. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade uses the saved timber to begin the repair without it. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade uses the saved timber to begin the repair alone. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
   held: {
     send_wagon_to_cade:
-      "The wagon brings the sound wood the fight consumed and rebuilds Cade's exposed line. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+      "The wagon brings replacement timber and repairs Cade's outer fence. You take Hedrick's packet north alone. Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade faces the broken outer line without sound timber until another relief run. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+      "The wagon goes north. Cade has no repair timber for the broken outer fence until another relief run. Reward: one 15-minute Greenway rest for traveling with the wardens.",
   },
 };
 
@@ -206,82 +206,82 @@ describe("journey campaign", () => {
       {
         endingId: "ending_pack_diverted",
         id: "pack_diverted",
-        phrase: "cattle are whole and all three wolves remain alive",
+        phrase: "whole herd survived, and all three wolves are alive",
       },
       {
         endingId: "ending_pack_diverted_cattle_scattered",
         id: "pack_diverted_cattle_scattered",
-        phrase: "two cattle are still missing",
+        phrase: "Two cattle are missing",
       },
       {
         endingId: "ending_pack_diverted_after_blood",
         id: "pack_diverted_after_blood",
-        phrase: "The yearling is dead",
+        phrase: "The yearling wolf died",
       },
       {
         endingId: "ending_bloodied_byre_evacuated",
         id: "bloodied_byre_evacuated",
-        phrase: "old grey remains in Cade's abandoned byre",
+        phrase: "old grey still holds the abandoned barn",
       },
       {
         endingId: "ending_bloodied_byre_evacuated_june_released",
         id: "bloodied_byre_evacuated",
-        phrase: "June returned separately",
+        phrase: "she returned separately",
       },
       {
         endingId: "ending_drive_cattle_wounded",
         id: "drive_cattle_wounded",
-        phrase: "you carry an untreated gate wound",
+        phrase: "gate wound is untreated",
       },
       {
         endingId: "ending_drive_person_cattle_lost",
         id: "drive_person_cattle_lost",
-        phrase: "the herd scattered during the retreat",
+        phrase: "the herd scattered",
       },
       {
         endingId: "ending_drive_reserve_spent",
         id: "drive_reserve_spent",
-        phrase: "spent signal-and-rope rig was cut apart and did not return",
+        phrase: "rig was destroyed",
       },
       {
         endingId: "ending_fortified_cade_terms",
         id: "fortified_cade_terms",
-        phrase: "honored his terms and returned Albany's public relief seals unused",
+        phrase: "followed Cade's terms and returned Albany's seals",
       },
       {
         endingId: "ending_fortified_albany_authority",
         id: "fortified_albany_authority",
-        phrase: "invoked lawful Albany authority and spent the public relief seals",
+        phrase: "spent the public seals",
       },
       {
         endingId: "ending_held_gate_barred",
         id: "gate_barred",
-        phrase: "inner gate you barred",
+        phrase: "barred inner gate",
       },
       {
         endingId: "ending_held_gate_barred_june_released",
         id: "gate_barred",
-        phrase: "June returned separately",
+        phrase: "she returned separately",
       },
       {
         endingId: "ending_held_timber_saved",
         id: "timber_saved",
-        phrase: "sound timber you carried out",
+        phrase: "timber you saved",
       },
       {
         endingId: "ending_held_timber_saved_june_released",
         id: "timber_saved",
-        phrase: "June returned separately",
+        phrase: "she returned separately",
       },
       {
         endingId: "ending_held",
         id: "held",
-        phrase: "guard wood was spent",
+        phrase: "fight used the guard wood",
       },
       {
         endingId: "ending_held_june_released",
         id: "held",
-        phrase: "June returned separately",
+        phrase: "she returned separately",
       },
     ] as const;
 
@@ -308,20 +308,20 @@ describe("journey campaign", () => {
     const expected = [
       {
         endingId: "ending_pack_diverted",
-        completionTruth: "cattle are whole",
+        completionTruth: "whole herd survived",
         consequenceTruths: [/whole herd/i],
         forbidden: /cattle (?:are )?still missing/i,
       },
       {
         endingId: "ending_pack_diverted_cattle_scattered",
-        completionTruth: "two cattle are still missing",
-        consequenceTruths: [/two cattle (?:are )?still missing/i],
+        completionTruth: "Two cattle are missing",
+        consequenceTruths: [/two missing cattle|two cattle are missing/i],
         forbidden: /whole herd/i,
       },
       {
         endingId: "ending_pack_diverted_after_blood",
-        completionTruth: "The yearling is dead",
-        consequenceTruths: [/yearling (?:is|remains) dead/i, /two cattle (?:are )?still missing/i],
+        completionTruth: "The yearling wolf died",
+        consequenceTruths: [/yearling wolf is dead/i, /two missing cattle|two cattle are missing/i],
         forbidden: /whole herd|all three wolves remain alive/i,
       },
     ] as const;
@@ -365,9 +365,9 @@ describe("journey campaign", () => {
       journey: awaitingInitialGoalChoice(),
       questOutcomeIds,
     });
-    expect(beforeContinue?.completionContext).toMatch(/yearling and flank wolf are dead/i);
-    expect(beforeContinue?.completionContext).toMatch(/old grey remains/i);
-    expect(beforeContinue?.completionContext).toMatch(/two cattle are still missing/i);
+    expect(beforeContinue?.completionContext).toMatch(/yearling and flank wolf died/i);
+    expect(beforeContinue?.completionContext).toMatch(/old grey still holds/i);
+    expect(beforeContinue?.completionContext).toMatch(/two cattle are missing/i);
     expect(beforeContinue?.completionContext).not.toMatch(
       /byre (?:was |is )?held|pack (?:was )?diverted|all three wolves/i,
     );
@@ -377,9 +377,9 @@ describe("journey campaign", () => {
       questOutcomeIds,
     });
     for (const option of afterContinue?.storyChoice?.options ?? []) {
-      expect(option.consequence).toMatch(/yearling and flank wolf (?:remain |are )?dead/i);
+      expect(option.consequence).toMatch(/two wolves are dead/i);
       expect(option.consequence).toMatch(/old grey/i);
-      expect(option.consequence).toMatch(/two missing cattle|two cattle are still missing/i);
+      expect(option.consequence).toMatch(/two missing cattle|two cattle are missing/i);
       expect(option.consequence).not.toMatch(/byre (?:was |is )?held|pack (?:was )?diverted/i);
     }
   });
@@ -388,20 +388,20 @@ describe("journey campaign", () => {
     const expected = [
       {
         endingId: "ending_drive_cattle_wounded",
-        completionTruth: /whole herd.*untreated gate wound/i,
-        consequenceTruths: [/whole herd/i, /gate wound remains untreated/i],
+        completionTruth: /whole herd.*gate wound is untreated/i,
+        consequenceTruths: [/whole herd/i, /gate wound is untreated/i],
         forbidden: /herd (?:remains )?scattered|rig did not return/i,
       },
       {
         endingId: "ending_drive_person_cattle_lost",
-        completionTruth: /herd scattered during the retreat/i,
-        consequenceTruths: [/herd (?:remains )?scattered|search for the scattered herd/i],
+        completionTruth: /herd scattered/i,
+        consequenceTruths: [/herd is scattered|search for the scattered herd/i],
         forbidden: /whole herd|gate wound|rig did not return/i,
       },
       {
         endingId: "ending_drive_reserve_spent",
-        completionTruth: /spent signal-and-rope rig was cut apart and did not return/i,
-        consequenceTruths: [/whole herd/i, /cut-apart signal-and-rope rig did not return/i],
+        completionTruth: /rig was destroyed/i,
+        consequenceTruths: [/whole herd/i, /destroyed rig is gone/i],
         forbidden: /herd (?:remains )?scattered|gate wound|rig remains in Albany/i,
       },
     ] as const;
@@ -437,17 +437,17 @@ describe("journey campaign", () => {
       {
         endingId: "ending_fortified_cade_terms",
         completionTruths: [
-          /honored his terms/i,
-          /relief seals unused/i,
+          /followed Cade's terms/i,
+          /returned Albany's seals/i,
           /outer property remained exposed/i,
         ],
         consequenceTruths: [
           /household/i,
-          /whole herd/i,
+          /herd/i,
           /shutters/i,
           /outer property/i,
           /exposed/i,
-          /relief seals/i,
+          /Albany's seals/i,
           /unused|reserve/i,
         ],
         forbidden: /authority|seals (?:were|are) spent|Cade refused/i,
@@ -455,16 +455,16 @@ describe("journey campaign", () => {
       {
         endingId: "ending_fortified_albany_authority",
         completionTruths: [
-          /invoked lawful Albany authority/i,
-          /spent the public relief seals/i,
-          /Cade refused to help/i,
+          /Albany's sealed boundary/i,
+          /spent the public seals/i,
+          /Cade refused to help under Albany's order/i,
         ],
         consequenceTruths: [
           /household/i,
-          /whole herd/i,
+          /herd/i,
           /outer property/i,
           /seal/i,
-          /relief seals/i,
+          /public seals/i,
           /spent/i,
           /refus/i,
         ],
@@ -508,17 +508,17 @@ describe("journey campaign", () => {
       {
         endingId: "ending_fields_held_race_spent",
         id: "fields_held_race_spent",
-        phrase: "winter grain intact",
+        phrase: "winter grain survived",
       },
       {
         endingId: "ending_race_held_fields_given",
         id: "race_held_fields_given",
-        phrase: "winter grain lies under silt",
+        phrase: "lost their winter grain",
       },
       {
         endingId: "ending_held",
         id: "held",
-        phrase: "relief-race carries the flood crest",
+        phrase: "relief channel carried the flood",
       },
     ];
 
@@ -560,10 +560,10 @@ describe("journey campaign", () => {
         Object.values(WOLF_WINTER_CAMPAIGN_OUTCOMES)[index]?.albanyReturnContext,
       );
       expect(context?.preRetentionTeaser).toBe(ALBANY_DAWN_DISPATCH_TEASER);
-      expect(context?.preRetentionTeaser).toContain("Hayden Hale");
+      expect(context?.preRetentionTeaser).toContain("Hayden");
       expect(context?.preRetentionTeaser).toContain("one dawn relief wagon");
       expect(context?.preRetentionTeaser).toContain("Hedrick Cradoc's father");
-      expect(context?.preRetentionTeaser).toContain("old grey sow above Queensbury");
+      expect(context?.preRetentionTeaser).toContain("old grey sow");
       expect(context?.continueLabel).toBe(ALBANY_DAWN_DISPATCH_CONTINUE_LABEL);
       expect(context?.continueLabel).toBe(
         "Continue: decide the dawn wagon, then take the Gallowmere lead",
@@ -572,7 +572,7 @@ describe("journey campaign", () => {
         ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX,
       );
       expect(context?.continueConsequencePrefix).toBe(
-        "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through.",
+        "Assign Albany's only dawn relief wagon. Then find Hedrick in Queensbury and complete The Gallowmere.",
       );
       expect(context?.storyChoice).toBeNull();
       expect(context?.continuationPreview).toEqual(
@@ -618,14 +618,14 @@ describe("journey campaign", () => {
     expect(journeyCampaignPresentationContext({ journey: ended, questOutcomeIds })).toBeNull();
 
     const context = journeyCampaignPresentationContext({ journey: continued, questOutcomeIds });
-    expect(context?.completionContext).toContain("inner gate you barred");
+    expect(context?.completionContext).toContain("barred inner gate");
     expect(context?.preRetentionTeaser).toBeNull();
     expect(context?.continueLabel).toBeUndefined();
     expect(context?.continueConsequencePrefix).toBeNull();
     expect(context?.storyChoice).toMatchObject({
       id: "albany_dawn_dispatch",
       message:
-        "Wolf-Winter is complete. First choose where Albany's only dawn relief wagon goes: back to Cade or north with the wardens. After this choice, the displayed goal is to reach Hedrick Cradoc in Queensbury and see The Gallowmere through.",
+        "Wolf-Winter is complete. Send Albany's only dawn relief wagon to Cade or north with the wardens. Your next goal is The Gallowmere in Queensbury.",
     });
     expect(context?.storyChoice).not.toHaveProperty("title");
     expect(context?.storyChoice).not.toHaveProperty("prompt");
@@ -668,7 +668,7 @@ describe("journey campaign", () => {
       expect(goal.text).toContain("The Gallowmere");
       expect(goal.text).not.toMatch(/tracking|wind-stone|knife|attack|lore|solution/i);
     }
-    expect(goals[0]?.text).toContain("Carry Hayden's packet");
+    expect(goals[0]?.text).toContain("Take Hayden's packet");
     expect(goals[1]?.text).toContain("Travel with Hayden's wardens");
   });
 
@@ -815,7 +815,7 @@ describe("journey campaign", () => {
       continueConsequencePrefix: "Continue to decide how Oneonta records the corrected dose.",
       storyChoice: null,
     });
-    expect(beforeRetention?.preRetentionTeaser).toContain("next live packet to Rome");
+    expect(beforeRetention?.preRetentionTeaser).toContain("next report to Rome");
     expect(journeyCampaignPresentationContext({ journey: ended, questOutcomeIds })).toBeNull();
 
     const afterContinue = journeyCampaignPresentationContext({
@@ -879,10 +879,10 @@ describe("journey campaign", () => {
       });
     }
     expect(TANNERS_FEVER_ACCOUNTABILITY_GOALS.keep_household_correction.text).toContain(
-      "household record",
+      "correction remains private",
     );
     expect(TANNERS_FEVER_ACCOUNTABILITY_GOALS.publish_dosage_warning.text).toContain(
-      "warning made public",
+      "warning is public",
     );
   });
 
@@ -918,7 +918,7 @@ describe("journey campaign", () => {
         continueConsequencePrefix: null,
         storyChoice: {
           id: ROME_POST_WEIR_DISPATCH_ID,
-          message: expect.stringContaining("Which live packet"),
+          message: "Choose the next report: Oswego's charter case or Greece's cold forge.",
         },
       });
       expect(afterContinue?.storyChoice?.options.map((option) => option.id)).toEqual(
@@ -970,8 +970,8 @@ describe("journey campaign", () => {
     for (const legacyGoal of legacyGoals) {
       expect(legacyGoal).not.toBeNull();
       expect(journeyCampaignGoalJournalCopy(legacyGoal!, new Map())).toEqual({
-        title: "A new relief lead",
-        text: `The dispatch chain turns to the next live packet. ${legacyGoal!.text}`,
+        title: "New goal",
+        text: legacyGoal!.text,
       });
     }
 

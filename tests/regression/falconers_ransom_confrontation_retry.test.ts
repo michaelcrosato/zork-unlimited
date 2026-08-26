@@ -94,8 +94,10 @@ describe("bug_0456 - Falconer's Ransom confrontation can recover from a bad roll
     state = failed.state;
 
     expect(narrations(failed.events)).toContain("cunning check: d20 1 + 9 = 10 vs 12");
-    expect(narrations(failed.events)).toContain("the forged bill is still in your hand");
-    expect(narrations(failed.events)).toContain("the evidence has not left the yard");
+    expect(narrations(failed.events)).toContain(
+      "Retry with PRESENT bill of sale against falcon's jesses; the check has no penalty or lockout",
+    );
+    expect(narrations(failed.events)).toContain("Thorn still blocks north");
     expect(state.inventory).toContain("hidden_bill");
     expect(state.flags.confrontation_attempted).toBeUndefined();
     expect(state.flags.aldric_shamed).toBeUndefined();

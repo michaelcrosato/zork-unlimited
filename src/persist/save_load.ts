@@ -235,19 +235,22 @@ export type EmbeddedQuestCharacterContinuitySave = {
 
 export type SaveSourceRef = CompactSourceRef;
 
-const PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
-  "Scenario-local numbers and issued kit govern this quest. Your persistent record remains intact; only authored campaign import and export effects cross the quest boundary.";
+const LEGACY_EMBEDDED_QUEST_CONTINUITY_EXPLANATIONS = new Set([
+  "Scenario-local numbers and issued kit govern this quest. Your persistent record remains intact; only authored campaign import and export effects cross the quest boundary.",
+  "Campaign supplies, fatigue, and character record persist. Quest HP, stats, and issued inventory are local; only authored campaign imports and exports cross the boundary.",
+]);
 
 // The explanation is player-facing copy, but version-1 sidecars persisted it as
-// a literal. Accept only the immediately previous literal at the load boundary
-// and normalize it before the strict current runtime schema sees the value.
+// a literal. Accept the two shipped legacy literals at the load boundary and
+// normalize them before the strict current runtime schema sees the value.
 const PersistedEmbeddedQuestCharacterContinuitySchema = z.preprocess((value) => {
   if (
     value !== null &&
     typeof value === "object" &&
     !Array.isArray(value) &&
-    (value as Record<string, unknown>)["explanation"] ===
-      PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION
+    LEGACY_EMBEDDED_QUEST_CONTINUITY_EXPLANATIONS.has(
+      (value as Record<string, unknown>)["explanation"] as string,
+    )
   ) {
     return {
       ...(value as Record<string, unknown>),

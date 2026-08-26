@@ -233,7 +233,7 @@ describe("RPG pressure-track client parity", () => {
       next: null,
     });
     expect(breaking.facts).toContain(
-      "pressure: Cattle Alarm — Breaking (4; highest band) — The next shock will scatter cattle.",
+      "pressure: Cattle Alarm — Breaking (4; at maximum) — The next shock will scatter cattle.",
     );
   });
 

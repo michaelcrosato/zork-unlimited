@@ -114,11 +114,11 @@ describe("Tide-Mill compact ending payoff", () => {
   it("keeps the clean and no-board rescue endings distinct without compact truncation", () => {
     const clean = act(raiseGate(true), "go_down");
     expect(clean.endingId).toBe("ending_saved");
-    expectCompactPayoff(clean, /takings are still on the desk/i);
+    expectCompactPayoff(clean, /coin-bag remains on the desk/i);
 
     const noBoard = act(raiseGate(false), "go_down");
     expect(noBoard.endingId).toBe("ending_saved");
-    expectCompactPayoff(noBoard, /not the written millboard order/i);
+    expectCompactPayoff(noBoard, /without reading the millboard/i);
     expect(compactEndingText(noBoard)).not.toMatch(/less clean/i);
   });
 
@@ -132,7 +132,7 @@ describe("Tide-Mill compact ending payoff", () => {
     returned = act(returned, "go_north");
     returned = act(returned, "go_down");
     expect(returned.endingId).toBe("ending_saved_returned_takings");
-    expectCompactPayoff(returned, /toll-takings are back/i);
+    expectCompactPayoff(returned, /returned Miller Ives's coin-bag/i);
 
     let kept = raiseGate(true);
     kept = act(kept, "go_south");
@@ -142,6 +142,6 @@ describe("Tide-Mill compact ending payoff", () => {
     kept = act(kept, "go_north");
     kept = act(kept, "go_down");
     expect(kept.endingId).toBe("ending_saved_with_takings");
-    expectCompactPayoff(kept, /silver rides cold/i);
+    expectCompactPayoff(kept, /keeping Miller Ives's coin-bag/i);
   });
 });

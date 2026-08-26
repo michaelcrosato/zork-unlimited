@@ -110,7 +110,7 @@ describe("current-goal passage", () => {
     const passage = session.journey().goalPassage;
     expect(passage).toEqual({
       id: "follow_current_goal",
-      label: "Follow the road to Queensbury town",
+      label: "Follow the roads to Queensbury town",
       destination: "Queensbury town",
       roadCount: 2,
       baseMinutes: 60,
@@ -121,9 +121,9 @@ describe("current-goal passage", () => {
       fatigueAfter: 12,
       travelConditionAfter: "ready",
       consequence:
-        "Travel toward Queensbury town, preserving every road's normal time, supplies, fatigue, discoveries, and encounters.",
+        "Travel toward Queensbury town. Each road still uses its shown time and supplies, adds fatigue, reveals places, and may trigger an encounter.",
       stopRule:
-        "The passage stops at the objective, at a road encounter, or before the next road would add a supply shortfall or a worse fatigue-delay tier; the first road always accepts your current condition.",
+        "You always take the first road. After that, travel stops at the goal, at a road encounter, or before a road that would cause a new supply shortage or worse fatigue delay.",
     });
     expect(Object.isFrozen(passage)).toBe(true);
     expect(Object.keys(passage!).sort()).toEqual(
@@ -339,7 +339,7 @@ describe("current-goal passage", () => {
   it("rejects blocked or absent passages without changing state", () => {
     const opening = new OverworldSession(WORLD);
     const openingHash = opening.snapshotHash();
-    expect(() => opening.followGoalPassage()).toThrow(/no current goal passage/i);
+    expect(() => opening.followGoalPassage()).toThrow(/no goal route is available/i);
     expect(opening.snapshotHash()).toBe(openingHash);
     expect(opening.journey().acceptedDecisions).toBe(0);
 

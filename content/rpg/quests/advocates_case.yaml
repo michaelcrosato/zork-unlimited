@@ -84,32 +84,22 @@ rooms:
   - id: market_stall
     name: "Marta's Stall"
     description: >
-      A cloth-seller's stall on the high street: two trestle tables spread with
-      bolts of good wool broadcloth — russet, tawny, and a dark blue that catches
-      the morning light. The bolts have been roped together and tagged with an
-      impound notice, the guild warden's seal plain on the paper. Marta Holm stands
-      behind the table with the careful stillness of someone who knows she is right
-      and is not yet certain it matters. Oswin, the Weavers' Guild warden, occupies
-      the street-side of the stall — compact, unhurried, a man at his leisure.
-      The charter roll lies on the near table where Marta set it. The charter
-      office lies east along the street; the guild records hall is west; the
-      alderman's administrative building is north.
+      Marta's broadcloth is roped under Warden Oswin's impound notice. The charter
+      roll is on the near table. Go east to the Charter Office, west to the Guild
+      Records Room, or north to the Alderman's Antechamber. Marta and Oswin wait
+      beside the stall.
     # Reactive: once the appeal is upheld, the stall reads as resolved.
     variants:
       - when: [{ has_flag: oswin_overruled }]
         text: >
-          Marta's stall, the impound notice already gone from the bolts. Marta is
-          stacking the broadcloth back in order with the methodical care of someone
-          who is not yet ready to believe the morning has turned out this way. Oswin
-          has not returned to the stall. The charter office is east; the guild
-          records hall is west; the alderman's building is north.
+          The impound notice is gone, and Marta is stacking her broadcloth. Oswin
+          has left. Go east to the Charter Office, west to the Guild Records Room,
+          or north to the Alderman's Antechamber.
       - when: [{ has_flag: charter_roll_taken }]
         text: >
-          Marta's stall, the impounded broadcloth still roped on the trestle
-          tables. The near table is bare where Marta's charter roll lay. Marta
-          stands behind the table, Oswin on the street-side of the stall. The
-          charter office is east; the guild records hall is west; the alderman's
-          building is north.
+          Marta's broadcloth remains roped under the impound notice. You took the
+          charter roll. Marta and Oswin wait here. Go east to the Charter Office,
+          west to the Guild Records Room, or north to the Alderman's Antechamber.
     objects: [charter_roll]
     exits:
       - { direction: east, to: charter_office }
@@ -119,25 +109,19 @@ rooms:
   - id: charter_office
     name: "The Charter Office"
     description: >
-      A small room off the Guildhall passage — one clerk, one window, and a wall
-      of bound registers going back forty years. The clerk on duty knows this room
-      the way a carpenter knows his bench: everything is where it was placed and
-      everything has a reason. The town's master charter register lies open on the
-      counter, its spine worn flat from being consulted. Beside it, the clerk has
-      prepared a certified extract of Walter Holm's entry for the hearing. The market
-      stall is back west.
+      A certified register extract of Walter Holm's 1671 entry is beside the open
+      master charter register. The extract can be taken; the master register stays
+      here. Go west to Marta's Stall.
     # Reactive: the portable extract can leave; the master register never does.
     variants:
       - when: [{ has_flag: register_read }]
         text: >
-          The charter office. Walter Holm's certified extract has been read, and the
-          master 1671 register remains open on the clerk's counter. Its bound pages
-          stay in the office. The market stall is back west.
+          You have read Walter Holm's certified register extract. The master 1671
+          register remains on the counter. Go west to Marta's Stall.
       - when: [{ has_flag: town_register_taken }]
         text: >
-          The charter office. The master charter register remains open on the clerk's
-          counter, its binding safely in the office. The space beside it is clear where
-          the clerk-certified extract was issued. The market stall is back west.
+          You took the certified register extract. The master charter register
+          remains on the counter. Go west to Marta's Stall.
     objects: [town_register]
     exits:
       - { direction: west, to: market_stall }
@@ -145,19 +129,17 @@ rooms:
   - id: guild_records
     name: "The Guild Records Room"
     description: >
-      The Weavers' Guild hall's side room, kept locked on most days but standing
-      open for the warden's use on market morning. Shelves of bound master conviction
-      ledgers and impound records line the west wall — every action the guild has taken
-      in this district for the past thirty years, bound and filed. The relevant master
-      volume remains on its shelf; a clerk-certified packet of its three discharged
-      cases has been prepared for the hearing. The market stall is back east.
+      A certified precedent packet was kept here. TAKE certified precedent packet if it
+      is here, or retrieve that packet if needed. READ certified precedent packet only
+      while that evidence remains unfinished. The master
+      conviction ledger stays on its shelf. Go east to Marta's Stall.
     # Reactive: reading the portable packet does not relocate the master ledger.
     variants:
       - when: [{ has_flag: priors_read }]
         text: >
-          The guild records room. The certified precedent packet has been reviewed:
-          three prior cases, with Oswin's signature on two loss entries. The bound
-          master conviction ledger remains on its shelf. The market stall is back east.
+          You have read the certified precedent packet: three discharged impounds,
+          including two signed by Oswin. The master conviction ledger remains here.
+          Go east to Marta's Stall.
     objects: [prior_convictions]
     exits:
       - { direction: east, to: market_stall }
@@ -165,34 +147,25 @@ rooms:
   - id: aldermans_antechamber
     name: "The Alderman's Antechamber"
     description: >
-      The waiting room outside the alderman's hearing hall — a bench along one wall,
-      a case slate on the clerk's table, and the north door to the hall itself.
-      Craf — Oswin's hired man — stands in the doorway with the settled patience of
-      someone who has been given one instruction and has not been given a second one.
-      He is not from the guildhall; he is from wherever Oswin found him. The slate
-      on the clerk's table carries Marta Holm's case, waiting for disposition. The
-      market stall is back south.
+      The case record for Marta's impound is on the clerk's table. Craf blocks the
+      north door to the hearing hall. Go south to Marta's Stall.
     # Two variants: rhetoric path (oswin_overruled) and combat path (craf_defeated).
     variants:
       - when: [{ has_flag: oswin_overruled }]
         text: >
-          The alderman's antechamber. The case slate has been struck through —
-          'exemption confirmed, impound discharged, warden's notice void.' Craf
-          stepped back from the door when the deputy signed it; he has gone back
-          to wherever Oswin sent him from. The hearing hall is north; the market
-          stall is south.
+          The case record says, 'Exemption confirmed. Impound discharged. Warden's
+          notice void.' Craf no longer blocks north. Go north to the hearing hall or south to
+          Marta's Stall.
       - when: [{ has_flag: craf_defeated }]
         text: >
-          The alderman's antechamber, Craf down across the doorway. The hearing
-          hall is north; the market stall is south.
+          Craf is down, and the north door is open. Go north to the hearing hall or
+          south to Marta's Stall.
       - when: [{ not_flag: priors_read }]
         text: >
-          The alderman's antechamber. Craf fills the north doorway, and the case
-          slate waits on the clerk's table, but the legal sequence is not complete
-          yet. The charter can state Marta's right and the certified register extract
-          can prove it is recorded; what will move Oswin is the guild's own precedent.
-          The guild records room is west from Marta's stall, if you mean to make this
-          an argument rather than a struggle.
+          Craf blocks the north door. In the Guild Records Room west of Marta's Stall,
+          TAKE certified precedent packet and READ certified precedent packet. It proves
+          that Oswin lost two matching cases. Without it,
+          you can still ATTACK Craf, but that route risks defeat and loses evidence score.
     objects: [case_record]
     exits:
       - { direction: south, to: market_stall }
@@ -200,26 +173,22 @@ rooms:
         to: market_square
         conditions: [{ any_of: [{ has_flag: oswin_overruled }, { has_flag: craf_defeated }] }]
         locked_msg: >
-          Craf fills the doorway. The hearing hall — and the square beyond — is on
-          the other side, and he is not moving until the case is settled or someone
-          moves him.
+          Craf blocks north. PRESENT certified precedent packet WITH case record to
+          settle the appeal, or ATTACK Craf and risk being expelled.
 
   - id: market_square
     name: "The Market Square"
     description: >
-      The high street opens into the market square north of the alderman's building,
-      the full run of it loud with the ordinary business of a market morning. Behind
-      you the hearing hall door stands open; Marta's stall is visible at the south
-      end of the street, her bolts already being re-spread on the tables. The
-      impound notice is gone. The road is clear.
+      Marta's impound is void, and her broadcloth is back on the tables. The hearing
+      hall is south. The market continues around you.
     # Locomotion win (+15 capstone): reaches the full 50 on first entry and fires
     # end_game simultaneously. SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win
     # (bug_0116): the +15 is the last award and the win fires in the same step.
     on_enter:
       - set_quest_stage: { quest: weavers_appeal, stage: market_clear }
       - add_journal: >
-          The appeal was heard and the exemption stands. Marta's goods are hers.
-          Oswin's impound has no further basis and he knows it.
+          Marta's exemption stands. Her goods were released, and Oswin's impound
+          is void.
       - inc_var: { name: score, by: 15 }
     exits:
       - { direction: south, to: aldermans_antechamber }
@@ -229,27 +198,26 @@ objects:
     name: "charter roll"
     aliases: [charter, roll, exemption, exemption roll, royal charter, warrant, document, papers, marta's charter, exemption document, cloth exemption, charter document, rolled charter, charter paper]
     description: >
-      A tight roll of vellum in a sleeve of oiled cloth — Marta's Royal Charter
-      exemption, the wax seal of the Crown still intact at the tie. She set it on
-      the table when Oswin arrived; he has not touched it.
+      Marta's Royal Charter exemption is rolled in an oiled-cloth sleeve. The Crown
+      seal is intact.
     # Reactive: once read, the roll shows as already examined.
     variants:
       - when: [{ has_flag: charter_read }]
         text: >
-          The charter roll, already read — Royal Warrant, Walter Holm, 1671,
-          exemption granted to his heirs in perpetuity. The wax seal is genuine.
-          What you need now is a certified extract of the registered entry.
+          You have read the charter roll: Walter Holm's 1671 exemption passes to
+          his heirs, and the Crown seal is genuine. The certified register extract
+          is the supporting record. If that evidence is unfinished, go to the Charter Office,
+          TAKE certified register extract, and READ certified register extract.
     takeable: true
     take_effects:
       - set_flag: charter_roll_taken
     read_text: >
-      'By the authority of the Crown, to Walter Holm of this town, in recognition
-      of service rendered: exemption from guild licensing requirements for lawful
-      trade in woollen cloth, heritable by his lawful heirs in perpetuity, registered
-      at the town charter office in the year 1671.' The seal is genuine — the Crown
-      stamp not reproduced in any guild instrument. Marta is Walter's daughter. The
-      exemption is hers. The question is whether you can put that answer in front of
-      someone who can act on it before noon.
+      The charter grants Walter Holm and his lawful heirs a permanent exemption
+      from guild licensing for woollen-cloth trade. It was registered at the town
+      charter office in 1671. The Crown seal is genuine, and Marta is Walter's heir.
+      The certified register extract supplies the supporting record. If that
+      evidence is unfinished, TAKE certified register extract and READ certified
+      register extract before the hearing at noon.
     interactions:
       # First read: +5 score (the foundation — the exemption confirmed in your own hands).
       # One-shot: retired after its first READ or a legal dismissal.
@@ -261,48 +229,35 @@ objects:
           - set_quest_stage: { quest: weavers_appeal, stage: charter_read }
           - inc_var: { name: score, by: 5 }
           - add_journal: >
-              The charter roll: Royal Warrant to Walter Holm, 1671. Exemption from guild
-              licensing, heritable in perpetuity, Crown seal genuine. Marta is his heir.
-              The exemption is hers — but Oswin is betting no one can argue it fast enough.
-              The town charter office can issue a certified extract of the registered
-              entry. (+5)
+              The charter roll proves that Walter Holm's 1671 guild exemption passes
+              to Marta. The Crown seal is genuine. The certified register extract is
+              the supporting record; complete it only if unfinished. (+5)
           - narrate: >
-              The vellum is worn soft from being unrolled before — Marta has read this
-              document many times. The text is plain: Royal Warrant, 1671, Walter Holm,
-              exemption from guild licensing for lawful woollen trade, heritable to his
-              heirs in perpetuity, registered at the town charter office. The Crown seal
-              at the foot is genuine — not a copy, not a guild instrument. Oswin has not
-              touched this roll because he knows what is in it. His bet is that a document
-              alone is not an argument, and that you cannot make one fast enough to matter.
+              You confirm Walter Holm's 1671 exemption, its inheritance clause, and
+              the genuine Crown seal. Marta is the lawful heir. A charter alone will
+              not settle the case. If its supporting evidence is unfinished, go to the Charter
+              Office before noon, TAKE certified register extract, and READ certified register extract.
 
   - id: town_register
     name: "certified register extract"
     aliases: [register, charter register, town record, charter record, charter book, registration, registry, official record, official register, registered copy, town charter book, clerk's register]
     description: >
-      Two portable sheets copied from the town's bound 1671 charter register. The
-      clerk's certification and office seal attest that Walter Holm's entry matches
-      the master: date, beneficiary, scope, and the critical phrase on inheritance.
-      The bound register remains in the charter office.
+      Two portable sheets copy Walter Holm's entry from the master 1671 charter
+      register. The clerk's signature and office seal certify the copy.
     # Reactive: once read, the extract shows as already studied without claiming possession.
     variants:
       - when: [{ has_flag: register_read }]
         text: >
-          The certified register extract, already read — Walter Holm, registered 1671,
-          exemption heritable to his lawful heirs, no guild license required. The
-          clerk's seal attests that it matches the master register kept at the charter
-          office.
+          You have read the certified register extract. It confirms that Walter
+          Holm's 1671 exemption passes to his heirs without a guild license.
     takeable: true
     take_effects:
       - set_flag: town_register_taken
     read_text: >
-      The certified extract transcribes the third page of the master 1671 register:
-      'Walter Holm, licensed cloth-trader, exemption from Weavers' Guild membership
-      requirement. Authority: Royal Warrant (Crown seal affixed to original, verified
-      by this office). Scope: lawful woollen trade in this town. Inheritable to lawful
-      heirs without further application. No guild license required for exempt household.'
-      The clerk's signature and office seal certify the copy. There is no ambiguity in
-      the phrasing. Oswin has seen the master entry. He is relying on no one else
-      bringing its certified wording to the hearing today.
+      The certified register extract confirms Walter Holm's Royal Warrant for lawful
+      woollen trade. It passes to lawful heirs without another application, and the
+      exempt household needs no guild license. The clerk's signature and office seal
+      match the master register. Bring the extract to the hearing before noon.
     interactions:
       # Close study of the extract: +10 score and +3 rhetoric (you now have the
       # registered phrasing to cite precisely under pressure). One-shot: requires
@@ -320,44 +275,35 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: weavers_appeal, stage: register_confirmed }
           - add_journal: >
-              Certified register extract, 1671 entry: 'heritable to lawful heirs without
-              further application, no guild license required.' The clerk's signature
-              and seal attest that it matches the master register — the evidence the
-              alderman's office would accept. (+3 rhetoric, +10)
+              The certified register extract confirms that the 1671 exemption passes
+              to lawful heirs without another application or guild license. Its seal
+              makes it valid hearing evidence. (+3 rhetoric, +10)
           - narrate: >
-              The phrase is there in the clerk's certified copy: 'heritable to lawful
-              heirs without further application, no guild license required.' This is not
-              interpretation — it reproduces the registered text. Oswin impounded Marta's
-              goods under a rule the official record explicitly exempts her from. The
-              exemption is registered, the scope exact, the inheritance unconditional.
-              You finish the extract with a clean sense of where the argument begins.
+              You confirm the registered terms: the exemption passes to Marta, and
+              she needs no guild license. The certified register extract is valid
+              hearing evidence. Its place in the required order is after the charter
+              terms and before the certified precedent packet.
 
   - id: prior_convictions
     name: "certified precedent packet"
     aliases: [convictions, priors, prior cases, guild records, conviction ledger, guild ledger, precedents, case records, prior convictions, warden records, guild cases, case book, conviction book, guild conviction book, guild precedent records]
     description: >
-      Three portable, clerk-certified extracts copied from the guild's bound conviction
-      ledger and tied as a packet for the hearing. Each records an impound discharged
-      under a charter exemption; two reproduce Oswin's filing signature. The bound
-      master ledger remains in the guild records room.
+      Three portable, certified extracts record impounds discharged under charter
+      exemptions. Two carry Oswin's filing signature. If you are not holding the
+      packet, TAKE certified precedent packet if needed. READ certified precedent
+      packet only while that evidence remains unfinished.
     # Reactive: once read, the packet shows as already studied without claiming possession.
     variants:
       - when: [{ has_flag: priors_read }]
         text: >
-          The certified precedent packet, already read — three discharged cases in
-          this district, all citing valid charter exemptions as sufficient discharge.
-          Two extracts reproduce Oswin's filing signature. He knows the precedent.
-          He filed the impound anyway.
+          You have read the certified precedent packet. It records three discharged
+          impounds under charter exemptions, including two filed by Oswin.
     takeable: true
     read_text: >
-      The packet contains three certified extracts marked 'discharged by order of the
-      alderman's deputy, charter exemption sufficient discharge of impound.' The first
-      is from 1683 — a linen merchant, Royal Warrant exemption, impound voided. The
-      second and third are from 1689 and 1691 — both cloth traders, both with registered
-      heritable exemptions, both impounds dismissed. Each extract reproduces a warden's
-      filing signature; the second and third are Oswin's. He has lost this argument in
-      this district under the same rule twice. He filed again because he thought no one
-      would argue back in time.
+      The packet records three district rulings from 1683, 1689, and 1691. Each
+      ruling discharged an impound because a registered charter exemption was
+      sufficient. Oswin signed the 1689 and 1691 filings. The required evidence order
+      is charter terms, certified register extract, then certified precedent packet.
     interactions:
       # Close study of the precedent packet: +10 score and +3 rhetoric (you now
       # have the specific precedent cases to name, including Oswin's own signatures).
@@ -375,49 +321,42 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: weavers_appeal, stage: precedents_found }
           - add_journal: >
-              Certified guild precedent packet: three prior discharged impounds in this
-              district, all citing charter exemption as sufficient discharge. The 1689
-              and 1691 extracts reproduce Oswin's filing signatures. He has lost this
-              argument before under the same rule. He filed anyway, betting on speed.
-              (+3 rhetoric, +10)
+              The certified precedent packet records three discharged impounds under
+              charter exemptions. Oswin signed the 1689 and 1691 filings. Its place in
+              the required order is after the charter terms and certified register
+              extract. (+3 rhetoric, +10)
           - narrate: >
-              The certified 1689 extract reproduces Oswin's filing signature and the
-              alderman's deputy's discharge: 'Charter exemption sufficient discharge of
-              the guild warden's impound action. Case closed.' The 1691 extract records
-              the same sequence and ruling. Oswin knows this argument; he has been on its
-              losing side. The packet gives you the order: exemption text, registered
-              confirmation, then precedent in Oswin's own district. Put those before the
-              deputy in sequence and the outcome has already happened twice before.
+              You confirm three matching rulings, including two filings signed by
+              Oswin. The required order is now clear: charter terms, certified
+              register extract, then certified precedent packet. In the Alderman's
+              Antechamber, PRESENT certified precedent packet WITH case record.
 
   - id: case_record
     name: "case record"
     aliases: [record, case, hearing, case slate, slate, hearing record, impound record, alderman's record, case notes, formal record, disposition record, alderman record, case disposition, holm case, marta's case]
     description: >
-      The case slate on the clerk's table: 'Holm, Marta — impound notice filed by
-      Warden Oswin under Guild Schedule, Article Fourteen. Goods held. Hearing:
-      this session.' The alderman's deputy is in the hall; the case is waiting for
-      a party to make the argument. The slate and its stylus are there to be used.
+      The case record says Warden Oswin impounded Marta Holm's twelve broadcloth
+      bolts under Guild Schedule, Article Fourteen. The deputy is ready to hear
+      the case before noon.
     variants:
       - when: [{ has_flag: oswin_overruled }]
         text: >
-          The case slate on the clerk's table, the original impound filing still
-          legible beneath the deputy's disposition: 'discharged, charter exemption
-          confirmed.' The word 'pending' is struck through. The slate and stylus
-          remain with the hearing record.
+          The case record now says, 'Discharged. Charter exemption confirmed.' The
+          deputy struck through the pending impound.
       - when:
           - all_of:
               - { has_flag: appeal_attempted }
               - { not_flag: oswin_overruled }
         text: >
-          The case slate on the clerk's table. Marta's original impound filing remains
-          pending after the deputy adjourned the first presentation without ruling.
-          The slate and stylus remain ready for a corrected legal sequence.
+          The first appeal was adjourned, so Marta's impound remains pending and
+          Craf still blocks north. If you read all three documents, PRESENT certified
+          register extract with the charter citation and certified precedent packet
+          on case record to retry in the required order.
     takeable: false
     read_text: >
-      The filed lines read: 'Holm, Marta — impound. Warden: Oswin (Weavers' Guild).
-      Article: Schedule Fourteen, unlicensed sale. Goods: twelve bolts broadcloth,
-      held. Claimant response: pending.' That is the original guild claim and response
-      field; the deputy's current disposition, if any, is recorded on the same slate.
+      The original case entry says, 'Marta Holm. Warden Oswin. Schedule Fourteen:
+      unlicensed sale. Twelve broadcloth bolts held.' If the appeal remains pending,
+      PRESENT certified precedent packet WITH case record. A completed ruling stays complete.
     interactions:
       # The confrontation: USE prior_convictions ON case_record — present the full
       # argument to the case record (and the deputy beyond the door): the exemption's
@@ -441,43 +380,24 @@ objects:
             - inc_var: { name: score, by: 10 }
             - set_quest_stage: { quest: weavers_appeal, stage: case_dismissed }
             - add_journal: >
-                Appeal made and accepted: Marta's exemption claim, supported by the
-                evidence gathered and the guild's prior discharges, was put in the
-                required legal sequence. The deputy verified the record and struck the
-                case through. Impound voided. Craf has no instruction left to enforce.
-                (+10)
+                The deputy accepted your presentation, verified Marta's exemption,
+                and voided the impound. Craf no longer blocks the north door. (+10)
             - narrate: >
-                You state the legal sequence clearly — Marta's claimed Crown exemption
-                as authority, any certified register extract you gathered as confirmation,
-                and the certified precedent packet as evidence of Oswin's prior losses
-                under the same rule in the same district.
-                You say all of it in one even sequence, without pause, giving no gap
-                for interruption, because the argument does not need a gap — it is
-                already finished before the last line. The deputy listens. He checks
-                the cited entries against the office records, reads the precedent packet,
-                and picks up the stylus. He draws a line through 'pending' on the case
-                slate and writes 'discharged,
-                charter exemption confirmed.' He does not look at Craf. Craf steps back
-                from the door without being told, because there is nothing left to
-                enforce and Craf is not the kind of man who stands in a doorway for
-                his own reasons.
+                You present the certified precedent packet with the case record. The
+                deputy verifies the official records and writes, 'Discharged. Charter
+                exemption confirmed.' Craf no longer blocks the north door.
           on_failure:
             - set_flag: appeal_attempted
             - add_journal: >
-                The argument did not carry — the sequence broke, the precedent came
-                in the wrong order, and the deputy asked for the certified registration
-                before you had named it. He has adjourned without ruling. Craf has not moved.
+                The deputy adjourned the first appeal because the evidence was out of
+                order. Marta's impound remains pending. The first presentation is spent;
+                use the prepared recovery, or ATTACK Craf only if he still blocks north.
             - narrate: >
-                The argument comes out in the wrong order — the precedent before the
-                certified registration, the registration before the charter text has
-                been clearly established, and the deputy raises a hand before you reach
-                the third point. He wants the certified register extract cited before
-                the precedent; the precedent requires the registration to have weight;
-                the registration requires the original charter's terms to be established.
-                The legal pieces exist, but you have not said them in the right sequence,
-                and a man who hears arguments for a living knows the difference between
-                an argument and a list of documents. He closes the slate. 'Come back
-                when you have the sequence.' Craf has not moved from the door.
+                The deputy adjourns without ruling because you present the evidence out
+                of order. To retry, complete any unfinished document reading. Then PRESENT
+                certified register extract WITH the charter citation and certified precedent
+                packet ON case record. ATTACK Craf only if he still blocks north; combat risks
+                expulsion and forfeits the full evidence score.
       # Recovery after a failed rhetoric roll: the failure text explicitly teaches
       # the required sequence, so a prepared player can now present the same three
       # documents in order instead of being forced into combat by a bad die.
@@ -499,29 +419,21 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: weavers_appeal, stage: case_dismissed }
           - add_journal: >
-              Appeal recovered and accepted: charter text first, certified register
-              extract second, certified extracts of Oswin's prior losses third. The
-              deputy struck the case through after the corrected presentation. Craf
-              stepped aside. (+10)
+              The corrected appeal succeeded: charter terms first, certified register
+              extract second, and certified precedent packet third. The deputy voided
+              the impound, and Craf no longer blocks north. (+10)
           - narrate: >
-              You do exactly what the deputy asked for. This time you cite Walter Holm's
-              Crown exemption first: heritable in perpetuity. The
-              certified register extract follows: the clerk-attested copy, the same
-              language, no guild license required. Only then do you open the certified
-              precedent packet to the prior discharges — Oswin's filing signatures
-              reproduced on two losses under the same rule. The sequence gives each
-              document its weight. The deputy reads the certified evidence in silence,
-              picks up the stylus, and strikes the slate through: 'discharged, charter
-              exemption confirmed.' Craf looks at the line, then at Oswin, and steps
-              back from the door.
+              You cite Walter Holm's inherited charter exemption, confirm it with the
+              certified register extract, and finish with Oswin's prior losses. The
+              deputy writes, 'Discharged. Charter exemption confirmed.' Craf no longer
+              blocks the north door.
 
 npcs:
   - id: oswin
     name: "Warden Oswin"
     description: >
-      The Weavers' Guild warden for this district — a compact man in a good guild
-      coat, not unkind in expression but entirely without doubt. He has filed this
-      kind of notice before. He will wait as long as he needs to.
+      The district's Weavers' Guild warden wears a formal guild coat. He filed
+      Marta's impound and expects it to stand.
     room: market_stall
     conditions: [{ not_flag: oswin_overruled }]
     dialogue:
@@ -529,30 +441,29 @@ npcs:
       nodes:
         - id: oswin_root
           npc_text: >
-            Your goods are impounded under Guild Schedule, Article Fourteen —
-            unlicensed sale at a licensed market. You may contest the notice at
-            the alderman's office. In the meantime, the bolts stay roped.
+            I impounded the bolts under Guild Schedule, Article Fourteen: unlicensed
+            sale at a licensed market. Contest the notice at the alderman's office
+            before noon. Until the deputy rules, the bolts stay roped.
           # Return variants (bug_0322/0325 pattern): short acknowledgment on re-entry
           # so the full opening speech does not re-fire on every visit.
           variants:
             - when: [{ has_flag: oswin_overruled }]
               text: >
-                Oswin is no longer at the stall. He left when the deputy struck
-                the case through.
+                Oswin left after the deputy voided the impound.
             - when: [{ has_flag: appeal_attempted }]
               text: >
-                The matter is with the alderman's deputy. I have nothing to add.
+                The deputy has the case. I have nothing more to add.
             - when: [{ any_of: [{ has_flag: asked_charter }, { has_flag: asked_article }] }]
               text: >
-                I have told you what applies. The charter office is east if you
-                believe you have documentation.
+                I have explained the rule. Supporting documents are in the Charter
+                Office east of this stall.
           topics:
             - id: ask_charter
-              prompt: "Point out that Marta holds a Royal Charter exemption."
+              prompt: "State that Marta holds a Royal Charter exemption."
               conditions: [{ not_flag: asked_charter }]
               goto: oswin_charter
             - id: ask_article
-              prompt: "Ask which Article Fourteen covers and what exceptions apply."
+              prompt: "Ask what Article Fourteen covers and which exemptions apply."
               conditions: [{ not_flag: asked_article }]
               goto: oswin_article
             - id: leave_oswin
@@ -560,33 +471,30 @@ npcs:
               end: true
         - id: oswin_charter
           npc_text: >
-            A charter exemption requires verification by the alderman's office
-            before it can be applied against a guild action. If Marta Holm has
-            documentation she believes is relevant, she may bring it to the
-            hearing. The impound stands until the deputy rules on it.
+            The alderman's office must verify a charter exemption before it can
+            cancel a guild action. Bring Marta's documents to the hearing before
+            noon. The impound stands until the deputy rules.
           effects:
             - set_flag: asked_charter
             - add_journal: >
-                Oswin acknowledged the charter but says it needs alderman's
-                verification before it can discharge the impound. He is right
-                that the hearing is the right venue — which means the argument
-                has to be made there, not here.
+                Oswin says the alderman's office must verify Marta's charter before
+                it can void the impound. Gather the evidence. In the Alderman's
+                Antechamber, use the current displayed PRESENT action before noon.
           topics:
             - id: charter_back
               prompt: "Walk away."
               goto: oswin_root
         - id: oswin_article
           npc_text: >
-            Article Fourteen covers unlicensed sale at licensed markets — any
-            goods sold without a current guild membership or an alderman-verified
-            exemption on file. The exemptions are documented at the charter office
-            if they exist. I suggest you check there before noon.
+            Article Fourteen covers sales without current guild membership or an
+            alderman-verified exemption. The Charter Office records exemptions.
+            Check it before noon.
           effects:
             - set_flag: asked_article
             - add_journal: >
-                Article Fourteen: unlicensed sale at licensed markets. Exemptions
-                must be alderman-verified. Oswin has just told me exactly where to go
-                and what to bring. The charter office is east; the hearing is north.
+                Article Fourteen requires guild membership or an alderman-verified
+                exemption. Go east to the Charter Office for proof, then north to
+                the Alderman's Antechamber for the hearing.
           topics:
             - id: article_back
               prompt: "Say nothing more."
@@ -596,10 +504,8 @@ enemies:
   - id: craf
     name: "Craf"
     description: >
-      Oswin's hired man — broad-shouldered, economical in his stillness, the kind
-      of person who is employed for his ability to fill a doorway and not move. He
-      is not from the guild; he will not be moved by argument. He has been given
-      one instruction and is waiting for a second one.
+      Oswin's hired guard blocks the north door. Only a successful appeal or combat
+      will move him. Fighting him risks expulsion.
     room: aldermans_antechamber
     conditions: [{ not_flag: oswin_overruled }]
     hp: 12
@@ -610,8 +516,8 @@ enemies:
     on_defeat:
       - set_quest_stage: { quest: weavers_appeal, stage: craf_down }
       - add_journal: >
-          Craf is down in the antechamber doorway. The market square is open to
-          the north. The manner of leaving will be on record but the door is clear.
+          You defeated Craf. The north door to the Market Square is open, but the
+          fight is now part of the hearing record.
 
 win_conditions:
   # Locomotion win: reaching market_square — accessible via the rhetoric path
@@ -632,29 +538,18 @@ endings:
     variants:
       - when: [{ has_flag: oswin_overruled }]
         text: >
-          The market square is busy with the ordinary business of a late-morning market.
-          Behind you the hearing hall door is open, the case slate visible through it —
-          Marta Holm's case crossed through in the deputy's hand, 'discharged, charter
-          exemption confirmed.' Oswin is somewhere in the guild hall explaining to someone
-          why the impound will not be entered in the district record as a successful action.
-          He has explained this before, in 1689 and in 1691. He will file again next market
-          day, against someone who does not have a travelling scrivener at the stall when
-          the notice goes up. Today was not that day. *** You have won. ***
+          The deputy confirmed Marta's charter exemption and voided the impound.
+          Her broadcloth is released, Craf no longer blocks north, and Oswin's action failed.
+          *** You have won. ***
     text: >
-      The market square opens north of the alderman's building, loud with the full run
-      of market morning. Craf is still in the antechamber behind you; he will be on his
-      feet before the hour. But the door is open and Marta's bolts are hers again —
-      you did not leave the hearing hall quietly, but you left it. The difference
-      between a scene and a precedent is that someone has to stand in the right place
-      at the right moment, and today that was you. *** You have won. ***
+      You forced your way past Craf and reached the Market Square. Marta keeps her
+      broadcloth, but the fight remains on the hearing record and you missed the
+      full evidence reward. *** You have won. ***
 
   - id: ending_expelled
-    title: "Expelled from the Market"
+    title: "Killed in the Market"
     text: >
-      Craf gets his weight into you before you reach the doorway, and after that
-      the choice is no longer yours. Oswin arrives in the antechamber with the
-      measured expression of a man who had anticipated this outcome and is not
-      surprised by it. The deputy notes the disturbance in the hearing record.
-      Marta's bolts remain impounded; Oswin's notice stands. Marta's claim remains
-      unresolved when market day ends. *** You have fallen. ***
+      Craf kills you in the market. The deputy records the disturbance, Marta's
+      broadcloth remains impounded, and Oswin's notice stands.
+      *** You have fallen. ***
     death: true

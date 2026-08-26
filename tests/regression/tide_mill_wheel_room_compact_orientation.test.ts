@@ -28,10 +28,10 @@ describe("Tide-Mill Wheel-Room compact prose keeps the direction map visible", (
     expect(moved.context.here).toEqual(["wheel_room", "The Wheel-Room"]);
     expect(moved.context.text.length).toBeLessThanOrEqual(COMPACT_DESCRIPTION_CHAR_LIMIT);
     expect(moved.context.text).not.toMatch(/\.\.\.\(\+\d+ chars\)$/);
-    expect(moved.context.text).toMatch(/west=head-race/i);
-    expect(moved.context.text).toMatch(/east=yard\/tool-shed/i);
-    expect(moved.context.text).toMatch(/south=mill-floor/i);
-    expect(moved.context.text).toMatch(/down=gated staith/i);
+    expect(moved.context.text).toMatch(/CUT choked head-race WITH billhook/i);
+    expect(moved.context.text).toMatch(/ATTACK tool-shed saboteur/i);
+    expect(moved.context.text).toMatch(/The Mill-House is south/i);
+    expect(moved.context.text).toMatch(/WIND sea-gate winch WITH crank-handle/i);
     expect(moved.context.exits).toEqual(expect.arrayContaining(["east", "south", "west"]));
     expect(moved.context.blocked).toEqual(
       expect.arrayContaining([["down", expect.stringMatching(/sea-gate/i)]]),

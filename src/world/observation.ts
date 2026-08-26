@@ -8,9 +8,9 @@ export function openingWorldText(
 ): string {
   if (!world || state.step !== 0 || state.ended) return text;
   const assignment = [
-    `You have come from ${world.hub} to ${world.district} in the role of ${world.role}.`,
+    `You traveled from ${world.hub} to ${world.district} as ${world.role}.`,
     world.connection,
-    `Your charge is to ${world.quest}.`,
+    `Goal: ${world.quest}.`,
   ].join(" ");
   return `${assignment}\n\n${text}`;
 }

@@ -86,8 +86,8 @@ export function resolveOpeningDispatchManifestChain(
 
 /**
  * Resolve the authored five-card Albany dispatch without adding a second
- * content source. The briefing deliberately reuses only the crisis sentence
- * from quest discovery, leaving Station support for the departure board.
+ * content source. The briefing uses only the crisis sentence from quest discovery,
+ * leaving Station support for the departure board.
  */
 function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | null {
   const chain = resolveOpeningDispatchManifestChain(world);
@@ -164,56 +164,56 @@ export function withOpeningDispatchBriefing(
     return {
       ...prompt,
       message:
-        `${plan.questTitle}: ${crisis}; you must choose one permanent background, then take a ` +
-        "ready-made promise/report pair or customize it; every approach stays open.",
+        `${plan.questTitle}: ${crisis}. Choose one permanent background. Then use a ` +
+        "ready-made setup or choose the promise and report separately. Every field plan stays open.",
     };
   }
   if (offersStandardPacket) {
     return {
       ...prompt,
       message:
-        `${plan.questTitle}: choose a ready-made promise/report pair or customize; ` +
-        "every approach stays open.",
+        `${plan.questTitle}: use a ready-made promise and report or choose them separately. ` +
+        "Every approach stays open.",
     };
   }
   if (civicStageIndex >= 0 && prompt.kind === "relief_oath") {
     return {
       ...prompt,
       message:
-        `${plan.questTitle}: choose one promise; your report comes next, and ` +
-        "every approach stays open.",
+        `${plan.questTitle}: choose one promise. Your report comes next. ` +
+        "Every field plan stays open.",
     };
   }
   if (civicStageIndex >= 0 && prompt.kind === "lead_source") {
     return {
       ...prompt,
       message:
-        `${plan.questTitle}: choose one report; Albany Station comes next, and every ` +
-        "approach stays open.",
+        `${plan.questTitle}: choose one report. Albany Station comes next. Every ` +
+        "field plan stays open.",
     };
   }
   if (departureChoice?.kind === "preparation") {
     return {
       ...prompt,
       message:
-        "Albany Station: ready to depart now, or choose one field kit; relief-wagon and " +
-        "riding choices are separate.",
+        "You can leave Albany Station now or choose one field kit. The relief wagon " +
+        "and June are separate choices.",
     };
   }
   if (departureChoice?.kind === "relief_allocation") {
     return {
       ...prompt,
       message:
-        "Albany Station: ready to depart now, or choose the relief wagon's job; field-kit " +
-        "and riding choices are separate.",
+        "You can leave Albany Station now or assign the relief wagon. The field kit " +
+        "and June are separate choices.",
     };
   }
   if (allyChoice) {
     return {
       ...prompt,
       message:
-        `Albany Station: ready to depart now alone, or ask ${plan.allyContactName ?? "the second rider"} ` +
-        "to ride; field kit and relief wagon choices are separate.",
+        `You can leave Albany Station alone or ask ${plan.allyContactName ?? "the second rider"} ` +
+        "to join. The field kit and relief wagon are separate choices.",
     };
   }
   return prompt;

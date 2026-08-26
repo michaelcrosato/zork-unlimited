@@ -71,7 +71,7 @@ describe("Tide-Mill flood-hatch branch", () => {
     expect(result.ok).toBe(true);
     expect(result.state.ended).toBe(true);
     expect(result.state.endingId).toBe("ending_drowned");
-    expect(narration(result.events)).toMatch(/exactly as the board warned/i);
+    expect(narration(result.events)).toMatch(/rotten staging breaks/i);
   });
 
   it("lets a strong roll force the hatch as a risky alternate repair", () => {
@@ -85,7 +85,7 @@ describe("Tide-Mill flood-hatch branch", () => {
     expect(result.state.ended).toBe(false);
     expect(result.state.flags["sluice_clear"]).toBe(true);
     expect(result.state.vars.score).toBe(10);
-    expect(narration(result.events)).toMatch(/both faults are answered/i);
+    expect(narration(result.events)).toMatch(/both wheel faults are now fixed/i);
     expect(hatchOptions(result.state)).toHaveLength(0);
   });
 });

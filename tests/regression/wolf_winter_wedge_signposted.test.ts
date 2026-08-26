@@ -97,11 +97,9 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     const text = byre!.npc_text.toLowerCase();
     expect(text).toContain("rail");
     expect(text).toContain("wedge");
-    expect(text).toContain("breach");
-    expect(text).toContain("guarded spear line");
-    expect(text).toContain("combat funnel");
-    expect(text).toContain("neither turns a wolf alive");
-    expect(text).toContain("bind a split");
+    expect(text).toContain("shown brace, wedge, set, splice, or bind rail action");
+    expect(text).toContain("during hunt, the rail aids combat");
+    expect(text).toContain("cannot redirect a wolf alive");
   });
 
   it("PROSE-ONLY: cade_byre's effects are still exactly {set_flag heard_plan, add_journal}", () => {
@@ -116,9 +114,9 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     const flag = effects.find((e) => "set_flag" in e) as { set_flag?: string };
     expect(flag.set_flag).toBe("heard_plan");
     const journal = effects.find((e) => "add_journal" in e) as { add_journal?: string };
-    expect(journal.add_journal).toMatch(/set the rail as tonight's ground allows/i);
-    expect(journal.add_journal).toMatch(/bind only an ordinary split/i);
-    expect(journal.add_journal).not.toMatch(/\bwedge\b/i);
+    expect(journal.add_journal).toMatch(/follow the shown rail action/i);
+    expect(journal.add_journal).toMatch(/shown HOLD\/TAKE pair/i);
+    expect(journal.add_journal).toMatch(/cannot redirect a wolf alive/i);
   });
 
   it("asking Cade about the byre surfaces the spoken signpost, journal, and resumed root", () => {
@@ -132,16 +130,14 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
       .flatMap((event) => (event.type === "narration" ? [event.text] : []))
       .join(" ")
       .toLowerCase();
-    expect(spoken).toContain("on ordinary ground, wedge it");
-    expect(spoken).toContain("a firm frozen rail braces directly");
-    expect(spoken).toContain("half-shut the breach");
-    expect(spoken).toContain("combat funnel");
-    expect(spoken).toContain("neither turns a wolf alive");
+    expect(spoken).toContain("shown brace, wedge, set, splice, or bind rail action");
+    expect(spoken).toContain("during hunt, the rail aids combat");
+    expect(spoken).toContain("cannot redirect a wolf alive");
 
     let obs = buildRpgObservation(index, d.state());
     expect(activeDialogue(index, d.state())?.node.id).toBe("cade_byre");
     expect(obs.dialogue?.npc_text).toMatch(
-      /Guarded spear line[^]*combat funnel[^]*ordinary ground[^]*wedge[^]*firm frozen rail[^]*braces directly[^]*patient alternative/i,
+      /Guarded HUNT[^]*shown BRACE, WEDGE, SET, SPLICE, or BIND rail action[^]*HOLD the spear point[^]*TAKE the grey leader's true rush/i,
     );
     expect(
       obs.available_actions.map((action) => action.id).filter((id) => id.startsWith("ask_")),
@@ -151,18 +147,17 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     obs = buildRpgObservation(index, d.state());
     expect(activeDialogue(index, d.state())?.node.id).toBe("cade_root");
     expect(obs.dialogue?.npc_text).toMatch(
-      /guarded spear-fighting plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
+      /you know the guarded HUNT tactic[^]*still learn the quick tactic[^]*going north without choosing/i,
     );
     expect(
       obs.available_actions.map((action) => action.id).filter((id) => id.startsWith("ask_")),
     ).toEqual(["ask_hunt", "ask_lure", "ask_drive", "ask_fortify", "ask_wolves", "ask_leave"]);
     expect(d.state().flags["heard_plan"]).toBe(true);
     const journal = d.state().journal.join(" ").toLowerCase();
-    expect(journal).toContain("guarded/patient combat");
-    expect(journal).toContain("set the rail as tonight's ground allows");
-    expect(journal).toContain("bind only an ordinary split");
-    expect(journal).not.toMatch(/\bwedge\b/);
-    expect(journal).toContain("neither turns a wolf alive");
+    expect(journal).toContain("guarded hunt tactic");
+    expect(journal).toContain("follow the shown rail action");
+    expect(journal).toContain("shown hold/take pair");
+    expect(journal).toContain("cannot redirect a wolf alive");
   });
 
   it("the signposted wedge is immediately legal as target-only USE, never TAKE", () => {

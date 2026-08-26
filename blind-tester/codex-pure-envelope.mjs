@@ -114,86 +114,86 @@ export const CODEX_PURE_PLAYER_TOOLS = new Set([
 // server catalogue change must deliberately update this reviewed set before its
 // clean build can enter a blind run.
 const PURE_MCP_TOOL_CATALOG_SHA256 = new Map([
-  ["start_overworld", "85040156096828af30f611518a0b2a52baff11570785a2b0b040bd36356127d1"],
-  ["get_overworld_session", "92a177f601d9cb30553a45a6d356e0727981cdcb8a9c1da776378bf7eebe070b"],
+  ["start_overworld", "59373762581923ea07cffb87ea729d7b5b8b9a74c4e6dbaa02f7d9fe59317dcb"],
+  ["get_overworld_session", "ebc5a001b9a950d1728a5256a64cbb5cf8441c25509e934f196f38892f3045a4"],
   [
     "get_overworld_session_context",
-    "70aae7668c20c7e676cc40d356adfed4f5b4407fb71ac490fd5f3e7062c01eed",
+    "be75a3598c4b513c76a362e3f63c0ac6d27427d55de69d26b0158c30190b434a",
   ],
   [
     "explain_overworld_session_opportunity",
-    "659c370523559e54f15ee9b61d3374da16bbdb6ca4ff844146678377177fdd6b",
+    "2133b68d31c0851b2c8ff1913d73ad99979f727a4b44d6b83552e4cb9c103215",
   ],
-  ["travel_overworld_session", "a950b0f764ad06b11baaf6cc656303b8ff43f15309cf8816157b32ac8a3d74cc"],
+  ["travel_overworld_session", "a28f00b85bc2842cd758c61d26c3e71d3580754cd674e4d79cd8555d37ecf547"],
   [
     "follow_overworld_session_goal",
-    "f25e4078e3c4d1e2831352be47d50a3355307aa11aaa8683f4034b0f894bf2c7",
+    "0e262c481c5541d1dbcd0d889d7243a758f0fd94d03ca9249b492446868619bb",
   ],
   [
     "resolve_overworld_session_road_encounter",
-    "b0120f113abc4fb16ce64af5a5983ff6bb2617917376328c7703ae1e7e826ca3",
+    "020424f06b594cc59d9ec6323024737c131b5619776c4313a8f83c66dffd84a7",
   ],
-  ["care_overworld_session", "0086d14d1b5b2f2317cfc8400757517da0717cc20b2a1d9871a36282f43dac43"],
+  ["care_overworld_session", "02d7270e563b42351a71f061b383a9d38d00de1f45a8bd94f799cc9070019e26"],
   [
     "resupply_overworld_session",
-    "b654cbf31a9cf97de36c2dc8ea17b8aa9bddeb4b136314976d34146a5d8f9147",
+    "76c5e0d95f2d3ed12205b40ec3f80f984e61c68a05ff0a71bdff950096103761",
   ],
-  ["rest_overworld_session", "2c1d78da5ead8eb7264d5769dac21babbcb6cad9b005fa90ae39f87c09a6fa94"],
+  ["rest_overworld_session", "4e23c226c87de41207b29a14f7a9881ceab81972d93122e98dc94483a55458ee"],
   [
     "plan_overworld_session_route",
-    "ac4d827e52f956389d256909450dfee5e363acd5d3dcb0ba191e76d3764a1d79",
+    "d230e5f0ae415d21687415b8f4107a7a6e7638280c7e9e8815a8e6cada07032e",
   ],
   [
     "scout_overworld_session_poi",
-    "9ce006e7896311778570aa6187b5f993ae2954a002c2310f1457e7bfbdba0433",
+    "cf99ed2fc618521571418d2b4e86398c038959a8f35cf462340bb19cddda75dc",
   ],
   [
     "talk_overworld_session_contact",
-    "ac9a32b046b25e6dee5b506e13df0687123d08ebc198e315491c8b2b67341719",
+    "0a1ca3d085f68c8fc4c71008f0fd495e9d44307c08d98a42bb6b5b37e02e89c7",
   ],
   [
     "investigate_overworld_session_event",
-    "4f4ae77cccd30969b5268b9746e7858aecd55a3dd0c79f8523f6dd495f4d1896",
+    "dc0781f488163f3b72a14324951a2f5383b3de748d0915a2b6ae1ad110710351",
   ],
   [
     "resolve_overworld_session_event",
-    "7fc4f51e702ed4a66e7c24d51d543d35e5277b29535e0c72d94700b5919f2e4a",
+    "507c3767f4b6344f236e1cece11acfc71828b8481562966eb7e86e5db89665b3",
   ],
   [
     "explore_overworld_session_site",
-    "9c7ffc97798ff111b869aa41c49cec5f73dc42152ca028bbeb41b66abdd0457f",
+    "852061ad378fa19e88f42deec21e3b80b6d5c956611f18c37eacd64320e1d4b0",
   ],
   [
     "explore_overworld_session_area",
-    "f0c659294f68692ef7f99d299656160fe5e8fb6df8ae598adf9ad9cc93e34dbe",
+    "c0f7ab8ab3c2e557512e65c995d2e8d4aad45eb2125f9b33dfa29b8b804c1f90",
   ],
   [
     "move_overworld_session_area",
-    "73eb58bf434e63700883692ecbb704b2efe7e3b9e2c0c678a357b0abfc727bee",
+    "f58ae15f630caa748d779f3b0c495eb0a83c091e5100647794a1724b43f4bdfc",
   ],
   [
     "work_overworld_session_job",
-    "f5bd6d6163705f200814e6502606bf3b54482ffc8b3f661f2a59052ea97f0a82",
+    "197f0be0134b5b676316349cfa3af8d0e925c0eabd4babad8027bccfcd6fead3",
   ],
   [
     "start_overworld_session_quest",
-    "3cc5853829b1a4c7407010ab0fc60c9e36b668b6a92bef9af4bd3524c8d177f8",
+    "1d9d27f35a1ae3616f2f3bd1325cd89120887ce6b5d9c68f48908b30d8d1d836",
   ],
   [
     "choose_overworld_session_journey",
-    "fe0e21e5fb1acfba8ad715c30d9062013ee247ae69e722c9236355257b86ad6a",
+    "0a1af4dc2f0017e3f8673170aac0f1c90a5ca87e56ef646712d28d3996d3287b",
   ],
   [
     "inspect_overworld_session_story",
-    "0a613ff914c5f2c9cf02e4280d798440966766fe027521bfedd98f798dbf178b",
+    "277cc4181dbdb8db3380faef2e39f33715637ae45385032af84105cead9a514e",
   ],
   [
     "choose_overworld_session_story",
-    "f9f64a17cd1960252ea69dde6b4ea894c24532c00228774f731171f20d733393",
+    "ddc4146f36dbd04c826e63deeba122e52bc305795b7f43422d591193da900f29",
   ],
-  ["get_observation", "0c978cd5bbabbbdd834cf7503caa39ae3ab4080fdde0a9e0f09896b099a8579f"],
-  ["list_legal_actions", "ffde6831a3c8ba1568100d28e4827fd73c77ee1555b4224dde676ebe339d1bb8"],
-  ["step_action", "6b64a9d7833fcf76a0cec2533528ada579c035f2f9c954ac3d4b56c19d07e86d"],
+  ["get_observation", "15c9b7f155eb11a2fea47cae1d61609478a5bf7aa184cffa7ae300cbe46cbab6"],
+  ["list_legal_actions", "c1846706d89f60669e50fbdc771facef3853095a922c4b07d34dce24178ada7b"],
+  ["step_action", "6836c5fcab845ddabc396d2146a0c3697e21ddb8d1fd8683d42c0977c98a7ad8"],
 ]);
 function nonNegativeInteger(value) {
   return Number.isInteger(value) && value >= 0;

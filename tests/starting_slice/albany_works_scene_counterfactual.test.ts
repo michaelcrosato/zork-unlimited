@@ -143,9 +143,13 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
       .compactView()
       .job_scenes?.find(([candidateJobId]) => candidateJobId === JOB_ID);
     expect(compactScene?.slice(0, 2)).toEqual([JOB_ID, "albany:works-yard-winter-shift"]);
-    expect(compactScene?.[2]).toContain("only one line");
+    expect(compactScene?.[2]).toMatch(
+      /80-minute rescue for 5 renown[^]*35-minute inventory for 2[^]*unchosen priority/i,
+    );
     expect(compactScene?.slice(3, 6)).toEqual([WORKS_POI_ID, WORKS_CONTACT_ID, ["wolf_winter"]]);
-    expect(() => protect.workLocalJob(JOB_ID)).toThrow(/Choose one authored option/i);
+    expect(() => protect.workLocalJob(JOB_ID)).toThrow(
+      /Choose one option for Reese's Two Winter Lines/i,
+    );
     expect(() => protect.workLocalJob(JOB_ID, "invented_priority")).toThrow(
       /Unknown local-job scene option/i,
     );
@@ -163,8 +167,8 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
     expect(inventory.snapshot().minutes - inventoryBefore.minutes).toBe(35);
     expect(protect.view().regionRenown["Capital / Mohawk"]).toBe(protectRenownBefore + 5);
     expect(inventory.view().regionRenown["Capital / Mohawk"]).toBe(inventoryRenownBefore + 2);
-    expect(protectedShift.entry.title).toContain("Protect the trapped public Works shift");
-    expect(inventoriedStock.entry.title).toContain("Inventory and seal the outbound cold-set");
+    expect(protectedShift.entry.title).toContain("Rescue the Trapped Shift");
+    expect(inventoriedStock.entry.title).toContain("Inventory the Repair Reserve");
     expect(protectedShift.entry).not.toHaveProperty("localSceneProof");
     expect(protect.view().jobChoices).toEqual([]);
     expect(inventory.view().jobChoices).toEqual([]);
@@ -344,7 +348,7 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
         session_id: restored.session_id,
         job_id: JOB_ID,
       }),
-    ).toThrow(/Choose one authored option/i);
+    ).toThrow(/Choose one option for Reese's Two Winter Lines/i);
 
     const worked = api.work_overworld_session_job({
       ...FULL,

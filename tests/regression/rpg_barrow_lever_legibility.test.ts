@@ -85,8 +85,10 @@ const slabDescription = pack.objects.find((o) => o.id === "stone_slab")!.descrip
 describe("bug_0027 — the slab lever reads as a retryable attempt, not a strength wall", () => {
   it("the on_failure feedback signals repeatable progress, not a fixed strength threshold or missing item", () => {
     // Positive: it must invite another attempt and frame persistence/leverage as the path.
-    expect(onFailureText.toLowerCase()).toMatch(/heave again|try again|keep at it/);
-    expect(onFailureText.toLowerCase()).toMatch(/leverage|shifting|grinds/);
+    expect(onFailureText.toLowerCase()).toMatch(
+      /lever it with the iron bar again|retries are unlimited/,
+    );
+    expect(onFailureText.toLowerCase()).toContain("returned to its original position");
     // Negative: it must NOT tell the player they simply lack the strength, nor present
     // the slab as immovable — the two readings that drove the blind tester to abandon.
     expect(onFailureText.toLowerCase()).not.toContain("does not give");
@@ -97,7 +99,7 @@ describe("bug_0027 — the slab lever reads as a retryable attempt, not a streng
   });
 
   it("the slab's examine description reframes the puzzle as persistence, not a might threshold", () => {
-    expect(slabDescription.toLowerCase()).toMatch(/again and again|persist|stubborn|keep/);
+    expect(slabDescription.toLowerCase()).toMatch(/can be retried until the check succeeds/);
     expect(slabDescription.toLowerCase()).not.toContain("real might");
   });
 
@@ -110,7 +112,9 @@ describe("bug_0027 — the slab lever reads as a retryable attempt, not a streng
     const ns = narrations(res!.effects);
     expect(ns[0]).toContain("failure"); // the roll genuinely failed at this seed/step
     // The player SEES the new persistence framing (not the old "does not give").
-    expect(ns.join(" ").toLowerCase()).toMatch(/heave again|keep at it/);
+    expect(ns.join(" ").toLowerCase()).toMatch(
+      /lever it with the iron bar again|retries are unlimited/,
+    );
     expect(ns.join(" ").toLowerCase()).not.toContain("does not give");
     // Applying the step leaves the puzzle unsolved and the player free to retry: no
     // quest-stage advance, slab still shut, still in the passage, no ending.

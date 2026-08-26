@@ -36,17 +36,16 @@ describe("Tide-Mill compact warning compression", () => {
 
     expect(text.length).toBeLessThanOrEqual(COMPACT_EVENT_NARRATION_CHAR_LIMIT);
     expect(text).not.toMatch(/\(\+\d+ chars\)/);
-    expect(text).toMatch(/wheel runs when/i);
-    expect(text).toMatch(/choked race is clear/i);
-    expect(text).toMatch(/brake-pawl free/i);
-    expect(text).toMatch(/tools are in the shed/i);
+    expect(text).toMatch(/CUT choked head-race WITH billhook/i);
+    expect(text).toMatch(/FREE brake-pawl WITH crow-bar/i);
+    expect(text).toMatch(/collect any missing combat gear/i);
     expect(text).not.toMatch(/clear choked race;\s*free brake-pawl/i);
-    expect(text).not.toMatch(/billhook/i);
-    expect(text).not.toMatch(/crow-bar/i);
-    expect(text).toMatch(/gaff-pole and oilskin/i);
-    expect(text).toMatch(/wind the sea-gate open/i);
-    expect(text).toMatch(/never lever the rotten flood-hatch/i);
-    expect(text).toMatch(/takings stay in the nook/i);
+    expect(text).toMatch(/billhook/i);
+    expect(text).toMatch(/crow-bar/i);
+    expect(text).toMatch(/ATTACK tool-shed saboteur/i);
+    expect(text).toMatch(/WIND sea-gate winch WITH crank-handle/i);
+    expect(text).toMatch(/Never LEVER flood-hatch WITH crow-bar/i);
+    expect(text).toMatch(/leave the coin-bag in the counting-nook/i);
   });
 
   it("keeps the yard fight warning inside compact room text", () => {
@@ -83,9 +82,9 @@ describe("Tide-Mill compact warning compression", () => {
     expect(result.context.here).toEqual(["mill_yard", "The Mill-Yard"]);
     expect(result.context.text.length).toBeLessThanOrEqual(COMPACT_DESCRIPTION_CHAR_LIMIT);
     expect(result.context.text).not.toMatch(/\(\+\d+ chars\)/);
-    expect(result.context.text).toMatch(/wheel-room west/i);
-    expect(result.context.text).toMatch(/tool-shed east/i);
-    expect(result.context.text).toMatch(/gaff-pole plus oilskin/i);
-    expect(result.context.text).toMatch(/bare hands make it a gamble/i);
+    expect(result.context.text).toMatch(/go west to the wheel-room/i);
+    expect(result.context.text).toMatch(/unlock the east exit/i);
+    expect(result.context.text).toMatch(/gaff-pole.*\+2 attack/i);
+    expect(result.context.text).toMatch(/oilskin mill-coat.*\+2 defense/i);
   });
 });

@@ -62,9 +62,10 @@ export function buildJourneyGoalPassagePresentation(
     throw new Error("A goal passage requires at least one road.");
   }
   const destination = route.destination.name;
+  const roadUnit = route.steps.length === 1 ? "road" : "roads";
   return {
     id: "follow_current_goal",
-    label: `Follow the road to ${destination}`,
+    label: `Follow the ${roadUnit} to ${destination}`,
     destination,
     roadCount: route.steps.length,
     baseMinutes: route.estimate.baseMinutes,
@@ -74,9 +75,9 @@ export function buildJourneyGoalPassagePresentation(
     suppliesAfter: route.estimate.suppliesAfter,
     fatigueAfter: route.estimate.fatigueAfter,
     travelConditionAfter: route.estimate.travelConditionAfter,
-    consequence: `Travel toward ${destination}, preserving every road's normal time, supplies, fatigue, discoveries, and encounters.`,
+    consequence: `Travel toward ${destination}. Each road still uses its shown time and supplies, adds fatigue, reveals places, and may trigger an encounter.`,
     stopRule:
-      "The passage stops at the objective, at a road encounter, or before the next road would add a supply shortfall or a worse fatigue-delay tier; the first road always accepts your current condition.",
+      "You always take the first road. After that, travel stops at the goal, at a road encounter, or before a road that would cause a new supply shortage or worse fatigue delay.",
   };
 }
 

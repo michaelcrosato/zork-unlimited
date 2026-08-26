@@ -67,20 +67,20 @@ rooms:
   - id: waystation_yard
     name: "The Waystation Yard"
     description: >
-      A stone waystation yard on the Saltmere Road, the late afternoon cold coming off
-      the river. Factor Harwick stands at the gatehouse steps with your merchant's
-      passage-seal in his hand — he has called it contraband, which it is not, and is
-      waiting to see what you will do about it. His impound notice is tacked to the
-      gatehouse board. The weighing room is to the east, a drover's stall runs off
-      to the west, and Breckel stands silent by the north gate.
+      Factor Harwick holds your passage-seal under an impound notice. READ
+      impound notice, go east to the Weighing Room for the factor's ledger, and go
+      west to the Drover's Stall for a witness. Breckel guards the north gate.
     # Reactive: once factor_shamed the yard reads as resolved.
     variants:
       - when: [{ has_flag: factor_shamed }]
         text: >
-          The Saltmere waystation yard. Harwick has gone inside; he has nothing
-          more to arrange at the steps today. Breckel has stepped back from the
-          north gate, and the road opens ahead. The weighing room is to the east
-          and the drover's stall to the west.
+          Harwick returned your passage-seal. Breckel no longer blocks north. Go north
+          to the Gate Arch, east to the Weighing Room, or west to the Drover's Stall.
+      - when: [{ has_flag: breckel_defeated }]
+        text: >
+          You defeated Breckel, so the north gate is open. Harwick remains in the
+          yard with your disputed passage-seal. Go north to the Gate Arch, east to
+          the Weighing Room, or west to the Drover's Stall.
     objects: [seal_notice]
     exits:
       - { direction: east, to: weighing_room }
@@ -90,16 +90,17 @@ rooms:
   - id: weighing_room
     name: "The Weighing Room"
     description: >
-      A low stone room smelling of old wax and river-damp, stacked with impound
-      ledgers and sealed manifests. On the work-bench lies Harwick's toll register —
-      the official record of every impound at this waystation, in his own hand.
-      The yard is back to the west.
+      The workbench is where the factor's ledger was kept. TAKE factor's ledger if it
+      is here, or retrieve the ledger if needed. If its evidence is unfinished, READ
+      factor's ledger to document
+      Harwick's overcharges and gain +3 authority. The Waystation Yard is west.
     # Reactive: once the ledger is taken the bench reads as cleared.
     variants:
       - when: [{ has_item: factor_ledger }]
         text: >
-          The weighing room, the work-bench cleared where the register lay — you
-          have it now. The yard is back to the west.
+          You hold the factor's ledger. Its overcharge pattern grants +3 authority
+          when first documented; complete only unfinished evidence. The Waystation
+          Yard is west.
     objects: [factor_ledger]
     exits:
       - { direction: west, to: waystation_yard }
@@ -107,66 +108,61 @@ rooms:
   - id: drover_stall
     name: "The Drover's Stall"
     description: >
-      A covered stall at the west side of the yard where a gray-muzzled drover sits
-      on a crate, waiting. He has been here three hours and he knows exactly what
-      Harwick is doing — he watched it done to the last merchant through. The yard
-      is back to the east.
+      Silas has waited three hours and saw Harwick take payment from another
+      merchant. If the dispute is unresolved, TALK TO Silas, then select the displayed "Ask
+      Silas to put his testimony on record." topic for +3 authority. If already settled, his testimony records what happened. The
+      Waystation Yard is east.
     # Reactive: once Silas has given testimony the stall reads as already visited.
     variants:
       - when: [{ has_flag: heard_silas }]
         text: >
-          The drover's stall. Silas sits on his crate, his account already given.
-          He will back the numbers if you call them out in the yard — that is all
-          a witness needs to do. The yard is back to the east.
+          Silas agreed to confirm the factor's ledger in public. If the dispute is
+          unresolved, go east to the Waystation Yard and PRESENT factor's ledger
+          against impound notice. The yard is east.
     exits:
       - { direction: east, to: waystation_yard }
 
   - id: gate_arch
     name: "The Gate Arch"
     description: >
-      The gate arch through the waystation's north wall. Breckel fills most of it —
-      a large, patient man with a truncheon at his belt and nothing to prove. He will
-      not move until Factor Harwick tells him to, and Harwick has not told him to yet.
-      The waystation yard is back to the south.
+      Breckel blocks north with a truncheon. Go south to the Waystation Yard and
+      PRESENT factor's ledger against impound notice to make Harwick call him off, or
+      ATTACK Breckel. Combat risks death and gives no confrontation score.
     # Two variants: social victory (factor_shamed) and combat victory (breckel_defeated).
     # Most-specific first: breckel_defeated with factor_shamed is the combat path even
     # if factor_shamed was somehow also set (not achievable in normal play, but safe).
     variants:
       - when: [{ has_flag: factor_shamed }]
         text: >
-          The gate arch, the door standing open now. Breckel has stepped back from the
-          passage — no one told him to hold it any longer, and he is not the kind of man
-          who stays in a doorway for his own reasons. The toll road opens north; the
-          waystation yard is back to the south.
+          Harwick yielded, Breckel no longer blocks the gate, and north is open. Go
+          north to the Toll Road or south to the Waystation Yard.
       - when: [{ has_flag: breckel_defeated }]
         text: >
-          The gate arch, Breckel down across the passage. The toll road opens north;
-          the waystation yard is back to the south.
+          Breckel is down, and the gate is open. Go north to the Toll Road or south
+          to the Waystation Yard.
     exits:
       - { direction: south, to: waystation_yard }
       - direction: north
         to: toll_road
         conditions: [{ any_of: [{ has_flag: factor_shamed }, { has_flag: breckel_defeated }] }]
         locked_msg: >
-          Breckel has not moved from the arch. The toll road is blocked while he
-          stands here — get past him or get Harwick to call him off.
+          Breckel blocks north. PRESENT factor's ledger against impound notice to make
+          Harwick call him off, or ATTACK Breckel. Combat risks death and
+          forfeits the confrontation score.
 
   - id: toll_road
     name: "The Toll Road North"
     description: >
-      The Saltmere Road opens north past the waystation gate, the river running cold
-      to the west and the first town lights beginning to show ahead in the afternoon
-      grey. The waystation falls behind you. The passage-seal is yours again, the road
-      is clear, and whatever Harwick tells the next inquiry about why he released it
-      will be his own concern to manage. The gate arch is back to the south.
+      You recovered the passage-seal and cleared the waystation. The Gate Arch is
+      south. Town lights are visible along the Saltmere Road.
     # The locomotion win (+15 capstone): reaches the full 50 on first entry and fires
     # end_game simultaneously. SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win
     # (bug_0116): the +15 is the last award and the win fires in the same step.
     on_enter:
       - set_quest_stage: { quest: saltmere_crossing, stage: crossing_made }
       - add_journal: >
-          The Saltmere gate is behind you. The road north is open. Harwick's scheme —
-          and Silas' word, if it is ever needed — will stay at the waystation.
+          You recovered the passage-seal and reached the Toll Road North. The
+          waystation is behind you.
       - inc_var: { name: score, by: 15 }
     exits:
       - { direction: south, to: gate_arch }
@@ -176,22 +172,23 @@ objects:
     name: "impound notice"
     aliases: [notice, seal, impound, papers, board, gatehouse board, notice board, official notice, passage seal, impound notice]
     description: >
-      Harwick's impound notice, tacked to the board at the gatehouse steps. Official
-      in form, vague in substance — the kind of paperwork that costs nothing to write
-      and everything to argue against without evidence.
+      Harwick's official impound notice gives no specific contraband. READ impound notice if that
+      examination is still unfinished. If the dispute remains open, gather the factor's
+      ledger and Silas's testimony.
     # Reactive: once the notice is read, the board shows as already studied.
     variants:
       - when: [{ has_flag: notice_read }]
         text: >
-          The impound notice, already read — 'contraband suspicion, pending inspection,'
-          article nine, Harwick's seal. No specific goods named. The toll register in
-          your hands, when you have it, makes the counterargument the notice cannot.
+          You read the impound notice. It cites Article Nine but names no unlicensed
+          goods. The factor's ledger and Silas's testimony support the public
+          challenge. If the dispute is unresolved, complete any missing evidence,
+          then PRESENT factor's ledger against impound notice.
     takeable: false
     read_text: >
-      'Contraband suspicion, article nine, pending inspection. Sealed subject to factor's
-      clearance.' Harwick's seal below. Article nine covers unlicensed goods — but your
-      manifest is fully licensed, and the notice names no specific article from it. The
-      form is official. The charge is invented.
+      The notice cites Article Nine for suspected contraband but names no goods.
+      Article Nine applies only to unlicensed goods, and every item on your manifest
+      is licensed. The charge has no stated basis. If the dispute remains unresolved,
+      the factor's ledger and a witness can establish the pattern.
     interactions:
       # First-read: +5 score (the opening discovery — understanding the charge).
       # One-shot: gated on not_flag notice_read, retired on first READ.
@@ -203,17 +200,15 @@ objects:
           - set_quest_stage: { quest: saltmere_crossing, stage: charge_read }
           - inc_var: { name: score, by: 5 }
           - add_journal: >
-              The impound notice: 'contraband suspicion, article nine' — but article nine
-              covers unlicensed goods and your manifest is fully licensed. No specific
-              article is named. Harwick has written a form without a basis and is waiting
-              to see if you know it.
+              The notice cites Article Nine but names no unlicensed goods. Your manifest
+              is licensed, so the charge has no basis. The factor's ledger and Silas's
+              testimony support your case. If unresolved, complete only evidence actions
+              still offered; finished work stays complete. (+5)
           - narrate: >
-              The notice reads 'contraband suspicion, article nine, pending inspection'
-              in Harwick's careful hand — but article nine of the district schedule covers
-              unlicensed goods, and your manifest is fully licensed on its face. He has
-              not named a specific article because there is not one. The form carries
-              official weight; the charge beneath it is invented. Knowing that is useful.
-              Proving it is something else.
+              You confirm that Article Nine applies only to unlicensed goods and
+              that the notice names none. Your manifest is fully licensed. The
+              factor's ledger and Silas's testimony establish the rest of the case.
+              If the dispute remains unresolved, complete only what is unfinished.
       # The confrontation: USE factor_ledger ON seal_notice presents the evidence
       # against the charge — a formal public challenge in Harwick's own yard.
       # Skill check: authority DC 11. Retires only on SUCCESS (bug_0455): a bad roll
@@ -236,47 +231,39 @@ objects:
             - inc_var: { name: score, by: 10 }
             - set_quest_stage: { quest: saltmere_crossing, stage: factor_shamed }
             - add_journal: >
-                Harwick's scheme called out in front of Silas: the register's columns
-                against his own impound notice. He folded. Passage-seal returned;
-                gate open. (+10)
+                Harwick returned your passage-seal after you presented his overcharge
+                records against the unsupported impound notice. Breckel no longer blocks
+                the north gate. (+10)
             - narrate: >
-                You open the register to the inspection-fee column and read the numbers
-                aloud beside Harwick's own impound notice — flat, steady, with Silas
-                ten paces off where he can hear every word. Harwick holds the argument
-                for perhaps two seconds. Then he looks at the column, looks at you, looks
-                at Silas, and whatever calculation runs behind his eyes completes itself.
-                He holds out the passage-seal without speaking. It is over before Breckel
-                has time to make up his mind about anything.
+                You compare the factor's ledger with the unsupported impound notice
+                in public. Harwick returns your passage-seal, and the north gate is open.
           on_failure:
             - narrate: >
-                The argument falters. Harwick reaches for the register, trying to turn it
-                to the correction column and make the overcharge sound like a clerical
-                error. Silas has not stepped away, though, and the ledger is still in your
-                hands. The seal stays in Harwick's coat for the moment, Breckel has not
-                been stood down, and the north gate stays closed — but the evidence has
-                not left the yard. Press the register against the notice again before
-                Harwick settles the point for himself.
+                Harwick calls the overcharges a clerical error and keeps your
+                passage-seal. Breckel still blocks north. Retry with PRESENT factor's
+                ledger against impound notice; the check has no penalty or lockout.
+                Fighting Breckel instead risks death and gives no confrontation score.
 
   - id: factor_ledger
     name: "factor's ledger"
     aliases: [ledger, register, toll register, book, record, accounts, tally, factor ledger, toll ledger, harwick ledger, register book]
     description: >
-      Harwick's official toll register — a fat volume in cracked leather, its columns
-      dense with dates, goods descriptions, and fees collected. The numbers in the
-      'fee collected' column do not match the posted rate on the gatehouse wall.
+      Harwick's official toll register shows fees above the posted rate. If you are
+      not holding the ledger, TAKE factor's ledger. READ factor's ledger for the exact overcharge pattern
+      and +3 authority.
     # Reactive: once the ledger is studied closely the description acknowledges it.
     variants:
       - when: [{ has_flag: ledger_studied }]
         text: >
-          The toll register, already read through — the overcharges are clear in the
-          columns, three times the posted rate on every impound this season, under a
-          'seal inspection fee' the district schedule has no entry for. The numbers
-          are in your head; Harwick's hand throughout.
+          You read the factor's ledger. Harwick charged eight merchants three times
+          the posted rate under a nonexistent seal inspection fee. If the dispute is
+          unresolved, secure any missing testimony. In the Waystation Yard, PRESENT
+          factor's ledger against impound notice.
     read_text: >
-      Fee levied: 2s. Seal fee: 1s. Posted rate: 1s. Three times the posted rate on
-      every impound this season, under a 'seal inspection fee' the gatehouse schedule
-      does not list. Eight merchants in three months, each one charged alike. The hand
-      is Harwick's own throughout — not an error. A routine.
+      Harwick charged a two-shilling levy and a one-shilling seal fee when the
+      posted rate is one shilling total. The nonexistent seal inspection fee appears
+      on all eight impounds this season in Harwick's handwriting. This is a repeated
+      overcharge, not a clerical error.
     takeable: true
     interactions:
       # Close reading of the register: +10 score and +3 authority (you now have
@@ -292,38 +279,35 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: saltmere_crossing, stage: evidence_found }
           - add_journal: >
-              The register: eight impounds this season, every one triple-charged under
-              a 'seal inspection fee' the posted schedule has no entry for. Harwick's
-              hand throughout. A pattern — and a pattern is evidence. (+3 authority, +10)
+              The factor's ledger shows eight merchants charged three times the
+              posted rate under a nonexistent seal inspection fee, all in Harwick's
+              handwriting. (+3 authority, +10)
           - narrate: >
-              The numbers come clear as you work through the columns — the same overage,
-              the same invented inspection line, eight times over, in the same hand all
-              the way through. This is not error. You close the register with a cold
-              certainty: there are enough columns here to stand Harwick down in front of
-              a witness, if you can find one and hold your nerve when you use them.
+              You confirm eight matching overcharges in Harwick's handwriting.
+              Silas's testimony completes the evidence if it is still missing. If
+              the dispute remains unresolved, PRESENT factor's ledger against
+              impound notice.
 
 npcs:
   - id: harwick
     name: "Factor Harwick"
     description: >
-      Factor Harwick: a neat, middle-aged man in a good coat, not unkind in manner but
-      with the cultivated patience of someone who has held leverage long enough to stop
-      worrying about the inconvenience it causes other people.
+      The waystation factor issued the impound and controls the north gate until the
+      dispute is resolved. His official manner hides a repeated overcharge scheme.
     room: waystation_yard
     dialogue:
       root: harwick_root
       nodes:
         - id: harwick_root
           npc_text: >
-            Your manifest lists goods not on the licensed schedule. I am holding the
-            seal pending inspection. These things take time. I suggest you wait.
+            I am holding your passage-seal while I inspect goods that may be outside
+            the licensed schedule. Wait here until I finish.
           # Return variants (bug_0322/0325 pattern): short acknowledgment on re-entry
           # so the full opening speech does not re-fire on every visit.
           variants:
             - when: [{ has_flag: factor_shamed }]
               text: >
-                Harwick does not look up from his papers. He has nothing further to say
-                to you today.
+                I returned your passage-seal. I have nothing more to say.
             - when: [{ has_flag: confrontation_attempted }]
               text: >
                 The correction is already entered. Good afternoon.
@@ -336,7 +320,7 @@ npcs:
               conditions: [{ not_flag: asked_contraband }]
               goto: harwick_contraband
             - id: demand_seal_back
-              prompt: "Demand the return of your passage-seal."
+              prompt: "Ask about his earlier refusal to return your passage-seal."
               conditions: [{ not_flag: demanded_seal }]
               goto: harwick_demand
             - id: leave_harwick
@@ -344,9 +328,9 @@ npcs:
               end: true
         - id: harwick_contraband
           npc_text: >
-            I will need to cross-reference the manifest against the district schedule
-            at the next inspection cycle. The inspection is underway. These things
-            take time.
+            My stated answer was that I would compare your manifest with the district
+            schedule during the next inspection cycle. Until the dispute forced a result,
+            I meant to keep your passage-seal.
           effects:
             - set_flag: asked_contraband
           topics:
@@ -355,15 +339,15 @@ npcs:
               goto: harwick_root
         - id: harwick_demand
           npc_text: >
-            You are welcome to file a complaint with the district collector. The nearest
-            office is in Saltmere town, eight miles north — which you cannot reach
-            without a cleared seal. In the meantime, I suggest patience.
+            I told you to file a complaint with the district collector in Saltmere, eight
+            miles north. While I held your passage-seal, that instruction also blocked the
+            gate. The record now shows whether that obstruction held.
           effects:
             - set_flag: demanded_seal
             - add_journal: >
-                Harwick's deflection: file a complaint in Saltmere, which he controls
-                access to. The circularity is the point. Evidence is the only lever that
-                moves him — and a witness to make it public is what gives evidence teeth.
+                Harwick had controlled access to the office where complaints had to be
+                filed. The factor's ledger and Silas's testimony were the supporting
+                evidence; a completed confrontation and all evidence remain valid.
           topics:
             - id: demand_back
               prompt: "Walk away."
@@ -372,76 +356,70 @@ npcs:
   - id: silas
     name: "Silas"
     description: >
-      A gray-muzzled drover in a patched coat, sitting on a crate in the western stall
-      with the expression of a man measuring exactly how much trouble getting involved is
-      worth to him. He has been waiting three hours; he has reached a conclusion.
+      A drover who has waited three hours and saw another merchant pay Harwick.
+      He can serve as a public witness.
     room: drover_stall
     dialogue:
       root: silas_root
       nodes:
         - id: silas_root
           npc_text: >
-            Three hours I've been sitting here on a manifest that Harwick pulled on the
-            same pretext. The man before me cleared his seal in twenty minutes — after
-            a private conversation at the gatehouse steps that I wasn't meant to see.
-            The fee on that wall is the licensed rate. What's in his ledger is not.
+            Harwick has held my manifest for three hours. The previous merchant got
+            his seal back in twenty minutes after paying Harwick privately. The posted
+            fee is legal; the higher fees in Harwick's ledger are not.
           # Return variant: once testimony given, Silas has done his part.
           variants:
             - when: [{ has_flag: heard_silas }]
               text: >
-                I told you what I know. Call it out loud in that yard and I will back
-                the numbers. That is all a witness needs to do.
+                I will confirm the factor's ledger in public if the confrontation is
+                still unresolved. Any evidence already presented remains on the record.
             - when: [{ has_flag: heard_bribe_detail }]
               text: >
-                Silas glances toward the gatehouse steps. "You know what I saw there.
-                Ask what else you need before you put Harwick's ledger in daylight."
+                You know what I saw at the gatehouse steps. Ask what else you need;
+                if the dispute is settled, any testimony remains on the record.
           topics:
             - id: ask_testimony
-              prompt: "Ask Silas to stand as witness when you confront Harwick."
+              prompt: "Ask Silas to put his testimony on record."
               conditions: [{ not_flag: heard_silas }]
               goto: silas_testimony
             - id: ask_private
-              prompt: "Ask about the private conversation Silas saw."
+              prompt: "Ask what Silas saw at the gatehouse steps."
               conditions: [{ not_flag: heard_bribe_detail }]
               goto: silas_private
             - id: leave_silas
-              prompt: "Thank him and step out."
+              prompt: "Leave Silas."
               end: true
         - id: silas_testimony
           npc_text: >
-            I'll stand in the yard, yes. Not out of love for the law — I just want my
-            cattle through before dark. But a witness in the yard is a witness in the
-            record, and Harwick knows it. Show him the register columns with me ten
-            paces off and I will back your account of what they say. That is all a
-            witness does, and it is enough to change the calculation for him.
+            I will witness the confrontation and confirm the factor's ledger in
+            public. If the dispute is still unresolved, go east to the Waystation Yard
+            and PRESENT factor's ledger against impound notice. If it is settled, my
+            testimony remains on the record. I want my cattle through before dark.
           effects:
             - set_flag: heard_silas
             - inc_var: { name: authority, by: 3 }
             - inc_var: { name: score, by: 10 }
             - set_quest_stage: { quest: saltmere_crossing, stage: witness_secured }
             - add_journal: >
-                Silas will stand as witness in the yard. A named witness changes the
-                calculation for Harwick: public exposure is a different problem than
-                a private complaint. (+3 authority, +10)
+                Silas agreed to confirm the factor's ledger in public if the dispute
+                remains unresolved. His testimony adds +3 authority. (+10 score)
           topics:
             - id: testimony_back
-              prompt: "Thank him."
+              prompt: "Return to Silas's questions."
               goto: silas_root
         - id: silas_private
           npc_text: >
-            The merchant slid something across at the base of the steps — I was too
-            far off to see the amount, but close enough to see the hand. Harwick took
-            it and the man's seal cleared in twenty minutes. So there's your inspection
-            standard: it moves exactly as fast as the fee does.
+            The previous merchant paid Harwick at the gatehouse steps. I could not
+            see the amount. Harwick returned that merchant's seal within twenty minutes.
           effects:
             - set_flag: heard_bribe_detail
             - add_journal: >
-                Silas watched a merchant bribe Harwick directly. The 'inspection fee'
-                is just the asking price — in writing or in coin, whichever the merchant
-                chooses. The pattern is deliberate.
+                Silas saw another merchant pay Harwick directly, after which Harwick
+                returned the merchant's seal within twenty minutes. The inspection
+                delay is part of the payment scheme.
           topics:
             - id: private_back
-              prompt: "Nod. That explains the register."
+              prompt: "Return to Silas's questions."
               goto: silas_root
 
 enemies:
@@ -462,10 +440,8 @@ enemies:
   - id: breckel
     name: "Breckel"
     description: >
-      Harwick's man — large, patient, economical in how he uses his body. Not a brute;
-      a professional. He has stood in enough doorways that nothing a merchant can say
-      surprises him, and he will not move unless Factor Harwick tells him to or the
-      alternative is worse.
+      Harwick's armed guard blocks the north gate. A successful public confrontation
+      makes Harwick call him off. Fighting Breckel risks death and gives no score.
     room: gate_arch
     conditions: [{ not_flag: factor_shamed }]
     hp: 14
@@ -476,8 +452,8 @@ enemies:
     on_defeat:
       - set_quest_stage: { quest: saltmere_crossing, stage: breckel_down }
       - add_journal: >
-          Breckel is down in the arch. The gate is open. It is not the clean
-          resolution — but it is a resolution.
+          You defeated Breckel, and the north gate is open. Combat gave no score and
+          leaves an official incident to answer for.
 
 win_conditions:
   # Locomotion win: reaching toll_road — accessible via the social path (factor_shamed
@@ -497,27 +473,17 @@ endings:
     variants:
       - when: [{ has_flag: factor_shamed }]
         text: >
-          The Saltmere Road opens north past the waystation gate, the river cold to
-          the west and the town lights ahead in the afternoon grey. Behind you Harwick
-          is already calculating who he can afford to blame for a clerical error in
-          the toll register, and Silas is clearing his own manifest with the deputy
-          who quietly replaced Harwick at the gatehouse steps. The passage-seal is
-          yours again and the road is clear — and a factor's scheme, once called out
-          in front of a witness, tends to attract considerably more official scrutiny
-          than a private complaint ever could. *** You have won. ***
+          Harwick returned your passage-seal after the factor's ledger exposed his
+          overcharges. A deputy has replaced him while officials review the records.
+          The Saltmere Road is open. *** You have won. ***
     text: >
-      The Saltmere Road opens north past the waystation gate, the river cold to
-      the west and the town lights ahead in the afternoon grey. You did not leave
-      the waystation quietly, and there will be a report. But the road is open and
-      the passage-seal is yours, and the difference between a report and a case is
-      that someone has to press the case — and Factor Harwick is not having a good
-      afternoon. *** You have won. ***
+      You defeated Breckel, recovered your passage-seal, and reached the Saltmere
+      Road. The fight will be reported, and you missed the evidence-path score.
+      *** You have won. ***
 
   - id: ending_impounded
-    title: "Held at the Waystation"
+    title: "Killed at the Waystation"
     text: >
-      Breckel gets his weight on you before you can clear the passage, and after that
-      it is simply a matter of time. Harwick calls it assault on an officer of the toll —
-      a charge that will keep you at the waystation long after the light has gone out of
-      this particular afternoon. The passage-seal stays in his coat. *** You have fallen. ***
+      Breckel kills you at the waystation. Harwick keeps your passage-seal and reports
+      that you assaulted a toll officer. *** You have fallen. ***
     death: true

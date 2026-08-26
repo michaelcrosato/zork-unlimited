@@ -119,33 +119,33 @@ export type RpgCompactObservation = {
  * in per-step payloads.
  */
 export const RPG_COMPACT_LEGEND = {
-  v: "compact observation schema version",
-  here: "[room_id, room_title] current room",
+  v: "compact observation version",
+  here: "[room_id, room_title]",
   text: "room description",
-  exits: "open exits: 'direction' or [direction, dest_room_id]",
+  exits: "open exits: direction, or [direction, destination_room_id]",
   vitals: "[hp, attack, defense, score, max_score]",
   actions:
-    "legal action ids shown here; dialogue does not suspend other listed actions; more counts truncation and list_legal_actions has the complete menu",
+    "legal action ids. Dialogue does not block other listed actions. more counts truncation; call list_legal_actions for the complete menu",
   checks:
-    "[[action_id, skill, current_modifier, die, difficulty, authored_stakes?], ...] checks for the included legal actions",
+    "skill checks for listed actions: [[action_id, skill, modifier, die, difficulty, stakes?], ...]",
   objects: "visible object ids",
-  npcs: "[[npc_id, display_name], ...] NPCs present",
+  npcs: "present NPCs: [[npc_id, display_name], ...]",
   blocked: "[[direction, reason], ...] blocked exits",
-  unavailable: "[[action_id, reason], ...] visible authored actions unavailable right now",
+  unavailable: "visible actions currently blocked: [[action_id, reason], ...]",
   inv: "carried item ids",
   flags: "set story flags",
-  vars: "story variables (core stats already shown in vitals are omitted)",
+  vars: "story variables; stats already in vitals are omitted",
   journal: "recent journal entries",
-  more: "[inv, flags, vars, journal, actions, exits, objects, npcs, blocked, enemies, unavailable, pressure, choices] counts omitted by truncation, trailing zeros dropped",
-  dialogue: "[npc_id, npc_line] active dialogue",
+  more: "omitted counts in this order: [inv, flags, vars, journal, actions, exits, objects, npcs, blocked, enemies, unavailable, pressure, choices]. Trailing zeros are removed",
+  dialogue: "active dialogue: [npc_id, npc_line]",
   choices:
-    "[[action_id, authored_prompt], ...] dialogue replies only; other listed actions remain legal and leaving the room ends the exchange; execute an unchanged id from actions",
-  enemies: "[[enemy_id, hp], ...] enemies present",
+    "dialogue replies: [[action_id, authored_prompt], ...]. Use the unchanged id from actions. other listed actions remain legal; leaving the room ends the exchange",
+  enemies: "present enemies: [[enemy_id, hp], ...]",
   pressure:
-    "[[track_id, title, value, band_min, band_label, next_min?, next_label?], ...] visible pressure tracks",
-  ended: "true when the quest has ended",
-  ending_id: "ending id when ended",
-  ending: "{id, title, text} ending details when ended",
+    "visible pressure tracks: [[track_id, title, value, band_min, band_label, next_min?, next_label?], ...]",
+  ended: "true after the quest ends",
+  ending_id: "ending id",
+  ending: "ending details: {id, title, text}",
   events: RPG_COMPACT_EVENT_LEGEND,
 } as const satisfies Record<keyof RpgCompactObservation | "events", string>;
 

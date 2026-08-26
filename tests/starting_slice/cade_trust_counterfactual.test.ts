@@ -71,9 +71,9 @@ type Stance = "cade" | "authority";
 type Oath = "full" | "aid-only";
 
 const CADE_OUTER_SEAL_COPY =
-  "All three wolves test the open paling from outside. Seat Cade's first household shutter here once. Reese's Works marks lower the shown Repair difficulty only if prepared at launch; a miss cannot retry, but Cade's accepted terms make his bracing hand the recovery.";
+  "SEAT Cade's two household shutters ON outer fortification frame. This Repair check can be attempted once. Reese's Works marks reduce the displayed difficulty if prepared. On failure, Cade's offered bracing hand completes the seal.";
 const AUTHORITY_OUTER_SEAL_COPY =
-  "All three wolves test the open paling from outside. Seat Albany's first relief seal here once. Reese's Works marks lower the shown Repair difficulty only if prepared at launch; a miss cannot retry, and Cade's refusal leaves one emergency public binding strip as recovery.";
+  "SEAT Albany relief seal roll ON outer fortification frame. This Repair check can be attempted once. Reese's Works marks reduce the displayed difficulty if prepared. On failure, BIND authority emergency binding WITH Albany relief seal roll; Cade will not help.";
 
 const OUTER_SEAL_DISCLOSURE_CASES = [
   { stance: "cade", oath: "full", works: false, difficulty: 14 },
@@ -251,10 +251,10 @@ function commitFortify(stance: Stance, withJune = false): GameState {
     expect.arrayContaining(["ask_commit_cade_terms", "ask_commit_albany_authority", "ask_leave"]),
   );
   expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
-    /household terms[^]*(?:Albany|authority)[^]*(?:dawn|outlast)/i,
+    /FORTIFY protects home and herd until dawn[^]*all wolves alive[^]*retreat and other plans close[^]*Cade's shutters[^]*expose his property[^]*preserve Albany's seals[^]*gain his help after one failed outer seal[^]*Albany's seals[^]*protect his property[^]*spend public stock[^]*gain no help/i,
   );
   expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
-    /If intact June rides[^]*prevents 2 HP only after an unstabilized failed seal reaches pressure 3\+[^]*solo or broken June pays it[^]*Mobile-stabilized or pressure-2 dawn costs no HP/i,
+    /unstabilized failed seal can cost 2 HP at dawn[^]*June or the mobile relief crew prevents it/i,
   );
 
   state = act(state, contract.choice);
@@ -522,7 +522,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
       }),
     );
     expect(objectDescription(index.objects.get("fortify_dawn_watch")!, withJune)).toMatch(
-      /unstabilized failed first seat[^]*Strained pressure 3 or higher[^]*solo rider or broken June[^]*persistent 2 HP[^]*intact June[^]*mobile-stabilized line costs no HP[^]*pressure 3[^]*no June injury benefit[^]*pressure 2 likewise costs no HP[^]*same stance ending/i,
+      /outer seal failed and was not stabilized[^]*Strained pressure 3 or higher costs 2 HP[^]*uninjured June braces the cattle[^]*mobile relief failure crew prevents that HP loss[^]*Hammering pressure 2 also costs no HP/i,
     );
     expect(actionIds(withJune)).toContain("talk_june_pike");
     expect(actionIds(withJune)).not.toContain("use_fortify_dawn_watch");
@@ -530,7 +530,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
       expect.objectContaining({
         id: "use_fortify_dawn_watch",
         reason: expect.stringMatching(
-          /Strained pressure[^]*June's intact cattle-first brace[^]*persistent -2 HP dawn strain[^]*same pressure-6 completion band and ending/i,
+          /First, TALK TO Road Warden June Pike[^]*cattle-first help can prevent the Strained dawn watch's 2 HP cost/i,
         ),
       }),
     );
@@ -538,7 +538,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
 
     withJune = act(withJune, "talk_june_pike");
     expect(buildRpgObservation(index, withJune).dialogue?.npc_text).toMatch(
-      /Albany's public seals are Strained[^]*unstabilized failed first seat[^]*Cade's property stays covered[^]*public stock pays[^]*refusal stands[^]*avoid the persistent 2 HP dawn strain[^]*without lowering pressure[^]*Albany's ending/i,
+      /Albany's relief seals are Strained[^]*unstabilized failed outer seal[^]*prevents the 2 HP dawn cost[^]*does not lower fortification pressure[^]*Cade's property remains protected[^]*public seals are spent[^]*refusal stands/i,
     );
     withJune = act(withJune, "ask_acknowledge");
     expect(actionIds(withJune)).toEqual(actionIds(solo));
@@ -556,10 +556,10 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
       vars: { fortification_pressure: 6, hp: 28 },
     });
     expect(withJune.journal.join("\n")).toMatch(
-      /June's lower cattle brace absorbs the Strained dawn watch[^]*avoids the persistent -2 HP strain[^]*failed-seat provenance stays recorded[^]*same pressure-6 completion and chosen ending/i,
+      /June braces the cattle during the Strained dawn watch[^]*prevents 2 HP loss[^]*failed outer seal remains recorded/i,
     );
     expect(solo.journal.join("\n")).toMatch(
-      /pay a persistent -2 HP watch strain[^]*failed-seat provenance stays recorded[^]*same pressure-6 completion and chosen ending/i,
+      /Strained watch costs 2 HP[^]*failed outer seal remains recorded/i,
     );
   });
 
@@ -572,11 +572,11 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
         const text = buildRpgObservation(index, state).dialogue?.npc_text ?? "";
         if (stance === "cade") {
           expect(text).toMatch(
-            /Cade's household (?:shutters|terms)[^]*(?:pressure 2|unstabilized failed first seat)[^]*outer property remains exposed[^]*Albany's seals remain public[^]*(?:no injury benefit|avoid the persistent 2 HP dawn strain)[^]*Cade's ending/i,
+            /Cade's household shutters[^]*(?:Strained after the unstabilized failed outer seal|Hammering \(2\))[^]*(?:prevents the 2 HP dawn cost|adds no HP benefit)[^]*does not lower fortification pressure[^]*property remains exposed[^]*Albany's relief seals remain unused/i,
           );
         } else {
           expect(text).toMatch(
-            /Albany's public seals[^]*(?:pressure 2|unstabilized failed first seat)[^]*Cade's property stays covered[^]*public stock pays[^]*refusal stands[^]*(?:no injury benefit|avoid the persistent 2 HP dawn strain)[^]*Albany's ending/i,
+            /Albany's relief seals[^]*(?:Strained after the unstabilized failed outer seal|Hammering \(2\))[^]*(?:prevents the 2 HP dawn cost|adds no HP benefit)[^]*does not lower fortification pressure[^]*Cade's property remains protected[^]*public seals are spent[^]*refusal stands/i,
           );
         }
       }
@@ -592,7 +592,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
     expect(withJune.vars).toMatchObject({ fortification_pressure: 6, hp: 30 });
     expect(solo.vars).toMatchObject({ fortification_pressure: 6, hp: 30 });
     expect(withJune.journal.join("\n")).toMatch(
-      /pressure 3\+[^]*prevents[^]*pressure-2[^]*no injury benefit/i,
+      /Strained \(3\) or higher[^]*prevents 2 HP loss[^]*Hammering \(2\) already costs no HP[^]*Fortification pressure does not change/i,
     );
   });
 
@@ -640,7 +640,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
         min: 2,
         label: "Hammering",
         description:
-          "The pack is hammering at two fixed pressure steps. The current seal state makes the disclosed first-seat recovery, threshold seal, or dawn watch the next legal beat.",
+          "The wolves are striking the seals. Follow the currently shown FORTIFY action; completed seals and recoveries stay complete. Once the threshold is sealed, begin the shown sealed-byre dawn watch.",
       },
       next: { min: 3, label: "Strained" },
     });

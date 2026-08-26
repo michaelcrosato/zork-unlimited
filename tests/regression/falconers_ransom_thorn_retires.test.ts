@@ -72,7 +72,7 @@ describe("bug_0402 — falconers_ransom retires Thorn after Aldric folds", () =>
     expect(s.flags.aldric_shamed).toBe(true);
     expect(s.flags.thorn_defeated).toBeUndefined();
     const obs = buildRpgObservation(index, s);
-    expect(obs.description).toContain("Thorn has stepped back from the passage");
+    expect(obs.description).toContain("Aldric yielded, Thorn no longer blocks the gate");
     expect(obs.enemies_present).toEqual([]);
     expect(obs.available_actions.map((a) => a.id)).not.toContain("attack_thorn");
     expect(obs.available_actions.map((a) => a.id)).toContain("go_north");

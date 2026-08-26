@@ -464,9 +464,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       const travelByRoadId = args.road_id !== undefined;
       const travelByDestination = args.destination_town_id !== undefined;
       if (travelByRoadId === travelByDestination) {
-        throw new Error(
-          "travel_overworld_session requires exactly one of road_id or destination_town_id.",
-        );
+        throw new Error("Pass exactly one: road_id or destination_town_id.");
       }
       if (args.road_id !== undefined) {
         const roadId = args.road_id;
@@ -481,9 +479,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       }
       const destinationTownId = args.destination_town_id;
       if (destinationTownId === undefined) {
-        throw new Error(
-          "travel_overworld_session requires exactly one of road_id or destination_town_id.",
-        );
+        throw new Error("Pass exactly one: road_id or destination_town_id.");
       }
       return overworldSessions.run(
         responseOptions,

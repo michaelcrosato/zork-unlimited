@@ -10,7 +10,7 @@ describe("human journey checkpoint status", () => {
         acceptedDecisions: 39,
         nextCheckpoint: 40,
       }),
-    ).toBe("First safe journey break on or after decision 40.");
+    ).toBe("First safe break on or after decision 40");
   });
 
   it.each([40, 45])(
@@ -22,7 +22,7 @@ describe("human journey checkpoint status", () => {
           acceptedDecisions,
           nextCheckpoint: 40,
         }),
-      ).toBe("Decision 40 has passed; the choice appears at the next safe journey break.");
+      ).toBe("Decision 40 passed. Choice at next safe break.");
     },
   );
 
@@ -46,7 +46,7 @@ describe("human journey checkpoint status", () => {
           acceptedDecisions,
           nextCheckpoint,
         }),
-      ).toBe("A journey choice is ready now.");
+      ).toBe("Journey choice ready now");
     },
   );
 

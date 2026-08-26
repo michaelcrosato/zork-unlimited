@@ -52,8 +52,8 @@ describe("falconers_ransom guest chambers react to the taken bill", () => {
 
     expect(s.inventory).toContain("hidden_bill");
     expect(s.flags["hidden_bill_taken"]).toBe(true);
-    expect(desc(s)).toContain("folded document is no longer tucked at the satchel's lip");
-    expect(desc(s)).not.toContain("A folded document lies half-under");
+    expect(desc(s)).toContain("You took the bill of sale");
+    expect(desc(s)).not.toContain("partly hidden under riding gloves");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -66,8 +66,8 @@ describe("falconers_ransom guest chambers react to the taken bill", () => {
 
     expect(s.inventory).not.toContain("hidden_bill");
     expect(s.flags["hidden_bill_taken"]).toBe(true);
-    expect(desc(s)).toContain("folded document is no longer tucked at the satchel's lip");
-    expect(desc(s)).not.toContain("A folded document lies half-under");
+    expect(desc(s)).toContain("You took the bill of sale");
+    expect(desc(s)).not.toContain("partly hidden under riding gloves");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -82,8 +82,8 @@ describe("falconers_ransom guest chambers react to the taken bill", () => {
     expect(s.inventory).not.toContain("hidden_bill");
     expect(s.flags["hidden_bill_taken"]).toBe(true);
     expect(s.flags["bill_read"]).toBe(true);
-    expect(desc(s)).toContain("forged seal's tell is fixed in your head");
-    expect(desc(s)).toContain("folded document is no longer hidden");
+    expect(desc(s)).toContain("You took and read the bill of sale");
+    expect(desc(s)).toContain("Its guild seal is forged");
     expect(desc(s)).not.toContain("What you needed is in your hands");
     expect(lookNarration(s)).toBe(desc(s));
   });

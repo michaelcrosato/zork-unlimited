@@ -52,8 +52,10 @@ describe("tanners_fever stores react to taken medical evidence", () => {
 
     expect(s.inventory).toContain("godwin_notes");
     expect(s.flags["godwin_notes_taken"]).toBe(true);
-    expect(desc(s)).toContain("bench is bare where his open case notes lay");
-    expect(desc(s)).not.toContain("His open monthly ledger holds case notes");
+    expect(desc(s)).toContain(
+      "Godwin's case notes were taken. Before treatment, retrieve and READ Godwin's case notes only if that evidence is unfinished",
+    );
+    expect(desc(s)).not.toContain("Before treatment, TAKE and READ them");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -66,8 +68,10 @@ describe("tanners_fever stores react to taken medical evidence", () => {
 
     expect(s.inventory).not.toContain("godwin_notes");
     expect(s.flags["godwin_notes_taken"]).toBe(true);
-    expect(desc(s)).toContain("bench is bare where his open case notes lay");
-    expect(desc(s)).not.toContain("His open monthly ledger holds case notes");
+    expect(desc(s)).toContain(
+      "Godwin's case notes were taken. Before treatment, retrieve and READ Godwin's case notes only if that evidence is unfinished",
+    );
+    expect(desc(s)).not.toContain("Before treatment, TAKE and READ them");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -82,8 +86,8 @@ describe("tanners_fever stores react to taken medical evidence", () => {
     expect(s.inventory).not.toContain("godwin_notes");
     expect(s.flags["godwin_notes_taken"]).toBe(true);
     expect(s.flags["notes_read"]).toBe(true);
-    expect(desc(s)).toContain("Godwin's overdose formula is fixed in your head");
-    expect(desc(s)).not.toContain("case notes are in your hand");
+    expect(desc(s)).toContain("You READ Godwin's case notes and gained +3 physick");
+    expect(desc(s)).not.toContain("You have Godwin's case notes");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -95,7 +99,10 @@ describe("tanners_fever stores react to taken medical evidence", () => {
       "go_east",
     ]);
     expect(unread.inventory).not.toContain("godwin_notes");
-    expect(desc(unread)).toContain("case notes have left the workbench and remain unread");
+    expect(desc(unread)).toContain("Godwin's case notes were taken");
+    expect(desc(unread)).toContain(
+      "Complete only unfinished reading, Edric's examination, or meadowsweet identification",
+    );
     expect(desc(unread)).not.toMatch(/in your hand|you carry/i);
     expect(lookNarration(unread)).toBe(desc(unread));
 
@@ -107,7 +114,9 @@ describe("tanners_fever stores react to taken medical evidence", () => {
       "go_east",
     ]);
     expect(read.inventory).not.toContain("godwin_notes");
-    expect(desc(read)).toMatch(/You know the written[^]*three-to-one[^]*one-to-one/i);
+    expect(desc(read)).toContain(
+      "You READ Godwin's case notes and confirmed the wormwood overdose",
+    );
     expect(desc(read)).not.toMatch(/in your hand|you carry/i);
     expect(lookNarration(read)).toBe(desc(read));
   });
@@ -117,8 +126,8 @@ describe("tanners_fever stores react to taken medical evidence", () => {
 
     expect(s.inventory).toContain("meadowsweet");
     expect(s.flags["meadowsweet_taken"]).toBe(true);
-    expect(desc(s)).toContain("green hook is empty where the meadowsweet bundle hung");
-    expect(desc(s)).not.toContain("Among them is green meadowsweet");
+    expect(desc(s)).toContain("The meadowsweet was taken");
+    expect(desc(s)).not.toContain("Before treatment, TAKE and INSPECT it");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -131,8 +140,11 @@ describe("tanners_fever stores react to taken medical evidence", () => {
 
     expect(s.inventory).not.toContain("meadowsweet");
     expect(s.flags["meadowsweet_taken"]).toBe(true);
-    expect(desc(s)).toContain("green hook is empty where the meadowsweet bundle hung");
-    expect(desc(s)).not.toContain("Among them is green meadowsweet");
+    expect(desc(s)).toContain("The meadowsweet was taken");
+    expect(desc(s)).toContain(
+      "If treatment and identification are unfinished, retrieve and LOOK AT meadowsweet",
+    );
+    expect(desc(s)).not.toContain("You have the meadowsweet");
     expect(lookNarration(s)).toBe(desc(s));
   });
 });

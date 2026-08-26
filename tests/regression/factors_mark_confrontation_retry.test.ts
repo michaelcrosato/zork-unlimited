@@ -106,7 +106,9 @@ describe("bug_0455 - Factor's Mark confrontation can recover from a bad roll", (
     state = failed.state;
 
     expect(narrations(failed.events)).toContain("authority check: d20 1 + 9 = 10 vs 11");
-    expect(narrations(failed.events)).toContain("the evidence has not left the yard");
+    expect(narrations(failed.events)).toContain(
+      "Retry with PRESENT factor's ledger against impound notice; the check has no penalty or lockout",
+    );
     expect(state.flags.confrontation_attempted).toBeUndefined();
     expect(state.flags.factor_shamed).toBeUndefined();
     expect(actionIds(state)).toContain("use_factor_ledger_on_seal_notice");

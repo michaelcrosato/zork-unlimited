@@ -79,9 +79,9 @@ const bellowsRoom = pack.rooms.find((r) => r.id === "bellows_walk")!;
 describe("bug_0070 — the Cold Forge bellows_walk honestly telegraphs a hard fight worth preparing for", () => {
   it("the base prose adds an honest threat-and-preparation cue", () => {
     const base = bellowsRoom.description.toLowerCase();
-    expect(base).toContain("slow is not the same as soft");
-    expect(base).toContain("dropped anvil");
-    expect(base).toMatch(/every edge you can bring to bear/);
+    expect(base).toContain("can kill an unprepared fighter");
+    expect(base).toContain("complete any unfinished lantern-spirit +2 attack counsel");
+    expect(base).toContain("first don of the cold-iron plate for +2 defense");
     // The cue is preparation advice, not a false hard requirement (the fight is
     // winnable from base stats), so it must not declare the buff mandatory.
     expect(base).not.toMatch(/cannot win|must .*buff|impossible without/);
@@ -91,8 +91,7 @@ describe("bug_0070 — the Cold Forge bellows_walk honestly telegraphs a hard fi
     const base = bellowsRoom.description.toLowerCase();
     expect(base).not.toContain("grinding slowly to life");
     expect(base).not.toContain("grinding to life");
-    expect(base).toMatch(/no swifter than it is now/);
-    expect(base).toMatch(/holds no fire to rouse it/);
+    expect(base).toMatch(/waiting does not strengthen the sentinel/);
   });
 
   it("LIVE: the bellows_walk room the player sees carries the new threat cue", () => {
@@ -101,9 +100,9 @@ describe("bug_0070 — the Cold Forge bellows_walk honestly telegraphs a hard fi
     s = act(s, move("north")); // → bellows_walk
     expect(s.current).toBe("bellows_walk");
     const shown = desc(s).toLowerCase();
-    expect(shown).toContain("dropped anvil");
-    expect(shown).toContain("every edge you can bring to bear");
-    expect(shown).toMatch(/no swifter than it is now/);
+    expect(shown).toContain("can kill an unprepared fighter");
+    expect(shown).toContain("complete any unfinished lantern-spirit +2 attack counsel");
+    expect(shown).toMatch(/waiting does not strengthen the sentinel/);
   });
 
   it("reachability/balance intact — sentinel retuned for teeth (bug_0101); buffed route (seed 1) still wins 50/50", () => {

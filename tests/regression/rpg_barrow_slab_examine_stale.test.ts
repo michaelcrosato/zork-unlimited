@@ -93,13 +93,13 @@ describe("bug_0047 — the stone slab's examine reacts to being levered aside", 
   it("before levering, the examine reads the base 'wedge the bar and heave' instruction", () => {
     const s = atSlab(1);
     const text = examineSlab(s).toLowerCase();
-    expect(text).toContain("wedge the bar");
+    expect(text).toContain("lever stone slab with iron bar");
     // The base text instructs the player to lever/heave the as-yet-unsolved slab.
     // (Fingerprint re-pinned by bug_0069: the old "heaving again and again / until
     // the old stone gives" wording was reworded to stop over-promising a grind; the
     // invariant under test is unchanged — base examine tells you to heave, and is
     // NOT the levered-aside text.)
-    expect(text).toMatch(/heave|works the old stone loose/);
+    expect(text).toContain("can be retried until the check succeeds");
     // It must NOT yet claim the slab is open.
     expect(text).not.toContain("levered aside");
   });
@@ -114,12 +114,12 @@ describe("bug_0047 — the stone slab's examine reacts to being levered aside", 
 
     const text = examineSlab(s).toLowerCase();
     // The stale instruction is gone — no contradiction with the just-solved puzzle.
-    expect(text).toContain("levered aside");
-    expect(text).toMatch(/stair drops away|bared a stair|a stair/);
-    expect(text).not.toContain("wedge the bar");
+    expect(text).toContain("already levered the stone slab aside");
+    expect(text).toContain("the stair down");
+    expect(text).not.toContain("can be retried until the check succeeds");
     expect(text).not.toMatch(/heaving again and again/);
     // …and it agrees with the room, which also reads the slab as moved.
-    expect(roomDesc(s).toLowerCase()).toContain("levered aside now");
+    expect(roomDesc(s).toLowerCase()).toContain("you moved the stone slab");
   });
 
   it("the slab variant is purely cosmetic — examining changes no state and the seed-1 route still wins 50/50", () => {

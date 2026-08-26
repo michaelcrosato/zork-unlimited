@@ -1,5 +1,5 @@
 export const RPG_STATE_HASH_MISMATCH_REASON =
-  "State hash mismatch; refresh the current observation or action menu.";
+  "The state changed since your last read. Refresh with get_observation or list_legal_actions.";
 export const RPG_PUBLIC_STATE_HASH_LENGTH = 24;
 
 export type RpgStateUnchanged = {

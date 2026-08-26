@@ -87,7 +87,7 @@ export function runRpgStartWorldQuest<Args extends RpgStartWorldQuestToolArgs>(
 ): RpgWorldQuestStartPayload<Args> {
   assertPublicWorldQuestStart(args);
   if ((args as { quest_id?: unknown }).quest_id !== undefined) {
-    throw new Error("start_world_quest accepts world_quest_id, not quest_id.");
+    throw new Error("Pass world_quest_id to start_world_quest. Do not pass quest_id.");
   }
   if ((args as { world_quest_id?: unknown }).world_quest_id === undefined) {
     throw new Error("start_world_quest requires world_quest_id.");

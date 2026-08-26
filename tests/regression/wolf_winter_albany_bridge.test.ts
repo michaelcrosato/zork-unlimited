@@ -14,28 +14,29 @@ if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 
 describe("Wolf-Winter Albany bridge", () => {
-  it("starts from Albany's relief packet instead of an unexplained steading role", () => {
+  it("starts from Albany's relief mission instead of an unexplained steading role", () => {
     const start = pack.rooms.find((room) => room.id === "steading_yard");
     expect(start, "steading_yard must exist").toBeDefined();
     const text = start!.description;
 
-    expect(text).toContain("Albany winter-relief packet");
-    expect(text).toContain("hill road");
-    expect(text).toContain("hunting-spear");
-    expect(text.toLowerCase()).toContain("already");
+    expect(text).toContain("Go north to the byre-yard");
+    expect(text).toContain("protect the cattle until dawn");
+    expect(text).toContain("Albany relief spear");
     expect(text).not.toContain("yours by trade");
     expect(text).not.toContain("steading's hunter");
   });
 
-  it("keeps Cade's first read aligned with the Albany relief-rider handoff", () => {
+  it("keeps Cade's first read aligned with the mission's four-plan choice", () => {
     const houndsman = pack.npcs.find((npc) => npc.id === "houndsman");
     expect(houndsman, "houndsman must exist").toBeDefined();
     const root = houndsman!.dialogue.nodes.find((node) => node.id === "cade_root");
     expect(root, "cade_root must exist").toBeDefined();
 
-    expect(houndsman!.description).toContain("Albany's relief rider");
+    expect(houndsman!.description).toContain("TALK TO old Cade the houndsman");
+    expect(houndsman!.description).toContain("HUNT, LURE, DRIVE, FORTIFY");
     expect(houndsman!.description).not.toContain("steading's hunter");
-    expect(root!.npc_text).toContain("Albany sent you");
+    expect(root!.npc_text).toContain("One choice permanently closes the rest");
+    expect(root!.npc_text).toContain("PREPARE SUPPORT chooses nothing");
     expect(root!.npc_text).not.toContain("You came down awake");
   });
 
@@ -49,9 +50,8 @@ describe("Wolf-Winter Albany bridge", () => {
     });
 
     const text = started.observation.description;
-    expect(text).toContain("Albany winter-relief packet");
-    expect(text).toContain("hill road");
-    expect(text).toContain("hunting-spear");
-    expect(text.toLowerCase()).toContain("already");
+    expect(text).toContain("Go north to the byre-yard");
+    expect(text).toContain("protect the cattle until dawn");
+    expect(text).toContain("Albany relief spear");
   });
 });

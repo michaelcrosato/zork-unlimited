@@ -31,13 +31,13 @@ const wolf = (() => {
 const wolfSource = readFileSync(wolf.source, "utf8");
 const CADE_PEER_PLAN_LABELS: Readonly<Record<string, string>> = {
   ask_hunt:
-    "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.",
+    "HUNT — Protect home and herd. Wolves may die; failure risks cattle. Cade's tactics and padded byre-jerkin help. Review. Go north or RELEASE JUNE to choose.",
   ask_lure:
-    "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details.",
+    "LURE — Move the wolves alive and protect the herd. Costs Cade's last feed; the fence stays broken. First-action failure adds 2 cattle alarm. Review only.",
   ask_drive:
-    "DRIVE — Goal: evacuate people/herd; wolves live. Cost: no retreat; outer defense + wound/two cattle/rig. Help: Fieldcraft. Ask only; choose after details.",
+    "DRIVE — Evacuate people and cattle; wolves live. Lose retreat and outer defense. Crisis costs 6 HP, two cattle, or the rig. Review only.",
   ask_fortify:
-    "FORTIFY — Goal: keep home/herd; wolves live. Cost: no retreat; expose property for Cade aid or spend seals. Help: Repair. Ask only; choose inside.",
+    "FORTIFY — Protect home and herd until dawn; wolves live. Lose retreat. Use Cade's shutters and expose his property, or spend Albany's seals. Review only.",
 };
 
 type Trail = ActiveQuestSaveState["trail"];
@@ -459,7 +459,7 @@ describe("player-facing action presentation", () => {
     if (!finalCommitment) throw new Error("Expected LURE final commitment.");
     const authoredCommitment = finalCommitment.title.replace(/^ask:\s*/i, "");
     expect(authoredCommitment).toMatch(
-      /^FINAL COMMITMENT — LURE:[^]*finite feed[^]*broken[^]*Irreversible\.$/i,
+      /^CHOOSE LURE — Consume Cade's only feed sack in three actions[^]*leave the paling broken[^]*permanently close HUNT, DRIVE, and FORTIFY\.$/i,
     );
     expect(playerActionLabel(finalCommitment)).toBe(authoredCommitment);
 
@@ -480,9 +480,7 @@ describe("player-facing action presentation", () => {
     }
 
     const comparison = prepared.child.view();
-    expect(comparison.dialogue?.text).toMatch(
-      /Cross north or RELEASE JUNE, if offered, to choose HUNT/i,
-    );
+    expect(comparison.dialogue?.text).toMatch(/Choose HUNT with GO north or RELEASE JUNE/i);
     const hunt = comparison.choices.find((choice) => choice.id === "ask_hunt");
     expect(hunt?.title).toBe(`ask: ${CADE_PEER_PLAN_LABELS.ask_hunt}`);
 
@@ -490,7 +488,7 @@ describe("player-facing action presentation", () => {
     expect(guarded.ok, guarded.rejection ?? "guarded support rejected").toBe(true);
     const supported = prepared.child.view();
     expect(supported.dialogue?.text).toMatch(
-      /PREPARE SUPPORT[^]*gain the guarded\/patient HUNT tactic[^]*without committing a plan/i,
+      /Guarded HUNT[^]*shown BRACE, WEDGE, SET, SPLICE, or BIND rail action[^]*finished preparation and fights stay closed/i,
     );
     expect(supported.publicState.flags).toContain("heard_plan");
     expect(supported.publicState.flags).not.toEqual(
@@ -505,7 +503,7 @@ describe("player-facing action presentation", () => {
     expect(prepared.child.choose("talk_june_pike").ok).toBe(true);
     const june = prepared.child.view();
     expect(june.choices.find((choice) => choice.id === "ask_release_june_for_hunt")?.title).toMatch(
-      /FINAL COMMITMENT[^]*HUNT \/ RELEASE JUNE/i,
+      /CHOOSE HUNT \/ RELEASE JUNE/i,
     );
     const released = prepared.child.choose("ask_release_june_for_hunt");
     expect(released.ok, released.rejection ?? "June release rejected").toBe(true);

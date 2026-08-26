@@ -60,9 +60,9 @@ describe("bug_0011 — reactive room text replaces stale descriptions in the bar
     s = act(s, { type: "MOVE", direction: "down" }); // entry_hall
     s = act(s, { type: "TAKE", item: "iron_bar" });
     s = act(s, { type: "MOVE", direction: "north" }); // guard_crypt
-    // Before the fight: the base description still narrates the wight's cold.
+    // Before the fight: the base description still presents the living wight and locked exit.
     expect(s.current).toBe("guard_crypt");
-    expect(desc(s)).toContain("choked with the cold");
+    expect(desc(s)).toContain("ATTACK barrow-wight to unlock the east exit");
 
     for (let i = 0; i < 40 && !s.ended && !s.flags["wight_slain"]; i++) {
       s = act(s, { type: "ATTACK", enemy: "barrow_wight" });
@@ -70,9 +70,9 @@ describe("bug_0011 — reactive room text replaces stale descriptions in the bar
     expect(s.flags["wight_slain"]).toBe(true);
     expect(s.ended).toBe(false);
     expect(s.current).toBe("guard_crypt");
-    // After: the variant takes over; the contradiction is gone.
-    expect(desc(s)).toContain("The cold has lifted");
-    expect(desc(s)).not.toContain("choked with the cold");
+    // After: the variant takes over; the completed fight and now-open route replace that command.
+    expect(desc(s)).toContain("You defeated the barrow-wight. Go east to the Slab Passage");
+    expect(desc(s)).not.toContain("ATTACK barrow-wight to unlock the east exit");
   });
 
   it("Slab Passage flips from flush-slab to levered-aside once the slab is moved", () => {
@@ -84,9 +84,9 @@ describe("bug_0011 — reactive room text replaces stale descriptions in the bar
       s = act(s, { type: "ATTACK", enemy: "barrow_wight" });
     }
     s = act(s, { type: "MOVE", direction: "east" }); // slab_passage
-    // Before levering: the base description still narrates the slab flush.
+    // Before levering: the base description presents the still-required slab action.
     expect(s.current).toBe("slab_passage");
-    expect(desc(s)).toContain("set flush with the floor");
+    expect(desc(s)).toContain("LEVER stone slab WITH iron bar to open the stair down");
 
     for (let i = 0; i < 40 && s.questStage["barrow"] !== "slab_moved"; i++) {
       s = act(s, { type: "USE", item: "iron_bar", target: "stone_slab" });
@@ -94,9 +94,9 @@ describe("bug_0011 — reactive room text replaces stale descriptions in the bar
     expect(s.questStage["barrow"]).toBe("slab_moved");
     expect(s.ended).toBe(false);
     expect(s.current).toBe("slab_passage");
-    // After: the variant takes over; the slab now reads as moved, stair bared.
-    expect(desc(s)).toContain("Levered aside now");
-    expect(desc(s)).not.toContain("set flush with the floor");
+    // After: the variant takes over; the slab now reads as moved and the stair is available.
+    expect(desc(s)).toContain("You moved the stone slab. Go down to the Relic Chamber");
+    expect(desc(s)).not.toContain("LEVER stone slab WITH iron bar to open the stair down");
   });
 
   it("a room with no variants returns its base description unchanged (backward-compat)", () => {

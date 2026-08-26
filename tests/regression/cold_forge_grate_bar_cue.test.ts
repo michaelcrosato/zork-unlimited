@@ -64,8 +64,8 @@ function act(s: GameState, pred: (a: Action) => boolean): GameState {
 const move = (dir: string) => (a: Action) => a.type === "MOVE" && a.direction === dir;
 const takeBar = (a: Action) => a.type === "TAKE" && (a as { item?: string }).item === "pry_bar";
 
-const CUE_PHRASE = "stout iron pry-bar by the cold trough";
-const BASE_PHRASE = "made to be levered by bar and brawn";
+const CUE_PHRASE = "Beside the trough in the Outer Forge, TAKE iron pry-bar";
+const BASE_PHRASE = "LEVER slag grate with iron pry-bar";
 
 /**
  * Walk to the Forge Heart, skipping combat by setting the sentinel-defeated flag
@@ -102,8 +102,8 @@ describe("bug_0259 — The Cold Forge cues the pry-bar at the sealed grate", () 
     expect(s.inventory).not.toContain("pry_bar");
     const desc = norm(obs(s).description);
     expect(desc).toContain(CUE_PHRASE);
-    expect(desc).toContain("you carry nothing strong enough");
-    expect(desc).not.toContain(BASE_PHRASE);
+    expect(desc).toContain("You cannot open the slag grate without the iron pry-bar");
+    expect(desc).toContain(BASE_PHRASE);
   });
 
   it("(3) arriving WITH the bar reads the base prose, no nag", () => {
@@ -121,7 +121,7 @@ describe("bug_0259 — The Cold Forge cues the pry-bar at the sealed grate", () 
       questStage: { ...s.questStage, forge: "grate_open" },
     };
     const desc = norm(obs(opened).description);
-    expect(desc).toContain("has been levered up off its lip and stands open");
+    expect(desc).toContain("The slag grate is open");
     expect(desc).not.toContain(CUE_PHRASE);
     expect(desc).not.toContain(BASE_PHRASE);
   });

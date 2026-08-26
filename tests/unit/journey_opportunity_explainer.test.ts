@@ -116,7 +116,7 @@ describe("generic journey opportunity explainer", () => {
       tool: "scout_overworld_session_poi",
       arguments: { poi_id: "fixture:signal" },
       command: "scout fixture:signal",
-      label: "Scout the event's visible local point of interest.",
+      label: "Scout the required point of interest.",
     });
     expect(
       explainJourneyOpportunity(state({ journalEntryIds: new Set(["scout:fixture:signal"]) }), {
@@ -153,7 +153,7 @@ describe("generic journey opportunity explainer", () => {
       tool: "resolve_overworld_session_event",
       arguments: { event_id: EVENT_ID, option_id: "fixture:shield" },
       command: `resolve ${EVENT_ID} fixture:shield`,
-      label: "Choose the currently visible “Shield the signal” event action.",
+      label: "Choose “Shield the signal” for this event.",
     });
     expect(JSON.stringify(resolve)).not.toMatch(
       /private|preview|consequence|minutes|renown|reward|prompt/i,
@@ -167,7 +167,7 @@ describe("generic journey opportunity explainer", () => {
       tool: "move_overworld_session_area",
       arguments: { area_route_id: "fixture:harbor_works" },
       command: `enter ${MAPPED}`,
-      label: "Walk one local route toward Works.",
+      label: "Take one local route toward Works.",
     });
     expect([...mappedState.journalEntryIds]).toEqual(before);
 
@@ -180,7 +180,7 @@ describe("generic journey opportunity explainer", () => {
       tool: "travel_overworld_session",
       arguments: { road_id: "fixture:road" },
       command: `go ${HOME}`,
-      label: "Travel one road toward Fixture Town.",
+      label: "Take one road toward Fixture Town.",
     });
 
     const hiddenArea = "fixture:marsh";
@@ -241,6 +241,6 @@ describe("generic journey opportunity explainer", () => {
         }),
         { kind: "job", id: JOB_ID },
       ),
-    ).toThrow(/no currently lawful local action/i);
+    ).toThrow(/no available local action/i);
   });
 });

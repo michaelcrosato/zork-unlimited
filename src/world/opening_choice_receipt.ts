@@ -26,7 +26,7 @@ export function presentOpeningChoiceOption(
   args: OpeningChoiceOptionPresentation,
 ): JourneyStoryChoiceOption {
   const consequence =
-    `Benefit: ${args.exactBenefit} Cost: ${args.immediateCost}. ` + `Boundary: ${args.giveUp}`;
+    `Benefit: ${args.exactBenefit} Cost: ${args.immediateCost}. ` + `Tradeoff: ${args.giveUp}`;
   const wordCount = openingSelectionReceiptWordCount(consequence);
   if (wordCount > OPENING_SELECTION_RECEIPT_WORD_LIMIT) {
     throw new Error(

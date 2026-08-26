@@ -13,7 +13,7 @@
  *
  * Locked on BOTH the engine surface and the real pack:
  *   - BEHAVIOURAL (the real Breaking Weir Pell): driving the actual TALK/ASK engine path,
- *     first contact speaks the full emergency, and a substantive reply auto-resumes the root
+ *     first contact speaks the full situation, and a substantive reply auto-resumes the root
  *     whose observation immediately exposes the terse variant without a filler decision;
  *   - VALIDATOR: the dead-reactive-content guards rooms/objects get (UNREACHABLE_VARIANT
  *     shadowing, UNSATISFIABLE_CONDITION) now also cover dialogue node variants, so a silently
@@ -66,20 +66,28 @@ describe("bug_0246 — reactive NPC dialogue text on The Breaking Weir's Pell", 
   it("speaks the full emergency first, then exposes the terse root immediately after a reply", () => {
     const start = initStateForRpgPack(index, 11);
 
-    // First contact: the full "Thank God someone came" opening.
+    // First contact: the full situation and remaining-work boundary.
     const talk = run(start, { type: "TALK", npc: "pell" });
-    expect(talk.text).toMatch(/Thank God someone came/);
-    expect(talk.text).not.toMatch(/what else, lad/i);
+    expect(talk.text).toMatch(
+      /My broken leg keeps me here[^]*unfinished storm-walk crossing or weir step[^]*missing tools[^]*Completed work stays complete[^]*final course choice remains permanent/i,
+    );
+    expect(talk.text).not.toMatch(/What else do you need/i);
 
     // Asking the plan auto-resumes Pell's root in the same accepted decision. The
     // reply narration still belongs to the plan node, while the resulting state
     // exposes the reactive root without a separate filler action.
     const asked = run(talk.state, { type: "ASK", npc: "pell", topic: "ask_weir" });
-    expect(asked.text).toMatch(/opening the relief-race will not finish it/);
-    expect(asked.text).toMatch(/Before that, three things hold this weir/); // the plan node fired
+    expect(asked.text).toMatch(
+      /recorded order[^]*FREE jammed head-rack WITH weir-iron[^]*RIG storm-walk WITH life-line[^]*HEAVE seized winch-gate WITH weir-iron[^]*choose SET stone-race course pin or SET field-wash course pin/i,
+    );
+    expect(asked.text).toMatch(
+      /stone-race course pin saves the winter grain but destroys the old works[^]*field-wash course pin saves the works but destroys the grain[^]*final choice is permanent[^]*rack and winch checks are safe to retry/i,
+    ); // the plan node fired
     const obs = buildRpgObservation(index, asked.state);
-    expect(obs.dialogue?.npc_text).toMatch(/what else, lad/i); // reactive root
-    expect(obs.dialogue?.npc_text).not.toMatch(/Thank God someone came/);
+    expect(obs.dialogue?.npc_text).toMatch(
+      /What else do you need[^]*Continue only with unfinished weir work/i,
+    ); // reactive root
+    expect(obs.dialogue?.npc_text).not.toMatch(/My broken leg keeps me here/i);
     const ids = enumerateRpgActions(index, asked.state).map((option) => option.id);
     expect(ids).toContain("ask_ask_walk");
     expect(ids).not.toContain("ask_weir_back");
@@ -92,8 +100,10 @@ describe("bug_0246 — reactive NPC dialogue text on The Breaking Weir's Pell", 
     const asked = run(s, { type: "ASK", npc: "pell", topic: "ask_walk" }); // sets heard_walk
     expect(asked.state.flags["heard_walk"]).toBe(true);
     const obs = buildRpgObservation(index, asked.state);
-    expect(obs.dialogue?.npc_text).toMatch(/what else, lad/i);
-    expect(obs.dialogue?.npc_text).not.toMatch(/Thank God someone came/);
+    expect(obs.dialogue?.npc_text).toMatch(
+      /What else do you need[^]*Continue only with unfinished weir work/i,
+    );
+    expect(obs.dialogue?.npc_text).not.toMatch(/My broken leg keeps me here/i);
     expect(enumerateRpgActions(index, asked.state).map((option) => option.id)).not.toContain(
       "ask_walk_back",
     );
@@ -103,12 +113,16 @@ describe("bug_0246 — reactive NPC dialogue text on The Breaking Weir's Pell", 
     let s = initStateForRpgPack(index, 11);
     // Mid-conversation at the root BEFORE any topic: observation shows the full opening.
     s = run(s, { type: "TALK", npc: "pell" }).state;
-    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/Thank God someone came/);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(
+      /My broken leg keeps me here[^]*unfinished storm-walk crossing or weir step[^]*missing tools[^]*Completed work stays complete[^]*final course choice remains permanent/i,
+    );
     // The reply auto-resumes the root: observation immediately shows the terse variant.
     s = run(s, { type: "ASK", npc: "pell", topic: "ask_weir" }).state;
     const obs = buildRpgObservation(index, s);
-    expect(obs.dialogue?.npc_text).toMatch(/what else, lad/i);
-    expect(obs.dialogue?.npc_text).not.toMatch(/Thank God someone came/);
+    expect(obs.dialogue?.npc_text).toMatch(
+      /What else do you need[^]*Continue only with unfinished weir work/i,
+    );
+    expect(obs.dialogue?.npc_text).not.toMatch(/My broken leg keeps me here/i);
     expect(obs.available_actions.map((option) => option.id)).not.toContain("ask_weir_back");
   });
 });

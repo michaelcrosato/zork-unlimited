@@ -224,7 +224,7 @@ const loadedWolf = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loadedWolf.ok) throw new Error("wolf_winter must compile");
 const wolfIndex = indexRpgPack(loadedWolf.compiled.pack);
 const WOLF_FEED_JOURNAL =
-  "You take Cade's finite feed. It must carry one trail through all three encounters; a fouled cast cannot be restocked.";
+  "You take Cade's winter-feed sack. It must serve all three wolves; a failed feed action cannot be restocked or restarted.";
 
 function reachWolfStore(): GameState {
   let state = initStateForRpgPack(wolfIndex, 4402);

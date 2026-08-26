@@ -101,7 +101,7 @@ describe("overworld quest launch", () => {
       suppliesAfter: null,
       fatigueAfter: null,
       travelConditionAfter: null,
-      blockedReason: "Requires 2 supplies; you have 1.",
+      blockedReason: "Requires 2 supplies. You have 1 supply.",
     });
   });
 
@@ -170,7 +170,7 @@ describe("overworld quest launch", () => {
         approachId: "test:sheltered_stockway",
         supplies: 1,
       }),
-    ).toThrow("Requires 2 supplies; you have 1.");
+    ).toThrow("Requires 2 supplies. You have 1 supply.");
 
     const optionless = { ...quest };
     delete optionless.launch;
@@ -341,7 +341,7 @@ describe("overworld quest launch", () => {
         "test:exposed_ridge",
       ],
     ]);
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(49);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(50);
 
     const focused = compactOverworldQuestRef(
       {
@@ -411,7 +411,7 @@ describe("overworld quest launch", () => {
       }),
     });
     expect(blocked[3]?.[2][1]?.[5]).toBe(false);
-    expect(blocked[3]?.[2][1]?.[10]).toBe("Requires 2 supplies; you have 1.");
+    expect(blocked[3]?.[2][1]?.[10]).toBe("Requires 2 supplies. You have 1 supply.");
   });
 
   it("clones authoritative quest-start tuples without inventing transport choices", () => {

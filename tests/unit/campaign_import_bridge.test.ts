@@ -524,7 +524,7 @@ describe("trusted campaign-character quest launch bridge", () => {
       },
       applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
       explanation:
-        "Campaign supplies, fatigue, and character record persist. Quest HP, stats, and issued inventory are local; only authored campaign imports and exports cross the boundary.",
+        "Campaign supplies, fatigue, and character history persist. Each quest uses its own HP, stats, and issued items. Only listed imports and exports transfer.",
     });
     expect(Object.isFrozen(fullSession.embeddedCharacterContinuity)).toBe(true);
     expect(Object.isFrozen(fullSession.embeddedCharacterContinuity?.quest_local_profile)).toBe(
@@ -546,7 +546,7 @@ describe("trusted campaign-character quest launch bridge", () => {
       },
       applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
       scope_note:
-        "Campaign supplies, fatigue, and character persist; quest HP, stats and issued inventory are local; only authored imports/exports cross.",
+        "Campaign history, supplies, and fatigue persist. Quest HP, stats, and items stay local. Only listed transfers cross.",
     });
     expect(compact.launched.rpg_session).not.toHaveProperty("character_continuity_legend");
     const fullContinuity = fullSession.embeddedCharacterContinuity;
@@ -617,7 +617,7 @@ describe("trusted campaign-character quest launch bridge", () => {
       },
       applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
       scope_note:
-        "Campaign supplies, fatigue, and character persist; quest HP, stats and issued inventory are local; only authored imports/exports cross.",
+        "Campaign history, supplies, and fatigue persist. Quest HP, stats, and items stay local. Only listed transfers cross.",
     });
     expect(embeddedCompactReload).not.toHaveProperty("character_continuity_legend");
     const reloadedSession = fullApi.sessions.get(embeddedFullReload.session_id);

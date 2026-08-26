@@ -84,7 +84,7 @@ export function buildOverworldPendingRoadEncounter(
     to: to.name,
     route: edge.route,
     arrivedAt,
-    timing: `On the road from ${from.name} to ${to.name} at ${arrivedAt}; resolve this route trouble before doing town business in ${to.name}.`,
+    timing: `Road encounter from ${from.name} to ${to.name} at ${arrivedAt}. Resolve it before taking actions in ${to.name}.`,
     event: roadEvent,
     options: roadEncounterOptionsFor(roadEvent),
   };
@@ -190,7 +190,7 @@ export function resolveOverworldRoadEncounter(
     kind: "road",
     town: state.townName,
     title: `${option.label}: ${encounter.event.title}`,
-    text: `${encounter.timing} ${encounter.event.summary} ${option.outcome} Afterward you arrive in ${encounter.to}.${supplyDeficit > 0 ? " Lacking supplies made the work more exhausting." : ""}`,
+    text: `${encounter.timing} ${encounter.event.summary} ${option.outcome} You arrive in ${encounter.to}.${supplyDeficit > 0 ? ` Supply shortage: +${String(supplyDeficit * 3)} fatigue.` : ""}`,
     recordedAt: timeLabel(minutesAfter),
   };
 

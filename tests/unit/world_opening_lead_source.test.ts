@@ -223,7 +223,8 @@ describe("Albany opening lead-source authoring", () => {
       minutes: 15,
       money: 0,
       sponsored: true,
-      sponsorNote: expect.stringContaining("waiving $6"),
+      sponsorNote:
+        "Relief Advocate sponsor benefit: cost drops from $6 to $0, and time drops from 35 to 15 minutes.",
     });
     expect(Object.isFrozen(ledgerTerms)).toBe(true);
     expect(formatOpeningLeadSourceCost(ledgerTerms)).toBe("15 minutes and $0");
@@ -238,7 +239,7 @@ describe("Albany opening lead-source authoring", () => {
       minutes: 5,
       money: 0,
       sponsored: true,
-      sponsorNote: expect.stringContaining("reduces the route-desk review"),
+      sponsorNote: "Road Warden sponsor benefit: time drops from 20 to 5 minutes.",
     });
     expect(openingLeadSourceTerms(hayden, profileCharacter("albany:ledger_advocate"))).toEqual({
       minutes: 20,
@@ -263,7 +264,7 @@ describe("Albany opening lead-source authoring", () => {
       tradeoff: jamie.tradeoff,
     });
     expect(sponsoredJamie.consequence).toBe(
-      `Benefit: ${jamie.trigger_category} Cost: 15 minutes and $0. Boundary: ${jamie.tradeoff}`,
+      `Benefit: ${jamie.trigger_category} Cost: 15 minutes and $0. Tradeoff: ${jamie.tradeoff}`,
     );
 
     const unsponsoredPrompt = presentOpeningLeadSource(
@@ -272,7 +273,7 @@ describe("Albany opening lead-source authoring", () => {
     );
     const unsponsoredJamie = unsponsoredPrompt.options.find((option) => option.id === jamie.id)!;
     expect(unsponsoredJamie.consequence).toBe(
-      `Benefit: ${jamie.trigger_category} Cost: 35 minutes and $6. Boundary: ${jamie.tradeoff}`,
+      `Benefit: ${jamie.trigger_category} Cost: 35 minutes and $6. Tradeoff: ${jamie.tradeoff}`,
     );
     for (const option of [...sponsoredPrompt.options, ...unsponsoredPrompt.options]) {
       expect(Object.keys(option.summary ?? {}).sort()).toEqual([

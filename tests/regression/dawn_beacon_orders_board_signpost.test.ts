@@ -50,8 +50,8 @@ describe("bug_0392 — Dawn Beacon watchman points unread players to Hale's boar
     expect(state.flags["read_orders"]).toBeUndefined();
 
     const obs = buildRpgObservation(index, state);
-    expect(obs.dialogue?.npc_text).toContain("read Hale's board before you climb");
-    expect(obs.dialogue?.npc_text).toContain("chalk has the whole order");
+    expect(obs.dialogue?.npc_text).toContain("READ orders-board to record the full order");
+    expect(obs.dialogue?.npc_text).toContain("Dawn is close");
   });
 
   it("drops the board reminder once the order has been read", () => {
@@ -63,7 +63,7 @@ describe("bug_0392 — Dawn Beacon watchman points unread players to Hale's boar
     expect(state.flags["read_orders"]).toBe(true);
 
     const obs = buildRpgObservation(index, state);
-    expect(obs.dialogue?.npc_text).toContain("what else");
-    expect(obs.dialogue?.npc_text).not.toContain("read Hale's board before you climb");
+    expect(obs.dialogue?.npc_text).toContain("What else do you need");
+    expect(obs.dialogue?.npc_text).not.toContain("READ orders-board to record the full order");
   });
 });

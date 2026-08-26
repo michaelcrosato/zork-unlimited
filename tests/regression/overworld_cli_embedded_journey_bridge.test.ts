@@ -251,14 +251,14 @@ describe("persistent CLI embedded-quest journey bridge", () => {
       const blocked = runCli(savePath, "go south");
       const blockedOutput = `${blocked.stdout ?? ""}\n${blocked.stderr ?? ""}`;
       expect(blocked.status, blockedOutput).toBe(1);
-      expect(blockedOutput).toContain("Choose the active journey prompt first");
+      expect(blockedOutput).toContain("Answer the current choice with `choose <number|label>`.");
       expect(blockedOutput).toContain("A scripted command was rejected.");
       expect(blockedOutput).not.toContain("[quest:");
 
       const resumed = runCli(savePath, "choose continue; actions");
       const resumedOutput = `${resumed.stdout ?? ""}\n${resumed.stderr ?? ""}`;
       expect(resumed.status, resumedOutput).toBe(0);
-      expect(resumedOutput).toContain("Chosen: Continue from this exact state.");
+      expect(resumedOutput).toContain("Chosen: Continue from here.");
       expect(resumedOutput).toContain("[quest: The Wolf-Winter]");
       expect(resumedOutput).toContain("You can:");
     } finally {

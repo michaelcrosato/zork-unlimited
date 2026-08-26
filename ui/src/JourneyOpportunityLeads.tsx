@@ -28,8 +28,8 @@ export function JourneyOpportunityLeads({
   return (
     <section className="journey-opportunities" aria-labelledby={headingId}>
       <div className="journey-opportunities-copy">
-        <p className="kicker">Optional aftermath</p>
-        <h3 id={headingId}>Return opportunities</h3>
+        <p className="kicker">Optional work</p>
+        <h3 id={headingId}>Available leads</h3>
         <p>{opportunities.guidance}</p>
       </div>
       {opportunities.leads.length > 0 ? (
@@ -47,10 +47,10 @@ export function JourneyOpportunityLeads({
                 {onExplain && (
                   <button
                     type="button"
-                    aria-label={`Show one lawful next action for ${lead.title}`}
+                    aria-label={`Show how to start ${lead.title}`}
                     onClick={() => onExplain(lead.kind, lead.id)}
                   >
-                    Show one lawful next action
+                    Show how to start
                   </button>
                 )}
                 {shown && (

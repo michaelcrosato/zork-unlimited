@@ -254,10 +254,10 @@ describe("bug_0515 - Tanner's Fever compact surface preserves the whole medical 
     };
 
     assertCurrentSurface();
-    expect(current.text).toMatch(/dose ledger[^]*west/i);
-    expect(current.text).toMatch(/remedies[^]*herb store[^]*east/i);
+    expect(current.text).toMatch(/room west[^]*READ Godwin's case notes/i);
+    expect(current.text).toMatch(/room east[^]*TAKE meadowsweet/i);
     expect(current.text).toMatch(/corridor[^]*north/i);
-    expect(current.text).toMatch(/Edric's bedside/i);
+    expect(current.text).toMatch(/Back in the Sickroom[^]*TREAT Edric WITH meadowsweet/i);
     expect(current.exits).toEqual(expect.arrayContaining(["east", "north", "west"]));
 
     for (const actionId of [
@@ -275,38 +275,44 @@ describe("bug_0515 - Tanner's Fever compact surface preserves the whole medical 
 
     const read = step("read_godwin_notes");
     expect(compactNarrations(read.events).join(" ")).toMatch(/three-to-one[^]*one-to-one/i);
-    expect(compactNarrations(read.events).join(" ")).toMatch(/settles the gut[^]*bedside/i);
+    expect(compactNarrations(read.events).join(" ")).toMatch(
+      /LOOK AT meadowsweet[^]*exact TREAT action shown for Edric and meadowsweet/i,
+    );
     expect(current.journal?.at(-1)).toBe(ui.view().journal.at(-1));
     expect(current.journal?.at(-1)).not.toMatch(TRUNCATION_CHROME);
 
     step("go_east");
     expect(current.here[0]).toBe("sickroom");
-    expect(current.text).toMatch(/written[^]*three-to-one[^]*one-to-one/i);
-    expect(current.text).toMatch(/remedies[^]*herb store[^]*east/i);
-    expect(current.text).toMatch(/Edric's bedside/i);
+    expect(current.text).toMatch(/confirmed the wormwood overdose/i);
+    expect(current.text).toMatch(/herb store is east/i);
+    expect(current.text).toMatch(/then TREAT Edric WITH meadowsweet/i);
     expect(current.text).not.toMatch(/ledger lies west/i);
     expect(current.actions).toContain("go_east");
 
     step("go_north");
     expect(current.here[0]).toBe("corridor");
-    expect(current.text).toMatch(/south[^]*Edric's bedside/i);
+    expect(current.text).toMatch(
+      /Go south and use the exact TREAT action shown for Edric and meadowsweet/i,
+    );
     const compactNorth = current.blocked?.find(([direction]) => direction === "north")?.[1];
     const humanNorth = ui
       .view()
       .facts.find((fact) => fact.startsWith("blocked: north — "))
       ?.slice("blocked: north — ".length);
     expect(compactNorth).toBe(humanNorth);
-    expect(compactNorth).toMatch(/Edric's bedside[^]*condition[^]*dose[^]*remedy/i);
+    expect(compactNorth).toMatch(
+      /Edric is treated[^]*Holt is defeated while you carry meadowsweet that you have INSPECTED/i,
+    );
     expect(compactNorth).not.toMatch(TRUNCATION_CHROME);
     expect(current.actions).toEqual(expect.arrayContaining(["go_south", "attack_holt"]));
     expect(current.actions).not.toContain("go_north");
 
     step("go_south");
-    expect(current.text).toMatch(/herb store[^]*east/i);
+    expect(current.text).toMatch(/herb store is east/i);
     step("go_east");
     expect(current.here[0]).toBe("herb_store");
-    expect(current.text).toMatch(/meadowsweet[^]*settle[^]*stomach/i);
-    expect(current.text).toMatch(/bedside[^]*west/i);
+    expect(current.text).toMatch(/TAKE meadowsweet[^]*LOOK AT meadowsweet/i);
+    expect(current.text).toMatch(/Go west to the Sickroom/i);
     step("take_meadowsweet");
     const examined = step("examine_meadowsweet");
     expect(compactNarrations(examined.events).join(" ")).toMatch(/keep water[^]*fever clears/i);

@@ -38,8 +38,7 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const world = loadOverworldManifest(process.cwd());
-const MOOR_EDGE_PROFILE_CONTEXT =
-  "Your history remains your own; on this moor, the hunt is read in spoor, wind, and knife-work.";
+const MOOR_EDGE_PROFILE_CONTEXT = "Your hunting-knife is already secured at your belt.";
 const GALLOWMERE_PACKET_HANDOFF = {
   version: 1,
   transition: "Queensbury Market -> The Gallowmere",
@@ -48,7 +47,7 @@ const GALLOWMERE_PACKET_HANDOFF = {
     title: "Hayden's Gallowmere packet",
     recipient: "Hedrick Cradoc",
   },
-  objective: "Packet delivered; see The Gallowmere through.",
+  objective: "Packet delivered. Finish The Gallowmere.",
   childState: "actionable",
 } as const;
 
@@ -226,8 +225,8 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       include_actions: true,
     }) as unknown as { context: CompactContext };
 
-    expect(human.text).toMatch(/hunting-knife is secured at your belt/i);
-    expect(human.text).toMatch(/bothy[^]*west[^]*path[^]*north/i);
+    expect(human.text).toMatch(/hunting-knife is already secured at your belt/i);
+    expect(human.text).toMatch(/west to the Shepherd's Bothy[^]*north to follow the Moor Trail/i);
     expect(human.text).toContain(MOOR_EDGE_PROFILE_CONTEXT);
     expect(human.inventory).toEqual(["hunting_knife"]);
     expect(human.choices.map((choice) => choice.id)).toContain("examine_hunting_knife");
@@ -468,7 +467,7 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     });
     expect(staleRecovery.ok).toBe(false);
     expect(staleRecovery.rejection_reason).toContain(
-      "get_observation include_character_continuity:true",
+      "call get_observation with include_character_continuity:true",
     );
     expect(staleRecovery).not.toHaveProperty("character_continuity");
     expect(compactApi.sessions.get(compact.rpg_session_id).stateHash).toBe(compactInitialStateHash);
@@ -742,7 +741,9 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       ui
         .view()
         .facts.some(
-          (fact) => fact.startsWith("blocked: north — ") && /read(?:ing)? the wind/i.test(fact),
+          (fact) =>
+            fact.startsWith("blocked: north — ") &&
+            /GAUGE wind-stone WITH hunting-knife/i.test(fact),
         ),
     ).toBe(true);
   });

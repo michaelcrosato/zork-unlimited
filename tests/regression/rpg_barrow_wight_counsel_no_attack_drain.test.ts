@@ -93,7 +93,7 @@ describe("bug_0222 — the shade's wight-counsel does not over-promise an attack
     const spoken = wightCounsel(7);
     // The line must still motivate the +3 ward by naming the HP-sapping cold blows.
     expect(spoken).toMatch(/cold|chill|grave-cold/);
-    expect(spoken).toMatch(/wears you down|wore me down|bites deep|bite the less/);
+    expect(spoken).toContain("+3 defense against the barrow-wight's cold blows");
   });
 
   it("(c) BEHAVIORAL WITNESS: player attack is genuinely constant across the whole fight", () => {

@@ -130,13 +130,13 @@ describe("bug_0126 — The Sunken Barrow death endings render cleanly to the pla
     expect(obs.ending!.id).toBe("ending_fallen");
     expect(obs.ending!.death).toBe(true);
     expect(obs.ending!.title).toBe("Another Niche Filled");
-    expect(obs.ending!.text.toLowerCase()).toContain("the cold closes over you");
+    expect(obs.ending!.text.toLowerCase()).toContain("the barrow-wight killed you");
 
     // the rendered, player-visible fields: at death the player sees the ending's
     // TITLE (not the room name) and its TEXT (not the room description)
     expect(obs.title).toBe("Another Niche Filled");
-    expect(obs.description.toLowerCase()).toContain("the cold closes over you");
-    expect(obs.description.toLowerCase()).toContain("something else will climb from the niche");
+    expect(obs.description.toLowerCase()).toContain("the barrow-wight killed you");
+    expect(obs.description.toLowerCase()).toContain("empty burial niche");
   });
 
   it("ending_fallen: the dying player gets honest score closure — 'Final score: 0 of 50.'", () => {
@@ -164,10 +164,10 @@ describe("bug_0126 — The Sunken Barrow death endings render cleanly to the pla
     expect(obs.ending!.id).toBe("ending_woken");
     expect(obs.ending!.death).toBe(true);
     expect(obs.ending!.title).toBe("What Sleeps Beneath");
-    expect(obs.ending!.text.toLowerCase()).toContain("the barrow-lord opens his eyes");
+    expect(obs.ending!.text.toLowerCase()).toContain("woke the barrow-lord");
 
     expect(obs.title).toBe("What Sleeps Beneath");
-    expect(obs.description.toLowerCase()).toContain("the barrow-lord opens his eyes");
+    expect(obs.description.toLowerCase()).toContain("he kills you");
   });
 
   it("ending_woken: the doom fork closes at the partial tally — 'Final score: 25 of 50.'", () => {

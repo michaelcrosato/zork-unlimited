@@ -14,7 +14,7 @@ import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";
 const WORLD = loadOverworldManifest(process.cwd());
 const FIRST_ROAD = "road_albany_city__saratoga_springs_city";
 const FUTURE_ROAD = "road_saratoga_springs_city__queensbury_town";
-const FIRST_EVENT_TITLE = "The northbound relief line";
+const FIRST_EVENT_TITLE = "Queensbury Shepherd Warning";
 const FUTURE_EVENT_TITLE = "Moor sign on the Queensbury road";
 
 function moveToArea(session: OverworldSession, destinationAreaId: string): void {
@@ -146,7 +146,9 @@ describe("MCP Goal Passage", () => {
     expect(stale).toMatchObject({
       ok: false,
       snapshot_hash: full.snapshot_hash,
-      rejection_reason: expect.stringMatching(/snapshot hash mismatch/i),
+      rejection_reason: expect.stringMatching(
+        /overworld state changed since your last read[^]*Refresh with get_overworld_session_context/i,
+      ),
       journeyDecision: { countsTowardJourney: false, reason: "rejected" },
       journey: full.journey,
     });

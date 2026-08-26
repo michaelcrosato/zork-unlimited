@@ -109,7 +109,7 @@ describe("Tide-Mill takings replay branch", () => {
 
     expect(state.endingId).toBe("ending_saved");
     expect(score(state)).toBe(55);
-    expect(endingText(state)).toMatch(/takings are still on the desk/i);
+    expect(endingText(state)).toMatch(/coin-bag remains on the desk/i);
   });
 
   it("lets the player pocket then return the takings for a lower-score rescue", () => {
@@ -140,7 +140,7 @@ describe("Tide-Mill takings replay branch", () => {
 
     expect(state.endingId).toBe("ending_saved_returned_takings");
     expect(score(state)).toBe(50);
-    expect(endingText(state)).toMatch(/toll-takings are back/i);
+    expect(endingText(state)).toMatch(/returned Miller Ives's coin-bag/i);
   });
 
   it("lets the player save the boat while keeping the takings, but not at full score", () => {
@@ -161,7 +161,7 @@ describe("Tide-Mill takings replay branch", () => {
     expect(state.endingId).toBe("ending_saved_with_takings");
     expect(state.inventory).toContain("coin_bag");
     expect(score(state)).toBe(50);
-    expect(endingText(state)).toMatch(/silver rides cold/i);
+    expect(endingText(state)).toMatch(/keeping Miller Ives's coin-bag/i);
   });
 
   it("still allows a deliberate walk-off-with-the-money thief ending", () => {
@@ -174,6 +174,6 @@ describe("Tide-Mill takings replay branch", () => {
 
     expect(state.ended).toBe(true);
     expect(state.endingId).toBe("ending_thief");
-    expect(endingText(state)).toMatch(/sea-gate stays unwound/i);
+    expect(endingText(state)).toMatch(/without reaching the Staith/i);
   });
 });

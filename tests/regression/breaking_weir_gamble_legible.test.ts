@@ -48,7 +48,7 @@ function onWalk(flags: Record<string, boolean>, inv: string[] = []): GameState {
   return { ...s, current: "weir_walk", flags: { ...s.flags, ...flags }, inventory: inv };
 }
 
-const GAMBLE_CUE = /raw nerve/i;
+const GAMBLE_CUE = /nerve check[^]*failure ends the game/i;
 
 describe("bug_0204 — The Breaking Weir: the storm-walk gamble is legible at the crossing", () => {
   it("UN-COUNSELLED (no heard_walk): room AND object name the gamble plainly", () => {
@@ -57,7 +57,7 @@ describe("bug_0204 — The Breaking Weir: the storm-walk gamble is legible at th
     expect(roomDescription(room, s)).toMatch(GAMBLE_CUE);
     expect(objectDescription(span, s)).toMatch(GAMBLE_CUE);
     // It is a CUE, not a wall: the room still points the player onward across the walk.
-    expect(roomDescription(room, s).toLowerCase()).toContain("race-house");
+    expect(roomDescription(room, s)).toContain("accept the risk and attempt the crossing");
   });
 
   it("COUNSELLED (heard_walk): the gamble cue is gone — Pell's telling defused it", () => {
@@ -70,7 +70,7 @@ describe("bug_0204 — The Breaking Weir: the storm-walk gamble is legible at th
   it("CROSSED (walk_crossed): the crossed variant wins, never the gamble cue", () => {
     const s = onWalk({ walk_crossed: true, heard_walk: true });
     expect(roomDescription(room, s)).not.toMatch(GAMBLE_CUE);
-    expect(roomDescription(room, s).toLowerCase()).toContain("crossed now");
+    expect(roomDescription(room, s)).toContain("You crossed the storm-walk");
     expect(objectDescription(span, s)).not.toMatch(GAMBLE_CUE);
   });
 
@@ -80,7 +80,8 @@ describe("bug_0204 — The Breaking Weir: the storm-walk gamble is legible at th
     // life_line in inventory so the no-rope variant (bug_0321) doesn't preempt the gamble cue.
     const s = onWalk({}, ["life_line"]);
     const text = `${roomDescription(room, s)} ${objectDescription(span, s)}`;
-    expect(text.toLowerCase()).toMatch(/may|whether|to say/);
+    expect(text).toMatch(/nerve check[^]*failure ends the game/i);
+    expect(text).not.toMatch(/attempting the crossing (?:kills|ends)/i);
   });
 
   it("the new variant leaves the storm-walk's display NAME unchanged in every state", () => {

@@ -66,7 +66,7 @@ const isAsk = (topic: string) => (a: Action) =>
   a.type === "ASK" && (a as { topic?: string }).topic === topic;
 const isUse = (a: Action) => a.type === "USE";
 
-const JOURNAL_RE = /Pell's marks|flood.marks/i;
+const JOURNAL_RE = /Pell's recorded steps/i;
 const bookEntries = (s: GameState) => s.journal.filter((j) => JOURNAL_RE.test(j));
 
 describe("bug_0318 — reading the flood-book adds a journal entry (was silent)", () => {
@@ -79,9 +79,14 @@ describe("bug_0318 — reading the flood-book adds a journal entry (was silent)"
     );
     expect(journalEffect, "READ interaction must have an add_journal effect").toBeDefined();
     // Compact memory keeps the tool/obstacle warning and the final public-good tradeoff.
-    expect(journalEffect!.add_journal).toMatch(/rack.*race/i);
-    expect(journalEffect!.add_journal).toMatch(/killing walk/i);
-    expect(journalEffect!.add_journal).toMatch(/winter grain.*old works/i);
+    expect(journalEffect!.add_journal).toMatch(
+      /FREE jammed head-rack.*RIG storm-walk.*HEAVE seized winch-gate/i,
+    );
+    expect(journalEffect!.add_journal).toMatch(/learn his safe method/i);
+    expect(journalEffect!.add_journal).toMatch(
+      /finally choose SET stone-race course pin or SET field-wash course pin/i,
+    );
+    expect(journalEffect!.add_journal).toMatch(/completed work and a chosen course stay fixed/i);
   });
 
   it("(2) the +5 score effect is still present (non-regression from bug_0315 check)", () => {
@@ -124,7 +129,7 @@ describe("bug_0318 — reading the flood-book adds a journal entry (was silent)"
     expect(s.flags["heard_walk"]).toBe(true);
     expect(s.vars["nerve"]).toBe(8);
     expect(activeDialogue(index, s)?.node.id).toBe("pell_root");
-    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/what else, lad/i);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else do you need/i);
     const resumedIds = options(s).map((option) => option.id);
     expect(resumedIds).toEqual(expect.arrayContaining(["ask_ask_weir", "ask_leave_pell"]));
     expect(resumedIds).not.toContain("ask_walk_back");

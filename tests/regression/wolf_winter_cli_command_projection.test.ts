@@ -138,7 +138,9 @@ describe("Wolf-Winter terminal dialogue commands", () => {
       expect.arrayContaining([
         expect.objectContaining({
           type: "narration",
-          text: expect.stringMatching(/bent old houndsman in a wolfskin cap/i),
+          text: expect.stringMatching(
+            /TALK TO old Cade the houndsman[^]*compare or review HUNT[^]*hands are too stiff to fight/i,
+          ),
         }),
       ]),
     );
@@ -269,7 +271,12 @@ describe("Wolf-Winter terminal dialogue commands", () => {
     const objectLook = makeStep(fixtureRules)(state, { type: "LOOK", target: "houndsman" });
     expect(npcLook.events).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ type: "narration", text: expect.stringMatching(/wolfskin cap/) }),
+        expect.objectContaining({
+          type: "narration",
+          text: expect.stringMatching(
+            /TALK TO old Cade the houndsman[^]*hands are too stiff to fight/i,
+          ),
+        }),
       ]),
     );
     expect(objectLook.events).toEqual(
@@ -389,13 +396,13 @@ describe("Wolf-Winter terminal dialogue commands", () => {
     let state = atCade();
     const rootHelp = renderActionHelp(index, state);
     expect(rootHelp.split("\n")).toContain(
-      "  lure (also: ask lure, ask feed, ask alive) — LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details.",
+      "  lure (also: ask lure, ask feed, ask alive) — LURE — Move the wolves alive and protect the herd. Costs Cade's last feed; the fence stays broken. First-action failure adds 2 cattle alarm. Review only.",
     );
 
     state = act(state, "lure");
     const commitmentHelp = renderActionHelp(index, state);
     expect(commitmentHelp).toMatch(
-      /\n {2}commit lure \(also: commit feed, commit alive\) — FINAL COMMITMENT — LURE: spend Cade's finite feed on three casts; leave paling broken; close HUNT\/DRIVE\/FORTIFY\. Irreversible\./i,
+      /\n {2}commit lure \(also: commit feed, commit alive\) — CHOOSE LURE — Consume Cade's only feed sack in three actions, leave the paling broken, and permanently close HUNT, DRIVE, and FORTIFY\./i,
     );
 
     state = act(state, "commit lure");

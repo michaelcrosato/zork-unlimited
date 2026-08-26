@@ -13,9 +13,8 @@ meta:
 rooms:
   - id: entry
     name: The Mine Adit
-    description: "A way drops down into the deepest gallery of an abandoned
-      deep-mine, where a vein-heart of raw silver glows in the lowest stope. You
-      came for one thing: the vein-heart. The only road to it is down."
+    description: "Goal: find the vein-heart. The stairs lead down into an abandoned
+      deep mine. A raw-silver vein-heart glows in the lowest chamber."
     objects: []
     exits:
       - direction: down
@@ -24,17 +23,15 @@ rooms:
     on_enter: []
   - id: hall
     name: The Pump-House
-    description: A cold vaulted hall. A worn inscription is cut into one wall, and
-      by it lies a stout miner's gad-bar. A damp-light hangs in a niche,
-      watching you. A low cell stands to the west, a passage runs north into the
-      dark, and the way climbs back up behind you.
+    description: "Exits: up, west, and north. The wall inscription marks where the
+      miner's gad-bar was stored; TAKE miner's gad-bar if it is here. A
+      damp-light waits here and can answer questions."
     variants:
       - when:
           - has_item: bar
-        text: A cold vaulted hall. A worn inscription is cut into one wall; the floor by
-          it is bare now, the miner's gad-bar that lay there in your own hands.
-          A damp-light hangs in a niche. A low cell stands to the west, a
-          passage runs north, and the way climbs back up.
+        text: "Exits: up, west, and north. You carry the miner's gad-bar that lay beside
+          the wall inscription. A damp-light waits here and can answer
+          questions."
     objects:
       - inscription
       - bar
@@ -51,9 +48,10 @@ rooms:
     on_enter: []
   - id: cell
     name: The Timberman's Stall
-    description: A narrow side cell. Against the wall lies the long-dead one who
-      came before you, still wearing a whole suit of rivet-plate jack the cold
-      kept from rotting. He has no use for it now.
+    description: "Exit: east. This is where an intact rivet-plate jack was found
+      beside a dead explorer. Its first DON teaches a lasting braced stance and
+      grants +2 defense against either guardian still standing. The bonus
+      persists even if the ward is later dropped."
     objects:
       - ward
     exits:
@@ -63,15 +61,13 @@ rooms:
     on_enter: []
   - id: gallery
     name: The Old Stope
-    description: A long gallery. Across the only way east stands the rock-golem — A
-      lurching shape of fused tailings and dead ore, slow as the mountain but
-      hard as the seam it guards. Slow is not the same as soft; better not to
-      meet it under-armed. The way south leads back to the hall.
+    description: Exit south returns to the hall. The rock-golem blocks the east
+      exit. A rock creature blocks the passage. It is slow and protected by hard
+      ore. Prepare before fighting it.
     variants:
       - when:
           - has_flag: foe_down
-        text: A long gallery. The rock-golem lies broken across the floor, and the way
-          east stands open. The way south leads back to the hall.
+        text: "Exits: south and east. The defeated rock-golem lies on the floor."
     objects: []
     exits:
       - direction: south
@@ -85,17 +81,13 @@ rooms:
     on_enter: []
   - id: span
     name: The Flooded Drift
-    description: A deeper hall, colder than the last. Across the only way east
-      stands the deep-haunt — A vast thing of caked ore and old timber, larger
-      and meaner than the golem above, hunched over the silver glow. It is the
-      worse of the two; come to it armed and counselled. The way west leads back
-      to the gallery.
+    description: Exit west returns to the gallery. The deep-haunt blocks the east
+      exit. A larger creature of ore and mine timber guards the silver. It is
+      stronger than the first golem. Prepare before fighting it.
     variants:
       - when:
           - has_flag: warden_down
-        text: A deeper hall, colder than the last. The deep-haunt lies broken across the
-          floor, and the way east stands open. The way west leads back to the
-          gallery.
+        text: "Exits: west and east. The defeated deep-haunt lies on the floor."
     objects: []
     exits:
       - direction: west
@@ -109,17 +101,15 @@ rooms:
     on_enter: []
   - id: hearth
     name: The Choked Drift
-    description: The deep chamber at the quest's root. The way down is closed by a
-      rubble-choked grille, sealed by the weight of ages — but its edge carries
-      a worn lip, made to be levered by bar and brawn. The way west leads back.
+    description: Exit west returns to the last hall. A rubble-choked grille blocks
+      the way down. HEAVE rubble-choked grille WITH miner's gad-bar to open it.
     variants:
       - when:
           - quest_stage:
               quest: way
               stage: open
-        text: The deep chamber at the quest's root. The rubble-choked grille has been
-          levered up off its lip and stands open, baring a low way down into the
-          dark below. The way west leads back.
+        text: "Exits: west and down. The opened rubble-choked grille no longer blocks
+          the stairs."
     objects:
       - seal
     exits:
@@ -132,13 +122,13 @@ rooms:
           - quest_stage:
               quest: way
               stage: open
-        locked_msg: The rubble-choked grille is sealed fast. It must be levered aside
-          first.
+        locked_msg: The rubble-choked grille is sealed fast. HEAVE rubble-choked grille
+          WITH miner's gad-bar.
     on_enter: []
   - id: vault
     name: The Lowest Stope
-    description: A small round chamber at the very bottom. On a plinth of pale stone
-      rests the vein-heart, whole and waiting, just as the old tales said.
+    description: The vein-heart rests on the stone platform. Reaching it completes
+      the quest.
     objects:
       - relic
     exits:
@@ -161,9 +151,11 @@ objects:
     description: Letters cut deep into the cold stone.
     takeable: false
     quest_critical: false
-    read_text: TWO KEEPERS HOLD THE DEEP WAY. BOTH ARE SLOW IN THE COLD AND WILL NOT
-      RISE TWICE IF STRUCK TRUE; THE SECOND IS THE WORSE. THE VEIN-HEART LIES
-      BELOW THE SEAL, AND ONLY A STRONG ARM AND A GOOD BAR WILL OPEN THE WAY.
+    read_text: THE ROUTE HELD TWO GUARDIANS. BOTH ARE SLOW; THE SECOND IS STRONGER.
+      IF THE FIRST GUARDIAN STILL STANDS, ATTACK ROCK-GOLEM. IF THE SECOND
+      GUARDIAN STILL STANDS, ATTACK DEEP-HAUNT. THE VEIN-HEART IS BELOW THE
+      SEAL. IF THE SEAL IS STILL CLOSED, HEAVE RUBBLE-CHOKED GRILLE WITH MINER'S
+      GAD-BAR. COMPLETED FIGHTS AND AN OPENED SEAL STAY COMPLETE.
     container: false
     openable: false
     locked: false
@@ -176,8 +168,9 @@ objects:
       - lever
       - pry-bar
       - prybar
-    description: A stout iron bar the length of your arm, cold but sound — a lever,
-      for an arm strong enough.
+    description: The miner's gad-bar is strong enough. If you are not holding the
+      miner's gad-bar, TAKE miner's gad-bar. If the rubble-choked grille is
+      still closed, HEAVE rubble-choked grille WITH miner's gad-bar.
     takeable: true
     quest_critical: false
     container: false
@@ -194,13 +187,16 @@ objects:
       - mail
       - plate
       - suit
-    description: A whole suit of rivet-plate jack, heavy and cold but unrusted —
-      iron the keepers' blows would ring off.
+    description: An intact rivet-plate jack. If you are not holding the rivet-plate
+      jack, TAKE rivet-plate jack. The first command, DON rivet-plate jack,
+      teaches a lasting braced stance and grants +2 defense against either
+      guardian still standing. Before that DON, carrying the ward gives no
+      bonus; afterward, the bonus persists even if the ward is dropped.
     variants:
       - when:
           - has_flag: ward_donned
-        text: The rivet-plate jack, buckled on now over your own gear; its weight sits
-          between you and the next blow.
+        text: You completed the rivet-plate jack's first DON. Its learned +2 defense
+          remains even if the ward is later dropped.
     takeable: true
     quest_critical: false
     container: false
@@ -219,10 +215,11 @@ objects:
           - inc_var:
               name: defense
               by: 2
-          - add_journal: You buckle on the rivet-plate jack; it will turn the worst of the
-              keepers' blows (+2 defense).
-          - narrate: You strip the rivet-plate jack from the old bones and buckle it on. It
-              is cold and heavy, but it sits between you and the next blow.
+          - add_journal: The rivet-plate jack's first DON teaches a lasting braced stance
+              and grants +2 defense against either guardian still standing. The
+              bonus persists even if the ward is later dropped.
+          - narrate: You put on the rivet-plate jack, learn its braced weight, and gain
+              lasting +2 defense. The bonus persists even if you later drop it.
         command_verb: don
   - id: seal
     name: rubble-choked grille
@@ -233,15 +230,14 @@ objects:
       - door
       - grille
       - hatch
-    description: A rubble-choked grille sealed fast by the weight of ages, with a
-      worn lip at its edge made for a lever.
+    description: A closed rubble-choked grille with a worn edge. HEAVE rubble-choked
+      grille WITH miner's gad-bar.
     variants:
       - when:
           - quest_stage:
               quest: way
               stage: open
-        text: The rubble-choked grille, levered up off its lip and standing open; below
-          it a low way drops down into the dark.
+        text: The rubble-choked grille is open. The way down is clear.
     takeable: false
     quest_critical: false
     container: false
@@ -265,17 +261,16 @@ objects:
             - set_quest_stage:
                 quest: way
                 stage: open
-            - add_journal: You lever the rubble-choked grille up off its lip; the way down
-                stands open.
+            - add_journal: You open the rubble-choked grille with the miner's gad-bar. The way
+                down is clear.
             - inc_var:
                 name: score
                 by: 10
-            - narrate: You set the bar to the lip and throw your weight on it — stone cracks
-                and the rubble-choked grille heaves up off its seat. The way
-                down is open.
+            - narrate: You HEAVE the rubble-choked grille open with the miner's gad-bar. The
+                way down is clear.
           on_failure:
-            - narrate: The bar bites under the lip and your shoulders strain, but the
-                rubble-choked grille holds. Set your feet and try again.
+            - narrate: "The rubble-choked grille does not move. Try again: HEAVE rubble-choked
+                grille WITH miner's gad-bar."
         command_verb: heave
         command_template: heave {target} with {item}
   - id: relic
@@ -287,8 +282,7 @@ objects:
       - heart
       - crown
       - orb
-    description: The vein-heart itself, whole and waiting — the one thing you came
-      down here to carry out.
+    description: The vein-heart. Reaching it completes the quest.
     takeable: false
     quest_critical: false
     container: false
@@ -306,19 +300,18 @@ npcs:
       root: spirit_root
       nodes:
         - id: spirit_root
-          npc_text: A warm thing, come down into the cold. Few do. Ask, if you would — I
-            have watched this place a long age and remember everything.
+          npc_text: I have watched this place for a long time. Ask about the guardians or
+            the last explorer.
           variants:
             - when:
                 - any_of:
                     - has_flag: heard_foe
                     - has_flag: heard_ward
-              text: The damp-light gutters and steadies. Ask what else you need before you go
-                deeper.
+              text: The damp-light waits. Ask any remaining question or leave.
           effects: []
           topics:
             - id: ask_foe
-              prompt: Ask how to beat the keepers below.
+              prompt: Ask about the keepers below.
               conditions:
                 - not_flag: heard_foe
               goto: spirit_foe
@@ -333,34 +326,31 @@ npcs:
               prompt: Step away.
               end: true
         - id: spirit_foe
-          npc_text: Two keepers stand between you and the deep — the rock-golem first,
-            then the worse deep-haunt below it. Both are slow in the cold and
-            will never be warmer; waiting does not mend them. Strike each hard
-            and it will not rise twice. Here — take what warmth I can spare; let
-            it ride your arm for both.
+          npc_text: "The route held two guardians: first the rock-golem, then the stronger
+            deep-haunt. Both are slow. My warmth gives you +2 attack against
+            either one still standing."
           effects:
             - set_flag: heard_foe
             - inc_var:
                 name: attack
                 by: 2
-            - add_journal: The damp-light's warmth settles into your arm — you feel you could
-                strike harder now, against both keepers (+2 attack).
+            - add_journal: The damp-light gives you +2 attack; it applies to either guardian
+                still standing.
           topics:
             - id: foe_back
               prompt: Nod, and ask something else.
               goto: spirit_root
               end: false
         - id: spirit_ward
-          npc_text: One came before you, an age ago, and never climbed back out. He lies
-            in the side-cell west of here, still in his rivet-plate jack, whole
-            and unrusted. He has no use for it now — better his iron on a living
-            back than guarding old bones. You will want it for the second
-            keeper.
+          npc_text: The intact rivet-plate jack found beside the dead explorer in the west
+            cell teaches a lasting +2 defense stance on its first DON. The bonus
+            applies to guardians still standing and persists even if the ward is
+            later dropped.
           effects:
             - set_flag: heard_ward
-            - add_journal: The damp-light speaks of one who came before, dead in the side-cell
-                west of the hall in rivet-plate jack that might yet turn the
-                keepers' blows.
+            - add_journal: The spirit said the rivet-plate jack in the west cell teaches a
+                lasting +2 defense stance on its first DON. The bonus persists
+                even if the ward is later dropped.
           topics:
             - id: ward_back
               prompt: Nod, and ask something else.
@@ -374,27 +364,21 @@ win_conditions:
 endings:
   - id: ending_victory
     title: Bearer of the vein-heart
-    text: You lift the vein-heart from its plinth and turn back toward the light
-      above. The long cold keeps the rest of this place, but its one living
-      prize climbs the stair in your hands.
+    text: You recover the vein-heart and begin the climb back to the surface.
     death: false
   - id: ending_fallen_sentinel
     title: Cold on the Stones
-    text: The rock-golem's last blow drops you among the dead in the gallery, and
-      the grave chill closes over you. The vein-heart waits a while longer for a
-      stronger arm.
+    text: The rock-golem kills you in the gallery. The vein-heart remains below.
     death: true
   - id: ending_fallen_guardian
     title: Fallen at the Deep Door
-    text: You went down under the deep-haunt's blows a stone's throw from the deep,
-      and the cold takes you there. So near, and the vein-heart no nearer for
-      it.
+    text: The deep-haunt kills you near the final chamber. The vein-heart remains
+      below.
     death: true
 enemies:
   - id: foe
     name: rock-golem
-    description: A lurching shape of fused tailings and dead ore, slow as the
-      mountain but hard as the seam it guards.
+    description: A rock creature blocks the passage. It is slow and protected by hard ore.
     room: gallery
     hp: 6
     attack: 1
@@ -408,8 +392,8 @@ enemies:
           by: 20
   - id: warden
     name: deep-haunt
-    description: A vast thing of caked ore and old timber, larger and meaner than
-      the golem above, hunched over the silver glow.
+    description: A larger creature of ore and mine timber guards the silver. It is
+      stronger than the first golem.
     room: span
     hp: 9
     attack: 2

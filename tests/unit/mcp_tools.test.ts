@@ -538,7 +538,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
     expect(() => a.start_world_quest({} as never)).toThrow(/requires world_quest_id/);
     expect(() => a.start_world_quest({ quest_id: "sunken_barrow" } as never)).toThrow(
-      /not quest_id/,
+      /Do not pass quest_id/,
     );
     expect(() => a.start_world_quest({ world_quest_id: "missing_quest" })).toThrow(
       /Unknown overworld quest/,
@@ -673,7 +673,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r).not.toHaveProperty("design_rules");
     expect(JSON.stringify(r).length).toBeLessThan(1700);
     expect(withDesignNotes.sources.length).toBeGreaterThan(0);
-    expect(withDesignNotes.design_rules.join(" ")).toContain("not globally selectable");
+    expect(withDesignNotes.design_rules.join(" ")).toContain(
+      "they are not all available at the start",
+    );
     // The overworld is the sole quest registry: its quest list backs the count.
     expect(overworld.quests).toHaveLength(r.quest_count);
     expect(new Set(overworld.quests.map((quest) => quest.id)).size).toBe(overworld.quests.length);
@@ -753,7 +755,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         session_id: started.session_id,
         event_id: event.id,
       }),
-    ).toThrow(/Before resolving/i);
+    ).toThrow(/To resolve this event/i);
 
     const scouted = a.scout_overworld_session_poi({
       ...FULL_OVERWORLD_RESPONSE,
@@ -844,7 +846,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).not.toBe("relief_allocation");
     const compactContext = a.get_overworld_session_context({ session_id: started.session_id });
     const sharedDispatchStatus = compactContext.context.station_dispatch_board?.[2];
-    expect(sharedDispatchStatus).toMatch(/^Set: background, promise, report\. Dispatch 35m;/);
+    expect(sharedDispatchStatus).toMatch(
+      /^Background, promise, and report are set\. Current setup: 35m\./,
+    );
     expect(compactContext.context.quests?.[0]).toEqual(
       compactOverworldQuestRef(discoveredQuest, true, false, false, sharedDispatchStatus),
     );
@@ -918,14 +922,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
         quest_id: discoveredQuest.id,
         approach_id: SHELTERED_APPROACH_ID,
       }),
-    ).toThrow(/already been started/i);
+    ).toThrow(/already active/i);
     expect(() =>
       a.complete_overworld_session_quest({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         rpg_session_id: startedQuest.rpg_session_id,
       }),
-    ).toThrow(/has not ended/i);
+    ).toThrow(/RPG quest is still active/i);
     const afterQuestStart = a.export_overworld_session({
       session_id: started.session_id,
       expected_snapshot_hash: startedQuest.snapshot_hash,
@@ -1025,7 +1029,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       route: [SHELTERED_APPROACH_ID, "Take the Sheltered Stockway"],
       preparation: {
         status: "imported",
-        title: "Reese's Works Fortification",
+        title: "Take Reese's Repair Plan",
       },
       childState: "actionable",
     });
@@ -1046,12 +1050,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactStartedQuest.rpg_session.context.actions?.[0]).toEqual(expect.any(String));
     expect("observation" in compactStartedQuest.rpg_session).toBe(false);
     expect(compactStartedQuest.rpg_session.character_continuity?.scope_note).toBe(
-      "Campaign supplies, fatigue, and character persist; quest HP, stats and issued inventory are local; only authored imports/exports cross.",
+      "Campaign history, supplies, and fatigue persist. Quest HP, stats, and items stay local. Only listed transfers cross.",
     );
     const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
     // NPC display-name tuples add a small amount of actionable orientation;
     // the ceiling below remains the real transport budget.
-    expect(compactLaunchBytes).toBe(7_059);
+    expect(compactLaunchBytes).toBe(6_638);
     expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
     const fieldHandoff = a.step_action({
       session_id: compactStartedQuest.rpg_session_id,
@@ -1073,7 +1077,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(fieldHandoff.journey).not.toHaveProperty("decisionProof");
     expect(fieldHandoff.journey.pendingChoice).toBeNull();
     const compactFieldTurnBytes = Buffer.byteLength(JSON.stringify(fieldHandoff));
-    expect(compactFieldTurnBytes).toBe(2_336);
+    expect(compactFieldTurnBytes).toBe(2_151);
     expect(compactFieldTurnBytes).toBeLessThanOrEqual(3_500);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,
@@ -1189,7 +1193,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       `On ${road!.route}: Albany city to Colonie town`,
     );
     expect(traveled.observation.current.description).toContain(
-      "You are still between Albany city and Colonie town",
+      "You are between Albany city and Colonie town",
     );
     expect(traveled.observation.currentArea).toBeNull();
     expect(traveled.observation.exits).toEqual([]);
@@ -1204,7 +1208,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       to: "Colonie town",
     });
     expect(traveled.observation.pendingRoadEncounter?.timing).toBe(
-      `On the road from Albany city to Colonie town at ${traveled.observation.pendingRoadEncounter?.arrivedAt}; resolve this route trouble before doing town business in Colonie town.`,
+      `Road encounter from Albany city to Colonie town at ${traveled.observation.pendingRoadEncounter?.arrivedAt}. Resolve it before taking actions in Colonie town.`,
     );
     expect(
       traveled.observation.pendingRoadEncounter?.options.map((option) => option.strategy),
@@ -1245,9 +1249,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(roadEncounter.result.entry.kind).toBe("road");
     expect(roadEncounter.result.entry.text).toContain(
-      "On the road from Albany city to Colonie town",
+      "Road encounter from Albany city to Colonie town",
     );
-    expect(roadEncounter.result.entry.text).toContain("Afterward you arrive in Colonie town.");
+    expect(roadEncounter.result.entry.text).toContain("You arrive in Colonie town.");
     expect(roadEncounter.observation.pendingRoadEncounter).toBeNull();
     expect(roadEncounter.observation.current.id).toBe("colonie_town");
     expect(roadEncounter.observation.currentArea?.home).toBe("colonie_town");
@@ -1323,7 +1327,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         session_id: started.session_id,
         rpg_session_id: generated.session_id,
       }),
-    ).toThrow(/Only shipped world quest/i);
+    ).toThrow(/started from a shipped overworld quest/i);
     const directWorldQuest = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     expect(() =>
       a.complete_overworld_session_quest({
@@ -1331,7 +1335,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         session_id: started.session_id,
         rpg_session_id: directWorldQuest.session_id,
       }),
-    ).toThrow(/not started from this overworld session/i);
+    ).toThrow(/did not start from the supplied overworld session/i);
 
     const launchedSnapshot = a.export_overworld_session({
       session_id: started.session_id,
@@ -1364,7 +1368,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(staleCompletion.ok).toBe(false);
     if (staleCompletion.ok) throw new Error("expected stale completion rejection");
-    expect(staleCompletion.rejection_reason).toMatch(/Snapshot hash mismatch/i);
+    expect(staleCompletion.rejection_reason).toBe(
+      "The overworld state changed since your last read. Refresh with get_overworld_session_context.",
+    );
     expect("context" in staleCompletion).toBe(false);
     expect("observation" in staleCompletion).toBe(false);
 
@@ -1382,7 +1388,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
       throw new Error("expected RPG state hash rejection");
     }
     expect(staleRpgCompletion.state_hash).toBe(ended.state_hash);
-    expect(staleRpgCompletion.rejection_reason).toMatch(/state hash mismatch/i);
+    expect(staleRpgCompletion.rejection_reason).toBe(
+      "The state changed since your last read. Refresh with get_observation or list_legal_actions.",
+    );
     expect("snapshot_hash" in staleRpgCompletion).toBe(false);
     expect("result" in staleRpgCompletion).toBe(false);
     expect("context" in staleRpgCompletion).toBe(false);
@@ -1793,7 +1801,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         45,
         [6, 8],
         [0, 0],
-        "You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 6 to 8.",
+        "You buy food, lamp oil, and road gear. Time: 45 minutes. Supplies: 6 → 8.",
         null,
       ],
       ["rest", "ordinary", null, true, false, 0, [6, 6], [0, 0], "You are already rested.", null],
@@ -1864,7 +1872,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactPlan.context.here[0]).toBe(full.current.id);
     expect("observation" in compactPlan).toBe(false);
     expect(() => a.travel_overworld_session({ session_id: started.session_id } as never)).toThrow(
-      /exactly one of road_id or destination_town_id/,
+      /exactly one: road_id or destination_town_id/,
     );
     expect(() =>
       a.travel_overworld_session({
@@ -1872,7 +1880,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         road_id: road!.id,
         destination_town_id: road!.destination.id,
       } as never),
-    ).toThrow(/exactly one of road_id or destination_town_id/);
+    ).toThrow(/Pass exactly one: road_id or destination_town_id/);
 
     const compactTravel = a.travel_overworld_session({
       session_id: started.session_id,
@@ -1915,7 +1923,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     if (staleTravel.ok) throw new Error("stale snapshot hash should reject");
     expect("session_id" in staleTravel).toBe(false);
     expect("events" in staleTravel).toBe(false);
-    expect(staleTravel.rejection_reason).toMatch(/snapshot hash/i);
+    expect(staleTravel.rejection_reason).toBe(
+      "The overworld state changed since your last read. Refresh with get_overworld_session_context.",
+    );
     expect(staleTravel.journeyDecision).toEqual({
       countsTowardJourney: false,
       reason: "rejected",
@@ -2172,7 +2182,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("session_id" in staleExport).toBe(false);
     expect("events" in staleExport).toBe(false);
     expect(staleExport.snapshot_hash).toBe(beforeRead.snapshot_hash);
-    expect(staleExport.rejection_reason).toMatch(/snapshot hash mismatch/i);
+    expect(staleExport.rejection_reason).toMatch(/state changed since your last read/i);
     expect("snapshot" in staleExport).toBe(false);
 
     const exported = a.export_overworld_session({
@@ -2392,7 +2402,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         session_id: started.session_id,
         job_id: marketJob!.id,
       }),
-    ).toThrow(/Explore local areas/i);
+    ).toThrow(/Take fresh local actions/i);
 
     const scoutedCivic = a.scout_overworld_session_poi({
       ...FULL_OVERWORLD_RESPONSE,
@@ -2495,7 +2505,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         session_id: started.session_id,
         site_id: site!.id,
       }),
-    ).toThrow(/Scout a local point of interest/i);
+    ).toThrow(/Take a fresh local action in this area/i);
 
     const scouted = a.scout_overworld_session_poi({
       ...FULL_OVERWORLD_RESPONSE,
@@ -3361,9 +3371,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(String(compactJournal?.[2]).length).toBeLessThanOrEqual(
       COMPACT_EVENT_JOURNAL_CHAR_LIMIT,
     );
-    // Measured 2,030 after restoring the shipped flood-book narration and
-    // journal copy; retain only narrow headroom around the recurring response.
-    expect(JSON.stringify(compactProseStep).length).toBeLessThan(2100);
+    // Measured 2,263 with the frozen shipped flood-book narration and journal
+    // copy; keep 237 characters of headroom around the recurring response.
+    expect(JSON.stringify(compactProseStep).length).toBeLessThan(2_500);
     expect(JSON.stringify(compactProseStep.events).length).toBeLessThan(
       JSON.stringify(fullProseStep.events).length,
     );
@@ -3845,7 +3855,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(stale.journeyActionId).toBeNull();
     expect("rejection_reason" in stale).toBe(true);
     if (stale.ok) throw new Error("expected stale action rejection");
-    expect(stale.rejection_reason).toMatch(/state hash/i);
+    expect(stale.rejection_reason).toMatch(/state changed since your last read/i);
     expect(stale.state_hash).toBe(moved.state_hash);
     expect("events" in stale).toBe(false);
     expect("event_v" in stale).toBe(false);
@@ -3938,7 +3948,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect("session_id" in stale).toBe(false);
     expect("events" in stale).toBe(false);
     expect(stale.state_hash).toBe(after);
-    expect(stale.rejection_reason).toMatch(/state hash mismatch/i);
+    expect(stale.rejection_reason).toMatch(/state changed since your last read/i);
     expect("save" in stale).toBe(false);
 
     const saved = a.save_game({

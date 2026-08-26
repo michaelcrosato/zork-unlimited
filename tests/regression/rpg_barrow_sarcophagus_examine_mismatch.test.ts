@@ -124,13 +124,13 @@ describe("bug_0095 — the sarcophagus examine no longer promises the slab's mig
     // Still load-bearing: the iron bar is named (it is genuinely required to prise)…
     expect(lc).toContain("iron bar");
     // …and the don't-wake warning is repeated, so the act stays informed (not a gotcha).
-    expect(lc).toMatch(/do not think to wake|sleeps here|warning/);
+    expect(lc).toMatch(/do not prise|immediately wakes|fatal ending/);
     // The over-promise is GONE: no claim of parity with the slab, no "stubborn back",
     // no might-check grammar implying a repeatable heave.
     expect(lc).not.toContain("the same as the slab");
     expect(lc).not.toContain("stubborn back");
     // It reads true to the terminal one-shot act instead.
-    expect(lc).toMatch(/one wrench|the deed is done|past all undoing|no patient slab/);
+    expect(lc).toMatch(/cannot be retried or undone/);
   });
 
   it("the prise action STILL has no skill_check — it ends the run instantly on first use", () => {

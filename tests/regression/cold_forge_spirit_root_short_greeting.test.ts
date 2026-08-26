@@ -72,7 +72,7 @@ describe("bug_0322 — cold_forge spirit_root shows short greeting on return", (
     const greet = run(s, (a) => a.type === "TALK");
     const lines = spokenLines(greet.events);
     expect(lines.length).toBe(1);
-    expect(lines[0]).toContain("watched this forge die by inches");
+    expect(lines[0]).toContain("I remember how this forge failed");
     expect(lines[0]).not.toContain("What else");
   });
 

@@ -24,8 +24,8 @@ const PALING = "dispatch_paling_rebuild";
 const EVACUATION = "dispatch_evacuation_line";
 const PASTURE = "dispatch_pasture_search";
 const PASTURE_CONSEQUENCE =
-  "Hayden gives the immediate hill slot to the lower-pasture search. Emery creates a Greenway stores line unless your personal-bond returned-rig cache already satisfied it; the packet closes without assigning you a second paling or evacuation-line job.";
-const PASTURE_JOURNAL_TEXT = `${PASTURE_CONSEQUENCE} The decision is logged against Albany Station Quarter.`;
+  "Hayden assigns the crew to search the lower pasture. The packet closes, and no second fence or boundary crew is sent.";
+const PASTURE_JOURNAL_TEXT = `${PASTURE_CONSEQUENCE} Location: Albany Station Quarter.`;
 const PALING_REST = "albany:cade_paling_rebuild_works_rest";
 const EVACUATION_REST = "albany:cade_evacuation_line_works_rest";
 const PASTURE_RESUPPLY = "albany:cade_pasture_search_greenway_resupply";
@@ -232,7 +232,7 @@ describe("Cade Return Packet", () => {
       dawnChoice: "send_wagon_to_cade",
     });
     expect(wagon.view().jobChoices).toEqual(choicePairs([PASTURE]));
-    expect(() => wagon.workLocalJob(JOB, EVACUATION)).toThrow(/not available in this journey/i);
+    expect(() => wagon.workLocalJob(JOB, EVACUATION)).toThrow(/unavailable in this journey/i);
     expect(wagon.workLocalJob(JOB, PASTURE).entry.text).toBe(PASTURE_JOURNAL_TEXT);
 
     const wardens = returned("ending_drive_person_cattle_lost", {
@@ -309,10 +309,10 @@ describe("Cade Return Packet", () => {
             job_id: JOB,
             option_id: EVACUATION,
           }),
-        ).toThrow(/not available in this journey/i);
+        ).toThrow(/unavailable in this journey/i);
         expect(() =>
           UiOverworldSession.restore(WORLD, session.snapshot()).workLocalJob(JOB, EVACUATION),
-        ).toThrow(/not available in this journey/i);
+        ).toThrow(/unavailable in this journey/i);
       }
       const worked = api.work_overworld_session_job({
         ...FULL,

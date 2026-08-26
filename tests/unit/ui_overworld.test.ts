@@ -340,13 +340,12 @@ describe("OverworldSession", () => {
       view.characters[0]?.agenda,
       view.events[0]?.summary,
     ].join(" ");
-    expect(openingText).toContain("Three leads sit close enough to start with");
-    expect(openingText).toContain("marked Notice Hall board");
-    expect(openingText).toContain("Rowan Quill's records desk");
-    expect(openingText).toContain("charter-backlog stair");
-    expect(openingText).toContain("Scouting the board turns those marks into local work");
-    expect(openingText).toContain("Ask Rowan what matters before the office closes");
-    expect(openingText).toContain("inspect the stair and underrooms");
+    expect(openingText).toContain("This area holds the notice board");
+    expect(openingText).toContain("Scout Albany Civic Center Notice Board");
+    expect(openingText).toContain("Rowan Quill is Albany's records clerk");
+    expect(openingText).toContain("Explore it to find official work, regional leads");
+    expect(openingText).toContain("Rowan handles registration, emergency authority");
+    expect(openingText).toContain("Choose how Albany records winter-relief household claims");
     expect(openingText).not.toMatch(
       /concrete local lead point|local problems|hidden count|tutorial|command/i,
     );
@@ -388,7 +387,7 @@ describe("OverworldSession", () => {
     expect(session.view().serviceActions).toEqual([]);
     expect("service_actions" in session.compactView()).toBe(false);
 
-    expect(() => session.restAtTown()).toThrow(/presented story consequence/i);
+    expect(() => session.restAtTown()).toThrow(/choose the open story option/i);
     expect(session.snapshotHash()).toBe(snapshotHash);
 
     const beforeDecision = journey.acceptedDecisions;
@@ -410,7 +409,7 @@ describe("OverworldSession", () => {
       storyChoice: null,
       goal: { version: 2, id: "travel_north_with_albany_wardens" },
       goalGuidance:
-        "Objective route: take the road toward Saratoga Springs city. Queensbury town is 2 roads and about 60 road minutes away.",
+        "Next road: Saratoga Springs city. Queensbury town is 2 roads away, about 60 travel minutes.",
     });
     expect(JSON.stringify(session.journey().goalGuidance)).not.toMatch(
       /targetQuestId|endingId|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
@@ -446,29 +445,28 @@ describe("OverworldSession", () => {
         id: "continue",
         label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
         consequence:
-          "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
+          "Assign Albany's only dawn relief wagon. Then find Hedrick in Queensbury and complete The Gallowmere. Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision 40.",
       },
       {
         id: "end",
         label: "End here",
-        consequence:
-          "Close this journey here and keep its read-only record; this journey cannot resume.",
+        consequence: "End this journey and keep its read-only record. You cannot resume it.",
       },
     ]);
     expect(pendingJourney.pendingChoice?.continuationPreview).toEqual({
       id: "albany_dawn_dispatch",
       message:
-        "Wolf-Winter is complete. First choose where Albany's only dawn relief wagon goes: back to Cade or north with the wardens. After this choice, the displayed goal is to reach Hedrick Cradoc in Queensbury and see The Gallowmere through.",
+        "Wolf-Winter is complete. Send Albany's only dawn relief wagon to Cade or north with the wardens. Your next goal is The Gallowmere in Queensbury.",
       options: [
         {
           id: "send_wagon_to_cade",
           label: "Send the wagon back to Cade",
-          consequence: expect.stringContaining("sound wood the fight consumed"),
+          consequence: expect.stringContaining("replacement timber and repairs Cade's outer fence"),
         },
         {
           id: "send_wardens_north",
           label: "Send the wagon and wardens north",
-          consequence: expect.stringContaining("wagon follows Hedrick's report"),
+          consequence: expect.stringContaining("Cade has no repair timber"),
         },
       ],
     });
@@ -486,7 +484,7 @@ describe("OverworldSession", () => {
     expect(deferredLeadCount).toBe(4);
     if (!deferredLeadCount) throw new Error("Expected deferred Albany opportunity leads.");
     const expectedDeferredGuidance =
-      "Choose the shown journey option first. 4 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.";
+      "Choose the current journey option first. 4 optional follow-up leads remain. Complete any other required choice. The leads return when play resumes.";
     expect(pendingJourney.opportunities).toEqual({
       guidance: expectedDeferredGuidance,
       leads: [],
@@ -535,11 +533,11 @@ describe("OverworldSession", () => {
       ];
 
       for (const markup of markups) {
-        expect(markup).toContain("Return opportunities");
+        expect(markup).toContain("Optional work");
         expect(markup).toContain(expectedDeferredGuidance);
-        expect(markup).toContain("Choose the shown journey option first");
-        expect(markup).toContain("if another choice follows, finish it too");
-        expect(markup).toContain("District details return when play resumes");
+        expect(markup).toContain("Choose the current journey option first");
+        expect(markup).toContain("Complete any other required choice");
+        expect(markup).toContain("The leads return when play resumes");
         expect(markup).not.toContain("finish this journey decision first");
         expect(markup).not.toContain("Jamie Tanner&#x27;s Winter Price Policy");
         expect(markup).not.toContain("journey-opportunity-list");
@@ -551,11 +549,11 @@ describe("OverworldSession", () => {
         "Continue: decide the dawn wagon, then take the Gallowmere lead",
       );
       expect(pendingMarkup).toContain(
-        "First choose where Albany&#x27;s only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through.",
+        "Assign Albany&#x27;s only dawn relief wagon. Then find Hedrick in Queensbury and complete The Gallowmere.",
       );
       expect(pendingMarkup).toContain("End here");
-      expect(pendingMarkup).toContain("After Continue: dawn relief dispatch");
-      expect(pendingMarkup).toContain("locked for review");
+      expect(pendingMarkup).toContain("If you continue: choose dawn relief");
+      expect(pendingMarkup).toContain("You cannot choose these options yet");
       expect(pendingMarkup.match(/<button/g)).toHaveLength(2);
       for (const option of pendingJourney.pendingChoice!.continuationPreview!.options) {
         expect(pendingMarkup).toContain(option.label);
@@ -593,7 +591,7 @@ describe("OverworldSession", () => {
     expect(logHelper).toContain("Relief wagon choice made");
     expect(logHelper).toContain("Wolf-Winter promise chosen");
     expect(logHelper).toContain("Riding choice made");
-    expect(logHelper).toContain("Story consequence");
+    expect(logHelper).toContain("Choice made");
     expect(logHelper).toContain("Current goal: ${result.goal.text}");
     expect(handler).not.toMatch(/AlbanyDawnDispatchChoiceId|Albany dawn dispatch/i);
     expect(handler).not.toMatch(
@@ -602,12 +600,12 @@ describe("OverworldSession", () => {
     expect(app).toContain("for (const interaction of worldView.departureInteractions)");
     expect(app).toContain("worldSession.inspectJourneyStory(storyChoiceId)");
     expect(app).toContain("onChoose: () => inspectDepartureStory(interaction.id)");
-    expect(app).toContain('support?.terms ?? "Inspect before committing"');
+    expect(app).toContain('support?.terms ?? "Review before choosing"');
     expect(app).toContain("stationSupportPresentation(worldView.stationDispatchBoard");
     expect(app).toContain("sections={worldActionSections}");
     expect(overworldScreen).toContain('panel === "terms"');
     expect(overworldScreen).toContain("section.actions.map((action)");
-    expect(screen).toContain("Journey consequence");
+    expect(screen).toContain("Journey choice");
     expect(screen).toContain("Choose what follows");
     expect(screen).toContain("Choose your background");
     expect(screen).toContain("Wolf-Winter report");
@@ -645,7 +643,7 @@ describe("OverworldSession", () => {
     expect(screen).toContain("const roleplaySummaryLabel =");
     for (const label of [
       '"Background:"',
-      '"Ready-made dispatch:"',
+      '"Ready-made plan:"',
       '"Wolf-Winter promise:"',
       '"Report:"',
       '"Field kit:"',
@@ -654,7 +652,7 @@ describe("OverworldSession", () => {
     ]) {
       expect(screen).toContain(label);
     }
-    expect(screen).toContain("`Inspect exact receipt for ${option.label}`");
+    expect(screen).toContain("`Show full terms for ${option.label}`");
     expect(styles).toContain(".journey-choice-actions .journey-choice-card > button");
     expect(styles).toContain(
       ".journey-choice-actions:not(.journey-choice-actions-registration)\n  .journey-choice-card:first-child\n  > button",
@@ -696,7 +694,7 @@ describe("OverworldSession", () => {
 
     expect(model).toContain("for (const job of worldView.jobs)");
     expect(model).not.toContain("OVERWORLD.jobs");
-    expect(screen).toContain("Nothing is currently projected in this category.");
+    expect(screen).toContain("No actions are available in this category.");
     expect(screen).not.toContain("undiscovered local");
     expect(screen).not.toContain("No local jobs mapped yet.");
   });
@@ -753,7 +751,7 @@ describe("OverworldSession", () => {
       const markup = reactDomServer.renderToStaticMarkup(react.createElement(module.default, {}));
 
       expect(markup).toContain("Jamie&#x27;s Disputed Crates");
-      expect(markup).toContain("Release the price-hold crates through Jamie&#x27;s kitchen ledger");
+      expect(markup).toContain("Release the Household-Price Crates");
       expect(markup).toContain("30 min · renown 3");
       // The focused scene shows one relevant job; the Exact terms panel receives
       // the complete section model built from every engine-projected option.
@@ -868,8 +866,8 @@ describe("OverworldSession", () => {
         }),
       );
       expect(endedMarkup).toContain("Your character died after");
-      expect(endedMarkup).toContain("unfinished goal and completed history");
-      expect(endedMarkup).toContain("Journey decisions");
+      expect(endedMarkup).toContain("unfinished goal and journey history");
+      expect(endedMarkup).toContain("Continue/end choices");
       expect(endedMarkup).not.toContain("You chose to end");
       expect(endedMarkup).not.toContain("Continuation choices");
     } finally {
@@ -1094,12 +1092,13 @@ describe("OverworldSession", () => {
     expect(recapComponent).toContain('"Review what is set and still optional"');
     expect(recapComponent).toContain('className="departure-recap-selected"');
     expect(recapComponent).toContain('<details className="departure-recap-terms">');
-    expect(recapComponent).toContain("<summary>Review exact active terms</summary>");
+    expect(recapComponent).toContain("<summary>Review selected costs and effects</summary>");
     expect(recapComponent).not.toContain("Active field term: {entry.activeFieldTerm}");
-    expect(recapComponent).toContain("Dispatch committed: {recap.dispatch.minutes}m");
-    expect(recapComponent).toContain("Direct launch now: {recap.dispatch.minutes}m");
-    expect(recapComponent).toContain("Dispatch sealed: {recap.dispatch.minutes}m");
-    expect(recapComponent).toContain("Direct-launch default; a second rider remains optional.");
+    expect(recapComponent).toContain("Departure ready: {recap.dispatch.minutes} min");
+    expect(recapComponent).toContain("Leave now: {recap.dispatch.minutes} min");
+    expect(recapComponent).toContain("Departure plan complete: {recap.dispatch.minutes} min");
+    expect(recapComponent).toContain("You may still add a");
+    expect(recapComponent).toContain("second rider.");
     expect(storyChoiceScreen).toContain('departureRecap?: OverworldView["departureRecap"]');
     expect(storyChoiceScreen).toContain(
       "{departureRecap && <DepartureRecap recap={departureRecap} headingLevel={2} />}",
@@ -1144,9 +1143,9 @@ describe("OverworldSession", () => {
       );
       expect(initiallyReadyMarkup).toContain("Optional second rider: Talking takes 15 minutes.");
       expect(initiallyReadyMarkup).toContain(
-        "Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total",
+        "Let June Control Cattle Safety: 15 minutes additional, 30 minutes total",
       );
-      expect(initiallyReadyMarkup).toContain("leave for The Wolf-Winter alone now");
+      expect(initiallyReadyMarkup).toContain("leave alone for The Wolf-Winter");
       expect(initiallyReadyMarkup).toContain("Ask June Pike about riding");
       expect(initiallyReadyMarkup).not.toContain("choose a field kit first");
 
@@ -1157,10 +1156,9 @@ describe("OverworldSession", () => {
         /\bDuty\b/gu,
         "Promise",
       );
-      expect(recapMarkup).toContain("The Wolf-Winter dispatch recap");
+      expect(recapMarkup).toContain("The Wolf-Winter departure plan");
       expect(recapMarkup).toContain(world.opening_registration!.profiles[0]!.title);
       expect(recapMarkup).toContain(projectedPromiseTitle);
-      expect(recapMarkup).not.toContain(world.opening_relief_oath!.options[0]!.title);
       expect(recapMarkup).toContain(
         world.opening_lead_source!.options[0]!.title.replace("'", "&#x27;"),
       );
@@ -1178,9 +1176,9 @@ describe("OverworldSession", () => {
       );
       expect(firstTier).not.toContain("Open (optional)");
       expect(recapMarkup).toContain('<details class="departure-recap-terms">');
-      expect(recapMarkup).toContain("<summary>Review exact active terms</summary>");
+      expect(recapMarkup).toContain("<summary>Review what is set and still optional</summary>");
       expect(recapMarkup).not.toMatch(/<details[^>]*\sopen(?:=|>)/);
-      expect(recapMarkup).toContain(recap.entries[0]!.activeFieldTerm!);
+      expect(recapMarkup).toContain(recap.entries[0]!.activeFieldTerm!.replaceAll("'", "&#x27;"));
 
       const readyMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.DepartureContactLead, {
@@ -1190,7 +1188,7 @@ describe("OverworldSession", () => {
       );
       expect(readyMarkup).toContain('aria-disabled="false"');
       expect(readyMarkup).toContain("Optional second rider: Talking takes 15 minutes.");
-      expect(readyMarkup).toContain("Ride alone: no added time, 15 minutes total");
+      expect(readyMarkup).toContain("Travel Alone: no added time, 15 minutes total");
       expect(readyMarkup).toContain("Ask June Pike about riding");
       expect(readyMarkup).not.toContain("choose a field kit first");
     } finally {
@@ -1274,14 +1272,12 @@ describe("OverworldSession", () => {
       };
       const markup = renderCurrentBoard();
       expect(markup).toContain(`${board.questTitle} field briefing`);
-      expect(markup).toContain(`${board.questTitle} dispatch recap`);
-      expect(markup).toContain(
-        "Review optional support — field kit, relief wagon, or second rider",
-      );
-      expect(markup).toContain("What is already set");
-      expect(markup.indexOf("Depart now")).toBeLessThan(markup.indexOf("Review optional support"));
-      expect(markup.indexOf("Review optional support")).toBeLessThan(
-        markup.indexOf("What is already set"),
+      expect(markup).toContain(`${board.questTitle} departure plan`);
+      expect(markup).toContain("Optional support — field kit, relief wagon, or second rider");
+      expect(markup).toContain("Current departure plan");
+      expect(markup.indexOf("Depart now")).toBeLessThan(markup.indexOf("Optional support"));
+      expect(markup.indexOf("Optional support")).toBeLessThan(
+        markup.indexOf("Current departure plan"),
       );
       for (const support of board.support) {
         expect(markup).toContain(support.label.replaceAll("'", "&#x27;"));
@@ -1311,10 +1307,10 @@ describe("OverworldSession", () => {
       session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
       const preparedMarkup = renderCurrentBoard();
       expect(preparedMarkup).toContain(
-        "Ready to depart now with background, Wolf-Winter promise, report, and field kit set; one relief wagon or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.",
+        "You can leave now. Set: background, Wolf-Winter promise, report, and field kit. Optional: one relief wagon or second rider. They affect support, costs, or later results, not your field plan.",
       );
-      expect(preparedMarkup).toContain("Review optional support — relief wagon or second rider");
-      expect(preparedMarkup).not.toContain("Review optional support — field kit");
+      expect(preparedMarkup).toContain("Optional support — relief wagon or second rider");
+      expect(preparedMarkup).not.toContain("Optional support — field kit");
       expect(preparedMarkup).not.toContain("One field kit");
       expect(preparedMarkup).toContain(preparation.profiles[0]!.title.replaceAll("'", "&#x27;"));
       expect(preparedMarkup.match(/Open \(optional\)/g) ?? []).toHaveLength(2);
@@ -1340,20 +1336,19 @@ describe("OverworldSession", () => {
       expect(soloResult.displaySummary).not.toContain(soloResult.consequence);
       const fullySetMarkup = renderCurrentBoard();
       expect(fullySetMarkup).toContain(
-        "Ready to depart now with background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice set; no optional support remains.",
+        "You can leave now. Set: background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice. No optional support remains.",
       );
       expect(fullySetMarkup).not.toContain("station-dispatch-support-details");
-      expect(fullySetMarkup).not.toContain("Review optional support");
+      expect(fullySetMarkup).not.toContain("Optional support —");
       expect(fullySetMarkup).not.toContain("Open (optional)");
       expect(fullySetMarkup).not.toContain("Review what is already set");
       for (const title of [
         preparation.profiles[0]!.title,
         allocation.options[0]!.title,
-        "Ride alone",
+        "Travel Alone",
       ]) {
         expect(fullySetMarkup).toContain(title.replaceAll("'", "&#x27;"));
       }
-      expect(fullySetMarkup).not.toContain(solo.title);
 
       const openStationSupportSession = (): OverworldSession => {
         const supportSession = new OverworldSession(world);
@@ -1394,7 +1389,7 @@ describe("OverworldSession", () => {
       const packetResult = packetSession.chooseJourneyStory(doctrine.id);
       const immediateLog = module.journeyStoryChoiceLogEntries("relief_oath", packetResult);
       expect(immediateLog[0]).toBe(packetResult.displaySummary);
-      expect(immediateLog[0]).toContain("Ready-made dispatch chosen — Background:");
+      expect(immediateLog[0]).toContain("Quick setup chosen. Background:");
       expect(immediateLog[0]).not.toMatch(
         /\b(role|duty|source|preparation|relief allocation|field-team)\b/iu,
       );
@@ -1407,7 +1402,6 @@ describe("OverworldSession", () => {
       const projectedPacketPromise = packetPromise.title.replace(/\bDuty\b/gu, "Promise");
       const packetBoardMarkup = renderCurrentBoard(packetSession);
       expect(packetBoardMarkup).toContain(projectedPacketPromise);
-      expect(packetBoardMarkup).not.toContain(packetPromise.title);
     } finally {
       await server.close();
     }
@@ -1458,7 +1452,7 @@ describe("OverworldSession", () => {
 
       const allOpen = renderSlots(["preparation", "relief_allocation", "field_team"]);
       expect(allOpen).toContain(
-        `Dispatch committed: ${String(dispatch.minutes)}m; field kit, relief wagon, and second rider remain optional.`,
+        `Departure ready: ${String(dispatch.minutes)} min; field kit, relief wagon, and second rider remain optional.`,
       );
       expect(allOpen.match(/Open \(optional\)/g) ?? []).toHaveLength(3);
       expect(allOpen).not.toContain("Available after choosing a field kit");
@@ -1577,16 +1571,16 @@ describe("OverworldSession", () => {
       expect(markup).toContain("Take the Exposed Ridge");
       expect(markup).toContain("Spend less supply but arrive winded.");
       expect(markup).toContain("The ridge is fast and visible from the valley.");
-      expect(markup).toContain("Route tradeoff:");
+      expect(markup).toContain("Tradeoff:");
       expect(markup).toContain(
         "Hill lip 0; final descent 1; first lure DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
       );
       expect(markup).toContain("You accept the wind and reach the steading first.");
-      expect(markup).toContain("Actual cost: 30 min, 1 supply, fatigue +25.");
+      expect(markup).toContain("Cost: 30 min, 1 supply, fatigue +25.");
       expect(markup).toContain(
-        "Projected arrival: Day 1, 08:30; 5 supplies remaining; fatigue 25; condition tired.",
+        "Arrival: Day 1, 08:30; 5 supplies remaining; fatigue 25; condition tired.",
       );
-      expect(markup).toContain("Projected time: Day 1, 09:15.");
+      expect(markup).toContain("Arrival time: Day 1, 09:15.");
       expect(markup).toContain("Requires 2 supplies; you have 1.");
       expect(markup).not.toMatch(/knowledge_|memory_|import:/i);
 
@@ -1612,7 +1606,7 @@ describe("OverworldSession", () => {
         departureMarkup.indexOf("Which road do you commit to?"),
       );
       expect(departureMarkup).toContain(
-        "Choose an available road to depart now; planning is optional.",
+        "Choose an available road to leave now. Planning is optional.",
       );
       expect(departureMarkup.match(/<button/g)).toHaveLength(2);
 
@@ -1696,7 +1690,9 @@ describe("OverworldSession", () => {
 
       expect(markup).toContain("Choose your background");
       expect(markup).toContain("Current objective");
-      expect(markup).toContain("Your background persists into the journey");
+      expect(markup).toContain(
+        "Your background stays with this character. Choose the experience you want to carry.",
+      );
       expect(markup.match(/<button/g)).toHaveLength(4);
       expect(markup).not.toContain("Goal just completed");
       expect(markup).not.toContain("sets your next objective");
@@ -1750,7 +1746,9 @@ describe("OverworldSession", () => {
       expect(markup).toContain("Wolf-Winter report");
       expect(markup).toContain("Choose the report you trust");
       expect(markup).toContain("Current objective");
-      expect(markup).toContain("does not replace this objective");
+      expect(markup).toContain(
+        "Your report changes later quest approaches. Your current goal stays the same.",
+      );
       expect(markup.match(/<button/g)).toHaveLength(3);
       expect(markup).not.toContain("Goal just completed");
       expect(markup).not.toContain("sets your next objective");
@@ -1818,7 +1816,7 @@ describe("OverworldSession", () => {
         expectedOpen: number,
       ): void => {
         const recapStart = screenMarkup.indexOf(
-          '<section aria-label="The Wolf-Winter dispatch recap">',
+          '<section aria-label="The Wolf-Winter departure plan">',
         );
         const recapEnd = screenMarkup.indexOf("</section>", recapStart);
         expect(recapStart).toBeGreaterThanOrEqual(0);
@@ -1847,7 +1845,7 @@ describe("OverworldSession", () => {
       const markup = renderStoryScreen(journey, departureRecap, true);
 
       expect(markup).toContain(
-        "Albany Station: ready to depart now, or choose one field kit; relief-wagon and riding choices are separate.",
+        "You can leave Albany Station now or choose one field kit. The relief wagon and June are separate choices.",
       );
       expect(markup).not.toContain("Old Cade");
       expect(markup).not.toContain("wolf pack coming down with the weather");
@@ -1855,7 +1853,7 @@ describe("OverworldSession", () => {
       expect(markup).not.toContain("Take the Sheltered Stockway");
       expect(markup).toContain("<b>Cost:</b>");
       expect(markup).toContain("<b>Give up:</b>");
-      expect(markup).toContain("The Wolf-Winter dispatch recap");
+      expect(markup).toContain("The Wolf-Winter departure plan");
       assertRecapRows(markup, departureRecap, 3, 3);
       expect(markup).not.toContain("clean three-cast lure line");
       expect(markup).toContain("Return to the Station without choosing");
@@ -1868,7 +1866,7 @@ describe("OverworldSession", () => {
           onDismiss: () => undefined,
         }),
       );
-      expect(noRecapMarkup).not.toContain("The Wolf-Winter dispatch recap");
+      expect(noRecapMarkup).not.toContain("The Wolf-Winter departure plan");
 
       const preparation = world.opening_preparation!;
       const allocation = world.opening_relief_allocation!;
@@ -1884,7 +1882,7 @@ describe("OverworldSession", () => {
       );
       expect(allocationMarkup).toContain("Choose where Albany&#x27;s relief wagon goes");
       expect(allocationMarkup).toContain(
-        "Albany Station: ready to depart now, or choose the relief wagon&#x27;s job; field-kit and riding choices are separate.",
+        "You can leave Albany Station now or assign the relief wagon. The field kit and June are separate choices.",
       );
       assertRecapRows(allocationMarkup, allocationRecap, 4, 2);
 
@@ -1899,7 +1897,7 @@ describe("OverworldSession", () => {
       const allyMarkup = renderStoryScreen(allyJourney, allyRecap, false);
       expect(allyMarkup).toContain("Choose a second rider or ride alone");
       expect(allyMarkup).toContain(
-        "Albany Station: ready to depart now alone, or ask June Pike to ride; field kit and relief wagon choices are separate.",
+        "You can leave Albany Station alone or ask June Pike to join. The field kit and relief wagon are separate choices.",
       );
       assertRecapRows(allyMarkup, allyRecap, 5, 1);
     } finally {
@@ -1964,7 +1962,7 @@ describe("OverworldSession", () => {
       expect(markup).toContain("Wolf-Winter promise");
       expect(markup).toContain("Choose one Wolf-Winter promise");
       expect(markup).toContain("Current objective");
-      expect(markup).toContain("access, actual cost, field consequence, and return terms");
+      expect(markup).toContain("access, cost, field effect, and return terms");
       expect(markup).toContain(
         "Access: boundary annex. Duty: public seals. Actual cost: 10 minutes.",
       );
@@ -2044,8 +2042,9 @@ describe("OverworldSession", () => {
       expect(markup).toContain("Wolf-Winter promise");
       expect(markup).toContain(journey.storyChoice.message);
       expect(markup).toContain(selectedOption.label);
-      expect(markup).toContain("Cost / give up:");
-      expect(markup).toContain(selectedOption.consequence);
+      expect(markup).toContain("Cost:");
+      expect(markup).toContain("Give up:");
+      expect(markup).toContain(selectedOption.consequence.replaceAll("'", "&#x27;"));
       expect(markup).not.toContain("Bounded authority becomes a named value");
       expect(markup.match(/<button/g)).toHaveLength(journey.storyChoice.options.length);
 
@@ -2145,7 +2144,7 @@ describe("OverworldSession", () => {
       expect(markup).toContain("Current objective");
       expect(markup).toContain("Capability: June can hold the cattle line");
       expect(markup).toContain("Condition: cattle come first");
-      expect(markup).toContain("actual cost");
+      expect(markup).toContain("Actual cost");
       expect(markup).toContain("Actual cost: 10 minutes");
       expect(markup.match(/<button/g)).toHaveLength(3);
       expect(markup).not.toContain("Goal just completed");
@@ -2344,7 +2343,7 @@ describe("OverworldSession", () => {
     const start = session.view();
     const hiddenJob = genericWorld.local_jobs.find((job) => job.home === start.current.id);
     expect(hiddenJob).toBeDefined();
-    expect(() => session.workLocalJob(hiddenJob!.id)).toThrow(/Explore local areas/i);
+    expect(() => session.workLocalJob(hiddenJob!.id)).toThrow(/Take fresh local actions/i);
 
     const explored = session.exploreArea(start.areas[0]!.id);
     expect(explored.discoveredJobs).toHaveLength(1);
@@ -2445,9 +2444,7 @@ describe("OverworldSession", () => {
     const after = session.view();
     expect(after.current.id).toBe(`road:${road!.id}`);
     expect(after.current.name).toBe(`On ${road!.route}: Albany city to Colonie town`);
-    expect(after.current.description).toContain(
-      "You are still between Albany city and Colonie town",
-    );
+    expect(after.current.description).toContain("You are between Albany city and Colonie town");
     expect(after.currentArea).toBeNull();
     expect(after.exits).toEqual([]);
     expect(after.areaExits).toEqual([]);
@@ -2485,7 +2482,7 @@ describe("OverworldSession", () => {
       to: "Colonie town",
     });
     expect(after.pendingRoadEncounter?.timing).toBe(
-      `On the road from Albany city to Colonie town at ${after.pendingRoadEncounter?.arrivedAt}; resolve this route trouble before doing town business in Colonie town.`,
+      `Road encounter from Albany city to Colonie town at ${after.pendingRoadEncounter?.arrivedAt}. Resolve it before taking actions in Colonie town.`,
     );
     expect(after.pendingRoadEncounter?.options.map((option) => option.strategy)).toEqual([
       "cautious_scout",
@@ -2537,8 +2534,8 @@ describe("OverworldSession", () => {
       kind: "road",
       title: `${option!.label}: ${encounter!.event.title}`,
     });
-    expect(after.journal[0]?.text).toContain("On the road from Albany city to Colonie town");
-    expect(after.journal[0]?.text).toContain("Afterward you arrive in Colonie town.");
+    expect(after.journal[0]?.text).toContain("Road encounter from Albany city to Colonie town");
+    expect(after.journal[0]?.text).toContain("You arrive in Colonie town.");
     expect(after.current.id).toBe("colonie_town");
     expect(after.currentArea?.home).toBe("colonie_town");
     expect(session.compactView()).toEqual(compactOverworldView(after));
@@ -3520,7 +3517,7 @@ describe("OverworldSession", () => {
       id: `quest:${discoveredQuest.id}`,
       kind: "quest",
     });
-    expect(() => session.startQuest(discoveredQuest.id)).toThrow(/already been started/i);
+    expect(() => session.startQuest(discoveredQuest.id)).toThrow(/already active/i);
     expect(() =>
       session.completeQuest(discoveredQuest.id, {
         endingId: "ending_fallen",
@@ -3602,9 +3599,7 @@ describe("OverworldSession", () => {
 
     const committed = OverworldSession.restore(world, committedSave);
     expect(committed.view().startedQuestIds).toContain(quest!.id);
-    expect(() => committed.prepareQuestStart(quest!.id, approach!.id)).toThrow(
-      /already been started/i,
-    );
+    expect(() => committed.prepareQuestStart(quest!.id, approach!.id)).toThrow(/already active/i);
   });
 
   it("names an off-anchor quest start area without presenting it as a legal launch", () => {
@@ -3742,7 +3737,7 @@ describe("OverworldSession", () => {
     expect(playable.session.compactView().quest_starts).toBeUndefined();
     expect(playable.session.view().questStarts).toEqual([]);
     expect(() => playable.session.prepareQuestStart(playable.quest.id, approach.id)).toThrow(
-      /already been started/i,
+      /already active/i,
     );
 
     const blockedManifest = structuredClone(world);
@@ -3753,11 +3748,11 @@ describe("OverworldSession", () => {
     const blockedApproach = blocked.quest.launch?.options[0];
     expect(blockedApproach?.projection).toMatchObject({
       available: false,
-      blockedReason: "Requires 8 supplies; you have 6.",
+      blockedReason: "Requires 8 supplies. You have 6 supplies.",
     });
     const beforeBlocked = blocked.session.snapshot();
     expect(() => blocked.session.startQuest(blocked.quest.id, blockedApproach!.id)).toThrow(
-      "Requires 8 supplies; you have 6.",
+      "Requires 8 supplies. You have 6 supplies.",
     );
     expect(blocked.session.compactView().quest_starts).toEqual([
       ["wolf_winter", "albany:wolf_approach_sheltered_stockway"],
@@ -3786,9 +3781,7 @@ describe("OverworldSession", () => {
     session.scoutPoi(opening.pois[0]!.id);
     expect(session.view().quests.map((quest) => quest.id)).toContain(probe.id);
     expect(session.journey().storyChoice).toBeNull();
-    expect(() => session.prepareQuestStart(probe.id)).toThrow(
-      /before starting this journey's first quest/i,
-    );
+    expect(() => session.prepareQuestStart(probe.id)).toThrow(/before starting the first quest/i);
     expect(session.view().questStarts).toEqual([]);
     expect(session.compactView().quest_starts).toBeUndefined();
   });
@@ -3838,7 +3831,7 @@ describe("OverworldSession", () => {
     );
     expect(site).toBeDefined();
 
-    expect(() => session.exploreSite(site!.id)).toThrow(/Scout a local point of interest/i);
+    expect(() => session.exploreSite(site!.id)).toThrow(/Take a fresh local action in this area/i);
     const scouted = session.scoutPoi(poi.id);
     expect(scouted.discoveredSites?.map((candidate) => candidate.id)).toContain(site!.id);
     expect(session.view().discoveredSiteIds).toContain(site!.id);
@@ -3873,7 +3866,7 @@ describe("OverworldSession", () => {
     const event = start.events[0]!;
     const optionId = event.authored_scene?.options[0]?.id;
 
-    expect(() => session.resolveEvent(event.id)).toThrow(/Before resolving/i);
+    expect(() => session.resolveEvent(event.id)).toThrow(/To resolve this event, first scout/i);
     session.scoutPoi(poi.id);
     session.talkToCharacter(contact.id);
     settleOpeningRegistration(session);

@@ -313,10 +313,10 @@ describe("June's pre-HUNT release counterfactual", () => {
       (option) => option.id === "ask_commit_hunt_and_hold",
     );
     expect(release?.command).toMatch(
-      /FINAL COMMITMENT[^]*HUNT \/ RELEASE JUNE[^]*preserve agreement[^]*lose all June field aid[^]*close LURE\/DRIVE\/FORTIFY[^]*Irreversible/i,
+      /CHOOSE HUNT \/ RELEASE JUNE[^]*preserve June's agreement[^]*lose all her help[^]*permanently close LURE, DRIVE, and FORTIFY/i,
     );
     expect(retain?.command).toMatch(
-      /PREPARE[^]*HUNT \/ KEEP JUNE[^]*keep cattle-first aid[^]*first wolf death breaks agreement[^]*North crossing is FINAL COMMITMENT[^]*closes other plans/i,
+      /KEEP JUNE[^]*keep her cattle-first help[^]*going north chooses HUNT[^]*closes other plans[^]*first wolf death ends her agreement/i,
     );
 
     const preChoiceSave = save(boundary, loaded.compiled.contentHash, SAVE_MODE, {
@@ -369,7 +369,7 @@ describe("June's pre-HUNT release counterfactual", () => {
     released = postChoiceRestored;
     const full = buildRpgObservation(index, released);
     expect(full.description).toMatch(
-      /HUNT is committed now[^]*LURE, DRIVE, and FORTIFY are closed[^]*north gate is open[^]*ordinary lessons[^]*store gear[^]*backtracking remain/i,
+      /Go north alone to begin HUNT[^]*June returned to Albany[^]*no field, combat, or cattle bonus[^]*LURE, DRIVE, and FORTIFY are closed[^]*Cade's lessons, store gear, and yard preparation/i,
     );
     const api = createToolApi({ root: process.cwd() });
     const launched = api.start_world_quest({
@@ -391,7 +391,7 @@ describe("June's pre-HUNT release counterfactual", () => {
         hide_graph: true,
       }).context.text,
     ).toMatch(
-      /HUNT is committed now[^]*LURE, DRIVE, and FORTIFY are closed[^]*backtracking remain/i,
+      /Go north alone to begin HUNT[^]*June returned to Albany[^]*no field, combat, or cattle bonus[^]*LURE, DRIVE, and FORTIFY are closed[^]*Cade's lessons, store gear, and yard preparation/i,
     );
     released = act(released, "talk_houndsman");
     expect(actionIds(released)).toEqual(
@@ -402,7 +402,7 @@ describe("June's pre-HUNT release counterfactual", () => {
         (action) => action.id === "ask_wolves_after_june_release",
       )?.command,
     ).toBe(
-      "ask: PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; HUNT is already committed and other plans stay closed.",
+      "ask: PREPARE SUPPORT — Learn the quick HUNT tactic for +2 attack and +5 score. HUNT is already chosen; other plans stay closed.",
     );
     expect(rpgActionOptionForInputId(enumerateRpgActions(index, released), "ask_wolves")?.id).toBe(
       "ask_wolves_after_june_release",
@@ -412,7 +412,7 @@ describe("June's pre-HUNT release counterfactual", () => {
     );
     expect(actionIds(released)).not.toContain("ask_commit_hunt_and_hold");
     expect(buildRpgObservation(index, released).dialogue?.npc_text).toMatch(
-      /release committed HUNT[^]*closed LURE, DRIVE, and FORTIFY[^]*ordinary preparation[^]*does not reopen/i,
+      /HUNT is chosen because you RELEASED JUNE[^]*LURE, DRIVE, and FORTIFY are permanently closed[^]*June will provide no help[^]*quick and guarded HUNT tactics[^]*Store-Shed gear/i,
     );
     released = act(released, "ask_leave");
     released = act(released, "go_south");
@@ -469,7 +469,7 @@ describe("June's pre-HUNT release counterfactual", () => {
     const generic = act(ordinaryHeld(releaseJune()), "go_north");
     expect(generic).toMatchObject({ ended: true, endingId: "ending_held_june_released" });
     expect(buildRpgObservation(index, generic).ending?.text).toMatch(
-      /patient line[^]*June had already returned cattle-first/i,
+      /grey leader's feint[^]*true rush[^]*June had already returned to Albany after you released her from HUNT[^]*agreement remains intact[^]*no field aid/i,
     );
 
     const fork = retainedSplitGuard(releaseJune());
@@ -480,7 +480,7 @@ describe("June's pre-HUNT release counterfactual", () => {
     });
     expect(saved.inventory).toContain("split_rail_guard");
     expect(buildRpgObservation(index, saved).ending?.text).toMatch(
-      /waited out old grey[^]*June had already returned/i,
+      /grey leader's feint[^]*split-rail guard[^]*June had already returned/i,
     );
 
     const barredFork = retainedSplitGuard(releaseJune());
@@ -498,7 +498,7 @@ describe("June's pre-HUNT release counterfactual", () => {
       endingId: "ending_held_gate_barred_june_released",
     });
     expect(buildRpgObservation(index, barredResult.state).ending?.text).toMatch(
-      /waited out old grey[^]*June had already returned/i,
+      /grey leader's feint[^]*split-rail guard to BAR the inner cattle-gate[^]*June had already returned/i,
     );
 
     const retained = act(ordinaryHeld(retainJune()), "go_north");
@@ -515,7 +515,7 @@ describe("June's pre-HUNT release counterfactual", () => {
       flags: { june_hunt_released: true, bloodied_byre_evacuated: true },
     });
     expect(buildRpgObservation(index, released).ending?.text).toMatch(
-      /old grey remains[^]*two cattle are missing[^]*June had already returned cattle-first[^]*agreement intact[^]*no field aid/i,
+      /grey leader keeps the byre[^]*two cattle are missing[^]*June had already returned to Albany after you released her from HUNT[^]*agreement remains intact[^]*no field aid/i,
     );
 
     const retainedFork = reachBloodiedEvacuation(false);
@@ -563,9 +563,7 @@ describe("June's pre-HUNT release counterfactual", () => {
           .view()
           .characters.find((character) => character.id === "albany_city__transport_hub__june_pike")
           ?.summary,
-      ).toMatch(
-        /returned separately[^]*released her before crossing into HUNT[^]*without claiming her field aid/i,
-      );
+      ).toMatch(/released her before HUNT[^]*completed the fight without her help/i);
       expect(OverworldSession.restore(WORLD, snapshot).snapshot()).toEqual(snapshot);
     },
   );
@@ -585,6 +583,6 @@ describe("June's pre-HUNT release counterfactual", () => {
         .view()
         .characters.find((character) => character.id === "albany_city__transport_hub__june_pike")
         ?.summary,
-    ).toMatch(/first wolf death[^]*ended the cattle-first field agreement/i);
+    ).toMatch(/first wolf died[^]*ending the cattle-safety agreement/i);
   });
 });

@@ -321,7 +321,9 @@ export function planOverworldAreaExploration(
   const area = state.areasById.get(state.areaId);
   if (!area || area.home !== state.currentTownId) throw new Error("That area is not in this town.");
   if (!state.discoveredAreaIds.has(area.id)) {
-    throw new Error("Scout, talk, investigate, or explore known areas to map that district.");
+    throw new Error(
+      "This area is not mapped. Explore a known area, scout a point of interest, talk to a contact, or investigate an event to reveal it.",
+    );
   }
   if (state.currentAreaId !== area.id) {
     throw new Error("Move to that local area before exploring it.");
@@ -346,7 +348,7 @@ export function planOverworldLocalJobCompletion(
     throw new Error("That local job is not in this town.");
   }
   if (!state.discoveredJobIds.has(job.id)) {
-    throw new Error("Explore local areas or talk to locals before working that job.");
+    throw new Error("This job is not discovered. Take fresh local actions to reveal jobs.");
   }
   if (job.area !== state.currentAreaId) {
     throw new Error("Move to that local area before working that job.");
@@ -355,11 +357,11 @@ export function planOverworldLocalJobCompletion(
   let sceneOption: LocalJobSceneOption | null = null;
   if (scene) {
     if (!state.optionId) {
-      throw new Error(`Choose one authored option for ${job.title}.`);
+      throw new Error(`Choose one option for ${job.title}.`);
     }
     sceneOption = resolveLocalJobSceneOption(scene, state.optionId);
     if (!state.journalEntries.has(`scout:${scene.required_poi_id}`)) {
-      throw new Error(`Scout the scene's point of interest before working ${job.title}.`);
+      throw new Error(`Scout the required point of interest before working ${job.title}.`);
     }
     const baseContactJournalId = `talk:${scene.required_contact_id}`;
     const talkedToRequiredContact = [...state.journalEntries.keys()].some(
@@ -367,7 +369,7 @@ export function planOverworldLocalJobCompletion(
         entryId === baseContactJournalId || entryId.startsWith(`${baseContactJournalId}@`),
     );
     if (!talkedToRequiredContact) {
-      throw new Error(`Talk to the scene's contact before working ${job.title}.`);
+      throw new Error(`Talk to the required contact before working ${job.title}.`);
     }
     const missingQuest = scene.requires_completed_quests?.find(
       (questId) => !state.completedQuestIds?.has(questId),
@@ -391,10 +393,12 @@ export function planOverworldLocalJobCompletion(
         state.journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
     };
     if (!localJobSceneRequirementsMet(scene, conditionState)) {
-      throw new Error(`The authored requirements for ${job.title} are not satisfied.`);
+      throw new Error(
+        `${job.title} is unavailable because its world-state requirements are not met.`,
+      );
     }
     if (!localJobSceneOptionRequirementsMet(sceneOption, conditionState)) {
-      throw new Error(`That authored option for ${job.title} is not available in this journey.`);
+      throw new Error(`That option for ${job.title} is unavailable in this journey.`);
     }
   } else if (state.optionId !== undefined) {
     throw new Error(`Local job ${job.title} has no authored option "${state.optionId}".`);
@@ -436,7 +440,9 @@ export function planOverworldSiteExploration(
     throw new Error("Move to that local area before exploring this site.");
   }
   if (!state.discoveredSiteIds.has(site.id)) {
-    throw new Error("Scout a local point of interest before exploring this site.");
+    throw new Error(
+      "This site is not discovered. Take a fresh local action in this area to reveal it.",
+    );
   }
   if (state.exploredSiteIds.has(site.id)) {
     const existing = state.journalEntries.get(`site:${site.id}`);

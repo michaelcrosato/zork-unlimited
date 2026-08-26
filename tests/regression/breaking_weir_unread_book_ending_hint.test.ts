@@ -94,7 +94,7 @@ describe("bug_0443 - Breaking Weir ending names the unread flood-book", () => {
     expect(state.endingId).toBe("ending_fields_held_race_spent");
     expect(state.flags["read_marks"]).toBeUndefined();
     expect(score(state)).toBe(45);
-    expect(endingDescription(state)).toMatch(/flood-book.*last marks unread/is);
+    expect(endingDescription(state)).toMatch(/left the flood-book unread/is);
     expect(endingDescription(state)).toContain("Final score: 45 of 50.");
   });
 

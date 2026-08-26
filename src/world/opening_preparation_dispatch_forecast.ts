@@ -65,13 +65,13 @@ function forecastLine(args: {
   let line: string;
   switch (args.classification) {
     case "on_time_guaranteed":
-      line = `Dispatch forecast if chosen: ${range}. On time for every remaining optional capacity or field-team choice; choose later to seal the total.`;
+      line = `If chosen, dispatch totals ${range}. Every remaining wagon and rider option stays on time. Choose them to set the final total.`;
       break;
     case "threshold_crossing":
-      line = `Dispatch forecast if chosen: ${range}. On time at ${String(OPENING_PREPARATION_DISPATCH_ON_TIME_MAX_MINUTES)}m; later optional choices can make dispatch delayed.`;
+      line = `If chosen, dispatch totals ${range}. ${String(OPENING_PREPARATION_DISPATCH_ON_TIME_MAX_MINUTES)}m is on time; later wagon or rider choices could cause delay.`;
       break;
     case "delayed_guaranteed":
-      line = `Dispatch forecast if chosen: ${range}. Delayed even if you leave later capacity unassigned and depart solo; later choices only seal the final total.`;
+      line = `If chosen, dispatch totals ${range}. Dispatch will be delayed even if you leave the wagon unassigned and ride alone.`;
       break;
   }
   if (line.length > OPENING_PREPARATION_DISPATCH_FORECAST_LINE_CHAR_LIMIT) {

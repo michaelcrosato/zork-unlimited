@@ -77,7 +77,9 @@ describe("bug_0094 — The Cold Forge's Outer Forge stops narrating the taken pr
   it("(2) before taking the bar the room reads the base 'lies a stout iron pry-bar'", () => {
     const s = enterForge();
     const desc = obs(s).description.replace(/\s+/g, " ");
-    expect(desc).toContain("By a cold trough lies a stout iron pry-bar");
+    expect(desc).toContain(
+      "The trough is where the iron pry-bar was kept; TAKE iron pry-bar if it is here, or retrieve the iron pry-bar if needed",
+    );
     expect(obs(s).visible_objects.map((o) => o.id)).toContain("pry_bar");
   });
 
@@ -87,9 +89,9 @@ describe("bug_0094 — The Cold Forge's Outer Forge stops narrating the taken pr
     expect(s.inventory).toContain("pry_bar");
 
     const desc = obs(s).description.replace(/\s+/g, " ");
-    expect(desc).toContain("The cold trough stands bare now");
+    expect(desc).toContain("You have the iron pry-bar");
     // the stale static line is gone — no claim the bar still lies by the trough
-    expect(desc).not.toContain("lies a stout iron pry-bar");
+    expect(desc).not.toContain("The trough is where the iron pry-bar was kept");
     expect(obs(s).visible_objects.map((o) => o.id)).not.toContain("pry_bar");
   });
 

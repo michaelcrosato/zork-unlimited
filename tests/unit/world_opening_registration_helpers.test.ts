@@ -154,7 +154,7 @@ describe("opening registration presentation", () => {
       expect(option.id).toBe(profile.id);
       expect(option.label).toBe(profile.title);
       expect(option.consequence).toBe(
-        `${profile.summary} ${profile.preview} Field trigger: ${profile.trigger_category}. ${profile.consequence}`,
+        `${profile.preview} Best for: ${profile.trigger_category!.replace(/\.$/u, "")}. ${profile.consequence}`,
       );
       expect(option.summary).toEqual({
         commitment: `Permanent background — ${profile.summary}`,
@@ -179,7 +179,7 @@ describe("opening registration presentation", () => {
     });
     const prompt = presentOpeningRegistration(categorized);
     expect(prompt.options[0]!.consequence).toBe(
-      "Summary 1. Visible mechanical preview 1. Field trigger: First use 1. Permanent consequence 1.",
+      "Visible mechanical preview 1. Best for: First use 1. Permanent consequence 1.",
     );
     expect(prompt.options[0]!.summary).not.toHaveProperty("fieldTrigger");
 
@@ -196,9 +196,7 @@ describe("opening registration presentation", () => {
         immediateCost: "no fee or delay; start with $0",
         tradeoff: exactLegacy.profiles[0]!.tradeoff,
       },
-      consequence:
-        `${exactLegacy.profiles[0]!.summary} ${exactLegacy.profiles[0]!.preview} ` +
-        exactLegacy.profiles[0]!.consequence,
+      consequence: `${exactLegacy.profiles[0]!.preview} ${exactLegacy.profiles[0]!.consequence}`,
     });
 
     const partiallyCategorized = structuredClone(categorized);

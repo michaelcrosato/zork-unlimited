@@ -64,8 +64,8 @@ function lookNarration(s: GameState): string {
 function expectCommittedLureFeedAvailable(s: GameState): void {
   expect(s.inventory).not.toContain("winter_feed_sack");
   expect(commands(s)).toContain("take Cade's winter-feed sack");
-  expect(desc(s)).toContain("Cade's last feed sack");
-  expect(desc(s)).toContain("Take the finite feed before the breach");
+  expect(desc(s)).toContain("TAKE Cade's winter-feed sack");
+  expect(desc(s)).toContain("only sack for LURE");
   expect(desc(s)).toContain("feed-hauler's crawlboard");
   expect(desc(s)).not.toContain("padded byre-jerkin hangs beside");
   expect(lookNarration(s)).toBe(desc(s));
@@ -74,9 +74,9 @@ function expectCommittedLureFeedAvailable(s: GameState): void {
 function expectCommittedLureFeedHeld(s: GameState): void {
   expect(s.inventory).toContain("winter_feed_sack");
   expect(commands(s)).not.toContain("take Cade's winter-feed sack");
-  expect(desc(s)).toContain("winter-feed peg is bare");
-  expect(desc(s)).toContain("finite sack rides with you");
-  expect(desc(s)).toContain("second cast across the feed-hauler's crawlboard");
+  expect(desc(s)).toContain("You carry Cade's winter-feed sack");
+  expect(desc(s)).toContain("one LURE attempt past all three wolves");
+  expect(desc(s)).toContain("second action");
   expect(desc(s)).not.toContain("padded byre-jerkin hangs beside");
   expect(lookNarration(s)).toBe(desc(s));
 }
@@ -92,16 +92,13 @@ describe("wolf_winter rooms react to preparation object state", () => {
     expect(s.flags["jerkin_donned"]).toBeUndefined();
     expect(s.vars.defense).toBe(3);
     expect(s.vars.score ?? 0).toBe(0);
-    expect(narrations(taken.events)).toContain("not yet on your back");
-    expect(narrations(taken.events)).toMatch(/Drag it on before you go north/i);
+    expect(narrations(taken.events)).toContain("DON padded byre-jerkin only while offered");
+    expect(narrations(taken.events)).toContain("carrying it gives no bonus");
     expect(commands(s)).toContain("don padded byre-jerkin");
     expect(commands(s)).not.toContain("drop padded byre-jerkin");
-    expect(desc(s)).toContain(
-      "peg by the door is bare where the steading's padded byre-jerkin hung",
-    );
-    expect(desc(s)).toContain("not yet on your back");
-    expect(desc(s)).toContain("carried hide will not turn teeth");
-    expect(desc(s)).not.toContain("On a peg by the door hangs");
+    expect(desc(s)).toContain("DON padded byre-jerkin only while that action is offered");
+    expect(desc(s)).toContain("Carrying it gives no bonus");
+    expect(desc(s)).not.toContain("TAKE the padded byre-jerkin from its peg");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -116,13 +113,10 @@ describe("wolf_winter rooms react to preparation object state", () => {
     expect(s.inventory).toContain("byre_jerkin");
     expect(commands(s)).not.toContain("don padded byre-jerkin");
     expect(commands(s)).not.toContain("drop padded byre-jerkin");
-    expect(narrations(donned.events)).toContain("drag the padded byre-jerkin on");
+    expect(narrations(donned.events)).toContain("don the padded byre-jerkin");
     expect(narrations(donned.events)).not.toContain("off its peg");
-    expect(desc(s)).toContain(
-      "peg by the door is bare where the steading's padded byre-jerkin hung",
-    );
-    expect(desc(s)).not.toContain("not yet on your back");
-    expect(desc(s)).not.toContain("carried hide will not turn teeth");
+    expect(desc(s)).toContain("You already took the padded byre-jerkin from its empty peg");
+    expect(desc(s)).not.toContain("Carrying it does not add its defense bonus");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -144,8 +138,7 @@ describe("wolf_winter rooms react to preparation object state", () => {
     expect(s.flags["jerkin_donned"]).toBe(true);
     expect(s.inventory).toContain("byre_jerkin");
     expect(s.vars.defense).toBe(5);
-    expect(desc(s)).toContain("jerkin peg is bare");
-    expect(desc(s)).toContain("padded hide now on your back");
+    expect(desc(s)).toContain("You are wearing the padded byre-jerkin");
     expectCommittedLureFeedAvailable(s);
 
     s = actById(s, "take_winter_feed_sack").state;
@@ -167,8 +160,7 @@ describe("wolf_winter rooms react to preparation object state", () => {
     expect(s.flags["byre_jerkin_taken"]).toBe(true);
     expect(s.inventory).toContain("byre_jerkin");
     expect(s.vars.defense).toBe(3);
-    expect(desc(s)).toContain("jerkin peg is bare");
-    expect(desc(s)).toContain("not yet on your back");
+    expect(desc(s)).toContain("DON padded byre-jerkin before going to the Broken Paling");
     expectCommittedLureFeedAvailable(s);
 
     s = actById(s, "use_byre_jerkin").state;
@@ -176,9 +168,8 @@ describe("wolf_winter rooms react to preparation object state", () => {
     expect(s.flags["jerkin_donned"]).toBe(true);
     expect(s.inventory).toContain("byre_jerkin");
     expect(s.vars.defense).toBe(5);
-    expect(desc(s)).toContain("jerkin peg is bare");
-    expect(desc(s)).toContain("padded hide now on your back");
-    expect(desc(s)).not.toContain("not yet on your back");
+    expect(desc(s)).toContain("You are wearing the padded byre-jerkin");
+    expect(desc(s)).not.toContain("Carrying it does not add its defense bonus");
     expectCommittedLureFeedAvailable(s);
 
     s = actById(s, "take_winter_feed_sack").state;
@@ -198,12 +189,14 @@ describe("wolf_winter rooms react to preparation object state", () => {
     expect(s.flags["strategy_drive_committed"]).toBe(true);
     expect(s.inventory).toContain("drive_signal_rope_kit");
     expect(s.vars.defense).toBe(3);
-    expect(desc(s)).toContain("The drive is irreversible");
-    expect(desc(s)).toContain("Cade's two-charge rig rides with you now");
-    expect(desc(s)).toContain("go north");
-    expect(desc(s)).toContain("shutter signal at the broken paling");
-    expect(desc(s)).toContain("cannot switch to lure or combat");
-    expect(desc(s)).not.toContain("Take Cade's two-charge rig");
+    expect(desc(s)).toContain("DRIVE is final");
+    expect(desc(s)).toContain("Cade's two-charge signal-and-rope rig");
+    expect(desc(s)).toContain("Go north");
+    expect(desc(s)).toContain(
+      "FIRE drive shutter signal WITH Cade's two-charge signal-and-rope rig",
+    );
+    expect(desc(s)).toContain("HUNT, LURE, and FORTIFY are closed");
+    expect(desc(s)).not.toContain("TAKE Cade's two-charge signal-and-rope rig");
     expect(desc(s)).not.toContain("west");
     expect(lookNarration(s)).toBe(desc(s));
   });
@@ -234,7 +227,7 @@ describe("wolf_winter rooms react to preparation object state", () => {
     expect(ids).toContain("wedge_paling_rail");
     expect(ids).not.toContain("take_paling_rail");
     expect(ids).not.toContain("drop_paling_rail");
-    expect(desc(s)).toContain("fallen clear into the snow at your feet");
+    expect(desc(s)).toContain("SET the Albany relief spear against the yearling's rush");
     expect(lookNarration(s)).toBe(desc(s));
   });
 });

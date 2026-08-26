@@ -15,18 +15,18 @@ import type { GameState } from "../../src/core/state.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 
 const NORTH_PENDING_GUIDANCE =
-  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+  "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const FULL = { compact_context: false, compact_result: false } as const;
 const LIVING_BOUNDARY =
-  /(?:name hunt[^]*cross uncommitted|cross (?:north )?uncommitted[^]*hunt|hunt commits[^]*north crossing)[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast|closes[^]*(?:other plans|other three))/i;
+  /(?:going north(?: now| without choosing LURE)? chooses HUNT|go north to choose HUNT)[^]*(?:permanently close(?:s)? (?:LURE, DRIVE, and FORTIFY|the other three plans)|closes (?:the )?other plans)/i;
 const ROOT_COMMITMENT_MODEL =
-  /Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Other plans begin only when you choose them[^]*Choosing one closes the rest[^]*Preparation helps without choosing/i;
+  /Reviews choose nothing[^]*Choose LURE, DRIVE, or FORTIFY in review[^]*Choose HUNT with GO north or RELEASE JUNE[^]*One choice permanently closes the rest[^]*PREPARE SUPPORT chooses nothing/i;
 const HUNT_BOUNDARY =
-  /HUNT — Goal: hold home\/herd\/stores[^]*Cost: wolves may die; cattle\/outer defense at risk[^]*Help: Cade lessons \+ jerkin[^]*Ask only; choose north\/RELEASE JUNE/i;
+  /HUNT — Protect home and herd[^]*Wolves may die[^]*failure risks cattle[^]*Cade's tactics and padded byre-jerkin help[^]*Go north or RELEASE JUNE to choose/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string, forcedRoll?: number): GameState {
@@ -146,7 +146,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     uncommitted = act(uncommitted, "talk_houndsman");
     const rootDialogue = observation(uncommitted);
     expect(rootDialogue.dialogue?.npc_text).toMatch(ROOT_COMMITMENT_MODEL);
-    expect(rootDialogue.dialogue?.npc_text.trimEnd().length).toBeLessThanOrEqual(360);
+    expect(rootDialogue.dialogue?.npc_text.trimEnd().length).toBeLessThanOrEqual(380);
     const rootPlanActions = rootDialogue.available_actions.filter((action) =>
       ["ask_hunt", "ask_lure", "ask_drive", "ask_fortify"].includes(action.id),
     );
@@ -159,13 +159,13 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootCommands = rootPlanActions.map((action) => action.command).join("\n");
     expect(rootCommands).toMatch(HUNT_BOUNDARY);
     expect(rootCommands).toMatch(
-      /LURE — Goal: move wolves alive; keep herd[^]*Cost: last feed \+ fence; first foul risks two cattle[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
+      /LURE — Move the wolves alive and protect the herd[^]*Costs Cade's last feed[^]*fence stays broken[^]*First-action failure adds 2 cattle alarm[^]*Review only/i,
     );
     expect(rootCommands).toMatch(
-      /DRIVE — Goal: evacuate people\/herd; wolves live[^]*Cost: no retreat; outer defense \+ wound\/two cattle\/rig[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
+      /DRIVE — Evacuate people and cattle; wolves live[^]*Lose retreat and outer defense[^]*Crisis costs 6 HP, two cattle, or the rig[^]*Review only/i,
     );
     expect(rootCommands).toMatch(
-      /FORTIFY — Goal: keep home\/herd; wolves live[^]*Cost: no retreat; expose property for Cade aid or spend seals[^]*Help: Repair[^]*Ask only; choose inside/i,
+      /FORTIFY — Protect home and herd until dawn; wolves live[^]*Lose retreat[^]*Cade's shutters and expose his property[^]*spend Albany's seals[^]*Review only/i,
     );
     expect(`${rootDialogue.dialogue?.npc_text}\n${rootCommands}`).not.toMatch(
       /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b|\bDC\s*\d/i,
@@ -210,7 +210,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const lureDialogue = observation(uncommitted);
     expect(lureDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
     expect(lureDialogue.dialogue?.npc_text).toMatch(
-      /first foul risks two cattle[^]*no retry[^]*rail recovery/i,
+      /failed first LAY action[^]*raises cattle alarm by 2[^]*cannot be retried[^]*fallen paling-rail recovery/i,
     );
     expect(compactRpgObservation(lureDialogue, [], { includeActions: true }).dialogue?.[1]).toMatch(
       LIVING_BOUNDARY,
@@ -218,7 +218,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     expect(
       lureDialogue.available_actions.find((action) => action.id === "ask_lure_back")?.command,
     ).toMatch(
-      /BACK[^]*LURE stays open[^]*North crossing commits HUNT[^]*retires LURE\/DRIVE\/FORTIFY/i,
+      /BACK[^]*Compare all four plans without choosing LURE[^]*Going north chooses HUNT[^]*closes LURE, DRIVE, and FORTIFY/i,
     );
 
     uncommitted = act(uncommitted, "ask_lure_back");
@@ -241,15 +241,15 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       LIVING_BOUNDARY,
     );
     expect(beforeCrossing.description).toMatch(
-      /lantern[^]*day-book[^]*worth reading[^]*before you leave the yard/i,
+      /READ day-book[^]*TALK TO old Cade the houndsman before going north[^]*Going north now chooses HUNT/i,
     );
-    expect(beforeCrossing.description).toMatch(/young wolf/i);
+    expect(beforeCrossing.description).toMatch(/yearling wolf/i);
 
     uncommitted = act(uncommitted, "read_day_book");
     const afterReading = observation(uncommitted);
     expect(afterReading.description).toMatch(LIVING_BOUNDARY);
-    expect(afterReading.description).toMatch(/you checked its last wolf-count/i);
-    expect(afterReading.description).toMatch(/young wolf/i);
+    expect(afterReading.description).toMatch(/You read the wolf count/i);
+    expect(afterReading.description).toMatch(/yearling wolf/i);
     expect(afterReading.description).not.toMatch(/worth reading before you leave the yard/i);
 
     uncommitted = act(uncommitted, "go_north");
@@ -258,7 +258,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     uncommitted = act(uncommitted, "talk_houndsman");
     const afterUncommittedCrossing = observation(uncommitted);
     expect(afterUncommittedCrossing.dialogue?.npc_text).toMatch(
-      /broken paling fixed hunt-and-hold[^]*commitments are permanently closed/i,
+      /Going north chose HUNT[^]*LURE, DRIVE, and FORTIFY are permanently closed/i,
     );
     expect(afterUncommittedCrossing.dialogue?.npc_text).not.toMatch(
       /before you cross|cross north uncommitted|crossing uncommitted/i,
@@ -266,7 +266,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     expect(
       afterUncommittedCrossing.available_actions.find((action) => action.id === "ask_leave")
         ?.command,
-    ).toBe("ask: LEAVE — Exit Cade's plan review; this action commits nothing.");
+    ).toBe("ask: LEAVE — Exit without choosing a plan.");
     expect(enumerateRpgActions(index, uncommitted).map((action) => action.id)).not.toEqual(
       expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify", "ask_commit_lure"]),
     );
@@ -282,30 +282,32 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       /cross north uncommitted|crossing uncommitted|hunt-and-hold/i,
     );
     expect(beforeCommittedCrossing.dialogue?.npc_text).toMatch(
-      /store-shed west[^]*go west[^]*take the sack[^]*return east[^]*cross north/i,
+      /LURE is chosen[^]*Go west and TAKE Cade's winter-feed sack[^]*go east[^]*go north[^]*LAY[^]*CAST[^]*CAST/i,
     );
     expect(
       beforeCommittedCrossing.available_actions.find((action) => action.id === "ask_leave")
         ?.command,
-    ).toMatch(/LEAVE[^]*Begin committed LURE[^]*finite feed west/i);
+    ).toMatch(/LEAVE[^]*Begin LURE[^]*Go west and TAKE Cade's winter-feed sack/i);
     committed = act(committed, "ask_leave");
     const committedPickup = observation(committed);
     expect(committedPickup.description).toMatch(
-      /released[^]*feed sack[^]*west[^]*take the winter-feed sack[^]*return east[^]*go north[^]*not available before you committed/i,
+      /Go west and TAKE Cade's winter-feed sack[^]*Go east[^]*go north and LAY downwind feed line WITH Cade's winter-feed sack[^]*available only after you chose LURE/i,
     );
     expect(committedPickup.available_actions.map((action) => action.id)).toContain("go_west");
     const pendingNorth = committedPickup.blocked_exits.find(
       (exit) => exit.direction === "north",
     )?.message;
     expect(pendingNorth).toBe(NORTH_PENDING_GUIDANCE);
-    expect(pendingNorth).toMatch(/LURE:[^]*fetch feed west/i);
+    expect(pendingNorth).toMatch(
+      /During LURE[^]*shown CALL or feed action[^]*feed is west[^]*hatch is west then up/i,
+    );
     const compactPickup = compactRpgObservation(
       committedPickup,
       committedPickup.available_actions.map((action) => action.id),
       { includeActions: true },
     );
     expect(compactPickup.text).toMatch(
-      /go west[^]*take the winter-feed sack[^]*return east[^]*go north/i,
+      /go west[^]*TAKE Cade's winter-feed sack[^]*go east[^]*go north/i,
     );
     expect(compactPickup.actions).toContain("go_west");
     expect(compactPickup.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
@@ -314,7 +316,9 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     );
     committed = act(committed, "go_west");
     const committedStore = observation(committed);
-    expect(committedStore.description).toMatch(/take the finite feed before the breach/i);
+    expect(committedStore.description).toMatch(
+      /TAKE Cade's winter-feed sack before going to the Broken Paling[^]*only feed sack for LURE/i,
+    );
     expect(committedStore.available_actions.map((action) => action.id)).toContain(
       "take_winter_feed_sack",
     );
@@ -325,10 +329,10 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     expect(committed.flags.strategy_lure_committed).toBe(true);
     const preFoulPaling = observation(committed);
     expect(preFoulPaling.description).toMatch(
-      /cast Cade's feed first[^]*before a foul[^]*rail is only a combat funnel[^]*if the cast fouls[^]*braced or bound rail can pen the yearling alive[^]*spear stroke commits the hybrid fight/i,
+      /LAY downwind feed line WITH Cade's winter-feed sack[^]*Before a failed LAY action[^]*paling-rail only supports combat[^]*After failure[^]*braced or bound rail can redirect the yearling alive[^]*MAKE a guarded strike and abandon the living recovery/i,
     );
     expect(compactRpgObservation(preFoulPaling, [], { includeActions: true }).text).toMatch(
-      /cast Cade's feed first[^]*before a foul[^]*rail is only a combat funnel[^]*if the cast fouls[^]*braced or bound rail can pen the yearling alive[^]*spear stroke commits the hybrid fight/i,
+      /LAY downwind feed line WITH Cade's winter-feed sack[^]*Before a failed LAY action[^]*paling-rail only supports combat[^]*After failure[^]*braced or bound rail can redirect the yearling alive[^]*MAKE a guarded strike and abandon the living recovery/i,
     );
     expect(enumerateRpgActions(index, committed).map((action) => action.id)).toContain(
       "use_winter_feed_sack_on_downwind_feed_line",
@@ -340,7 +344,9 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     docket = act(docket, "use_split_rail_guard_on_downwind_feed_line");
     docket = act(docket, "go_south");
     const docketYard = observation(docket);
-    expect(docketYard.description).toMatch(/sealed docket[^]*call its named sequence here/i);
+    expect(docketYard.description).toMatch(
+      /CALL Jamie's sealed relief protocol[^]*used once here[^]*carry the feed west/i,
+    );
     expect(docketYard.available_actions.map((action) => action.id)).toContain(
       "use_relief_protocol_docket",
     );
@@ -353,20 +359,24 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       docketYard.available_actions.map((action) => action.id),
       { includeActions: true },
     );
-    expect(compactDocketYard.text).toMatch(/sealed docket[^]*call its named sequence here/i);
+    expect(compactDocketYard.text).toMatch(
+      /CALL Jamie's sealed relief protocol[^]*used once here[^]*carry the feed west/i,
+    );
     expect(compactDocketYard.actions).toContain("use_relief_protocol_docket");
     expect(compactDocketYard.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
-    expect(NORTH_PENDING_GUIDANCE).toMatch(/LURE: call any shown docket/i);
+    expect(NORTH_PENDING_GUIDANCE).toMatch(/During LURE[^]*shown CALL or feed action/i);
 
     committed = act(committed, "go_south");
     committed = act(committed, "talk_houndsman");
     const afterCommittedCrossing = observation(committed);
-    expect(afterCommittedCrossing.dialogue?.npc_text).toMatch(/feed-and-hounds line is in motion/i);
+    expect(afterCommittedCrossing.dialogue?.npc_text).toMatch(
+      /Continue LURE with the next action shown[^]*no replacement winter-feed sack[^]*no restart[^]*no plan change/i,
+    );
     expect(afterCommittedCrossing.dialogue?.npc_text).not.toMatch(
       /before you cross|cross north uncommitted|crossing uncommitted|hunt-and-hold/i,
     );
     expect(
       afterCommittedCrossing.available_actions.find((action) => action.id === "ask_leave")?.command,
-    ).toBe("ask: LEAVE — Exit Cade's plan review; this action commits nothing.");
+    ).toBe("ask: LEAVE — Exit without choosing a plan.");
   });
 });

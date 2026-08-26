@@ -343,7 +343,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       expect(profile.character.promises).toHaveLength(1);
       expect(profile.character.relationships).toHaveLength(2);
       expect(profile.preview).toMatch(
-        /Contact: .*Skill edge: .*Value: .*Kit: .*Funds: .*Standing: .*Knowledge: .*Obligation:/,
+        /Skill edge: .*Value: .*Knowledge: .*Kit: .*Sponsor: .*Money: .*Standing: .*Obligation:/,
       );
 
       const selected = registerSession(profile.id);
@@ -394,8 +394,8 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     const refusal = REGISTRATION.profiles.find(
       (profile) => profile.id === "albany:unaffiliated_courier",
     );
-    expect(refusal?.consequence).toMatch(/decline institutional sponsorship/i);
-    expect(refusal?.consequence).toMatch(/instead of reopening the same question/i);
+    expect(refusal?.consequence).toMatch(/no faction sponsor/i);
+    expect(refusal?.consequence).toMatch(/Emery witnesses your bond[^]*return or publicly cancel/i);
   });
 
   it("requires registration before the first overworld quest and keeps refusal authored", () => {
@@ -413,10 +413,10 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(session.campaignCharacterState().background).toBeNull();
     expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
     expect(() => session.previewQuestStart(wolf.id)).toThrow(
-      /complete Enter Albany's Relief Compact.*Rowan Quill.*Albany Civic Center/i,
+      /Before starting the first quest, complete Choose Your Background with Rowan Quill in Albany Civic Center/i,
     );
     expect(() => session.startQuest(wolf.id)).toThrow(
-      /before starting this journey's first quest/i,
+      /Before starting the first quest, complete Choose Your Background/i,
     );
     expect(session.snapshot().startedQuestIds).toEqual([]);
 
@@ -425,13 +425,15 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     session.chooseJourneyStory("albany:unaffiliated_courier");
     expect(session.journey().storyChoice).toMatchObject({ kind: "relief_oath" });
     expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
-    expect(() => session.previewQuestStart(wolf.id)).toThrow(/relief oath|relief terms/i);
+    expect(() => session.previewQuestStart(wolf.id)).toThrow(
+      /Choose Choose Your Wolf-Winter Promise/i,
+    );
     revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
     session.chooseJourneyStory(DEFAULT_OATH_ID);
     expect(session.journey().storyChoice).toMatchObject({ kind: "lead_source" });
     expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
     expect(() => session.previewQuestStart(wolf.id)).toThrow(
-      /certify .*Wolf-Winter Source Packet/i,
+      /Choose Choose One Wolf-Winter Report/i,
     );
     session.chooseJourneyStory(DEFAULT_SOURCE_ID);
     moveSessionToArea(session, WORLD.opening_preparation!.area);

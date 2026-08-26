@@ -20,13 +20,13 @@ import type { McpObservation } from "./types.js";
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
 const COMPACT_MORE_CHOICES_INDEX = 12;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 11 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 12 as const;
 export const JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT = 320;
 export const JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT = 50;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
-  "Technical detail and complete terms are staged; inspect this exact option before choosing if you need them." as const;
+  "Inspect this option to see its full terms. Inspection does not choose it." as const;
 export const JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION =
-  "Choose from the player-facing summaries, or inspect one visible option for exact terms; inspection is read-only and commits nothing." as const;
+  "Choose from these summaries. To see full terms, inspect one option. Inspection does not choose it." as const;
 
 export type JourneyStoryChoiceComparisonOption = Readonly<{
   id: string;
@@ -252,19 +252,17 @@ export function journeyStoryChoiceOptionById(
 
 function exactStationSituationalBoundary(
   prompt: Pick<JourneyStoryChoicePrompt, "id" | "kind">,
-  option: Pick<JourneyStoryChoiceOption, "id" | "label">,
+  option: Pick<JourneyStoryChoiceOption, "id">,
 ): string | undefined {
   const boundary =
     prompt.id === "albany:wolf_preparation" &&
     prompt.kind === "preparation" &&
-    option.id === "albany:prep_relief_protocol" &&
-    option.label === "Jamie's Relief Protocol"
-      ? "May never trigger. In LURE, foul the first feed cast, fail the public wedge, spend the split-rail guard to redirect the yearling alive, then return to Cade before the loft cast. A clean cast, braced rail, or other recovery gets no benefit."
+    option.id === "albany:prep_relief_protocol"
+      ? "This bonus may not trigger. In LURE, it applies only if you foul the first feed cast, fail the public wedge, use the split-rail guard to redirect the yearling alive, and return to Cade before the loft cast. A clean cast, braced rail, or different recovery gives no bonus."
       : prompt.id === "albany:wolf_ally_commitment" &&
           prompt.kind === "ally" &&
-          option.id === "albany:ally_june_cattle_first" &&
-          option.label === "Grant June Cattle-First Authority"
-        ? "May never trigger. June lowers cattle alarm when a recovered LURE leaves the herd pressing, or prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized failed first FORTIFY seal at pressure 3+. Clean DRIVE, pressure-2/mobile-stabilized FORTIFY gain nothing; no combat help; first wolf death ends her help."
+          option.id === "albany:ally_june_cattle_first"
+        ? "June's help may not trigger. She lowers cattle alarm after recovered LURE if the herd presses. She prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized first FORTIFY failure at pressure 3+. No help for clean DRIVE, lower/stabilized FORTIFY, or combat. Her help ends when a wolf dies."
         : undefined;
   if (boundary === undefined) return undefined;
   if (boundary.length > JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT) {
@@ -285,7 +283,7 @@ function compactJourneyStoryChoiceBriefSummary(
   const highlights =
     summary.highlights ??
     (kind === "preparation" && summary.checkFit
-      ? ([Object.freeze({ label: "Governing skill", value: summary.checkFit })] as const)
+      ? ([Object.freeze({ label: "Check skill", value: summary.checkFit })] as const)
       : undefined);
   return Object.freeze({
     commitment: summary.commitment,

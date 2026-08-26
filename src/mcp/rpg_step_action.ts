@@ -102,8 +102,8 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     return {
       ...rejection,
       rejection_reason: s.embeddedCharacterContinuity
-        ? `${rejection.rejection_reason} Embedded quests can recover character continuity ` +
-          "with get_observation include_character_continuity:true."
+        ? `${rejection.rejection_reason} To restore the embedded character context, call ` +
+          "get_observation with include_character_continuity:true."
         : rejection.rejection_reason,
       journeyDecision: excludedJourneyDecision("rejected"),
       journeyActionId: null,

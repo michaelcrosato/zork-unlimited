@@ -79,7 +79,7 @@ const ROUTES = {
     finalAlarm: 4,
     endingId: "ending_pack_diverted_cattle_scattered",
     returnSummary:
-      "You reached Cade by the exposed ridge: faster and better sighted across the whole byre, with the cattle already alarmed by the visible descent.",
+      "You reached Cade quickly by the exposed ridge. You saw the full byre, but the cattle saw you and became alarmed.",
   },
   stockway: {
     approachId: "albany:wolf_approach_sheltered_stockway",
@@ -107,7 +107,7 @@ const ROUTES = {
     finalAlarm: 3,
     endingId: "ending_pack_diverted",
     returnSummary:
-      "You reached Cade by the sheltered stockway: slower and less tiring, with the herd calm and the byre's weather and sight lines concealed.",
+      "You reached Cade by the sheltered stockway. The trip took longer, but you arrived less tired and kept the cattle calm.",
   },
 } as const;
 
@@ -447,9 +447,9 @@ function playCleanLure(
   );
   expect(completion?.kind).toBe("quest_done");
   expect(completion?.text).toContain(
-    `${spec.returnSummary} Registration receipt — Rowan Quill reconciles`,
+    `${spec.returnSummary} Registration complete. Rowan Quill records`,
   );
-  expect(completion?.text).toMatch(/The truthful-account promise changed active → kept\.$/u);
+  expect(completion?.text).toMatch(/Promise kept: give a truthful account\.$/u);
   expect(completion?.questCompletionBoundary?.acceptedDecisions).toBe(
     finalStep.journey.acceptedDecisions,
   );

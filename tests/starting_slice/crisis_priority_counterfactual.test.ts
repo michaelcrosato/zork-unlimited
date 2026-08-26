@@ -91,18 +91,28 @@ function commitDrive(withJune = false, withDrover = false): GameState {
 
   expect(state.flags.strategy_drive_committed).not.toBe(true);
   const driveBrief = buildRpgObservation(index, state).dialogue?.npc_text ?? "";
-  expect(driveBrief).toMatch(/drive evacuates people\/herd[^]*forcing the pack clear/i);
-  expect(driveBrief).toMatch(/(?:outer defense[^]*lost|loses outer defense)/i);
   expect(driveBrief).toMatch(
-    /commit starts herd[^]*closes (?:lure\/hunt\/fortify|other plans|alternatives)/i,
+    /DRIVE evacuates (?:the )?people and (?:cattle alive|herd while keeping all wolves alive)/i,
   );
-  expect(driveBrief).toMatch(/(?:prepare\/don gear|don gear)[^]*first/i);
-  expect(driveBrief).toMatch(/miss[^]*no retry[^]*hurdle recovery/i);
-  expect(driveBrief).toMatch(/crisis(?::|(?: still)? costs)[^]*wound[^]*two cattle[^]*rig/i);
+  expect(driveBrief).toMatch(/loses (?:retreat and )?outer defense/i);
+  expect(driveBrief).toMatch(
+    withJune
+      ? /permanently loses retreat and outer defense/i
+      : /Choosing DRIVE closes HUNT, LURE, and FORTIFY/i,
+  );
+  expect(driveBrief).toMatch(
+    /Complete (?:offered gear preparation first|any gear preparation still offered before choosing DRIVE)/i,
+  );
+  expect(driveBrief).toMatch(
+    /(?:first signal fails|failure)[^]*cannot be retried[^]*loose drive hurdle/i,
+  );
+  expect(driveBrief).toMatch(
+    /Crisis (?:still )?costs(?: a (?:lasting|persistent) wound and)? 6 HP[^]*two cattle[^]*rig/i,
+  );
   expect(
     enumerateRpgActions(index, state).find((option) => option.id === "ask_commit_drive")?.command,
   ).toMatch(
-    /FINAL COMMITMENT[^]*DRIVE[^]*start herd[^]*forfeit outer defense[/]retreat[^]*Crisis costs wound[^]*two cattle[^]*rig[^]*close HUNT[/]LURE[/]FORTIFY/i,
+    /CHOOSE DRIVE[^]*Start moving the herd[^]*lose outer defense and retreat[^]*Crisis costs 6 HP[^]*two cattle[^]*rig[^]*close HUNT, LURE, and FORTIFY/i,
   );
 
   state = act(state, "ask_commit_drive");
@@ -140,7 +150,7 @@ function reachCrisis(
     expectCommittedDriveWithholdsCombat(state);
     expect(actionIds(state)).toContain("examine_drive_breach_signal");
     expect(objectDescription(index.objects.get("drive_breach_signal")!, state)).toMatch(
-      /single spent call[^]*no retry/i,
+      /signal failed[^]*spent one charge[^]*cannot be retried/i,
     );
     expect(buildRpgObservation(index, state).pressure_tracks).toContainEqual(
       expect.objectContaining({
@@ -192,15 +202,19 @@ function reachCrisis(
       expect(actionIds(state)).not.toContain("use_drive_overrun_recovery");
       const observation = buildRpgObservation(index, state);
       expect(observation.description).toMatch(
-        /June[^]*lower swing-gate[^]*-2 HP self-brace is blocked[^]*hear her independent decision/i,
+        /failed drive shutter signal caused Overrun[^]*June can brace the lower swing-gate without your 2 HP cost[^]*After her decision[^]*choose cattle first, people first, or relief reserve/i,
       );
       expect(
         observation.pressure_tracks?.find((track) => track.id === "pack_drive")?.band.description,
-      ).toMatch(/June's intact cattle-first lower gate can absorb it[^]*otherwise brace[^]*2 HP/i);
+      ).toMatch(
+        /failed drive shutter signal caused Overrun[^]*If June is still helping[^]*hear her decision[^]*Otherwise[^]*brace[^]*lose 2 HP/i,
+      );
       expect(observation.blocked_actions).toContainEqual(
         expect.objectContaining({
           id: "use_drive_overrun_recovery",
-          reason: expect.stringMatching(/June[^]*absorbs[^]*without your -2 HP brace/i),
+          reason: expect.stringMatching(
+            /TALK TO Road Warden June Pike[^]*cattle-first help can absorb Overrun[^]*prevent this 2 HP cost/i,
+          ),
         }),
       );
     } else {
@@ -224,7 +238,7 @@ function reachCrisis(
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
     expect(state.vars).toMatchObject({ hp: 30, pack_drive: 2 });
     expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
-      /hold Pack Drive at Crisis[^]*first signal folded[^]*instead of your hands taking the brace[^]*clean signal gains nothing/i,
+      /brace the lower swing-gate[^]*first DRIVE signal failed[^]*prevent the 2 HP Overrun cost[^]*return pack drive to Crisis[^]*If it succeeded[^]*add no benefit/i,
     );
     state = act(state, "ask_acknowledge");
   }
@@ -256,7 +270,7 @@ function finishPriority(priority: Priority, withJune = false): GameState {
   if (priority !== "reserve") {
     expect(actionIds(state)).toContain("examine_drive_signal_rope_kit");
     expect(objectDescription(index.objects.get("drive_signal_rope_kit")!, state)).toMatch(
-      /preserves[^]*closed the option to sacrifice/i,
+      /Both rig charges are spent[^]*chosen cattle-first or people-first priority returns[^]*relief-reserve priority is closed/i,
     );
   }
 
@@ -317,12 +331,12 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
         {
           direction: "south",
           message:
-            "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.",
+            "South is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the currently displayed gear action, then go north.",
         },
         {
           direction: "west",
           message:
-            "West is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.",
+            "West is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the currently displayed gear action, then go north.",
         },
       ]),
     );
@@ -333,7 +347,7 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     expect(buildRpgObservation(index, launched).blocked_exits).toContainEqual({
       direction: "south",
       message:
-        "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: follow shown paling steps until north opens.",
+        "South is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the shown Broken Paling action to open north.",
     });
 
     let lure = fresh();
@@ -390,7 +404,7 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     expect(actionIds(prepared)).toContain("use_drive_drover_route_marks");
     expect(actionIds(unprepared)).not.toContain("use_drive_drover_route_marks");
     expect(objectDescription(index.objects.get("drive_drover_route_marks")!, prepared)).toMatch(
-      /Streetwise[^]*DC 12[^]*extra pack-pressure[^]*-2 HP[^]*loose hurdle/i,
+      /Streetwise[^]*DC 12[^]*lowers pack drive by 1[^]*prevents the later 2 HP[^]*loose drive hurdle/i,
     );
 
     let recovered = act(structuredClone(prepared), "use_drive_drover_route_marks", "best");
@@ -450,9 +464,11 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     expect(solo).toMatchObject({ vars: { pack_drive: 2, hp: 28 } });
     expect(solo.flags.june_drive_cattle_line_taken).not.toBe(true);
     expect(withJune.journal.join("\n")).toMatch(
-      /June[^]*failed-signal Overrun[^]*without the player's -2 HP brace/i,
+      /June braces the lower swing-gate[^]*prevents the 2 HP Overrun cost after a failed DRIVE signal[^]*sets pack drive to Crisis[^]*successful signal gains no benefit[^]*crisis priority remains/i,
     );
-    expect(solo.journal.join("\n")).toMatch(/overrun at the swing-gate \(-2 HP\)/i);
+    expect(solo.journal.join("\n")).toMatch(
+      /brace the swing-gate and lose 2 HP[^]*pack drive returns to Crisis/i,
+    );
     expect(actionIds(withJune)).toEqual(actionIds(solo));
   });
 
@@ -506,7 +522,7 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     expect(state.vars.score ?? 0).toBe(0);
     expect(state.inventory).toContain("drive_signal_rope_kit");
     expect(state.journal.join("\n")).toMatch(
-      /no retry[^]*loose hurdle[^]*second and final[^]*overrun/i,
+      /cannot be retried[^]*loose drive hurdle[^]*final rig charge[^]*lose 2 HP/i,
     );
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
   });
@@ -547,7 +563,7 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     expect(cattle.inventory).toContain("drive_signal_rope_kit");
     expect(cattle.flags.june_drive_cattle_line_taken).toBe(true);
     expect(buildRpgObservation(index, cattle).ending?.text).toMatch(
-      /June Pike[^]*Cade and every rider are clear[^]*wound[^]*abandoned outer steading line/i,
+      /Cade, June Pike, every rider, and the whole herd escape[^]*all three wolves remain alive[^]*June independently held the lower gate[^]*6 HP and a persistent wound[^]*promise remains intact[^]*outer defense is abandoned[^]*rig returns for repair/i,
     );
 
     expect(person).toMatchObject({
@@ -557,7 +573,7 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     });
     expect(person.inventory).toContain("drive_signal_rope_kit");
     expect(buildRpgObservation(index, person).ending?.text).toMatch(
-      /every rider clear[^]*two cattle[^]*outer steading defense line was abandoned/i,
+      /Cade and every rider escape[^]*all three wolves remain alive[^]*people-first crossing costs two cattle[^]*outer defense is abandoned[^]*rig returns to Albany/i,
     );
 
     expect(reserve).toMatchObject({
@@ -567,7 +583,7 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     });
     expect(reserve.inventory).not.toContain("drive_signal_rope_kit");
     expect(buildRpgObservation(index, reserve).ending?.text).toMatch(
-      /signal-and-rope rig does not return[^]*Cade and every rider are clear[^]*outer steading defense line was abandoned/i,
+      /Cade, every rider, and the whole herd escape[^]*all three wolves remain alive[^]*signal-and-rope rig is lost[^]*cut rope and housing became the final anchor[^]*outer defense is abandoned[^]*return unwounded/i,
     );
   });
 

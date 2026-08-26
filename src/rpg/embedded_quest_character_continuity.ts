@@ -12,10 +12,10 @@ import {
 import type { RpgPack } from "./schema.js";
 
 export const EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
-  "Campaign supplies, fatigue, and character record persist. Quest HP, stats, and issued inventory are local; only authored campaign imports and exports cross the boundary.";
+  "Campaign supplies, fatigue, and character history persist. Each quest uses its own HP, stats, and issued items. Only listed imports and exports transfer.";
 
 export const EMBEDDED_QUEST_COMPACT_SCOPE_NOTE =
-  "Campaign supplies, fatigue, and character persist; quest HP, stats and issued inventory are local; only authored imports/exports cross.";
+  "Campaign history, supplies, and fatigue persist. Quest HP, stats, and items stay local. Only listed transfers cross.";
 
 export type EmbeddedQuestLocalSkill = {
   id: string;

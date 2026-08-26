@@ -47,9 +47,12 @@ const RECEIPT_OWNER_BY_BACKGROUND: ReadonlyMap<string, string> = new Map([
   ["albany:unaffiliated_courier", "Rowan Quill"],
 ]);
 const RECEIPT_ACTION_BY_BACKGROUND: ReadonlyMap<string, string> = new Map([
-  ["albany:road_warden", "accepts the returned field account"],
-  ["albany:ledger_advocate", "reconciles"],
-  ["albany:ironhands_repairer", "records the insulated repair roll returned"],
+  ["albany:road_warden", "accepts your field report"],
+  ["albany:ledger_advocate", "records Use Hayden's Frost Report under Accept Aid-Only Terms"],
+  [
+    "albany:ironhands_repairer",
+    "records the insulated repair roll at 100/100 condition and closes the tool loan",
+  ],
   ["albany:unaffiliated_courier", "records the emergency tag returned"],
 ]);
 
@@ -171,7 +174,7 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
       const boundary = wolfBoundary(profile.id);
       expect(promiseStatus(boundary.character, promiseId), profile.id).toBe("active");
       expect(
-        boundary.journalEntries.some((entry) => entry.text.includes("Registration receipt —")),
+        boundary.journalEntries.some((entry) => entry.text.includes("Registration complete.")),
         profile.id,
       ).toBe(false);
 
@@ -201,7 +204,7 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
 
       expect(snapshot.journey.acceptedDecisions).toBe(boundary.journey.acceptedDecisions);
       expect(promiseStatus(snapshot.character, promiseId), profile.id).toBe("kept");
-      expect(completion.text.match(/Registration receipt —/g), profile.id).toHaveLength(1);
+      expect(completion.text.match(/Registration complete\./g), profile.id).toHaveLength(1);
       expect(completion.text, profile.id).toContain(RECEIPT_OWNER_BY_BACKGROUND.get(profile.id)!);
       expect(completion.text, profile.id).toContain(RECEIPT_ACTION_BY_BACKGROUND.get(profile.id)!);
       for (const [otherProfileId, action] of RECEIPT_ACTION_BY_BACKGROUND) {
@@ -247,7 +250,7 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
           campaignExport.ending_title,
         );
         expect(
-          completion.text.match(/Registration receipt —/g),
+          completion.text.match(/Registration complete\./g),
           `${profile.id} / ${campaignExport.ending_id}`,
         ).toHaveLength(1);
         const expectedOwner = RECEIPT_OWNER_BY_BACKGROUND.get(profile.id)!;
@@ -287,11 +290,12 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
       .journalEntries.find((entry) => entry.id === `quest_done:${WOLF.id}`)!.text;
 
     expect(returned).toContain(
-      "Rowan Quill records the emergency tag returned under Emery Sloane's witness",
+      "Rowan Quill records the emergency tag returned with Emery Sloane as witness",
     );
     expect(returned).not.toContain("publicly voids");
-    expect(voided).toContain("Rowan Quill publicly voids the emergency tag");
-    expect(voided).toContain("lawful Albany authority was invoked");
+    expect(voided).toContain(
+      "Rowan Quill cancels the emergency tag after you used Albany authority",
+    );
     expect(voided).not.toContain("Emery Sloane's witness");
   });
 
@@ -449,7 +453,7 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
       openingReliefOath: RELIEF_OATH,
       openingLeadSource: LEAD_SOURCE,
     });
-    expect(plan.entryDraft.text.match(/Registration receipt —/g)).toHaveLength(1);
+    expect(plan.entryDraft.text.match(/Registration complete\./g)).toHaveLength(1);
 
     const applicationState = {
       completedQuestIds: new Set<string>(),
@@ -491,7 +495,7 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
     expect(
       deathSession
         .snapshot()
-        .journalEntries.some((entry) => entry.text.includes("Registration receipt —")),
+        .journalEntries.some((entry) => entry.text.includes("Registration complete.")),
     ).toBe(false);
 
     const session = OverworldSession.restore(WORLD, wolfBoundary("albany:ledger_advocate"));
@@ -501,7 +505,7 @@ describe("SS-F01 — registration obligations close on truthful Wolf-Winter retu
       death: false,
     });
     const transcript = renderQuestCompletion(result);
-    expect(transcript.match(/Registration receipt —/g)).toHaveLength(1);
+    expect(transcript.match(/Registration complete\./g)).toHaveLength(1);
     expect(transcript).toBe(result.entry.text);
     expect(compactOverworldQuestCompletionResult(result).text).toBe(result.entry.text);
   });

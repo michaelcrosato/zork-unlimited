@@ -172,7 +172,7 @@ export function formatSpectateEntry(
         out.push(`   ${scene.summary}`);
       }
       if (asRecord(ctx.pending_road).id !== undefined || asRecord(p.pending_road).id !== undefined)
-        out.push(`   ⚠ road encounter — resolve before travelling on`);
+        out.push(`   ⚠ road encounter — resolve before more travel`);
       break;
     }
     case "follow_overworld_session_goal": {
@@ -202,7 +202,7 @@ export function formatSpectateEntry(
         asRecord(ctx.pending_road).id !== undefined ||
         asRecord(p.pending_road).id !== undefined
       ) {
-        out.push(`   ⚠ road encounter — resolve before travelling on`);
+        out.push(`   ⚠ road encounter — resolve before more travel`);
       }
       break;
     }
@@ -240,7 +240,7 @@ export function formatSpectateEntry(
       }
       // A pending road encounter blocks all further travel — flag it loudly.
       if (asRecord(ctx.pending_road).id !== undefined || asRecord(p.pending_road).id !== undefined)
-        out.push(`   ⚠ road encounter — resolve before travelling on`);
+        out.push(`   ⚠ road encounter — resolve before more travel`);
     }
   }
   return `${out.join("\n")}\n`;

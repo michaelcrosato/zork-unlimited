@@ -322,7 +322,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(selected.result).toEqual({
       storyChoiceId: LEAD_SOURCE.id,
       choiceId: ROWAN_SOURCE,
-      displaySummary: "Report chosen — Leave on Rowan's Civic Docket. Cost: no added time and $0.",
+      displaySummary: "Report chosen — Use Rowan's Public Report. Cost: no added time and $0.",
       consequence: sourceOption.consequence,
       goal: pending.pendingJourney.goal,
       entry: {
@@ -481,8 +481,8 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     if (!hayden) throw new Error("Expected Hayden's Albany contact.");
     const contact = restored.view().characters.find((character) => character.id === HAYDEN_ID);
     expect(contact).toMatchObject({
-      summary: expect.stringContaining("frost-heave sketch"),
-      agenda: expect.stringContaining("dangerous line"),
+      summary: expect.stringContaining("certified his frost report"),
+      agenda: expect.stringContaining("During ordinary HUNT, attempt the public wedge"),
     });
     if (!contact) throw new Error("Expected Hayden in the Station Quarter.");
     const talked = restored.talkToCharacter(HAYDEN_ID);
@@ -490,8 +490,8 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       id: `talk:${HAYDEN_ID}@frost_report_certified`,
       text: `${contact.summary} ${contact.agenda}`,
     });
-    expect(talked.entry.text).toMatch(/controlling field account/i);
-    expect(talked.entry.text).toMatch(/only if the paling fails and remains unbound/i);
+    expect(talked.entry.text).toMatch(/leave it unbound[^]*kill the yearling[^]*go north/i);
+    expect(talked.entry.text).toMatch(/skipping or repairing the rail closes this route/i);
   });
 
   it("keeps Hayden's base dispatch policy true after Rowan or Jamie is already certified", () => {
@@ -503,8 +503,9 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       session.chooseJourneyStory(DEFAULT_PREPARATION);
       session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION);
       const hayden = session.view().characters.find((candidate) => candidate.id === HAYDEN_ID);
-      expect(hayden?.agenda).toContain("controlling source certification");
-      expect(hayden?.agenda).toContain("settled packets carry route timing");
+      expect(hayden?.agenda).toBe(
+        "Hayden handles route reports, winter dispatches, and field returns.",
+      );
       expect(hayden?.agenda).not.toMatch(/needs .* certified|once the packet is settled/i);
     }
   });
@@ -599,7 +600,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(haydenBlockedLoft).toEqual({
       direction: "up",
       message:
-        "Before the flank-wolf falls, settle the yearling. Then take the crawlboard named by certified testimony or Cade's committed plan, or bind a split rail; leave the sound rail set.",
+        "Up is blocked. Complete the currently listed yearling action. Then cross with a split-rail guard, Jamie's certified crawlboard route, or Cade's LURE route. A sound braced rail cannot be carried.",
     });
     expect(haydenBlockedLoft?.message).not.toMatch(/in your packet/i);
     expect(haydenCombatStore.description).not.toMatch(/Jamie's certified testimony/i);
@@ -616,21 +617,21 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     const roadRowanBefore = structuredClone(roadRowan);
     expect(roadRowan.vars).toMatchObject({ fieldcraft: 4, defense: 4 });
     expect(narrationForAction(roadRowan, "examine_relief_spear")).toMatch(
-      /road-warden stamp[^]*Fieldcraft 4[^]*starting DEF to 4 instead of its base 3[^]*Rowan's unaugmented civic docket[^]*public routes and the split-rail recovery only[^]*no certified crawlboard or frost-brace evidence/i,
+      /Albany relief spear[^]*Fieldcraft 4 set starting DEF to 4 instead of 3[^]*Rowan's civic docket provides only the public routes and split-rail guard recovery[^]*no certified feed-hauler's crawlboard or frost-jammed door-brace option/i,
     );
     expect(roadRowan).toEqual(roadRowanBefore);
 
     const roadJamie = launchMcpWolf(JAMIE_SOURCE, COUNTERFACTUAL_PREPARATION, ROAD_WARDEN).state;
     const roadJamieReceipt = narrationForAction(roadJamie, "examine_relief_spear");
     expect(roadJamieReceipt).toMatch(
-      /road-warden stamp[^]*Fieldcraft 4[^]*starting DEF to 4 instead of its base 3[^]*separately certified source packet remains the controlling field evidence/i,
+      /Albany relief spear[^]*base attack[^]*Fieldcraft 4 set your starting DEF to 4 instead of 3[^]*dispatch packet provides the additional action described on that packet/i,
     );
     expect(roadJamieReceipt).not.toMatch(/unaugmented civic docket/i);
 
     const courierRowan = launchMcpWolf(ROWAN_SOURCE).state;
     const courierRowanReceipt = narrationForAction(courierRowan, "examine_relief_spear");
     expect(courierRowanReceipt).toMatch(
-      /Rowan's unaugmented civic docket[^]*public routes and the split-rail recovery only[^]*no certified crawlboard or frost-brace evidence/i,
+      /Rowan's civic docket provides only the public routes and split-rail guard recovery[^]*no certified feed-hauler's crawlboard or frost-jammed door-brace option/i,
     );
     expect(courierRowanReceipt).not.toMatch(/starting DEF to 4/i);
   });
@@ -662,7 +663,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     state = act(state, "go_up");
     const loft = buildRpgObservation(wolfIndex, state);
     expect(loft.description).toMatch(
-      /Cade's local feed-plan instruction[^]*feed-hauler's crawlboard/i,
+      /CAST Cade's winter-feed sack THROUGH low wolf-hatch[^]*feed-hauler's crawlboard with Cade's winter-feed sack/i,
     );
     expect(loft.description).not.toMatch(/Jamie|packet/i);
   });
@@ -701,7 +702,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     let boundHayden = failRailWithEqualRolls(launchMcpWolf(HAYDEN_SOURCE).state);
     const forkObservation = buildRpgObservation(wolfIndex, boundHayden);
     expect(forkObservation.description).toMatch(
-      /Hayden's report marks a frost-jammed brace north.*leave the rail unbound.*bind.*commit away/is,
+      /Keeping the split fallen paling-rail unbound[^]*Hayden's frost-jammed door-brace for later[^]*BIND split paling-rail[^]*make a split-rail guard and close that option/is,
     );
     expect(
       forkObservation.available_actions.find((action) => action.id === "bind_paling_rail")?.command,
@@ -719,20 +720,21 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     const haydenSource = LEAD_SOURCE.options.find((option) => option.id === HAYDEN_SOURCE);
     if (!haydenSource) throw new Error("Expected Hayden's source option.");
     expect(haydenSource.preview).toMatch(
-      /ordinary hunt.*attempt.*wedge.*only if.*frozen.*splits.*leave.*unbound.*yearling.*go north/is,
+      /ordinary HUNT[^]*public wedge[^]*frozen ground splits it[^]*leave the pieces unbound[^]*killing the yearling[^]*go north[^]*frost brace/is,
     );
-    expect(haydenSource.preview).toMatch(/skipping.*no split.*binding.*commits away/is);
-    expect(haydenSource.preview).toMatch(/Works.*replaces.*wedge.*forgoes.*frost brace/is);
+    expect(haydenSource.preview).toMatch(
+      /Binding the rail or taking Reese's repair plan closes this route/is,
+    );
 
     const frostRoot = "maneuver_flank_wolf_frost_brace_trip";
     let ordinary = launchMcpWolf(HAYDEN_SOURCE).state;
     ordinary = act(ordinary, "use_sheltered_stockway_last_mile");
     const ordinaryCue = buildRpgObservation(wolfIndex, ordinary).description;
     expect(ordinaryCue).toMatch(
-      /Cross north uncommitted.*hunt-and-hold permanently retires.*feed lure.*signal drive.*seal-and-outlast/is,
+      /Go north to choose HUNT[^]*permanently closes LURE, DRIVE, and FORTIFY/is,
     );
     expect(ordinaryCue).toMatch(
-      /ordinary hunt.*attempt.*public wedge.*only if frozen ground splits.*leave.*unbound.*kill the yearling.*go north.*Skipping.*no split.*binding.*forgoes/is,
+      /Hayden's frost-jammed door-brace option[^]*attempt to BRACE fallen paling-rail[^]*If it splits, leave it unbound[^]*ATTACK yearling wolf[^]*go north with the bare Albany relief spear[^]*Skipping the brace or binding a split-rail guard closes that option/is,
     );
     ordinary = act(ordinary, "go_north");
     expect(actionIds(ordinary)).toContain("wedge_paling_rail");
@@ -757,9 +759,11 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     works = act(works, "use_sheltered_stockway_last_mile");
     const worksCue = buildRpgObservation(wolfIndex, works).description;
     expect(worksCue).toMatch(
-      /Cross north uncommitted.*hunt-and-hold permanently retires.*feed lure.*signal drive.*seal-and-outlast/is,
+      /Going north chooses HUNT[^]*permanently closes LURE, DRIVE, and FORTIFY/is,
     );
-    expect(worksCue).toMatch(/Works packet replaces.*wedge.*forgoes the frost-brace line/is);
+    expect(worksCue).toMatch(
+      /Reese's Works packet replaces the fallen paling-rail check[^]*Hayden's frost-jammed door-brace option will not be available/is,
+    );
     works = act(works, "go_north");
     expect(actionIds(works)).toContain("set_paling_rail");
     expect(actionIds(works)).not.toContain("wedge_paling_rail");
@@ -776,9 +780,11 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     june.flags.june_pike_present = true;
     june = act(june, "use_sheltered_stockway_last_mile");
     const juneCue = buildRpgObservation(wolfIndex, june).description;
-    expect(juneCue).toMatch(/June holds the north gate.*any wolf death ends her agreement/is);
     expect(juneCue).toMatch(
-      /Hayden's frost line requires.*attempt the public wedge.*only if.*frozen ground splits.*leave.*unbound.*kill the yearling.*go north/is,
+      /TALK TO Road Warden June Pike[^]*TALK TO old Cade the houndsman before going north[^]*Going north without Cade's feed sack, drive rig, or seals chooses HUNT[^]*any wolf death ends June's agreement/is,
+    );
+    expect(juneCue).toMatch(
+      /Hayden's frost-jammed door-brace option[^]*attempt to BRACE fallen paling-rail during HUNT[^]*If it splits, leave it unbound[^]*ATTACK yearling wolf[^]*go north with the bare Albany relief spear/is,
     );
     expect(actionIds(june)).not.toContain("go_north");
 
@@ -786,8 +792,12 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     juneWorks.flags.june_pike_present = true;
     juneWorks = act(juneWorks, "use_sheltered_stockway_last_mile");
     const juneWorksCue = buildRpgObservation(wolfIndex, juneWorks).description;
-    expect(juneWorksCue).toMatch(/June holds the north gate.*any wolf death ends her agreement/is);
-    expect(juneWorksCue).toMatch(/Works packet replaces the wedge.*forgoes the frost brace/is);
+    expect(juneWorksCue).toMatch(
+      /TALK TO Road Warden June Pike[^]*TALK TO old Cade the houndsman before going north[^]*any wolf death ends June's agreement/is,
+    );
+    expect(juneWorksCue).toMatch(
+      /Reese's Works packet closes Hayden's frost-jammed door-brace option/is,
+    );
     expect(actionIds(juneWorks)).not.toContain("go_north");
   });
 
@@ -824,7 +834,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     });
     const lureExamine = narrationForAction(lure, "examine_paling_rail");
     expect(lureExamine).toMatch(
-      /committed the fouled lure to hybrid combat.*closing.*rail recovery/is,
+      /Leave the split fallen paling-rail here and carry the remaining feed deeper[^]*guarded strike closed BIND and every other rail recovery/is,
     );
     expect(lureExamine).not.toMatch(/Hayden|frost-jammed|bare spear.*trip/is);
     const frostManeuver = loadedWolf.compiled.pack.enemies
@@ -837,6 +847,8 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
 
     const hunt = failRailWithEqualRolls(launchMcpWolf(HAYDEN_SOURCE).state);
     const huntExamine = narrationForAction(hunt, "examine_paling_rail");
-    expect(huntExamine).toMatch(/Hayden's certified report.*frost-load.*bare spear.*trip/is);
+    expect(huntExamine).toMatch(
+      /Leave it unbound for Hayden's door-brace only while the flank-wolf still stands[^]*TRIP Hayden's frost-jammed brace[^]*Binding the guard closes that option[^]*completed fights stay complete/is,
+    );
   });
 });

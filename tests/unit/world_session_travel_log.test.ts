@@ -160,7 +160,7 @@ describe("overworld session travel log restoration", () => {
         route: "Test Road",
         arrivedAt: "Day 1, 09:06",
         timing:
-          "On the road from Albany to Colonie at Day 1, 09:06; resolve this route trouble before doing town business in Colonie.",
+          "Road encounter from Albany to Colonie at Day 1, 09:06. Resolve it before taking actions in Colonie.",
         event,
       },
     });

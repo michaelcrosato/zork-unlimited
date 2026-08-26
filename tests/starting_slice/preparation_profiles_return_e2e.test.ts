@@ -225,7 +225,7 @@ function launchPreparedWolf(api: ToolApi, seed = 5) {
   });
   expect(presentedProfile.consequence).toBe(
     `Benefit: ${sourceProfile.trigger_category} Cost: 5 minutes and $0. ` +
-      `Boundary: ${sourceProfile.tradeoff}`,
+      `Tradeoff: ${sourceProfile.tradeoff}`,
   );
 
   const prepared = api.choose_overworld_session_story({
@@ -246,7 +246,7 @@ function launchPreparedWolf(api: ToolApi, seed = 5) {
   }).snapshot;
   expect(
     preparedSnapshot.journalEntries.find((entry) => entry.id === prepared.result.entry.id)?.text,
-  ).toMatch(/actual cost: 5 minutes and \$0[^]*independent bond/i);
+  ).toMatch(/Actual cost: 5 minutes and \$0[^]*Independent Courier sponsor benefit/i);
   expect(UiOverworldSession.restore(WORLD, preparedSnapshot).view().character).toEqual(
     prepared.observation.character,
   );
@@ -339,7 +339,7 @@ describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", ()
           vars: { pack_drive: 1, drive_kit_charges: 1, hp: 30 },
         });
         expect(primary.observation.description).toMatch(
-          /drop the loose hurdle[^]*living recovery/i,
+          /RELEASE loose drive hurdle[^]*redirect the yearling wolf alive[^]*signal failed and cannot be repeated/i,
         );
       }
       if (actionId === "use_drive_signal_rope_kit_on_drive_threshold_line") {
@@ -597,7 +597,9 @@ describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", ()
           vars: { cattle_alarm: 1 },
           flags: { drover_route_attempted: true, yearling_redirected: true },
         });
-        expect(primary.observation.description).toMatch(/yearling is alive[^]*high wood/i);
+        expect(primary.observation.description).toMatch(
+          /yearling wolf followed Cade's feed into the high wood alive/i,
+        );
       }
     }
 
@@ -664,9 +666,9 @@ describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", ()
       {
         id: SERVICE_ID,
         action: "rest",
-        title: "Take the Drover Recovery Cot",
+        title: "Rest After Emery's Recovery Route",
         summary:
-          "Because Emery allocated the drover route and your truthful return says Cade's byre held, the Campus stockyard clinic opens one reserved warmed cot and recovery watch.",
+          "Available after taking Emery's recovery route and returning with Cade's byre held. Spend 15 minutes to clear fatigue.",
         minutes: 15,
         providerId: "albany_city__campus__contact",
         providerName: expect.any(String),
@@ -681,8 +683,8 @@ describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", ()
       [
         SERVICE_ID,
         "rest",
-        "Take the Drover Recovery Cot",
-        expect.stringContaining("Emery allocated the drover route"),
+        "Rest After Emery's Recovery Route",
+        expect.stringContaining("returning with Cade's byre held"),
         15,
       ],
     ]);
@@ -703,7 +705,7 @@ describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", ()
       minutes: 15,
       fatigueBefore: campus.fatigue,
       fatigueAfter: 0,
-      message: expect.stringContaining("Emery allocated the drover route"),
+      message: expect.stringContaining("Emery's recovery route"),
     });
     expect(claimed.observation.serviceOffers).toEqual([]);
     expect(claimed.journey.acceptedDecisions).toBeLessThanOrEqual(45);

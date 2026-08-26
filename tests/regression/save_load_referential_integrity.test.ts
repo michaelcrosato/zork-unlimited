@@ -420,7 +420,9 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
 
   it("RPG: an authored journal entry cannot predate any player step", () => {
     const forged = forgeSave((s) => {
-      s.journal = ["You have reached the relic chamber."];
+      s.journal = [
+        "You reached the Relic Chamber. TAKE Barrow-Lord's circlet to win; PRISE sealed sarcophagus WITH iron bar to trigger a fatal ending.",
+      ];
     });
     expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ save: forged })).toThrow(/impossible journal entry count/);

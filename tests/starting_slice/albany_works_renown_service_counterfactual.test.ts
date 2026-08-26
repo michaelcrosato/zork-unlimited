@@ -134,8 +134,8 @@ describe("Works renown delayed campaign-service consumer", () => {
     expect(protectedShift.compactView().service_offers).toContainEqual([
       SERVICE,
       "rest",
-      "Take the Civic Standing Recovery Cot",
-      expect.stringContaining("Rowan"),
+      "Rest at the Civic Counter",
+      expect.stringMatching(/truthful held-byre return[^]*13 Capital \/ Mohawk renown/i),
       15,
     ]);
 

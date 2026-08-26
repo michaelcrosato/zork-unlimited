@@ -163,7 +163,7 @@ describe("opening relief allocation authoring", () => {
     });
     expect(exactLegacyPrompt.options[0]!.consequence).toBe(
       `Benefit: ${exactLegacy.options[0]!.protects} Cost: 10 minutes. ` +
-        `Boundary: Leaves exposed: ${exactLegacy.options[0]!.leaves_exposed}`,
+        `Tradeoff: Leaves exposed: ${exactLegacy.options[0]!.leaves_exposed}`,
     );
 
     const partiallyCategorized = cloneOpeningReliefAllocation(scene);
@@ -282,7 +282,7 @@ describe("opening relief allocation application and presentation", () => {
     expect(prompt.options).toHaveLength(3);
     expect(prompt.options[0]!.consequence).toBe(
       "Benefit: Opening relief line at Cade's steading. Cost: 10 minutes. " +
-        "Boundary: Leaves exposed: Albany's resident counter and the roaming reserve.",
+        "Tradeoff: Leaves exposed: Albany's resident counter and the roaming reserve.",
     );
     expect(prompt.options[0]!.summary).toEqual({
       commitment: scene.options[0]!.summary,
@@ -297,7 +297,7 @@ describe("opening relief allocation application and presentation", () => {
         "immediateCost",
         "tradeoff",
       ]);
-      expect(option.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
+      expect(option.consequence).toMatch(/^Benefit: .+ Cost: .+\. Tradeoff: .+$/);
       expect(openingSelectionReceiptWordCount(option.consequence)).toBeLessThanOrEqual(
         OPENING_SELECTION_RECEIPT_WORD_LIMIT,
       );

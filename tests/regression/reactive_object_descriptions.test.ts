@@ -95,7 +95,7 @@ describe("bug_0023 — reactive object descriptions (objectDescription)", () => 
   });
 });
 
-describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'welded shut' once levered open", () => {
+describe("bug_0023 — live on The Cold Forge: the slag grate stops reading as sealed once levered open", () => {
   const loaded = loadRpgSourceFile("content/rpg/quests/cold_forge.yaml");
   if (!loaded.ok) throw new Error("cold_forge must compile");
   const pack = loaded.compiled.pack;
@@ -125,7 +125,7 @@ describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'wel
     return eff?.narrate ?? "";
   };
 
-  it("examining the grate reads 'welded shut' before levering, and the open text after grate_open", () => {
+  it("examining the grate reads as slag-sealed before levering, and open after grate_open", () => {
     // Drive the canonical buffed route to the Forge Heart, then lever the grate.
     let s = initStateForRpgPack(index, 1);
     s = act(s, move("down")); // Outer Forge
@@ -154,7 +154,7 @@ describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'wel
 
     // BEFORE: the static base description.
     expect(s.questStage["forge"]).not.toBe("grate_open");
-    expect(narration(s)).toContain("welded shut");
+    expect(narration(s)).toContain("Cooled slag seals the grate");
 
     // Lever it open (might check; retry until it gives).
     guard = 0;
@@ -164,10 +164,10 @@ describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'wel
     }
     expect(s.questStage["forge"]).toBe("grate_open");
 
-    // AFTER: the reactive variant — no longer "welded shut", now reads as open.
+    // AFTER: the reactive variant — no longer sealed, now reads as open.
     const after = narration(s);
-    expect(after).not.toContain("welded shut");
-    expect(after).toContain("standing open");
+    expect(after).not.toContain("Cooled slag seals the grate");
+    expect(after).toContain("slag grate is open");
 
     // Reachability unchanged: the win still fires at 50/50.
     s = act(s, move("down")); // Ember Chamber

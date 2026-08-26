@@ -60,9 +60,11 @@ describe("bug_0445 - Cold Forge plate pickup points at donning", () => {
     expect(taken.state.inventory).toContain("cold_iron_plate");
     expect(taken.state.flags["plate_donned"]).toBeUndefined();
     expect(taken.state.vars["defense"]).toBe(2);
-    expect(narrations(taken.events)).toContain("not yet on your body");
-    expect(narrations(taken.events)).toMatch(/Don it before the sentinel/i);
-    expect(taken.state.journal.at(-1)).toMatch(/only weight.*until it is buckled on/i);
+    expect(narrations(taken.events)).toContain("You carry the cold-iron plate");
+    expect(narrations(taken.events)).toMatch(/first DON teaches a lasting \+2 defense stance/i);
+    expect(taken.state.journal.at(-1)).toMatch(
+      /first DON teaches a lasting braced stance[^]*\+2 defense[^]*carrying it gives no protection/i,
+    );
     expect(commands(taken.state)).toContain("don cold-iron plate");
   });
 

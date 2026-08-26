@@ -21,11 +21,11 @@ describe("Tide-Mill Mill-House compact prose keeps the opening map visible", () 
     expect(started.context.here).toEqual(["mill_house", "The Mill-House"]);
     expect(started.context.text.length).toBeLessThanOrEqual(COMPACT_DESCRIPTION_CHAR_LIMIT);
     expect(started.context.text).not.toMatch(/\.\.\.\(\+\d+ chars\)$/);
-    expect(started.context.text).toMatch(/north=wheel-room/i);
-    expect(started.context.text).toMatch(/yard\/tool-shed/i);
-    expect(started.context.text).toMatch(/east=counting-nook/i);
-    expect(started.context.text).toMatch(/written night-order millboard/i);
-    expect(started.context.text).toMatch(/boat is caught/i);
+    expect(started.context.text).toMatch(/go north to the wheel-room/i);
+    expect(started.context.text).toMatch(/saboteur still stands/i);
+    expect(started.context.text).toMatch(/counting-nook east/i);
+    expect(started.context.text).toMatch(/READ millboard/i);
+    expect(started.context.text).toMatch(/boat is trapped/i);
     expect(started.context.exits).toEqual(expect.arrayContaining(["east", "north"]));
     expect(started.context.objects).toEqual(expect.arrayContaining(["millboard", "gaff_hook"]));
     expect(started.context.npcs).toEqual(expect.arrayContaining([["ives", "Miller Ives"]]));

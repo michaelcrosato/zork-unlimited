@@ -115,10 +115,7 @@ export function resolveAttack(
     },
   );
   if (newPlayerHp <= 0) {
-    effects.push(
-      { narrate: "Your strength fails and the world goes dark." },
-      { end_game: enemy.death_ending },
-    );
+    effects.push({ narrate: "Your health reaches 0. You die." }, { end_game: enemy.death_ending });
   }
   return { conditions: [], effects };
 }

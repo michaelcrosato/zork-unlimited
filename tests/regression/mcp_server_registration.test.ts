@@ -12,7 +12,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { READ_ONLY_TOOLS, TOOL_REGISTRATIONS } from "../../src/mcp/server.js";
 
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
-  "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions by calling with session_id set to the exact current parent overworld_session_id and story_choice_id set to that exact visible id. Merge visible revealOption/reviewOption arguments into that call; they do not replace session_id, and option_id/reveal_id are mutually exclusive. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.";
+  "Inspect a visible story choice without choosing it. Pass the parent session_id and exact story_choice_id from journey.storyChoice, Station ['inspect', id], or departure_interactions. Add option_id or reveal_id, not both. option_id returns one option's full detail. reveal_id unlocks staged options for this session and survives export or restore. Compact output omits repeated board and world data. Set compact_result:false for the full story.";
 
 const RETIRED_STATIC_OVERWORLD_TOOLS = [
   "explore_overworld_area",
@@ -146,47 +146,42 @@ describe("MCP server registration", () => {
       (candidate) => candidate.name === "inspect_overworld_session_story",
     );
     expect(registration?.description).toBe(PARENT_BOUND_STORY_INSPECTION_DESCRIPTION);
-    expect(registration?.description).toContain("Inspect journey.storyChoice");
-    expect(registration?.description).toContain("Station ['inspect', story_choice_id]");
-    expect(registration?.description).toContain("legacy departure_interactions");
-    expect(registration?.description).toContain("Compact returns comparison");
-    expect(registration?.description).toContain("one visible option detail");
-    expect(registration?.description).toContain("durable session receipt");
-    expect(registration?.description).toContain("survives export/restore");
-    expect(registration?.description).toContain("without board/world repetition");
-    expect(registration?.description).toContain("compact_result:false returns full story");
-    expect(registration?.description).toContain("preserves reveals");
+    expect(registration?.description).toContain("Inspect a visible story choice");
+    expect(registration?.description).toContain("Station ['inspect', id]");
+    expect(registration?.description).toContain("departure_interactions");
+    expect(registration?.description).toContain("one option's full detail");
+    expect(registration?.description).toContain("survives export or restore");
+    expect(registration?.description).toContain("omits repeated board and world data");
+    expect(registration?.description).toContain("compact_result:false for the full story");
 
     const block = registeredToolBlock("inspect_overworld_session_story");
-    expect(block).toContain("journey.storyChoice, Station inspect action");
+    expect(block).toContain("journey.storyChoice, Station ['inspect', id]");
     expect(block).toContain("option_id: z");
-    expect(block).toContain("Compact output returns only that option's new detail");
-    expect(block).toContain("unchanged receipt");
-    expect(block).toContain(
-      "compact_result:false validates the id but returns the canonical full story",
-    );
+    expect(block).toContain("Compact output returns that option's detail without changing state");
+    expect(block).toContain("option_id and reveal_id are mutually exclusive");
+    expect(block).toContain("reveal applies only to this session and story");
     expect(
       TOOL_REGISTRATIONS.find((candidate) => candidate.name === "talk_overworld_session_contact")
         ?.description,
-    ).toContain("Station ['talk', character_id, contact_name]");
+    ).toContain("from ['talk', character_id, contact_name]");
     expect(
       TOOL_REGISTRATIONS.find((candidate) => candidate.name === "talk_overworld_session_contact")
         ?.description,
-    ).toContain("support is order-neutral");
+    ).toContain("Contact order does not matter");
 
     const chooseStory = TOOL_REGISTRATIONS.find(
       (candidate) => candidate.name === "choose_overworld_session_story",
     );
-    expect(chooseStory?.description).toContain("story_choice_id disambiguates Station support");
+    expect(chooseStory?.description).toContain("Pass story_choice_id for a Station support choice");
     const chooseBlock = registeredToolBlock("choose_overworld_session_story");
-    expect(chooseBlock).toContain("Visible option id; departure options are inferred.");
-    expect(chooseBlock).toContain("Optional Station support story id.");
+    expect(chooseBlock).toContain("Exact visible option id. Departure story id is inferred.");
+    expect(chooseBlock).toContain("Story id required for Station support.");
   });
 
   it("keeps exact departure terms behind the read-only compact-context request", () => {
     const block = registeredToolBlock("get_overworld_session_context");
     expect(block).toContain("include_departure_recap_terms");
-    expect(block).toContain("Exact selected plan terms.");
+    expect(block).toContain("Include the full terms of the selected plan.");
     expect(
       TOOL_REGISTRATIONS.find((candidate) => candidate.name === "get_overworld_session_context")
         ?.annotations.readOnlyHint,
@@ -333,12 +328,12 @@ describe("MCP server registration", () => {
 
     // The game-native passage action, optional quest approach, and exact authored
     // job option add bounded schema blocks; retain a tight ceiling around them.
-    expect(overworldSchemaSource.length).toBe(9192);
+    expect(overworldSchemaSource.length).toBe(9194);
     expect(overworldSchemaSource.length).toBeLessThanOrEqual(9250);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
-    expect(serverSource).toContain('"Legacy support detail."');
+    expect(serverSource).toContain('"Include legacy Station support details."');
     expect(serverSource).not.toContain("Optional Station support purposes and action handles.");
   });
 
@@ -510,7 +505,7 @@ describe("MCP server registration", () => {
       "type RpgLegalActionRows",
     );
     expect(legalActionArgs).not.toContain("hide_graph");
-    expect(legalActions).toContain("labeled options");
+    expect(legalActions).toContain("includes labels");
     expect(legalActions).toContain("IF_STATE_HASH");
     expect(legalActions).not.toContain("HIDE_GRAPH");
     expect(legalActions).not.toContain("hide_graph");

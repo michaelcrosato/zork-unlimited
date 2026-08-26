@@ -39,7 +39,7 @@ const GREENWAY_CONTACT_ID = "albany_city__greenway__contact";
 const LIVE_PACK_RULE_ID = "albany:wolf_live_pack_greenway_resupply";
 const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_resident_shelter";
 const LIVE_PACK_SUMMARY =
-  "Because you returned a living corridor pack to the high wood while keeping Cade's herd whole, Emery Sloane releases a one-time Greenway cache of food, lamp oil, and wildlife flares for your next road.";
+  "Available after returning the living pack to the high wood with Cade's herd whole. Spend 15 minutes to refill supplies to 8.";
 
 const CLEAN_ROUTE = [
   "use_sheltered_stockway_last_mile",
@@ -309,7 +309,7 @@ function playStrategy(strategy: Strategy) {
           next: { min: 4, label: "Breaking: cattle missing" },
         });
         expect(ui.view().facts).toContain(
-          "pressure: Cattle alarm — Restless (2; next Breaking: cattle missing at 4) — The herd is strained but remains below the loss threshold.",
+          "pressure: Cattle alarm — Restless (2; next Breaking: cattle missing at 4) — The herd is restless, but no cattle are missing.",
         );
       } else {
         const mirror = api.step_action({
@@ -331,8 +331,8 @@ function playStrategy(strategy: Strategy) {
   expect(ui.ending()?.id).toBe(expectedEnding);
   expect(finalStep.journey.pendingChoice?.message).toMatch(
     strategy === "clean"
-      ? /cattle are whole and all three wolves remain alive/i
-      : /guard wood was spent in the fighting/i,
+      ? /whole herd survived[^]*all three wolves are alive in the high wood/i
+      : /fight used the guard wood[^]*broken outer fence has no repair timber/i,
   );
   expect(finalStep.journey.acceptedDecisions).toBeLessThanOrEqual(45);
 
@@ -432,7 +432,7 @@ describe("SS-F09 — Wolf strategy survives the full Albany return", () => {
       {
         id: LIVE_PACK_RULE_ID,
         action: "resupply",
-        title: "Claim Emery's Nonlethal Response Cache",
+        title: "Collect Nonlethal-Return Supplies",
         summary: LIVE_PACK_SUMMARY,
         minutes: 15,
         providerId: GREENWAY_CONTACT_ID,
@@ -442,7 +442,9 @@ describe("SS-F09 — Wolf strategy survives the full Albany return", () => {
     expect(combatView.serviceOffers).toEqual([]);
     expect(
       cleanView.characters.find((character) => character.id === GREENWAY_CONTACT_ID)?.summary,
-    ).toMatch(/whole-herd tally[^]*unbloodied relief report[^]*living pack/i);
+    ).toBe(
+      "Emery records that the whole herd survived and the living pack moved to the high wood.",
+    );
     expect(
       combatView.characters.find((character) => character.id === GREENWAY_CONTACT_ID)?.summary,
     ).not.toMatch(/whole-herd tally[^]*living pack/i);
@@ -452,13 +454,7 @@ describe("SS-F09 — Wolf strategy survives the full Albany return", () => {
         compact_context: true,
       }).context.service_offers,
     ).toEqual([
-      [
-        LIVE_PACK_RULE_ID,
-        "resupply",
-        "Claim Emery's Nonlethal Response Cache",
-        LIVE_PACK_SUMMARY,
-        15,
-      ],
+      [LIVE_PACK_RULE_ID, "resupply", "Collect Nonlethal-Return Supplies", LIVE_PACK_SUMMARY, 15],
     ]);
     expect(
       combat.api.get_overworld_session_context({
@@ -518,7 +514,7 @@ describe("SS-F09 — Wolf strategy survives the full Albany return", () => {
       minutes: 15,
       suppliesBefore: beforeClaim.supplies,
       suppliesAfter: beforeClaim.maxSupplies,
-      message: expect.stringContaining("living corridor pack"),
+      message: expect.stringContaining("returning the living pack to the high wood"),
     });
     expect(claimed.observation.serviceOffers).toEqual([]);
 

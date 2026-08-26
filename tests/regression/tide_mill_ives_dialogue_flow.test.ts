@@ -102,11 +102,14 @@ describe("Tide-Mill Ives dialogue supports direct urgent follow-ups", () => {
     expect(state.vars.craft).toBe(8);
     expect(state.vars.might).toBe(8);
     const adviceJournal = state.journal.join(" ");
-    expect(adviceJournal).toContain("head-race trick");
-    expect(adviceJournal).toContain("pawl and winch angle");
+    expect(adviceJournal).toContain("CUT the choked head-race with the billhook");
+    expect(adviceJournal).toContain(
+      "FREE brake-pawl WITH crow-bar and WIND sea-gate winch WITH crank-handle",
+    );
     expect(adviceJournal).toContain("gaff-pole");
     expect(adviceJournal).toContain("oilskin");
-    expect(adviceJournal).not.toMatch(/\+\d+\s*(attack|defense|craft|might)/i);
+    expect(adviceJournal).toContain("+5 craft");
+    expect(adviceJournal).toContain("+5 might");
     expect(buildRpgObservation(index, state).dialogue).toBeNull();
   });
 });

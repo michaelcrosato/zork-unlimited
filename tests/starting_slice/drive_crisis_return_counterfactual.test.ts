@@ -49,8 +49,8 @@ const OUTCOMES = {
     stationServices: [STATION_CARE, STATION_REST],
     greenwayService: GREENWAY_RESUPPLY,
     juneMemory: "albany:memory_june_drive_herd_out_rider_wounded",
-    juneCopy: /whole herd[^]*bound shoulder[^]*untreated wound/i,
-    emeryCopy: /all three wolves[^]*whole herd[^]*untreated gate wound/i,
+    juneCopy: /whole herd[^]*untreated gate wound/i,
+    emeryCopy: /whole herd safe[^]*all wolves alive[^]*gate wound untreated/i,
   },
   ending_drive_person_cattle_lost: {
     title: "The People Out, Cattle Lost",
@@ -68,8 +68,8 @@ const OUTCOMES = {
     stationServices: [STATION_REST],
     greenwayService: null,
     juneMemory: "albany:memory_june_drive_cattle_line_overrun",
-    juneCopy: /every person safe[^]*two cattle still missing/i,
-    emeryCopy: /every person safe[^]*two cattle still missing/i,
+    juneCopy: /everyone escaped[^]*two cattle are missing[^]*herd overran the lower gate/i,
+    emeryCopy: /everyone safe[^]*all wolves alive[^]*two cattle missing/i,
   },
   ending_drive_reserve_spent: {
     title: "The Steading Evacuated, Reserve Spent",
@@ -86,8 +86,8 @@ const OUTCOMES = {
     stationServices: [],
     greenwayService: GREENWAY_RESUPPLY,
     juneMemory: "albany:memory_june_drive_signal_spent_herd_out",
-    juneCopy: /whole herd[^]*signal-and-rope rig cut apart/i,
-    emeryCopy: /whole herd[^]*signal-and-rope rig left cut apart/i,
+    juneCopy: /whole herd escaped[^]*DRIVE rig was destroyed/i,
+    emeryCopy: /whole herd safe[^]*all wolves alive[^]*rig destroyed/i,
   },
 } as const;
 
@@ -253,7 +253,7 @@ describe("SS-F10 — drive crisis survives the truthful Albany return", () => {
     expect(promiseStatus(session)).toBe("broken");
     expect(
       session.view().characters.find((character) => character.id === ALLY.contact)?.summary,
-    ).toMatch(/first wolf death[^]*before she could take the lower rail/i);
+    ).toMatch(/first wolf died[^]*ending the cattle-safety agreement/i);
     expect(
       session.view().characters.find((character) => character.id === ALLY.contact)?.summary,
     ).not.toMatch(/crossed into combat[^]*ending the cattle-first field agreement/i);
@@ -335,9 +335,7 @@ describe("SS-F10 — drive crisis survives the truthful Albany return", () => {
     ]);
     const rested = session.restAtTown();
     expect(rested).toMatchObject({ action: "rest", changed: true, minutes: 15 });
-    expect(rested.message).toMatch(
-      /restores fatigue only[^]*neither creates nor treats a lasting wound/i,
-    );
+    expect(rested.message).toMatch(/clear fatigue[^]*does not treat a lasting wound/i);
     expect(session.snapshot().character.health).toEqual({ current: 24, max: 30 });
     expect(session.snapshot().character.wounds).toContainEqual({
       woundId: WOUND,

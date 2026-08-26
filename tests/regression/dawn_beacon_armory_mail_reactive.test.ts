@@ -39,17 +39,21 @@ function inArmory(flags: Record<string, boolean>, inv: string[] = []): GameState
 describe("bug_0323 — dawn_beacon armory clears 'hanging on its peg' once garrison mail taken", () => {
   it("base state (mail not taken) → 'hanging on its peg' present", () => {
     const desc = roomDescription(armory, inArmory({}));
-    expect(desc.toLowerCase()).toContain("hanging on its peg");
+    expect(desc).toContain(
+      "The only occupied peg held garrison mail. TAKE garrison mail if it is here",
+    );
   });
 
   it("mail in inventory (taken, not yet donned) → 'hanging on its peg' absent", () => {
     const desc = roomDescription(armory, inArmory({}, ["garrison_mail"]));
-    expect(desc.toLowerCase()).not.toContain("hanging on its peg");
+    expect(desc).not.toContain("hangs on the only occupied peg");
+    expect(desc).toContain("You hold the garrison mail");
   });
 
   it("mail donned (mail_donned flag, still in inventory) → 'hanging on its peg' absent", () => {
     const desc = roomDescription(armory, inArmory({ mail_donned: true }, ["garrison_mail"]));
-    expect(desc.toLowerCase()).not.toContain("hanging on its peg");
+    expect(desc).not.toContain("hangs on the only occupied peg");
+    expect(desc).toContain("You hold the garrison mail");
   });
 
   it("pack validates green and ending_lit is reachable", () => {

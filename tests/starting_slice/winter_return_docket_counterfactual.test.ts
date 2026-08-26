@@ -124,13 +124,17 @@ describe("Winter Return Docket", () => {
       { minutes: 50, renown: 2 },
     ]);
     expect(event?.authored_scene?.prompt).toMatch(
-      /after a truthful field return[^]*takes longer[^]*Both cost 50 minutes to open today[^]*earn 2 Capital \/ Mohawk renown/i,
+      /Choose one permanent filing policy[^]*Both options cost 50 minutes and earn 2 Capital \/ Mohawk renown[^]*public record[^]*slower but more rewarding[^]*protected record[^]*faster but less rewarding/i,
     );
     expect(session.view().eventChoices).toEqual([]);
-    expect(() => session.resolveEvent(EVENT_ID)).toThrow(/Before resolving/i);
+    expect(() => session.resolveEvent(EVENT_ID)).toThrow(
+      /To resolve this event, first investigate the event/i,
+    );
 
     session.investigateEvent(EVENT_ID);
-    expect(() => session.resolveEvent(EVENT_ID)).toThrow(/Choose one authored option/i);
+    expect(() => session.resolveEvent(EVENT_ID)).toThrow(
+      /Choose one option for Albany Civic Center: charter backlog/i,
+    );
     expect(session.view().eventChoices).toEqual([
       [EVENT_ID, PUBLIC],
       [EVENT_ID, PROTECTED],
@@ -149,8 +153,10 @@ describe("Winter Return Docket", () => {
     expect(resolved).toMatchObject({ minutes: 50, alreadyKnown: false });
     expect(session.snapshot().minutes - before.minutes).toBe(50);
     expect(session.view().regionRenown[REGION]).toBe(2);
-    expect(resolved.entry.title).toContain("Open a public winter-relief record");
-    expect(() => session.resolveEvent(EVENT_ID, PROTECTED)).toThrow(/different authored option/i);
+    expect(resolved.entry.title).toContain("Open a Public Relief Record");
+    expect(() => session.resolveEvent(EVENT_ID, PROTECTED)).toThrow(
+      /already resolved with a different option/i,
+    );
     expect(
       session.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT_ID}`),
     ).toMatchObject({
@@ -173,7 +179,9 @@ describe("Winter Return Docket", () => {
     );
     expect(session.view().jobChoices).toEqual([[JOB_ID, PUBLIC_HELD]]);
     expect(session.compactView().job_choices).toEqual([[JOB_ID, PUBLIC_HELD]]);
-    expect(() => session.workLocalJob(JOB_ID, PROTECTED_HELD)).toThrow(/not available/i);
+    expect(() => session.workLocalJob(JOB_ID, PROTECTED_HELD)).toThrow(
+      /unavailable in this journey/i,
+    );
 
     const liveSnapshot = session.snapshot();
     expect(UiOverworldSession.restore(WORLD, liveSnapshot).view().jobChoices).toEqual([
@@ -240,7 +248,7 @@ describe("Winter Return Docket", () => {
         session_id: restored.session_id,
         event_id: EVENT_ID,
       }),
-    ).toThrow(/Choose one authored option/i);
+    ).toThrow(/Choose one option for Albany Civic Center: charter backlog/i);
     const resolved = api.resolve_overworld_session_event({
       ...FULL,
       session_id: restored.session_id,
@@ -382,21 +390,25 @@ describe("Winter Return Docket", () => {
     expect(session.view().events.map((event) => event.id)).not.toContain(EVENT_ID);
     expect(session.view().eventChoices).toEqual([]);
     const beforeLateInvestigation = session.snapshot();
-    expect(() => session.investigateEvent(EVENT_ID)).toThrow(/must be made before completing/i);
+    expect(() => session.investigateEvent(EVENT_ID)).toThrow(
+      /This event option closed when you completed wolf_winter/i,
+    );
     expect(session.snapshot()).toEqual(beforeLateInvestigation);
     expect(session.snapshot().journalEntries.map((entry) => entry.id)).not.toContain(
       `investigate:${EVENT_ID}`,
     );
     expect(() => session.resolveEvent(EVENT_ID, PUBLIC)).toThrow(
-      /Before resolving|must be made before completing/i,
+      /To resolve this event, first investigate the event/i,
     );
 
     const restored = OverworldSession.restore(WORLD, session.snapshot());
     expect(restored.view().events.map((event) => event.id)).not.toContain(EVENT_ID);
     expect(restored.view().eventChoices).toEqual([]);
-    expect(() => restored.investigateEvent(EVENT_ID)).toThrow(/must be made before completing/i);
+    expect(() => restored.investigateEvent(EVENT_ID)).toThrow(
+      /This event option closed when you completed wolf_winter/i,
+    );
     expect(() => restored.resolveEvent(EVENT_ID, PROTECTED)).toThrow(
-      /Before resolving|must be made before completing/i,
+      /To resolve this event, first investigate the event|This event option closed when you completed wolf_winter/i,
     );
   });
 
@@ -410,7 +422,9 @@ describe("Winter Return Docket", () => {
     const before = preparedForWolf(null, postWolfWorld).session;
     moveToArea(before, CIVIC_AREA, postWolfWorld);
     expect(before.view().events.map((candidate) => candidate.id)).not.toContain(EVENT_ID);
-    expect(() => before.investigateEvent(EVENT_ID)).toThrow(/only after completing wolf_winter/i);
+    expect(() => before.investigateEvent(EVENT_ID)).toThrow(
+      /Complete wolf_winter before choosing this event option/i,
+    );
 
     const after = returnedToCivic(null, "ending_held", "The Byre Held", postWolfWorld);
     expect(

@@ -172,11 +172,13 @@ describe("SS-F19 — Wolf-Winter wound care is persistent campaign gameplay", ()
       serviceAreaId: STATION,
     });
     expect(after.journalEntries[0]?.text).toMatch(
-      /45 minutes[^]*untreated to treated[^]*health rises from 24 to 30/i,
+      /Time: 45 minutes[^]*wound treatment: untreated → treated[^]*Health: 24 → 30/i,
     );
     expect(session.view().serviceOffers.map((offer) => offer.id)).not.toContain(CARE);
     expect(session.view().serviceActions.map((action) => action.action)).not.toContain("care");
-    expect(() => session.careAtTown()).toThrow(/no active campaign wound-care offer/i);
+    expect(() => session.careAtTown()).toThrow(
+      /Wound care is unavailable here[^]*No active care offer matches your condition/i,
+    );
     expect(OverworldSession.restore(WORLD, after).snapshot()).toEqual(after);
   });
 
@@ -192,7 +194,7 @@ describe("SS-F19 — Wolf-Winter wound care is persistent campaign gameplay", ()
       expect(greenwayOptionIds(untreated)).toEqual([fast]);
       expect(JSON.stringify(untreated.view())).not.toContain("character_conditions");
       expect(() => untreated.workLocalJob("albany_city__greenway__job", deep)).toThrow(
-        /not available in this journey/i,
+        /unavailable in this journey/i,
       );
 
       const treated = OverworldSession.restore(WORLD, boundary);

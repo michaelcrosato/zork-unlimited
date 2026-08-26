@@ -14,6 +14,17 @@ function idLabel(id: string): string {
     .join(" ");
 }
 
+const BACKGROUND_LABELS: Readonly<Record<string, string>> = Object.freeze({
+  "albany:road_warden": "Road Warden",
+  "albany:ledger_advocate": "Relief Advocate",
+  "albany:ironhands_repairer": "Field Repairer",
+  "albany:unaffiliated_courier": "Independent Courier",
+});
+
+function backgroundLabel(id: string): string {
+  return BACKGROUND_LABELS[id] ?? idLabel(id);
+}
+
 function statusLabel(value: string): string {
   return value.replaceAll("_", " ");
 }
@@ -45,12 +56,12 @@ export function CampaignCharacterPanel({
       <summary className="character-heading">
         <h2 className="character-heading-layout">
           <span className="character-title-block">
-            <span className="kicker">Persistent Character</span>
+            <span className="kicker">Character</span>
             <span className="character-title">Your Record</span>
           </span>
           <span className="character-heading-meta">
             <span className="character-summary">
-              Health {character.health.current}/{character.health.max} · {character.money} coin
+              Health {character.health.current}/{character.health.max} · ${character.money}
             </span>
             <span className="character-readonly">Read only</span>
             <span className="character-toggle" aria-hidden="true">
@@ -64,7 +75,7 @@ export function CampaignCharacterPanel({
         <div>
           <dt>Background</dt>
           <dd title={character.background ?? undefined}>
-            {character.background ? idLabel(character.background) : "Unchosen"}
+            {character.background ? backgroundLabel(character.background) : "Unchosen"}
           </dd>
         </div>
         <div>
@@ -227,7 +238,7 @@ export function CampaignCharacterPanel({
         </section>
 
         <section className="character-group-wide">
-          <h3>Faction Standing</h3>
+          <h3>Faction standing</h3>
           {character.factionStanding.length === 0 ? (
             <Empty />
           ) : (

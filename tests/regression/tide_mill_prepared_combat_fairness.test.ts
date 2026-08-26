@@ -92,9 +92,10 @@ describe("Tide-Mill prepared combat stays fair under worst rolls", () => {
     expect(state.vars.attack).toBe(5);
     expect(state.vars.defense).toBe(3);
     const prepJournal = state.journal.join(" ");
-    expect(prepJournal).toMatch(/glancing cut/i);
-    expect(prepJournal).not.toMatch(/\+\d+\s*(attack|defense|craft|might)/i);
-    expect(prepJournal).not.toMatch(/tool-shed saboteur/i);
+    expect(prepJournal).toMatch(/gaff-pole and oilskin mill-coat grant lasting/i);
+    expect(prepJournal).toContain("+2 attack");
+    expect(prepJournal).toContain("+2 defense");
+    expect(prepJournal).toMatch(/tool-shed saboteur/i);
     expect(state.flags["heard_yard_trick"]).toBe(true);
 
     state = attackUntilSettled(state);

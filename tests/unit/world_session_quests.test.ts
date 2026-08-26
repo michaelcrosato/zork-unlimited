@@ -115,7 +115,7 @@ describe("overworld quest lifecycle planning", () => {
         kind: "quest",
         town: "Alden",
         title: `Started ${lead.title}`,
-        text: `You turn the local lead "${lead.discovery}" into an active quest.`,
+        text: `Lead: ${lead.discovery}`,
       },
     });
     expect([...startedQuestIds]).toEqual([]);
@@ -147,7 +147,7 @@ describe("overworld quest lifecycle planning", () => {
         ...startableState,
         startedQuestIds: new Set([lead.id]),
       }),
-    ).toThrow(/already been started/);
+    ).toThrow(/already active/);
     expect(() =>
       planOverworldQuestStart({ ...startableState, currentAreaId: "other_area" }),
     ).toThrow(/Move to Old Market before starting/);

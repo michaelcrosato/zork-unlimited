@@ -7,9 +7,9 @@
  * action would equip the weir-iron and life-line; it only ends the conversation. Found
  * by blind playtest (ai-runs/2026-06-08T11-51-58-454Z/playtest.md), friction point F1.
  *
- * Fix: prompt changed to "Leave old Pell and hold the weir." — mirrors wolf_winter's
- * leave convention ("Leave old Cade and hold the byre."), honest farewell, no implication
- * of item transfer. Pure prose — no flag, score, condition, or route changed.
+ * Fix: prompt changed to "Leave Pell and go to the weir." — an honest, direct farewell
+ * with no implication of item transfer. Pure prose — no flag, score, condition, or route
+ * changed.
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -42,10 +42,10 @@ describe("bug_0316 — leave_pell prompt does not imply automatic tool pickup", 
     expect(topic.prompt).not.toMatch(/take up the tools/i);
   });
 
-  it("leave_pell prompt uses the wolf_winter farewell convention", () => {
+  it("leave_pell prompt clearly leaves Pell", () => {
     const root = getPellNode("pell_root");
     const topic = root.topics.find((t) => t.id === "leave_pell")!;
-    expect(topic.prompt).toMatch(/leave old pell/i);
+    expect(topic.prompt).toMatch(/leave pell/i);
   });
 
   it("leave_pell prompt still references the weir mission", () => {

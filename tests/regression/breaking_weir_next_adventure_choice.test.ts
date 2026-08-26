@@ -296,7 +296,7 @@ describe("Breaking Weir next-adventure dispatch", () => {
     );
 
     const blockedHash = continued.snapshotHash();
-    expect(() => continued.restAtTown()).toThrow(/presented story consequence/i);
+    expect(() => continued.restAtTown()).toThrow(/choose the open story option/i);
     expect(continued.snapshotHash()).toBe(blockedHash);
 
     const choiceSnapshot = continued.snapshot();
@@ -390,7 +390,7 @@ describe("Breaking Weir next-adventure dispatch", () => {
     );
 
     expect(() => api.rest_overworld_session({ session_id: restored.session_id })).toThrow(
-      /presented story consequence/i,
+      /choose the open story option/i,
     );
     expect(JSON.stringify(restored.journey.storyChoice)).not.toMatch(
       /targetQuestId|targetTownId|targetAreaId|questOutcomeIds|endingId|content\/rpg|win_conditions|solution|maneuver_/i,

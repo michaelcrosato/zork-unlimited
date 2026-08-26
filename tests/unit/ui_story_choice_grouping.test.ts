@@ -51,9 +51,7 @@ describe("JourneyStoryChoiceScreen registration grouping", () => {
       expect(markup).toContain("Choose a ready-made background");
       expect(markup).toContain("Build a custom background");
       expect(markup).toContain("Choose how to begin");
-      expect(markup).toContain(
-        "Choose a background. Next, choose a ready-made promise/report pair or customize it.",
-      );
+      expect(markup).toContain("Choose a background. You will choose a promise and report next.");
       expect(markup.indexOf("Choose a ready-made background")).toBeLessThan(
         markup.indexOf("Build a custom background"),
       );

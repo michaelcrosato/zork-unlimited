@@ -28,8 +28,7 @@ const index = indexRpgPack(loaded.compiled.pack);
 const FIRST_CAST_ID = "use_winter_feed_sack_on_downwind_feed_line";
 const LOFT_CAST_ID = "use_winter_feed_sack_on_loft_hatch";
 const LEADER_CAST_ID = "use_winter_feed_sack_on_outer_scent_gate";
-const TRUTHFUL_FAILURE_COPY =
-  "The first cast is spent, but the sack still holds the loft and leader measures:";
+const TRUTHFUL_FAILURE_COPY = "Feed remains for two wolves.";
 
 type RouteSpec = {
   label: string;
@@ -44,21 +43,21 @@ const FAILED_CASTS: readonly RouteSpec[] = [
     flags: ["approach_exposed_ridge", "relief_cade_fodder_allocated"],
     arrivalAction: "use_exposed_ridge_last_mile",
     expectedJournal:
-      "The ridge cast fouls despite Emery's Albany wagon fodder. No retry; alarm +2. Bind a rail to redirect the yearling or fight.",
+      "The Fieldcraft check fails and cannot be retried. Cattle alarm rises by 2. If you carry the bound split-rail guard, PEN downwind feed line WITH bound split-rail guard. Otherwise use any rail or route recovery currently offered; if none is offered, MAKE a guarded strike and abandon the living recovery.",
   },
   {
     label: "ordinary exposed ridge",
     flags: ["approach_exposed_ridge"],
     arrivalAction: "use_exposed_ridge_last_mile",
     expectedJournal:
-      "Ridge crosswind cannot save the cast: it fouls. No retry; alarm rises by 2. Bind a rail to redirect the yearling or fight.",
+      "The Fieldcraft check fails and cannot be retried. Cattle alarm rises by 2. If you carry the bound split-rail guard, PEN downwind feed line WITH bound split-rail guard. Otherwise use any rail or route recovery currently offered; if none is offered, MAKE a guarded strike and abandon the living recovery.",
   },
   {
     label: "sheltered stockway",
     flags: ["approach_sheltered_stockway"],
     arrivalAction: "use_sheltered_stockway_last_mile",
     expectedJournal:
-      "Hidden stockway crosswind folds the first cast. No retry; alarm rises by 2. Bind a rail to redirect the yearling or fight.",
+      "The Fieldcraft check fails at DC 12 and cannot be retried. Cattle alarm rises by 2. If you carry the bound split-rail guard, PEN downwind feed line WITH bound split-rail guard. Otherwise use any rail or route recovery currently offered; if none is offered, MAKE a guarded strike and abandon the living recovery.",
   },
 ];
 
@@ -168,7 +167,7 @@ describe("Wolf-Winter first-cast feed truth", () => {
     expect(state.flags.yearling_redirected).toBe(true);
     expect(state.flags.lure_trail_fouled).not.toBe(true);
     expect(state.journal.at(-1)).toBe(
-      "Emery's Albany wagon fodder absorbs the ridge pressure. The yearling follows the clean line; cattle alarm does not rise.",
+      "The Fieldcraft check succeeds at DC 10. The yearling wolf follows the feed alive, and exposed-ridge relief fodder prevents cattle alarm from rising.",
     );
     expect(narration(cast.events)).not.toContain("The feed is spent");
     expect(state.inventory).toContain("winter_feed_sack");

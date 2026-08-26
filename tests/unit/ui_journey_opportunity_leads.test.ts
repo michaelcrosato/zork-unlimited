@@ -13,7 +13,7 @@ import { OverworldSession } from "../../ui/src/overworld.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const EXPECTED_DEFERRED_GUIDANCE =
-  "Choose the shown journey option first. 5 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.";
+  "Choose the current journey option first. 5 optional follow-up leads remain. Complete any other required choice. The leads return when play resumes.";
 
 describe("journey opportunity UI", () => {
   it("keeps roots bounded and offers read-only next steps only during active play", async () => {
@@ -163,22 +163,22 @@ describe("journey opportunity UI", () => {
       );
 
       for (const markup of [choiceMarkup, storyMarkup]) {
-        expect(markup).toContain("Optional aftermath");
-        expect(markup).toContain("Return opportunities");
+        expect(markup).toContain("Optional work");
+        expect(markup).toContain("Available leads");
         expect(markup).toContain(EXPECTED_DEFERRED_GUIDANCE);
-        expect(markup).toContain("Choose the shown journey option first");
-        expect(markup).toContain("if another choice follows, finish it too");
-        expect(markup).toContain("District details return when play resumes");
+        expect(markup).toContain("Choose the current journey option first");
+        expect(markup).toContain("Complete any other required choice");
+        expect(markup).toContain("The leads return when play resumes");
         expect(markup).not.toContain("Albany Greenway: trail sign damage");
         expect(markup).not.toContain("Albany Station Quarter");
         expect(markup).not.toContain("journey-opportunity-list");
         expect(markup).not.toMatch(/albany_city__|dispatch_|option_id|reward|renown/i);
       }
-      expect(statusMarkup).toContain("Optional aftermath");
+      expect(statusMarkup).toContain("Optional work");
       expect(statusMarkup).toContain(INITIAL_JOURNEY_GOAL_GUIDANCE.replaceAll("'", "&#x27;"));
-      expect(statusMarkup).toContain("Return opportunities");
+      expect(statusMarkup).toContain("Available leads");
       expect(statusMarkup).toContain(JOURNEY_OPPORTUNITY_GUIDANCE);
-      expect(statusMarkup).toContain("When town actions are available");
+      expect(statusMarkup).toContain("if you are in its area, finish any setup and start it");
       expect(statusMarkup).toContain("Albany Greenway: trail sign damage");
       expect(statusMarkup).toContain("Albany Station Quarter");
       expect(statusMarkup).toContain("Here now");
@@ -188,7 +188,7 @@ describe("journey opportunity UI", () => {
       expect(choiceMarkup.match(/<button/g)).toHaveLength(2);
       expect(storyMarkup.match(/<button/g)).toHaveLength(storyJourney.storyChoice.options.length);
       expect(statusMarkup.match(/<button/g)).toHaveLength(opportunities.leads.length);
-      expect(statusMarkup).toContain("Show one lawful next action");
+      expect(statusMarkup).toContain("Show how to start");
       expect(statusMarkup).toContain("Talk to the job&#x27;s visible local contact.");
       expect(statusMarkup).toContain("talk albany_city__transport_hub__contact");
       expect(pendingStatusMarkup).not.toContain("Show one lawful next action");

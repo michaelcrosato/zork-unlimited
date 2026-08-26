@@ -56,12 +56,11 @@ const WOLF_SOURCE = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!WOLF_SOURCE.ok) throw new Error("Wolf-Winter must compile.");
 const WOLF_INDEX = indexRpgPack(WOLF_SOURCE.compiled.pack);
 const NEUTRAL_RIDGE_SUMMARY =
-  "Open crest: 30m, 1 supply, fatigue +25; cattle alarm starts at 1; clear sight of the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.";
+  "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Cattle alarm starts at 1, but you can see the byre and weather clearly. This road chooses no field plan.";
 const NEUTRAL_STOCKWAY_SUMMARY =
-  "Sheltered lee: 75m, 2 supplies, fatigue +10; cattle alarm starts at 0; hedges conceal the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.";
-const NEUTRAL_GROUND_PREVIEW =
-  "Cade discloses tonight's independent ground fact before commitment; it can supersede one matching first beat.";
-const RIDGE_ENTRY_TIMING = "cattle alarm starts at 1";
+  "Sheltered Stockway — 75 minutes, 2 supplies, +10 fatigue. Cattle alarm starts at 0, but hedges hide the byre and weather. This road chooses no field plan.";
+const ROUTE_INDEPENDENCE_PREVIEW = "This road does not choose a field plan.";
+const RIDGE_ENTRY_TIMING = "Cattle alarm starts at 1";
 
 const ROUTE_CARD_CASES = [
   {
@@ -209,26 +208,26 @@ function dispatchBriefing(session: OverworldSession): string {
     const timing =
       minimum > 60 ? "already late" : maximum <= 60 ? "all on time" : "support can delay dispatch";
     return (
-      `Set: background, promise, report. Dispatch ${String(presentation.committedMinutes)}m; ` +
-      `final ${finalRange}; ${timing}. Compare; named choice commits. ` +
-      "Start Wolf-Winter to decline the rest."
+      `Background, promise, and report are set. Current setup: ${String(presentation.committedMinutes)}m. ` +
+      `Final setup: ${finalRange}; ${timing}. Optional support remains. ` +
+      "Start Wolf-Winter to skip it."
     );
   }
   if (ridge.status === "delayed" && ridge.ledgerMinutes !== undefined) {
     return (
-      `Dispatch ${String(ridge.ledgerMinutes)}m—delayed; roads change arrival, not delay. ` +
-      "First failure: lure/drive/hunt alarm +1; fortify +1."
+      `Setup took ${String(ridge.ledgerMinutes)}m, so the dispatch is late. Roads change arrival costs only. ` +
+      "The first failed LURE, DRIVE, or HUNT raises cattle alarm by 1; a failed FORTIFY raises winter pressure by 1."
     );
   }
   if (ridge.status === "on_time" && ridge.ledgerMinutes !== undefined) {
     return (
-      `Dispatch ${String(ridge.ledgerMinutes)}m—on time; roads change arrival, not dispatch. ` +
-      "No opening-delay failure pressure."
+      `Setup took ${String(ridge.ledgerMinutes)}m, so the dispatch is on time. Roads change arrival costs only. ` +
+      "No late-dispatch penalty applies."
     );
   }
   return (
-    "Dispatch unverified—neutral; roads change arrival, not dispatch. " +
-    "No opening-delay failure pressure."
+    "Dispatch timing is unverified. Roads change arrival costs only. " +
+    "No late-dispatch penalty applies."
   );
 }
 
@@ -484,13 +483,13 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
 
       const markup = renderQuestNotice(quest);
       const normalizedMarkup = markup.replaceAll("&#x27;", "'");
-      expect(markup.match(/Route tradeoff:/g)).toHaveLength(2);
+      expect(markup.match(/Tradeoff:/g)).toHaveLength(2);
       expect(markup).toContain(expectedRidgeSummary);
       expect(markup).toContain(expectedStockwaySummary);
       expect(markup).not.toContain("...");
 
       const cli = renderQuestLaunch(quest);
-      expect(cli.match(/Route tradeoff:/g)).toHaveLength(2);
+      expect(cli.match(/Tradeoff:/g)).toHaveLength(2);
       expect(cli).toContain(expectedRidgeSummary);
       expect(cli).toContain(expectedStockwaySummary);
 
@@ -509,11 +508,11 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       expect(stockwayPreview).toBe(AUTHORED_ROUTE_PREVIEWS[STOCKWAY_ID]);
       expect(mcpStockwayPreview).toBe(AUTHORED_ROUTE_PREVIEWS[STOCKWAY_ID]);
       for (const surface of [ridgePreview, mcpRidgePreview, normalizedMarkup, cli]) {
-        expect(surface).toContain(NEUTRAL_GROUND_PREVIEW);
+        expect(surface).toContain(ROUTE_INDEPENDENCE_PREVIEW);
       }
       expect(compactPreview(session, RIDGE_ID)).toBeNull();
       for (const surface of [stockwayPreview, mcpStockwayPreview, normalizedMarkup, cli]) {
-        expect(surface).toContain(NEUTRAL_GROUND_PREVIEW);
+        expect(surface).toContain(ROUTE_INDEPENDENCE_PREVIEW);
       }
       expect(compactPreview(session, STOCKWAY_ID)).toBeNull();
       for (const surface of [
@@ -597,8 +596,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       },
     );
     const expectedBriefing =
-      "Dispatch 90m—delayed; roads change arrival, not delay. " +
-      "First failure: lure/drive/hunt alarm +1; fortify +1.";
+      "Setup took 90m, so the dispatch is late. Roads change arrival costs only. " +
+      "The first failed LURE, DRIVE, or HUNT raises cattle alarm by 1; a failed FORTIFY raises winter pressure by 1.";
     expect(dispatchBriefing(session)).toBe(expectedBriefing);
 
     const full = fullSummaries(quest);
@@ -701,8 +700,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       },
     );
     const briefing =
-      "Dispatch 55m—on time; roads change arrival, not dispatch. " +
-      "No opening-delay failure pressure.";
+      "Setup took 55m, so the dispatch is on time. Roads change arrival costs only. " +
+      "No late-dispatch penalty applies.";
     expect(dispatchBriefing(session)).toBe(briefing);
     const full = fullSummaries(quest);
     expectCompactSharedDispatchOnce(session, full, briefing);
@@ -721,8 +720,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       },
     );
     const beforeBriefing =
-      "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. " +
-      "Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+      "Background, promise, and report are set. Current setup: 65m. Final setup: 65–80m; already late. " +
+      "Optional support remains. Start Wolf-Winter to skip it.";
     for (const summary of Object.values(fullSummaries(beforeJune))) {
       expect(summary?.startsWith(beforeBriefing)).toBe(true);
     }
@@ -733,8 +732,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     const pendingQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
     if (!pendingQuest?.launch) throw new Error("Expected the pending-June Wolf route card.");
     const pendingBriefing =
-      "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. " +
-      "Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+      "Background, promise, and report are set. Current setup: 65m. Final setup: 65–80m; already late. " +
+      "Optional support remains. Start Wolf-Winter to skip it.";
     const pendingFull = fullSummaries(pendingQuest);
     const pendingCompact = compactSummaries(session);
     for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
@@ -787,7 +786,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
 
     const pendingMarkup = renderQuestNotice(pendingQuest);
     const pendingCli = renderQuestLaunch(pendingQuest);
-    expect(pendingMarkup.match(/Start Wolf-Winter to decline the rest\./g)).toHaveLength(2);
+    expect(pendingMarkup.match(/Start Wolf-Winter to skip it\./g)).toHaveLength(2);
     expect(pendingCli.split(pendingBriefing)).toHaveLength(3);
     const api = createToolApi({ root: ROOT });
     const restored = api.restore_overworld_session({
@@ -815,8 +814,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     const afterJune = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
     if (!afterJune?.launch) throw new Error("Expected the final June route card.");
     const afterBriefing =
-      "Dispatch 80m—delayed; roads change arrival, not delay. " +
-      "First failure: lure/drive/hunt alarm +1; fortify +1.";
+      "Setup took 80m, so the dispatch is late. Roads change arrival costs only. " +
+      "The first failed LURE, DRIVE, or HUNT raises cattle alarm by 1; a failed FORTIFY raises winter pressure by 1.";
     for (const summary of Object.values(fullSummaries(afterJune))) {
       expect(summary?.startsWith(afterBriefing)).toBe(true);
       expect(summary).not.toContain(pendingBriefing);
@@ -832,8 +831,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       committedMinutes: 40,
       maximumMinutes: 55,
       expectedBriefing:
-        "Set: background, promise, report. Dispatch 40m; final 40–55m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
-      expectedBytes: 146,
+        "Background, promise, and report are set. Current setup: 40m. Final setup: 40–55m; all on time. Optional support remains. Start Wolf-Winter to skip it.",
+      expectedBytes: 152,
     },
     {
       label: "threshold crossing",
@@ -843,8 +842,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       committedMinutes: 60,
       maximumMinutes: 75,
       expectedBriefing:
-        "Set: background, promise, report. Dispatch 60m; final 60–75m; support can delay dispatch. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
-      expectedBytes: 161,
+        "Background, promise, and report are set. Current setup: 60m. Final setup: 60–75m; support can delay dispatch. Optional support remains. Start Wolf-Winter to skip it.",
+      expectedBytes: 167,
     },
     {
       label: "guaranteed delayed",
@@ -854,8 +853,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       committedMinutes: 65,
       maximumMinutes: 80,
       expectedBriefing:
-        "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
-      expectedBytes: 147,
+        "Background, promise, and report are set. Current setup: 65m. Final setup: 65–80m; already late. Optional support remains. Start Wolf-Winter to skip it.",
+      expectedBytes: 153,
     },
   ])(
     "classifies an open field-team range that is $label without inventing a final forecast",

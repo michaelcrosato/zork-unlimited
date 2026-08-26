@@ -6,7 +6,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 const BLOCKED_ID = "use_meadowsweet_on_sick_edric";
 const BLOCKED_COMMAND = "treat Edric with meadowsweet after ordering the evidence";
 const BLOCKED_REASON =
-  "Godwin will hear a corrected treatment only after all three proofs are established: inspect Edric, read his case notes, and inspect the meadowsweet in hand.";
+  "The guaranteed TREAT retry is locked until you LOOK AT Edric, READ Godwin's case notes, and, while holding meadowsweet, LOOK AT meadowsweet.";
 
 function blockedTannersSession() {
   const api = createToolApi({ root: process.cwd() });

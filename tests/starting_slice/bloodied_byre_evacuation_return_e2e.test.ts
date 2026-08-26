@@ -186,17 +186,17 @@ describe("SS-F12 — Bloodied Byre evacuation survives the truthful Albany retur
       "send_wardens_north",
     ]);
     for (const option of dispatch?.options ?? []) {
-      expect(option.consequence).toMatch(/yearling and flank wolf[^]*dead/i);
+      expect(option.consequence).toMatch(/two wolves are dead/i);
       expect(option.consequence).toMatch(/old grey[^]*(?:remains|holds)/i);
       expect(option.consequence).toMatch(/two (?:missing )?cattle|two cattle[^]*missing/i);
-      expect(option.consequence).toMatch(/Cade[^]*(?:every|safe|evacuat)/i);
+      expect(option.consequence).toMatch(/(?:helps the evacuees|evacuees remain safe)/i);
     }
     completed.chooseJourneyStory("send_wardens_north");
     moveToArea(completed, CIVIC_AREA);
     expect(completed.view().jobChoices).toEqual([[JOB_ID, EVACUATED_DOCKET]]);
     expect(completed.compactView().job_choices).toEqual([[JOB_ID, EVACUATED_DOCKET]]);
     expect(() => completed.workLocalJob(JOB_ID, "file_public_held_return")).toThrow(
-      /not available/i,
+      /unavailable in this journey/i,
     );
 
     const docketSnapshot = completed.snapshot();

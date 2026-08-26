@@ -115,7 +115,7 @@ describe("bug_0071 — the lantern-spirit's npc_text is pure speech (clean wrapp
     const greetLines = spokenLines(greet.events);
     expect(greetLines.length).toBe(1);
     greetLines.forEach(expectWellFormed);
-    expect(greetLines[0]).toContain("watched this forge die by inches");
+    expect(greetLines[0]).toContain("I remember how this forge failed");
     s = greet.state;
 
     // Each one-shot info topic returns to root in that same accepted decision.
@@ -134,9 +134,9 @@ describe("bug_0071 — the lantern-spirit's npc_text is pure speech (clean wrapp
   it("(c) the rewrite preserves the substantive clues", () => {
     const node = (id: string) =>
       pack.npcs.flatMap((n) => n.dialogue.nodes).find((nd) => nd.id === id)!.npc_text;
-    expect(node("spirit_sentinel")).toMatch(/as slow now as it will ever be/);
-    expect(node("spirit_sentinel")).toMatch(/rise twice/);
-    expect(node("spirit_heart").toLowerCase()).toContain("iron bar");
+    expect(node("spirit_sentinel")).toMatch(/waiting will not strengthen it/);
+    expect(node("spirit_sentinel")).toMatch(/remaining warmth grants \+2 attack/);
+    expect(node("spirit_heart").toLowerCase()).toContain("iron pry-bar");
     expect(node("spirit_heart").toLowerCase()).toContain("slag grate");
     expect(node("spirit_forge")).toMatch(/relight|never/i);
     expect(node("spirit_forge").toLowerCase()).toContain("ember-heart");

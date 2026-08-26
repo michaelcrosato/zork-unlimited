@@ -40,8 +40,10 @@ describe("bug_0393 — Gallowmere peat sign points direct players to the kill-si
     const looked = act(state, { type: "LOOK", target: "peat_sign" });
 
     expect(looked.text).toContain("charge angle");
-    expect(looked.text).toContain("kill-site to the east");
-    expect(looked.text).toContain("before you commit yourself to the gully");
+    expect(looked.text).toContain(
+      "go east and use the offered TRACK action on the kill-site ground",
+    );
+    expect(looked.text).toContain("recorded charge angle and +2 attack persist");
     expect(looked.state.flags["found_kill"]).toBeUndefined();
     expect(looked.state.vars.score ?? 0).toBe(0);
   });

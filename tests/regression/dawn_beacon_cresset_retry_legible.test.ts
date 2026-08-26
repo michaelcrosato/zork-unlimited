@@ -79,8 +79,8 @@ describe("bug_0446 — Dawn Beacon cresset retry is easier and legible", () => {
     expect(res).not.toBeNull();
     const text = narrations(res!.effects).join("\n");
     expect(text).toContain("might check: d20 1 + 3 = 4 vs 10 — failure.");
-    expect(text).toMatch(/rocks a handspan toward its socket/i);
-    expect(text).toMatch(/heave again until the pivot catches/i);
+    expect(text).toMatch(/moves but falls back before reaching its pivot/i);
+    expect(text).toMatch(/Retry with LEVER toppled cresset WITH iron winch-bar/i);
     expect(res!.effects.some((e) => "set_quest_stage" in e || "inc_var" in e)).toBe(false);
   });
 

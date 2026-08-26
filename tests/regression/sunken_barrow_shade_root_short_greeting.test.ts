@@ -74,7 +74,7 @@ describe("bug_0325 — sunken_barrow shade_root reacts immediately after counsel
     const greet = run(s, (a) => a.type === "TALK");
     const lines = spokenLines(greet.events);
     expect(lines.length).toBe(1);
-    expect(lines[0]).toContain("Another one, come down for the cold crown");
+    expect(lines[0]).toContain("Ask me about the barrow-wight or the Barrow-Lord");
     expect(lines[0]).not.toContain("What else would you ask");
   });
 
@@ -89,7 +89,7 @@ describe("bug_0325 — sunken_barrow shade_root reacts immediately after counsel
     const obs = buildRpgObservation(index, s);
     expect(obs.dialogue?.npc).toBe("reaver_shade");
     expect(obs.dialogue?.npc_text).toContain("What else would you ask of me");
-    expect(obs.dialogue?.npc_text).not.toContain("Another one, come down");
+    expect(obs.dialogue?.npc_text).not.toContain("Ask me about the barrow-wight");
     expect(options(s).map((o) => o.id)).toEqual(
       expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
     );
@@ -107,7 +107,7 @@ describe("bug_0325 — sunken_barrow shade_root reacts immediately after counsel
     const obs = buildRpgObservation(index, s);
     expect(obs.dialogue?.npc).toBe("reaver_shade");
     expect(obs.dialogue?.npc_text).toContain("What else would you ask of me");
-    expect(obs.dialogue?.npc_text).not.toContain("Another one, come down");
+    expect(obs.dialogue?.npc_text).not.toContain("Ask me about the barrow-wight");
     expect(options(s).map((o) => o.id)).toEqual(
       expect.arrayContaining(["ask_ask_wight", "ask_leave_shade", "go_east"]),
     );

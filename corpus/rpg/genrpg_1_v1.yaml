@@ -13,9 +13,8 @@ meta:
 rooms:
   - id: entry
     name: The Barrow Mouth
-    description: "A way drops down into a sea-king's flooded barrow, where a drowned
-      crown rests in the deepest cell below the tide-line. You came for one
-      thing: the drowned crown. The only road to it is down."
+    description: "Goal: find the drowned crown. The stairs lead down into a flooded
+      sea-king's tomb. The drowned crown is in the deepest chamber."
     objects: []
     exits:
       - direction: down
@@ -24,17 +23,15 @@ rooms:
     on_enter: []
   - id: hall
     name: The Antechamber
-    description: A cold vaulted hall. A worn inscription is cut into one wall, and
-      by it lies a stout bronze prise-bar. A drowned shade hangs in a niche,
-      watching you. A low cell stands to the west, a passage runs north into the
-      dark, and the way climbs back up behind you.
+    description: "Exits: up, west, and north. The wall inscription marks where the
+      bronze prise-bar was stored; TAKE bronze prise-bar if it is here. A
+      drowned shade waits here and can answer questions."
     variants:
       - when:
           - has_item: bar
-        text: A cold vaulted hall. A worn inscription is cut into one wall; the floor by
-          it is bare now, the bronze prise-bar that lay there in your own hands.
-          A drowned shade hangs in a niche. A low cell stands to the west, a
-          passage runs north, and the way climbs back up.
+        text: "Exits: up, west, and north. You carry the bronze prise-bar that lay
+          beside the wall inscription. A drowned shade waits here and can answer
+          questions."
     objects:
       - inscription
       - bar
@@ -51,9 +48,10 @@ rooms:
     on_enter: []
   - id: cell
     name: The Oarsman's Niche
-    description: A narrow side cell. Against the wall lies the long-dead one who
-      came before you, still wearing a whole suit of kelp-green hauberk the cold
-      kept from rotting. He has no use for it now.
+    description: "Exit: east. This is where an intact kelp-green hauberk was found
+      beside a dead explorer. Its first DON teaches a lasting braced stance and
+      grants +2 defense against either guardian still standing. The bonus
+      persists even if the ward is later dropped."
     objects:
       - ward
     exits:
@@ -63,15 +61,13 @@ rooms:
     on_enter: []
   - id: gallery
     name: The Shield-Hall
-    description: A long gallery. Across the only way east stands the barrow-draugr —
-      A grave-cold corpse risen in rusted mail, salt-stiff and slow, set to keep
-      the crown from living hands. Slow is not the same as soft; better not to
-      meet it under-armed. The way south leads back to the hall.
+    description: Exit south returns to the hall. The barrow-draugr blocks the east
+      exit. A corpse in rusted mail blocks the way to the crown. It is slow and
+      heavily armored. Prepare before fighting it.
     variants:
       - when:
           - has_flag: foe_down
-        text: A long gallery. The barrow-draugr lies broken across the floor, and the
-          way east stands open. The way south leads back to the hall.
+        text: "Exits: south and east. The defeated barrow-draugr lies on the floor."
     objects: []
     exits:
       - direction: south
@@ -85,17 +81,13 @@ rooms:
     on_enter: []
   - id: span
     name: The Drowned Gallery
-    description: A deeper hall, colder than the last. Across the only way east
-      stands the tide-wight — A king's huscarl drowned in his own war-gear,
-      broader and grimmer than the draugr behind you, the crown's last keeper.
-      It is the worse of the two; come to it armed and counselled. The way west
-      leads back to the gallery.
+    description: Exit west returns to the gallery. The tide-wight blocks the east
+      exit. The king's drowned guard protects the crown. It is stronger and
+      tougher than the first corpse. Prepare before fighting it.
     variants:
       - when:
           - has_flag: warden_down
-        text: A deeper hall, colder than the last. The tide-wight lies broken across the
-          floor, and the way east stands open. The way west leads back to the
-          gallery.
+        text: "Exits: west and east. The defeated tide-wight lies on the floor."
     objects: []
     exits:
       - direction: west
@@ -109,17 +101,15 @@ rooms:
     on_enter: []
   - id: hearth
     name: The Sunken Stair
-    description: The deep chamber at the quest's root. The way down is closed by a
-      barnacled slab, sealed by the weight of ages — but its edge carries a worn
-      lip, made to be levered by bar and brawn. The way west leads back.
+    description: Exit west returns to the last hall. A barnacled slab blocks the way
+      down. PRISE barnacled slab WITH bronze prise-bar to open it.
     variants:
       - when:
           - quest_stage:
               quest: way
               stage: open
-        text: The deep chamber at the quest's root. The barnacled slab has been levered
-          up off its lip and stands open, baring a low way down into the dark
-          below. The way west leads back.
+        text: "Exits: west and down. The opened barnacled slab no longer blocks the
+          stairs."
     objects:
       - seal
     exits:
@@ -132,12 +122,13 @@ rooms:
           - quest_stage:
               quest: way
               stage: open
-        locked_msg: The barnacled slab is sealed fast. It must be levered aside first.
+        locked_msg: The barnacled slab is sealed fast. PRISE barnacled slab WITH bronze
+          prise-bar.
     on_enter: []
   - id: vault
     name: The Tide Cell
-    description: A small round chamber at the very bottom. On a plinth of pale stone
-      rests the drowned crown, whole and waiting, just as the old tales said.
+    description: The drowned crown rests on the stone platform. Reaching it
+      completes the quest.
     objects:
       - relic
     exits:
@@ -160,9 +151,11 @@ objects:
     description: Letters cut deep into the cold stone.
     takeable: false
     quest_critical: false
-    read_text: TWO KEEPERS HOLD THE DEEP WAY. BOTH ARE SLOW IN THE COLD AND WILL NOT
-      RISE TWICE IF STRUCK TRUE; THE SECOND IS THE WORSE. THE DROWNED CROWN LIES
-      BELOW THE SEAL, AND ONLY A STRONG ARM AND A GOOD BAR WILL OPEN THE WAY.
+    read_text: THE ROUTE HELD TWO GUARDIANS. BOTH ARE SLOW; THE SECOND IS STRONGER.
+      IF THE FIRST GUARDIAN STILL STANDS, ATTACK BARROW-DRAUGR. IF THE SECOND
+      GUARDIAN STILL STANDS, ATTACK TIDE-WIGHT. THE DROWNED CROWN IS BELOW THE
+      SEAL. IF THE SEAL IS STILL CLOSED, PRISE BARNACLED SLAB WITH BRONZE
+      PRISE-BAR. COMPLETED FIGHTS AND AN OPENED SEAL STAY COMPLETE.
     container: false
     openable: false
     locked: false
@@ -175,8 +168,9 @@ objects:
       - lever
       - pry-bar
       - prybar
-    description: A stout iron bar the length of your arm, cold but sound — a lever,
-      for an arm strong enough.
+    description: The bronze prise-bar is strong enough. If you are not holding the
+      bronze prise-bar, TAKE bronze prise-bar. If the barnacled slab is still
+      closed, PRISE barnacled slab WITH bronze prise-bar.
     takeable: true
     quest_critical: false
     container: false
@@ -193,13 +187,16 @@ objects:
       - mail
       - plate
       - suit
-    description: A whole suit of kelp-green hauberk, heavy and cold but unrusted —
-      iron the keepers' blows would ring off.
+    description: An intact kelp-green hauberk. If you are not holding the kelp-green
+      hauberk, TAKE kelp-green hauberk. The first command, DON kelp-green
+      hauberk, teaches a lasting braced stance and grants +2 defense against
+      either guardian still standing. Before that DON, carrying the ward gives
+      no bonus; afterward, the bonus persists even if the ward is dropped.
     variants:
       - when:
           - has_flag: ward_donned
-        text: The kelp-green hauberk, buckled on now over your own gear; its weight sits
-          between you and the next blow.
+        text: You completed the kelp-green hauberk's first DON. Its learned +2 defense
+          remains even if the ward is later dropped.
     takeable: true
     quest_critical: false
     container: false
@@ -218,10 +215,11 @@ objects:
           - inc_var:
               name: defense
               by: 2
-          - add_journal: You buckle on the kelp-green hauberk; it will turn the worst of the
-              keepers' blows (+2 defense).
-          - narrate: You strip the kelp-green hauberk from the old bones and buckle it on.
-              It is cold and heavy, but it sits between you and the next blow.
+          - add_journal: The kelp-green hauberk's first DON teaches a lasting braced stance
+              and grants +2 defense against either guardian still standing. The
+              bonus persists even if the ward is later dropped.
+          - narrate: You put on the kelp-green hauberk, learn its braced weight, and gain
+              lasting +2 defense. The bonus persists even if you later drop it.
         command_verb: don
   - id: seal
     name: barnacled slab
@@ -232,15 +230,14 @@ objects:
       - door
       - grille
       - hatch
-    description: A barnacled slab sealed fast by the weight of ages, with a worn lip
-      at its edge made for a lever.
+    description: A closed barnacled slab with a worn edge. PRISE barnacled slab WITH
+      bronze prise-bar.
     variants:
       - when:
           - quest_stage:
               quest: way
               stage: open
-        text: The barnacled slab, levered up off its lip and standing open; below it a
-          low way drops down into the dark.
+        text: The barnacled slab is open. The way down is clear.
     takeable: false
     quest_critical: false
     container: false
@@ -264,17 +261,16 @@ objects:
             - set_quest_stage:
                 quest: way
                 stage: open
-            - add_journal: You lever the barnacled slab up off its lip; the way down stands
-                open.
+            - add_journal: You open the barnacled slab with the bronze prise-bar. The way down
+                is clear.
             - inc_var:
                 name: score
                 by: 20
-            - narrate: You set the bar to the lip and throw your weight on it — stone cracks
-                and the barnacled slab heaves up off its seat. The way down is
-                open.
+            - narrate: You PRISE the barnacled slab open with the bronze prise-bar. The way
+                down is clear.
           on_failure:
-            - narrate: The bar bites under the lip and your shoulders strain, but the
-                barnacled slab holds. Set your feet and try again.
+            - narrate: "The barnacled slab does not move. Try again: PRISE barnacled slab WITH
+                bronze prise-bar."
         command_verb: prise
         command_template: prise {target} with {item}
   - id: relic
@@ -286,8 +282,7 @@ objects:
       - heart
       - crown
       - orb
-    description: The drowned crown itself, whole and waiting — the one thing you
-      came down here to carry out.
+    description: The drowned crown. Reaching it completes the quest.
     takeable: false
     quest_critical: false
     container: false
@@ -305,19 +300,18 @@ npcs:
       root: spirit_root
       nodes:
         - id: spirit_root
-          npc_text: A warm thing, come down into the cold. Few do. Ask, if you would — I
-            have watched this place a long age and remember everything.
+          npc_text: I have watched this place for a long time. Ask about the guardians or
+            the last explorer.
           variants:
             - when:
                 - any_of:
                     - has_flag: heard_foe
                     - has_flag: heard_ward
-              text: The drowned shade gutters and steadies. Ask what else you need before you
-                go deeper.
+              text: The drowned shade waits. Ask any remaining question or leave.
           effects: []
           topics:
             - id: ask_foe
-              prompt: Ask how to beat the keepers below.
+              prompt: Ask about the keepers below.
               conditions:
                 - not_flag: heard_foe
               goto: spirit_foe
@@ -332,34 +326,31 @@ npcs:
               prompt: Step away.
               end: true
         - id: spirit_foe
-          npc_text: Two keepers stand between you and the deep — the barrow-draugr first,
-            then the worse tide-wight below it. Both are slow in the cold and
-            will never be warmer; waiting does not mend them. Strike each hard
-            and it will not rise twice. Here — take what warmth I can spare; let
-            it ride your arm for both.
+          npc_text: "The route held two guardians: first the barrow-draugr, then the
+            stronger tide-wight. Both are slow. My warmth gives you +2 attack
+            against either one still standing."
           effects:
             - set_flag: heard_foe
             - inc_var:
                 name: attack
                 by: 2
-            - add_journal: The drowned shade's warmth settles into your arm — you feel you
-                could strike harder now, against both keepers (+2 attack).
+            - add_journal: The drowned shade gives you +2 attack; it applies to either
+                guardian still standing.
           topics:
             - id: foe_back
               prompt: Nod, and ask something else.
               goto: spirit_root
               end: false
         - id: spirit_ward
-          npc_text: One came before you, an age ago, and never climbed back out. He lies
-            in the side-cell west of here, still in his kelp-green hauberk,
-            whole and unrusted. He has no use for it now — better his iron on a
-            living back than guarding old bones. You will want it for the second
-            keeper.
+          npc_text: The intact kelp-green hauberk found beside the dead explorer in the
+            west cell teaches a lasting +2 defense stance on its first DON. The
+            bonus applies to guardians still standing and persists even if the
+            ward is later dropped.
           effects:
             - set_flag: heard_ward
-            - add_journal: The drowned shade speaks of one who came before, dead in the
-                side-cell west of the hall in kelp-green hauberk that might yet
-                turn the keepers' blows.
+            - add_journal: The spirit said the kelp-green hauberk in the west cell teaches a
+                lasting +2 defense stance on its first DON. The bonus persists
+                even if the ward is later dropped.
           topics:
             - id: ward_back
               prompt: Nod, and ask something else.
@@ -373,27 +364,23 @@ win_conditions:
 endings:
   - id: ending_victory
     title: Bearer of the drowned crown
-    text: You lift the drowned crown from its plinth and turn back toward the light
-      above. The long cold keeps the rest of this place, but its one living
-      prize climbs the stair in your hands.
+    text: You recover the drowned crown and begin the climb back to the surface.
     death: false
   - id: ending_fallen_sentinel
     title: Cold on the Stones
-    text: The barrow-draugr's last blow drops you among the dead in the gallery, and
-      the grave chill closes over you. The drowned crown waits a while longer
-      for a stronger arm.
+    text: The barrow-draugr kills you in the gallery. The drowned crown remains
+      below.
     death: true
   - id: ending_fallen_guardian
     title: Fallen at the Deep Door
-    text: You went down under the tide-wight's blows a stone's throw from the deep,
-      and the cold takes you there. So near, and the drowned crown no nearer for
-      it.
+    text: The tide-wight kills you near the final chamber. The drowned crown remains
+      below.
     death: true
 enemies:
   - id: foe
     name: barrow-draugr
-    description: A grave-cold corpse risen in rusted mail, salt-stiff and slow, set
-      to keep the crown from living hands.
+    description: A corpse in rusted mail blocks the way to the crown. It is slow and
+      heavily armored.
     room: gallery
     hp: 6
     attack: 1
@@ -407,8 +394,8 @@ enemies:
           by: 10
   - id: warden
     name: tide-wight
-    description: A king's huscarl drowned in his own war-gear, broader and grimmer
-      than the draugr behind you, the crown's last keeper.
+    description: The king's drowned guard protects the crown. It is stronger and
+      tougher than the first corpse.
     room: span
     hp: 9
     attack: 2

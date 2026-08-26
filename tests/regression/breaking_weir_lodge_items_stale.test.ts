@@ -39,9 +39,10 @@ buildRpgRules(index);
 
 const desc = (s: GameState): string => buildRpgObservation(index, s).description;
 
-const IRON_IN_ROOM = "leans by the door";
-const LINE_IN_ROOM = "hangs on its peg";
-const BOTH_TAKEN = "tools already in your hands";
+const TOOLS_BASE = "The weir-iron and life-line were kept by the door";
+const CONDITIONAL_TAKE =
+  "TAKE weir-iron and TAKE life-line if each is here; retrieve either where dropped if needed";
+const BOTH_TAKEN = "You have the weir-iron and life-line";
 
 describe("bug_0314 — keeper's lodge stale item descriptions after tools are taken", () => {
   it("(1) fresh state: description names both iron and life-line in place", () => {
@@ -50,8 +51,8 @@ describe("bug_0314 — keeper's lodge stale item descriptions after tools are ta
     expect(s.inventory).not.toContain("weir_iron");
     expect(s.inventory).not.toContain("life_line");
     const d = desc(s);
-    expect(d).toContain(IRON_IN_ROOM);
-    expect(d).toContain(LINE_IN_ROOM);
+    expect(d).toContain(TOOLS_BASE);
+    expect(d).toContain(CONDITIONAL_TAKE);
     expect(d).not.toContain(BOTH_TAKEN);
   });
 
@@ -60,16 +61,17 @@ describe("bug_0314 — keeper's lodge stale item descriptions after tools are ta
     const s: GameState = { ...base, inventory: ["weir_iron", "life_line"] };
     const d = desc(s);
     expect(d).toContain(BOTH_TAKEN);
-    expect(d).not.toContain(IRON_IN_ROOM);
-    expect(d).not.toContain(LINE_IN_ROOM);
+    expect(d).not.toContain(TOOLS_BASE);
+    expect(d).not.toContain(CONDITIONAL_TAKE);
   });
 
   it("(3) only weir_iron in inventory: life-line still on peg; iron not mentioned in room", () => {
     const base = initStateForRpgPack(index, 1);
     const s: GameState = { ...base, inventory: ["weir_iron"] };
     const d = desc(s);
-    expect(d).toContain(LINE_IN_ROOM);
-    expect(d).not.toContain(IRON_IN_ROOM);
+    expect(d).toContain("You have the weir-iron");
+    expect(d).toContain("TAKE life-line if it is here, or retrieve it if needed");
+    expect(d).not.toContain(TOOLS_BASE);
     expect(d).not.toContain(BOTH_TAKEN);
   });
 
@@ -77,8 +79,9 @@ describe("bug_0314 — keeper's lodge stale item descriptions after tools are ta
     const base = initStateForRpgPack(index, 1);
     const s: GameState = { ...base, inventory: ["life_line"] };
     const d = desc(s);
-    expect(d).toContain(IRON_IN_ROOM);
-    expect(d).not.toContain(LINE_IN_ROOM);
+    expect(d).toContain("You have the life-line");
+    expect(d).toContain("TAKE weir-iron if it is here, or retrieve it if needed");
+    expect(d).not.toContain(TOOLS_BASE);
     expect(d).not.toContain(BOTH_TAKEN);
   });
 
@@ -90,9 +93,9 @@ describe("bug_0314 — keeper's lodge stale item descriptions after tools are ta
       inventory: ["weir_iron", "life_line"],
     };
     const d = desc(s);
-    expect(d).toContain("voice outside has changed");
-    expect(d).not.toContain(IRON_IN_ROOM);
-    expect(d).not.toContain(LINE_IN_ROOM);
+    expect(d).toContain("open relief-race has stopped the water from rising");
+    expect(d).not.toContain(TOOLS_BASE);
+    expect(d).not.toContain(CONDITIONAL_TAKE);
     expect(d).not.toContain(BOTH_TAKEN);
   });
 });

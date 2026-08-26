@@ -22,7 +22,7 @@ export type GallowmereEmbeddedQuestLaunchHandoff = Readonly<{
     title: "Hayden's Gallowmere packet";
     recipient: "Hedrick Cradoc";
   }>;
-  objective: "Packet delivered; see The Gallowmere through.";
+  objective: "Packet delivered. Finish The Gallowmere.";
   childState: "actionable";
 }>;
 
@@ -50,7 +50,7 @@ export function embeddedQuestLaunchHandoff(args: {
         title: "Hayden's Gallowmere packet",
         recipient: "Hedrick Cradoc",
       }),
-      objective: "Packet delivered; see The Gallowmere through.",
+      objective: "Packet delivered. Finish The Gallowmere.",
       childState: "actionable",
     });
   }

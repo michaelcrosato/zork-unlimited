@@ -81,9 +81,7 @@ describe("bug_0132 — the shade's ward counsel is honest about the warded fight
   it("(a) concedes the warded fight is not a sure thing", () => {
     const spoken = shadeWightCounsel(7);
     // Some explicit admission that, even warded and playing correctly, the fight can be lost.
-    expect(spoken).toMatch(
-      /not the sure of it|can yet go hard|even done right|lucky nights|will not swear you safe/,
-    );
+    expect(spoken).toContain("does not guarantee survival");
   });
 
   it("(b) drops the flat over-promise — no bare 'not the truth of the odds' guarantee", () => {
@@ -93,9 +91,9 @@ describe("bug_0132 — the shade's ward counsel is honest about the warded fight
 
   it("(c) the anti-retreat cure survives: pressing on is the best chance and there's no aid to find", () => {
     const spoken = shadeWightCounsel(7);
-    expect(spoken).toMatch(/best chance|keep striking|feet set/); // press on
-    expect(spoken).toMatch(/seek aid that is not here|no fresher/); // don't break off
-    expect(spoken).toMatch(/no balm|no second blade|no charm|whole of the help/); // nothing to find
+    expect(spoken).toContain("a much better chance");
+    expect(spoken).toMatch(/retreating does not restore health|attack until one of you falls/);
+    expect(spoken).toContain("no healing item, combat weapon, or second ward");
   });
 
   it("(d) content-only: the ward mechanic and the wight stats are untouched", () => {

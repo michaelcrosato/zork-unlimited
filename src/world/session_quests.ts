@@ -291,7 +291,7 @@ function questForOverworldQuestStart(state: OverworldQuestStartState): Overworld
     throw new Error("Discover that local quest lead before starting it.");
   }
   if (state.startedQuestIds.has(quest.id)) {
-    throw new Error(`Quest ${quest.title} has already been started from this overworld session.`);
+    throw new Error(`${quest.title} is already active.`);
   }
   if (state.currentAreaId !== quest.area) {
     throw new Error(
@@ -376,7 +376,7 @@ export function planOverworldQuestStart(state: OverworldQuestStartState): Overwo
       kind: "quest",
       town: state.currentTownName,
       title: `Started ${quest.title}`,
-      text: `You turn the local lead "${quest.discovery}" into an active quest.`,
+      text: `Lead: ${quest.discovery}`,
     },
   };
 }
@@ -439,9 +439,8 @@ export function prepareOverworldQuestStart(
       town: state.currentTownName,
       title: `Started ${quest.title}`,
       text: launchApplication
-        ? `You turn the local lead "${quest.discovery}" into an active quest. ` +
-          `Approach: ${launchApplication.option.title}. ${launchApplication.option.consequence}`
-        : `You turn the local lead "${quest.discovery}" into an active quest.`,
+        ? `Lead: ${quest.discovery} Approach: ${launchApplication.option.title}. ${launchApplication.option.consequence}`
+        : `Lead: ${quest.discovery}`,
     },
   };
 }

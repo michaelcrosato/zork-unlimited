@@ -192,7 +192,7 @@ describe("overworld event and regional arc proof replay", () => {
         journalEntryIds: new Set(["talk:character_a"]),
       }),
     ).toThrow(
-      /Before resolving this event, scout a local point of interest, investigate the event\./,
+      /To resolve this event, first scout a local point of interest, investigate the event\./,
     );
   });
 
@@ -229,7 +229,7 @@ describe("overworld event and regional arc proof replay", () => {
         kind: "resolution",
         town: "Alden",
         title: "Resolved event_a",
-        text: "Alden stabilizes around event_a. Your work reduces hazard pressure and earns 2 North renown.",
+        text: "You stabilize Alden by resolving event_a. Pressure reduced: hazard. Renown: +2 North.",
       },
     });
     expect([...journalEntries.keys()]).toEqual([
@@ -463,14 +463,14 @@ describe("overworld event and regional arc proof replay", () => {
         optionId: "open",
         campaignWorldFactIds: new Set<string>(),
       }),
-    ).toThrow(/not available in this journey/i);
+    ).toThrow(/unavailable in this journey/i);
     expect(() =>
       planOverworldEventResolution({
         ...baseState,
         optionId: "seal",
         campaignWorldFactIds: new Set(["fact:record_recovered"]),
       }),
-    ).toThrow(/not available in this journey/i);
+    ).toThrow(/unavailable in this journey/i);
     expect(
       planOverworldEventResolution({
         ...baseState,

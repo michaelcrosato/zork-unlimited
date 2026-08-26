@@ -21,29 +21,29 @@ export type FreshGameTutorial = Readonly<{
  */
 export const FRESH_GAME_TUTORIAL = Object.freeze({
   version: 1,
-  kicker: "Field guide · Day one",
-  title: "Begin where you stand",
+  kicker: "Day one",
+  title: "Start in Albany",
   goal: INITIAL_JOURNEY_GOAL.text,
   steps: Object.freeze([
     Object.freeze({
       id: "read",
-      title: "Read the moment",
-      text: "Check place, supplies, and fatigue. Choose a shown action.",
+      title: "Check",
+      text: "Location, supplies, fatigue, and available actions.",
     }),
     Object.freeze({
       id: "discover",
-      title: "Find a local lead",
-      text: "Scout, talk, investigate, and explore nearby areas to reveal local work and quests.",
+      title: "Find leads",
+      text: "SCOUT, TALK, INVESTIGATE, or EXPLORE.",
     }),
     Object.freeze({
       id: "follow",
-      title: "Follow it on foot",
-      text: "Reach a lead's area first. Roads cost time and supplies; towns offer rest/resupply. Goal Passage applies road costs and pauses at choices or strain.",
+      title: "Travel",
+      text: "Reach the lead's area. Road cost: time and supplies. Towns: rest/resupply. Follow Goal takes the first road, then stops at the goal, an encounter, or before a new supply shortage or worse fatigue delay.",
     }),
     Object.freeze({
       id: "remember",
-      title: "Choose your horizon",
-      text: `Journal: save/export/resume. Changes count; reads/repeats do not. Completed goals or thresholds (40, 80, then every 40) pause safely—never mid-combat/dialogue. ${OPENING_CHAPTER_HORIZON}`,
+      title: "Save",
+      text: `Journal: save, export, resume. Accepted consequential actions count; context and repeated information do not. It pauses after goals, at 40 and 80 decisions, then every 40; never during combat or dialogue. ${OPENING_CHAPTER_HORIZON}`,
     }),
   ]),
   start_label: "Explore Albany",

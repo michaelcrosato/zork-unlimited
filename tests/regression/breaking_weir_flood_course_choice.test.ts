@@ -52,7 +52,7 @@ const COURSES = [
     otherFlag: "flood_over_lower_fields",
     endingId: "ending_fields_held_race_spent",
     endingTitle: "The Fields Held, the Old Race Spent",
-    consequence: /winter grain above water[^]*cracked the low race-house[^]*rebuilt/i,
+    consequence: /winter grain is safe[^]*old gate and race-house are destroyed[^]*rebuilt/i,
   },
   {
     actionId: "use_field_wash_pin",
@@ -60,7 +60,8 @@ const COURSES = [
     otherFlag: "flood_down_stone_race",
     endingId: "ending_race_held_fields_given",
     endingTitle: "The Old Race Held, the Lower Fields Given",
-    consequence: /relief works fit[^]*winter grain[^]*silt/i,
+    consequence:
+      /old gate and race-house remain usable[^]*lower winter grain is destroyed[^]*lean season/i,
   },
 ] as const;
 
@@ -331,11 +332,15 @@ describe("Breaking Weir mandatory flood-course choice", () => {
     expect(closedObservation.visible_objects.map((object) => object.id)).not.toEqual(
       expect.arrayContaining(["stone_race_pin", "field_wash_pin"]),
     );
-    expect(closedObservation.description).toMatch(/winter grain[^]*old works/i);
+    expect(closedObservation.description).toMatch(
+      /HEAVE seized winch-gate with weir-iron[^]*After it opens, choose exactly one course pin/i,
+    );
     expect(closedObservation.blocked_exits).toContainEqual(
       expect.objectContaining({
         direction: "north",
-        message: expect.stringMatching(/course-frame/i),
+        message: expect.stringMatching(
+          /HEAVE seized winch-gate[^]*SET stone-race course pin to save grain[^]*SET field-wash course pin to save old works[^]*Every house survives/i,
+        ),
       }),
     );
 
@@ -349,11 +354,13 @@ describe("Breaking Weir mandatory flood-course choice", () => {
       expect.arrayContaining(["stone_race_pin", "field_wash_pin"]),
     );
     expect(observation.description).toMatch(/grain[^]*old works|old works[^]*grain/i);
-    expect(observation.description).toMatch(/every house lives/i);
+    expect(observation.description).toMatch(/Every house survives/i);
     expect(observation.blocked_exits).toContainEqual(
       expect.objectContaining({
         direction: "north",
-        message: expect.stringMatching(/course-frame/i),
+        message: expect.stringMatching(
+          /SET stone-race course pin to save grain[^]*SET field-wash course pin to save old works[^]*Every house survives/i,
+        ),
       }),
     );
   });
@@ -440,12 +447,12 @@ describe("Breaking Weir mandatory flood-course choice", () => {
           score: readBook ? 50 : 45,
           ending: { id: course.endingId, title: course.endingTitle, death: false },
         });
-        expect(completed.observation.ending?.text).toMatch(/every house dry/i);
+        expect(completed.observation.ending?.text).toMatch(/Every house is dry/i);
         expect(completed.observation.ending?.text).toMatch(course.consequence);
         if (readBook) {
-          expect(completed.observation.ending?.text).not.toMatch(/last marks unread/i);
+          expect(completed.observation.ending?.text).not.toMatch(/flood-book unread/i);
         } else {
-          expect(completed.observation.ending?.text).toMatch(/flood-book[^]*last marks unread/i);
+          expect(completed.observation.ending?.text).toMatch(/left the flood-book unread/i);
         }
         expect(completed.observation.description).toContain(
           `Final score: ${readBook ? 50 : 45} of 50.`,
@@ -498,7 +505,10 @@ describe("Breaking Weir mandatory flood-course choice", () => {
       compactMenu.actions.filter((id) => (CHOICE_IDS as readonly string[]).includes(id)),
     ).toEqual(CHOICE_IDS);
     expect(compact.objects).toEqual(expect.arrayContaining(["stone_race_pin", "field_wash_pin"]));
-    expect(compact.blocked).toContainEqual(["north", expect.stringMatching(/course-frame/i)]);
+    expect(compact.blocked).toContainEqual([
+      "north",
+      "North needs the open race and one permanent pin. If closed, HEAVE seized winch-gate WITH weir-iron. Then SET stone-race course pin to save grain but lose old works, or SET field-wash course pin to save old works but lose grain. Every house survives.",
+    ]);
 
     const uiChoices = ui.choices.filter((choice) =>
       (CHOICE_IDS as readonly string[]).includes(choice.id),

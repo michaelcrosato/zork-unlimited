@@ -78,7 +78,7 @@ export function storyChoiceCommitmentLabel(
   kind: JourneyStoryChoicePrompt["kind"] | undefined,
   readyMadeDispatch = false,
 ): string {
-  if (readyMadeDispatch) return "Ready-made dispatch";
+  if (readyMadeDispatch) return "Ready-made plan";
   switch (kind) {
     case "registration":
       return "Background";
@@ -103,18 +103,18 @@ function summaryLabels(
   readyMadeDispatch = false,
 ): {
   commitment: string;
-  trigger?: "Field trigger" | "Starter package / field edge" | "Trigger category";
+  trigger?: "Applies when" | "Starting gear and advantage" | "Applies to";
 } {
   if (summary.fieldTrigger === undefined) {
     return { commitment: storyChoiceCommitmentLabel(kind, readyMadeDispatch) };
   }
   if (summary.fieldTriggerScope === "category") {
-    return { commitment: "Purpose", trigger: "Trigger category" };
+    return { commitment: "Purpose", trigger: "Applies to" };
   }
   return {
-    commitment: "Commitment",
+    commitment: "Choice",
     trigger:
-      summary.fieldTriggerScope === "starter" ? "Starter package / field edge" : "Field trigger",
+      summary.fieldTriggerScope === "starter" ? "Starting gear and advantage" : "Applies when",
   };
 }
 
@@ -133,13 +133,13 @@ function renderSummaryLines(
       ...(summary.highlights ?? []).map(
         (highlight) => `${indent}${highlight.label}: ${highlight.value}`,
       ),
-      ...(summary.checkFit === undefined ? [] : [`${indent}Governing skill: ${summary.checkFit}`]),
+      ...(summary.checkFit === undefined ? [] : [`${indent}Skill used: ${summary.checkFit}`]),
       ...(isAdventureSetupCard
         ? [
             `${indent}Cost: ${summary.immediateCost}`,
             `${indent}${kind === "registration" ? "Return obligation" : "Give up"}: ${summary.tradeoff}`,
           ]
-        : [`${indent}Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`]),
+        : [`${indent}Cost: ${summary.immediateCost}`, `${indent}Give up: ${summary.tradeoff}`]),
     ];
   }
   return [
@@ -148,8 +148,8 @@ function renderSummaryLines(
     ...(summary.highlights ?? []).map(
       (highlight) => `${indent}${highlight.label}: ${highlight.value}`,
     ),
-    ...(summary.checkFit === undefined ? [] : [`${indent}Check fit: ${summary.checkFit}`]),
-    `${indent}Immediate cost: ${summary.immediateCost}`,
+    ...(summary.checkFit === undefined ? [] : [`${indent}Skill check: ${summary.checkFit}`]),
+    `${indent}Cost: ${summary.immediateCost}`,
     `${indent}Tradeoff: ${summary.tradeoff}`,
   ];
 }
@@ -178,11 +178,11 @@ export function renderTerminalStoryChoiceComparison(
     progressiveDisclosure !== undefined && progressiveDisclosure.initialOptionIds.length === 0;
   const requiresComparisonFirst = isRevealFirst && config.revealId === undefined;
   const lines = [
-    "\n! Story choice comparison",
+    "\n! Compare choices",
     `  ${comparison.message}`,
     requiresComparisonFirst
-      ? "  Open the read-only outcome compass before choosing a Wolf-Winter promise or ready-made dispatch:"
-      : "  Compare the cards, then use one exact command shown below:",
+      ? "  Review the possible outcomes first. This does not choose a plan:"
+      : "  Compare the options, then type a command shown below:",
   ];
   const renderOption = (option: (typeof comparison.options)[number], index: number): void => {
     if (!option.summary) {
@@ -230,10 +230,10 @@ export function renderTerminalStoryChoiceComparison(
   }
   lines.push(
     requiresComparisonFirst
-      ? "  Open the read-only outcome compass with `compare`; no commitment is presented before it."
+      ? "  Type `compare` to review outcomes before choosing."
       : config.allowComparisonExit
-        ? "  `back` or `cancel` leaves this optional comparison without changing the journey."
-        : "  This choice is mandatory; inspect a card or choose one of the exact options above.",
+        ? "  Type `back` or `cancel` to close this optional comparison without choosing."
+        : "  You must choose. Inspect an option or use a choose command shown above.",
   );
   return lines.join("\n");
 }
@@ -250,7 +250,7 @@ export function renderTerminalStoryChoiceDetail(
   if (!projected) {
     throw new Error(`Story choice "${prompt.id}" could not inspect option "${option.id}".`);
   }
-  const lines = [`\n! Story choice detail — ${projected.label}`];
+  const lines = [`\n! Choice details — ${projected.label}`];
   if (option.summary) {
     if (option.summary.fieldTrigger === undefined) {
       lines.push(
@@ -260,7 +260,7 @@ export function renderTerminalStoryChoiceDetail(
         )}: ${option.summary.commitment}`,
       );
       if (option.summary.checkFit !== undefined && prompt.kind !== "preparation") {
-        lines.push(`  Check fit: ${option.summary.checkFit}`);
+        lines.push(`  Skill check: ${option.summary.checkFit}`);
       }
     } else {
       lines.push(...renderSummaryLines(option.summary, "  ", prompt.kind));
@@ -268,7 +268,7 @@ export function renderTerminalStoryChoiceDetail(
     if (option.dispatchImpact) lines.push(`  ${option.dispatchImpact.line}`);
     if (option.dispatchForecast) lines.push(`  ${option.dispatchForecast.line}`);
   }
-  lines.push(`  Consequence: ${projected.consequence}`);
+  lines.push(`  Result: ${projected.consequence}`);
   lines.push(`  Choose: \`choose ${projected.id}\``);
   lines.push("  Back: `back` (or `cancel`)");
   return lines.join("\n");
@@ -375,14 +375,14 @@ export async function runTerminalStoryChoiceController(args: {
     if (["back", "cancel"].includes(verb) && selector.length === 0) {
       if (inspected) {
         inspected = null;
-        args.write("Back to the story choice comparison; its exact commands remain in context.");
+        args.write("Back to the choice list.");
         continue;
       }
       if (args.allowComparisonExit) return { kind: "cancelled" };
       args.write(
         requiresComparisonFirst && activeRevealId() === undefined
-          ? "This story choice is mandatory. Open the read-only outcome compass with `compare`; back/cancel cannot dismiss it."
-          : "This story choice is mandatory. Inspect an exact option or choose one; back/cancel cannot dismiss it.",
+          ? "You must choose. Type `compare` to review the outcomes first."
+          : "You must choose. Inspect an option or choose one; `back` and `cancel` cannot close this choice.",
       );
       continue;
     }
@@ -394,7 +394,7 @@ export async function runTerminalStoryChoiceController(args: {
       activeRevealId() !== progressiveDisclosure.reveal.id
     ) {
       if (inspected) {
-        args.reject("Use `back` before comparing individual promises.");
+        args.reject("Type `back` before comparing individual promises.");
         continue;
       }
       presentedPrompt = args.reveal?.(progressiveDisclosure.reveal.id) ?? presentedPrompt;
@@ -414,15 +414,15 @@ export async function runTerminalStoryChoiceController(args: {
         if (progressiveDisclosure && hiddenOption(selector)) {
           args.reject(
             requiresComparisonFirst
-              ? "Use `compare` to open the outcome compass before inspecting a Wolf-Winter promise or ready-made dispatch."
-              : "Use `customize` to reveal the individual promises before inspecting that card.",
+              ? "Type `compare` before inspecting a Wolf-Winter promise or ready-made plan."
+              : "Type `customize` to show the individual promises before inspecting one.",
           );
           continue;
         }
         args.reject(
           requiresComparisonFirst
-            ? "Inspect an exact option id or full option label from the comparison."
-            : "Inspect an exact option id, full option label, or number from the comparison.",
+            ? "Inspect an option using its exact id or full label shown above."
+            : "Inspect an option using its number, exact id, or full label shown above.",
         );
         continue;
       }
@@ -437,21 +437,21 @@ export async function runTerminalStoryChoiceController(args: {
         if (progressiveDisclosure && hiddenOption(selector)) {
           args.reject(
             requiresComparisonFirst
-              ? "Use `compare` to open the outcome compass before choosing a Wolf-Winter promise or ready-made dispatch."
-              : "Use `customize` to reveal the individual promises before choosing that card.",
+              ? "Type `compare` before choosing a Wolf-Winter promise or ready-made plan."
+              : "Type `customize` to show the individual promises before choosing one.",
           );
           continue;
         }
         args.reject(
           requiresComparisonFirst
-            ? "Choose an exact option id or full option label from the comparison."
-            : "Choose an exact option id, full option label, or number from the comparison.",
+            ? "Choose using an exact option id or full label shown above."
+            : "Choose using a number, exact option id, or full label shown above.",
         );
         continue;
       }
       if (inspected && inspected.id !== option.id) {
         args.reject(
-          `This detail is for "${inspected.label}". Use \`choose ${inspected.id}\` or \`back\` before choosing another card.`,
+          `You are viewing "${inspected.label}". Use \`choose ${inspected.id}\` or \`back\` before choosing another option.`,
         );
         continue;
       }
@@ -465,10 +465,10 @@ export async function runTerminalStoryChoiceController(args: {
 
     args.reject(
       inspected
-        ? `Use \`choose ${inspected.id}\`, \`back\`, or an available read-only command.`
+        ? `Use \`choose ${inspected.id}\`, \`back\`, or an available review command.`
         : requiresComparisonFirst && activeRevealId() === undefined
-          ? "Open the read-only outcome compass first with `compare`."
-          : "Choose the active journey prompt first with an exact `inspect <id>` or `choose <id>` command shown above.",
+          ? "Type `compare` to review the outcomes first."
+          : "Use an `inspect <id>` or `choose <id>` command shown above.",
     );
   }
 }

@@ -66,12 +66,14 @@ describe("bug_0450 -- Printer's Night proof sheet can be claimed without replaci
     expect(state.flags["proof_sheet_taken"]).toBe(true);
     expect(state.flags["block_taken"]).toBeUndefined();
     expect(state.vars["score"] ?? 0).toBe(0);
-    expect(taken.text).toContain("will not stop the run by itself");
-    expect(taken.text).toContain("forme in the chase");
+    expect(taken.text).toContain(
+      "If the type-block remains, removing it will disrupt the scheduled run",
+    );
+    expect(taken.text).toContain("It proves what Fen planned to print");
 
     const obs = buildRpgObservation(index, state);
-    expect(obs.description).toContain("proof sheet is gone from the bench");
-    expect(obs.description).toContain("type-block that can print it again");
+    expect(obs.description).toContain("You took the proof sheet");
+    expect(obs.description).toContain("type-block remains in the press chase");
     expect(actionIds(state)).toContain("take_type_block");
   });
 
@@ -84,7 +86,7 @@ describe("bug_0450 -- Printer's Night proof sheet can be claimed without replaci
     expect(obs.room).toBe("back_court");
     expect(obs.exits.map((e) => e.direction)).not.toContain("east");
     expect(obs.blocked_exits.find((e) => e.direction === "east")?.message).toContain(
-      "type-block is still in the press room",
+      "East requires the type-block and a clear route",
     );
   });
 
@@ -94,7 +96,9 @@ describe("bug_0450 -- Printer's Night proof sheet can be claimed without replaci
 
     const proof = pack.objects.find((o) => o.id === "pamphlet_proof")!;
     const readVariant = proof.variants?.find((v) => JSON.stringify(v.when).includes("proof_read"));
-    expect(readVariant?.text).toContain("still in the chase until you lift it");
+    expect(readVariant?.text).toContain(
+      "At the press chase, TAKE type-block to complete the warrant",
+    );
 
     const obs = buildRpgObservation(index, state);
     expect(obs.visible_objects.map((o) => o.id)).toContain("pamphlet_proof");

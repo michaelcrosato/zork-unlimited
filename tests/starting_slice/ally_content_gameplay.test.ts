@@ -59,7 +59,7 @@ const RELAY = "albany:ally_june_relay_only";
 const SOLO = "albany:ally_travel_solo";
 const JUNE_PROMISE = "albany:promise_june_cattle_first";
 const NORTH_PENDING_GUIDANCE =
-  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+  "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
 
 function withoutWolfReturnDependents<T extends typeof world>(manifest: T): T {
   for (const localAction of [...manifest.local_events, ...manifest.local_jobs]) {
@@ -283,10 +283,10 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       [SOLO, 0],
     ]);
     expect(ally.capability).toMatch(
-      /DRIVE[^]*failed signal's Overrun[^]*prevents the rider's -2 HP brace[^]*FORTIFY only an unstabilized failed first seal at pressure 3\+[^]*persistent -2 HP dawn strain[^]*without lowering pressure or changing the ending[^]*pressure-2 FORTIFY[^]*mobile-stabilized FORTIFY line[^]*displayed pressure 3[^]*cost no HP and gain no extra reduction/i,
+      /bloodless route[^]*recovered LURE[^]*lowers cattle alarm[^]*failed DRIVE signal[^]*prevent 2 HP damage at Overrun[^]*unstabilized first FORTIFY failure at pressure 3 or more[^]*prevent 2 HP damage at dawn[^]*clean DRIVE[^]*pressure-2 FORTIFY[^]*mobile-stabilized FORTIFY[^]*does not lower winter pressure or change the ending/i,
     );
     expect(ally.options.find((option) => option.id === ACCEPT)?.preview).toMatch(
-      /DRIVE[^]*-2 HP brace[^]*failed signal reaches Overrun[^]*FORTIFY[^]*persistent -2 HP dawn strain only after an unstabilized failed first seal reaches pressure 3\+[^]*does not lower pressure or change the ending[^]*pressure-2 FORTIFY[^]*mobile-stabilized line[^]*pressure 3[^]*cost no HP and gain no extra reduction/i,
+      /Cost: 15 additional minutes[^]*20 minutes total[^]*lower cattle alarm[^]*failed DRIVE[^]*unstabilized FORTIFY at pressure 3 or higher[^]*does not fight[^]*first wolf dies[^]*clean DRIVE[^]*stabilized FORTIFY/i,
     );
 
     const accepted = applyOpeningAllyOption({
@@ -313,7 +313,9 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       );
     }
 
-    expect(wolfQuest.discovery).toMatch(/without .*bond.*alone/i);
+    expect(wolfQuest.discovery).toMatch(
+      /optional second rider[^]*Starting without her sends you alone/i,
+    );
     expect(
       imports.rules.some(
         (rule) =>
@@ -329,7 +331,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     let withJune = act(optionState(ACCEPT), "go_north");
     const boundary = buildRpgObservation(index, withJune);
     expect(boundary.description).toMatch(
-      /June holds the north gate[^]*spear funnel[^]*not a living turn[^]*committed first feed cast fouls[^]*brace[^]*pen the yearling alive[^]*any wolf death ends/i,
+      /Going north without Cade's feed sack, drive rig, or seals chooses HUNT[^]*any wolf death ends June's agreement[^]*fallen paling-rail[^]*combat[^]*failed first LAY action/i,
     );
     expect(actionIds(withJune)).toContain("talk_june_pike");
     expect(actionIds(withJune)).not.toContain("go_north");
@@ -342,11 +344,11 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       boundary.available_actions.map((action) => action.id),
       { includeActions: true },
     );
-    expect(compactBoundary.text).toMatch(/June holds the north gate/i);
+    expect(compactBoundary.text).toMatch(/Going north without Cade's feed sack/i);
     expect(compactBoundary.actions).toContain("talk_june_pike");
     expect(compactBoundary.actions).not.toContain("go_north");
     expect(compactBoundary.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
-    expect(NORTH_PENDING_GUIDANCE).toMatch(/talk to June before HUNT/i);
+    expect(NORTH_PENDING_GUIDANCE).toMatch(/Before HUNT, TALK TO Road Warden June Pike/i);
 
     withJune = act(withJune, "talk_june_pike");
     expect(actionIds(withJune)).toEqual(
@@ -371,7 +373,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       },
       {
         type: "narration",
-        text: `Road Warden June Pike: "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle LURE relocation, DRIVE evacuation, or FORTIFY until dawn with him. Until one is committed, north remains closed."`,
+        text: `Road Warden June Pike: "My cattle-first terms already apply. This chooses nothing. Select BACK to return to Cade and review LURE, DRIVE, or FORTIFY. North remains blocked until you choose a plan or select my displayed HUNT option."`,
       },
     ]);
     const keepTerms = keepTermsResult.state;
@@ -383,7 +385,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(buildRpgObservation(index, keepTerms).dialogue).toEqual({
       npc: "june_pike",
       npc_text:
-        "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle LURE relocation, DRIVE evacuation, or FORTIFY until dawn with him. Until one is committed, north remains closed.",
+        "My cattle-first terms already apply. This chooses nothing. Select BACK to return to Cade and review LURE, DRIVE, or FORTIFY. North remains blocked until you choose a plan or select my displayed HUNT option.",
     });
     expect(keepTerms.flags.june_combat_line_acknowledged).not.toBe(true);
     expect(actionIds(keepTerms)).not.toContain("go_north");
@@ -412,13 +414,13 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(acknowledged.flags.june_combat_line_acknowledged).toBe(true);
     expect(acknowledged.flags.june_blood_condition_broken).not.toBe(true);
     expect(acknowledged.journal.at(-1)).toMatch(
-      /rail is only a combat funnel[^]*firm-braced[^]*ordinarily wedged and bound[^]*without a living plan[^]*first wolf death ends/i,
+      /fallen paling-rail only helps combat during HUNT[^]*Going north chooses HUNT[^]*closes other plans[^]*first wolf death ends her agreement/i,
     );
     expect(buildRpgObservation(index, acknowledged).dialogue).toBeNull();
     expect(actionIds(acknowledged)).toContain("go_north");
     acknowledged = act(acknowledged, "go_north");
     expect(buildRpgObservation(index, acknowledged).description).toMatch(
-      /combat funnel[^]*does not turn the wolf alive/i,
+      /SET the Albany relief spear against the yearling's rush[^]*exact follow-up shown[^]*ATTACK yearling wolf until it is dead/i,
     );
     acknowledged = act(acknowledged, "wedge_paling_rail", 20);
     expect(acknowledged.flags.breach_braced).toBe(true);
@@ -473,7 +475,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(actionIds(hybrid)).toContain("attack_yearling_wolf");
     expect(actionIds(hybrid)).not.toContain("turn_paling_rail");
     expect(buildRpgObservation(index, hybrid).description).toMatch(
-      /first spear stroke committed the hybrid line[^]*recoveries are closed/i,
+      /guarded strike chose LURE's combat route[^]*braced rail[^]*split-rail guard[^]*drover-route recoveries are closed/i,
     );
 
     state = act(state, "turn_paling_rail");
@@ -508,7 +510,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       expect.objectContaining({
         id: "use_winter_feed_sack_on_outer_scent_gate",
         reason: expect.stringMatching(
-          /authority.*speak to her first.*one cattle-line intervention lowers cattle alarm by 1.*before the last scent cast/i,
+          /TALK TO Road Warden June Pike[^]*cattle-first help lowers cattle alarm by 1 before the final feed cast/i,
         ),
       }),
     );
@@ -517,7 +519,9 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     withJune = act(withJune, "talk_june_pike");
     expect(withJune.flags.june_cattle_line_taken).toBe(true);
     expect(withJune.vars.cattle_alarm).toBe(2);
-    expect(withJune.journal.at(-1)).toMatch(/refuses the wolf line.*falls by 1/i);
+    expect(withJune.journal.at(-1)).toMatch(
+      /cattle-first authority[^]*lowers cattle alarm by 1[^]*will not fight the grey leader/i,
+    );
     withJune = act(withJune, "ask_acknowledge");
 
     withJune = finishLivingLine(withJune);
@@ -528,7 +532,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       ending_id: "ending_pack_diverted",
     });
     expect(buildRpgObservation(index, withJune).ending?.text).toMatch(
-      /June Pike refused the old-grey line.*Albany receives two matching accounts/is,
+      /June Pike refused to help with the wolves.*protected the lower rail.*Albany receives both reports/is,
     );
     expect(buildRpgObservation(index, solo)).toMatchObject({
       ending_id: "ending_pack_diverted_cattle_scattered",
@@ -576,7 +580,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     state = finishLivingLine(state);
     const ending = buildRpgObservation(index, state);
     expect(ending.ending_id).toBe("ending_pack_diverted_after_blood");
-    expect(ending.ending?.text).toMatch(/first wolf death ended June Pike's field agreement/i);
+    expect(ending.ending?.text).toMatch(/first wolf death ended June Pike's agreement/i);
 
     for (const enemyId of ["yearling_wolf", "flank_wolf", "grey_leader"]) {
       const enemy = pack.enemies.find((candidate) => candidate.id === enemyId);

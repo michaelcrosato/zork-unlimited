@@ -18,13 +18,10 @@ function sentenceCase(value: string): string {
 }
 
 function registrationExactConsequence(profile: OpeningRegistration["profiles"][number]): string {
-  const fieldTrigger = profile.trigger_category?.replace(/\.$/u, "");
-  return [
-    profile.summary,
-    profile.preview,
-    ...(fieldTrigger ? [`Field trigger: ${fieldTrigger}.`] : []),
-    profile.consequence,
-  ].join(" ");
+  const bestFor = profile.trigger_category?.replace(/\.$/u, "");
+  return [profile.preview, ...(bestFor ? [`Best for: ${bestFor}.`] : []), profile.consequence].join(
+    " ",
+  );
 }
 
 /** Project the manifest scene onto the existing generic journey-choice surface. */
@@ -78,10 +75,7 @@ export function presentOpeningRegistration(
   return Object.freeze({
     id: parsed.id,
     kind: "registration" as const,
-    message:
-      (parsed.doctrines?.length ?? 0) > 0
-        ? `${parsed.title}. Choose a background; order is neutral and every field plan stays open. A Wolf-Winter promise and report follow, together in a ready-made dispatch or separately when customized. ${parsed.message}`
-        : `${parsed.title}. ${parsed.message}`,
+    message: `${parsed.title}. ${parsed.message}`,
     options,
   });
 }

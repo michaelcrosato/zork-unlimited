@@ -61,8 +61,10 @@ describe("Tide-Mill head-race reconnaissance", () => {
 
     const board = step(api, started.session_id, "read_millboard");
     const boardText = narrationEvents(board.events).join(" ");
-    expect(boardText).toMatch(/wheel runs when choked race is clear and brake-pawl free/i);
-    expect(boardText).toMatch(/tools are in the shed/i);
+    expect(boardText).toMatch(
+      /CUT choked head-race WITH billhook[^]*FREE brake-pawl WITH crow-bar/i,
+    );
+    expect(boardText).toMatch(/collect any missing combat gear[^]*ATTACK tool-shed saboteur/i);
     expect(boardText).not.toMatch(/clear choked race;\s*free brake-pawl/i);
 
     step(api, started.session_id, "go_north");
@@ -80,9 +82,9 @@ describe("Tide-Mill head-race reconnaissance", () => {
     const text = narrationEvents(tried.events).join(" ");
     expect(text.length).toBeLessThanOrEqual(COMPACT_EVENT_NARRATION_CHAR_LIMIT);
     expect(text).not.toMatch(/\(\+\d+ chars\)/);
-    expect(text).toMatch(/billhook work/i);
-    expect(text).toMatch(/tool-shed/i);
-    expect(text).toMatch(/yard knife-man/i);
+    expect(text).toMatch(/cannot check the choked head-race clear by hand/i);
+    expect(text).toMatch(/ATTACK tool-shed saboteur/i);
+    expect(text).toMatch(/TAKE billhook/i);
     const raw = api.get_state({ session_id: started.session_id, include_state: true }) as {
       state: { flags: Record<string, boolean>; vars: Record<string, number> };
     };

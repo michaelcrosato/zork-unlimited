@@ -554,12 +554,10 @@ function pureStationDispatchRevealBase(
   const sessionId = input.session_id;
   const retainedHash = input.if_snapshot_hash;
   if (typeof sessionId !== "string" || sessionId.length === 0) {
-    throw new Error("Pure Station support reveal requires the current parent session_id.");
+    throw new Error("To reveal Station support, pass the current parent session_id.");
   }
   if (typeof retainedHash !== "string" || retainedHash.length === 0) {
-    throw new Error(
-      "Pure Station support reveal requires if_snapshot_hash from the retained compact context.",
-    );
+    throw new Error("Also pass if_snapshot_hash from the latest compact context.");
   }
   const exported = objectRecord(api.export_overworld_session({ session_id: sessionId }));
   const snapshotHash = exported?.snapshot_hash;
@@ -567,9 +565,7 @@ function pureStationDispatchRevealBase(
     throw new Error("Pure Station support reveal could not capture its base snapshot hash.");
   }
   if (retainedHash !== snapshotHash) {
-    throw new Error(
-      "Pure Station support reveal base hash is stale; retain a fresh compact context before revealing.",
-    );
+    throw new Error("The snapshot changed. Read a new compact context, then reveal again.");
   }
   return { sessionId, snapshotHash };
 }
@@ -586,7 +582,7 @@ function pureStationDispatchRevealResponse(
 ): unknown {
   if (!isPureStationRevealDeltaRequest(name, args)) return value;
   if (base === null) {
-    throw new Error("Pure Station support reveal has no authenticated base context.");
+    throw new Error("Station support cannot be revealed here. Read a full compact context first.");
   }
   const response = objectRecord(value);
   const context = objectRecord(response?.context);
@@ -689,13 +685,11 @@ function pureStationJuneModalBase(name: string, args: unknown): PureStationJuneM
   const retainedHash = input.expected_snapshot_hash;
   if (typeof retainedHash !== "string" || retainedHash.length === 0) {
     throw new Error(
-      "Pure Station June talk requires expected_snapshot_hash from the revealed Station board.",
+      "To talk to June here, pass expected_snapshot_hash from the revealed Station board.",
     );
   }
   if (retainedHash !== snapshotHash) {
-    throw new Error(
-      "Pure Station June talk base hash is stale; retain the latest Station response before talking.",
-    );
+    throw new Error("The snapshot changed. Read the latest Station response, then talk to June.");
   }
   return { sessionId, snapshotHash };
 }
@@ -797,30 +791,34 @@ function pureCallPreflight(name: string, args: unknown): void {
     input.choice === "end" &&
     (pureRunState.journeyExitRecorded || pureRunState.journeyExitRetryable);
   if (pureRunState.journeyExitResponse !== null && !exactCommittedEndReplay) {
-    throw new Error("This pure-play journey has ended; the exit receipt is the final run event.");
+    throw new Error(
+      "This journey has ended. Its exit receipt is final; do not take another gameplay action.",
+    );
   }
   if (exactCommittedEndReplay) return;
   if (pureRunState.journeyExitRecorded) {
-    throw new Error("This pure-play journey has ended; the exit receipt is the final run event.");
+    throw new Error(
+      "This journey has ended. Its exit receipt is final; do not take another gameplay action.",
+    );
   }
   if (name === "start_overworld") {
     if (pureRunState.overworldSessionId !== null) {
       throw new PureSessionRecoveryError(
-        "Pure play already has exactly one fresh overworld session; continue it with the recovered overworld_session_id.",
+        "Pure play allows one new overworld session. Continue with the recovered overworld_session_id.",
         "overworld_session_id",
       );
     }
     return;
   }
   if (pureRunState.overworldSessionId === null) {
-    throw new Error("Pure play must begin with start_overworld.");
+    throw new Error("Start pure play with start_overworld.");
   }
   const sessionId = input?.session_id;
   if (PURE_OVERWORLD_SESSION_TOOLS.has(name) && sessionId !== pureRunState.overworldSessionId) {
     throw new PureSessionRecoveryError(
       pureRunState.rpgSessionId !== null && sessionId === pureRunState.rpgSessionId
-        ? "This overworld tool requires the parent overworld_session_id, not the active RPG child handle."
-        : "This overworld tool requires the exact current parent overworld_session_id; the supplied session_id is missing, malformed, stale, or unknown.",
+        ? "This overworld tool needs the parent overworld_session_id, not the active child rpg_session_id."
+        : "Pass the current parent overworld_session_id. The supplied session_id is missing, invalid, stale, or unknown.",
       "overworld_session_id",
     );
   }
@@ -830,27 +828,27 @@ function pureCallPreflight(name: string, args: unknown): void {
     !PURE_OVERWORLD_TOOLS_DURING_RPG.has(name)
   ) {
     throw new PureSessionRecoveryError(
-      "Finish the active embedded quest with its rpg_session_id before taking another overworld action.",
+      "Finish the active quest with its rpg_session_id before taking another overworld action.",
       "rpg_session_id",
     );
   }
   if (PURE_RPG_SESSION_TOOLS.has(name)) {
     if (pureRunState.rpgSessionId === null) {
       throw new PureSessionRecoveryError(
-        "No embedded RPG quest is active; enter a visible overworld quest before using RPG tools.",
+        "No RPG quest is active. Start a visible overworld quest before using RPG tools.",
         "rpg_session_id",
       );
     }
     if (sessionId !== pureRunState.rpgSessionId) {
       throw new PureSessionRecoveryError(
-        "This RPG tool requires the active child rpg_session_id, not the parent overworld_session_id.",
+        "This RPG tool needs the active child rpg_session_id, not the parent overworld_session_id.",
         "rpg_session_id",
       );
     }
     const rpgSession = api.sessions.get(sessionId);
     if (rpgSession.overworldSessionId !== pureRunState.overworldSessionId) {
       throw new PureSessionRecoveryError(
-        "The RPG child is not bound to this pure run's parent overworld session.",
+        "This rpg_session_id does not belong to the current overworld session.",
         "rpg_session_id",
       );
     }
@@ -870,8 +868,8 @@ function pureJourneyExitEvidenceFailure(
       recorded: false,
       retryable,
       message: retryable
-        ? "The journey ended and its exit receipt is final, but server evidence was not recorded; make exactly one more call with the same parent session and End choice to retry evidence recording."
-        : "The journey ended and its exit receipt is final, but server evidence could not be recorded; do not retry or make another gameplay call.",
+        ? "The journey ended and its exit receipt is final, but evidence was not saved. Make exactly one more End call with the same parent session to retry."
+        : "The journey ended and its exit receipt is final, but evidence was not saved. Do not retry or make another gameplay call.",
     },
   };
 }
@@ -1097,7 +1095,7 @@ function normalizeEquivalentAlias(
   const alias = input[aliasName];
   if (canonical !== undefined && alias !== undefined && canonical !== alias) {
     throw new Error(
-      `Conflicting ${canonicalName} and ${aliasName}; provide one value or the same value in both fields.`,
+      `${canonicalName} and ${aliasName} conflict. Pass one field, or use the same value in both.`,
     );
   }
   if (alias === undefined) return input;
@@ -1133,8 +1131,8 @@ export function resolveVisibleAreaRouteId(
   if (matches.length !== 1) {
     throw new Error(
       matches.length === 0
-        ? `Area ${JSON.stringify(destinationAreaId)} is not a currently visible destination from here.`
-        : `Area ${JSON.stringify(destinationAreaId)} has multiple currently visible routes from here; provide area_route_id or route_id.`,
+        ? `Area ${JSON.stringify(destinationAreaId)} is not a visible destination from here.`
+        : `More than one visible route leads to area ${JSON.stringify(destinationAreaId)}. Pass area_route_id or route_id.`,
     );
   }
   return matches[0]![0];
@@ -1159,7 +1157,7 @@ export function resolveAreaMoveSelector(
     canonicalRouteId !== routeIdAlias
   ) {
     throw new Error(
-      "Conflicting area_route_id and route_id; provide one value or the same value in both fields.",
+      "area_route_id and route_id conflict. Pass one field, or use the same value in both.",
     );
   }
 
@@ -1175,9 +1173,7 @@ export function resolveAreaMoveSelector(
     routeSelector !== undefined &&
     !routes.some(([candidateRouteId]) => candidateRouteId === routeSelector)
   ) {
-    throw new Error(
-      `Area route ${JSON.stringify(routeSelector)} is not a currently visible route from here.`,
-    );
+    throw new Error(`Area route ${JSON.stringify(routeSelector)} is not visible from here.`);
   }
 
   if (selector.area_id === undefined) return routeSelector;
@@ -1193,7 +1189,7 @@ export function resolveAreaMoveSelector(
       !matchingRoutes.some(([candidateRouteId]) => candidateRouteId === routeSelector))
   ) {
     throw new Error(
-      `Area ${JSON.stringify(selector.area_id)} has multiple currently visible routes from here; provide area_route_id or route_id.`,
+      `More than one visible route leads to area ${JSON.stringify(selector.area_id)}. Pass area_route_id or route_id.`,
     );
   }
   if (
@@ -1201,7 +1197,7 @@ export function resolveAreaMoveSelector(
     !matchingRoutes.some(([candidateRouteId]) => candidateRouteId === routeSelector)
   ) {
     throw new Error(
-      `Conflicting ${routeSelectorName} and area_id; the route does not lead to that currently visible destination.`,
+      `${routeSelectorName} and area_id conflict. That route does not lead to the visible destination.`,
     );
   }
   // An exact route selector truthfully resolves an ambiguous destination alias
@@ -1271,7 +1267,7 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
       if (PLAY_MODE === "pure") {
         if (pureRunState.callInFlight) {
           throw new Error(
-            "Another pure-play tool call is still in progress; wait for its response before retrying.",
+            "Another tool call is still running. Wait for its response before trying again.",
           );
         }
         pureRunState.callInFlight = true;
@@ -1475,7 +1471,7 @@ function requireAliasedArgument(
 }
 
 const WORLD_QUEST_SOURCE = {
-  world_quest_id: z.string().describe("Shipped quest id (from the overworld quest registry)."),
+  world_quest_id: z.string().describe("Quest id from the shipped overworld quest registry."),
 };
 const G = z.number().int().refine(genSeed);
 const B = (d: string) => z.boolean().optional().describe(d);
@@ -1486,10 +1482,10 @@ const SESSION_HANDLE = (description: string) =>
     ? REQUIRED_SESSION_HANDLE(description).optional()
     : REQUIRED_SESSION_HANDLE(description);
 const OVERWORLD_SESSION = {
-  session_id: SESSION_HANDLE("Parent handle: overworld_session_id; never rpg_session_id."),
+  session_id: SESSION_HANDLE("Parent overworld_session_id. Do not use rpg_session_id."),
 };
 const HIDE_GRAPH = {
-  hide_graph: B("Omit the world graph from observations."),
+  hide_graph: B("Omit the world graph."),
 };
 const PLAYER_HIDE_GRAPH = PLAY_MODE === "pure" ? {} : HIDE_GRAPH;
 const EMBEDDED_QUEST_SEED =
@@ -1499,36 +1495,42 @@ const EMBEDDED_QUEST_SEED =
         seed: z.number().int().safe().optional().describe("Runtime seed."),
       };
 const COMPACT_ACTIONS = {
-  compact_actions: B("Bare action ids instead of labeled options."),
+  compact_actions: B("Return action ids without labels."),
 };
 const COMPACT_EVENTS = {
-  compact_events: B("Events as tagged tuples per the session legend."),
-  include_event_version: B("Echo the event schema version."),
+  compact_events: B("Return events as tagged tuples defined by the session legend."),
+  include_event_version: B("Include the event schema version."),
 };
 const COMPACT_OBSERVATION = {
-  compact_observation: B("False swaps the compact context for the verbose observation."),
+  compact_observation: B("Set false to return the verbose observation."),
   include_actions: B(
-    "Legal action ids plus active dialogue prompts in context; enforced for active pure compact responses.",
+    "Include legal action ids and active dialogue replies. Always true in pure compact play.",
   ),
-  include_context_version: B("Echo the context schema version."),
+  include_context_version: B("Include the context schema version."),
 };
 const IF_STATE_HASH = {
-  if_state_hash: z.string().optional().describe("Reply unchanged:true if this state hash holds."),
+  if_state_hash: z
+    .string()
+    .optional()
+    .describe("Return unchanged:true if this state hash matches."),
 };
 const IF_TRANSCRIPT_HASH = {
   if_transcript_hash: z
     .string()
     .optional()
-    .describe("Reply unchanged:true if this transcript hash holds."),
+    .describe("Return unchanged:true if this transcript hash matches."),
 };
 const EXPECTED_STATE_HASH = {
-  expected_state_hash: z.string().optional().describe("Reject if the state hash went stale."),
+  expected_state_hash: z
+    .string()
+    .optional()
+    .describe("Reject the action if this state hash is stale."),
 };
 tool(
   "list_overworld",
-  "Summarize the overworld: town, road, and content counts plus the start town; design notes are opt-in.",
+  "Return overworld counts and the start town. Design notes are optional.",
   {
-    include_design_notes: z.boolean().optional().describe("Include sources and design rules."),
+    include_design_notes: z.boolean().optional().describe("Include source notes and design rules."),
   },
   (a) => api.list_overworld(a),
 );
@@ -1667,35 +1669,38 @@ function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
 }
 
 const EXPECTED_SNAPSHOT_HASH = {
-  expected_snapshot_hash: z.string().optional().describe("Reject if the snapshot hash is stale."),
+  expected_snapshot_hash: z
+    .string()
+    .optional()
+    .describe("Reject the action if this snapshot hash is stale."),
 };
 const IF_SNAPSHOT_HASH = {
   if_snapshot_hash: z
     .string()
     .optional()
-    .describe("Reply unchanged:true if this snapshot hash holds."),
+    .describe("Return unchanged:true if this snapshot hash matches."),
 };
 const ROUTES = {
-  include_route_options: B("Include multi-leg route_options in the context."),
+  include_route_options: B("Include multi-road route_options."),
 };
 const IDS = {
-  include_ids: B("Include discovered/completed id lists in the context."),
+  include_ids: B("Include discovered and completed id lists."),
 };
 const W = {
-  include_world_name: B("Include the world name in the context."),
+  include_world_name: B("Include the world name."),
 };
 const S = {
-  include_session_id: B("Echo the session id."),
+  include_session_id: B("Include the session id."),
 };
 const STATION_SUPPORT = {
-  include_station_dispatch_support: B("Legacy support detail."),
+  include_station_dispatch_support: B("Include legacy Station support details."),
   reveal_station_dispatch_support: z
     .string()
     .optional()
     .describe(
       PLAY_MODE === "pure"
-        ? "V6 board [5] id; reveal-only needs latest if_snapshot_hash."
-        : "Durable read-only reveal; pass the exact Station V6 board [5] id.",
+        ? "Station board[5] reveal id. Also pass the latest if_snapshot_hash."
+        : "Reveal Station support without changing state. Pass the exact board[5] id.",
     ),
 };
 const OVERWORLD_READ_DETAILS = PLAY_MODE === "pure" ? {} : { ...S, ...W, ...IDS, ...ROUTES };
@@ -1703,7 +1708,7 @@ const COMPACT_OVERWORLD_CONTEXT =
   PLAY_MODE === "pure"
     ? {}
     : {
-        compact_context: B("False swaps the compact context for the verbose observation."),
+        compact_context: B("Set false to return the verbose observation."),
         ...W,
         ...IDS,
         ...ROUTES,
@@ -1712,7 +1717,7 @@ const COMPACT_OVERWORLD_RESULT =
   PLAY_MODE === "pure"
     ? {}
     : {
-        compact_result: B("False returns the verbose action result."),
+        compact_result: B("Set false to return the verbose action result."),
       };
 const OVERWORLD_ACTION_CONTEXT = {
   ...EXPECTED_SNAPSHOT_HASH,
@@ -1721,12 +1726,12 @@ const OVERWORLD_ACTION_CONTEXT = {
 };
 const OVERWORLD_CONTEXT_DESCRIPTION =
   PLAY_MODE === "pure"
-    ? "Read compact context; Station reveal-only yields V1 delta."
-    : "Read compact context; Station support uses the exact V6 board [5] id.";
+    ? "Read current compact context without acting. A Station reveal returns only its new fields."
+    : "Read current context without acting. Station support uses the exact board[5] id.";
 
 tool(
   "start_overworld",
-  "Start a fresh overworld game; keep its tutorial and initial compact legend, merging later legend_delta patches by key.",
+  "Start fresh overworld play. Keep the tutorial, session_id, and legend. Add later legend_delta keys.",
   {
     ...COMPACT_OVERWORLD_CONTEXT,
   },
@@ -1735,15 +1740,15 @@ tool(
 tool(
   "get_overworld_session",
   PLAY_MODE === "pure"
-    ? "Re-read the bounded compact context of the current overworld session without acting."
-    : "Re-read an overworld session without acting; include_observation swaps the compact context for the verbose view.",
+    ? "Read the current compact overworld context without acting."
+    : "Read the current overworld context without acting. Set include_observation for the verbose view.",
   {
     ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,
     ...(PLAY_MODE === "pure"
       ? {}
       : {
-          include_observation: z.boolean().optional().describe("Return the verbose observation."),
+          include_observation: z.boolean().optional().describe("Return the verbose view."),
         }),
     ...OVERWORLD_READ_DETAILS,
   },
@@ -1755,7 +1760,7 @@ tool(
   {
     ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,
-    include_departure_recap_terms: B("Exact selected plan terms."),
+    include_departure_recap_terms: B("Include the full terms of the selected plan."),
     ...STATION_SUPPORT,
     ...OVERWORLD_READ_DETAILS,
   },
@@ -1763,7 +1768,7 @@ tool(
 );
 tool(
   "explain_overworld_session_opportunity",
-  "Revalidate one exact current opportunity lead and return one existing lawful next action without changing the journey, discovery, or snapshot.",
+  "Check one current event or job lead and return its legal next action. Does not change state.",
   {
     ...OVERWORLD_SESSION,
     kind: z.enum(["event", "job"]).describe("Exact lead kind from opportunity_leads."),
@@ -1774,7 +1779,7 @@ tool(
 );
 tool(
   "export_overworld_session",
-  "Export a resumable overworld snapshot; pass it to restore_overworld_session to continue the run later.",
+  "Export a snapshot. Pass it to restore_overworld_session to continue later.",
   {
     ...OVERWORLD_SESSION,
     ...EXPECTED_SNAPSHOT_HASH,
@@ -1784,7 +1789,7 @@ tool(
 );
 tool(
   "restore_overworld_session",
-  "Restore an exported overworld snapshot as a new session without replaying the fresh-start tutorial; keep its initial compact legend and merge later legend_delta patches by key.",
+  "Restore an exported snapshot as a new session. The start tutorial is not repeated. Keep the returned legend and add later legend_delta values by key.",
   {
     snapshot: BOUNDED_SNAPSHOT_RECORD.describe("Snapshot from export_overworld_session."),
     ...COMPACT_OVERWORLD_CONTEXT,
@@ -1803,19 +1808,19 @@ const DESTINATION_TOWN_INPUT = (shape: ZodRawShape) =>
 
 tool(
   "travel_overworld_session",
-  "Travel one road to an adjacent town, spending minutes and supplies and gaining fatigue; may trigger a road encounter.",
+  "Travel one road to an adjacent town. This spends time and supplies, adds fatigue, and may start a road encounter.",
   {
     ...OVERWORLD_SESSION,
     destination_town_id: z.string().optional().describe("Adjacent destination town."),
     dest_town_id: DEST_TOWN_ID_ALIAS.optional(),
-    road_id: z.string().optional().describe("Adjacent road to walk instead."),
+    road_id: z.string().optional().describe("Adjacent road id. Use instead of a town id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.travel_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "follow_overworld_session_goal",
-  "Follow the current goal passage until the game stops at its objective, a road choice, or a resource boundary.",
+  "Travel toward the current goal. Stops at the objective, a road encounter, or a resource boundary.",
   {
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -1824,7 +1829,7 @@ tool(
 );
 tool(
   "resolve_overworld_session_road_encounter",
-  "Choose a strategy for the pending road encounter; travel stays blocked until it is resolved.",
+  "Resolve the pending road encounter. Travel remains blocked until you choose a strategy.",
   {
     ...OVERWORLD_SESSION,
     strategy: z
@@ -1836,7 +1841,7 @@ tool(
 );
 tool(
   "care_overworld_session",
-  "Accept the active one-time campaign wound-care offer at the current area, spending its exact time.",
+  "Use the current area's one-time wound care. The shown time cost applies.",
   {
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -1863,7 +1868,7 @@ tool(
 );
 tool(
   "plan_overworld_session_route",
-  "Preview the best route to a town — minutes, supplies, fatigue — without moving.",
+  "Preview the best route to a town. Shows time, supplies, and arrival fatigue without moving.",
   DESTINATION_TOWN_INPUT({
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -1872,7 +1877,7 @@ tool(
 );
 tool(
   "scout_overworld_session_poi",
-  "Scout a point of interest in the current area; can reveal hidden areas, jobs, sites, or quests.",
+  "Scout a point of interest in the current area. This may reveal areas, jobs, sites, or quests.",
   {
     ...OVERWORLD_SESSION,
     poi_id: z.string().describe("POI id."),
@@ -1882,7 +1887,7 @@ tool(
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk via Station ['talk', character_id, contact_name] or legacy lead; support is order-neutral.",
+  "Talk to a visible contact. For Station, pass character_id from ['talk', character_id, contact_name]. Contact order does not matter.",
   CONTACT_INPUT({
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -1901,7 +1906,7 @@ tool(
 );
 tool(
   "resolve_overworld_session_event",
-  "Resolve an investigated event; use exact option_id for authored scenes.",
+  "Resolve an investigated event. For a scene with options, pass an exact option_id.",
   {
     ...OVERWORLD_SESSION,
     event_id: z.string().describe("Event id."),
@@ -1912,7 +1917,7 @@ tool(
 );
 tool(
   "explore_overworld_session_site",
-  "Explore a discovered exploration site for renown and journal finds.",
+  "Explore a discovered site. This grants the shown renown and records its find.",
   {
     ...OVERWORLD_SESSION,
     site_id: z.string().describe("Site id."),
@@ -1922,7 +1927,7 @@ tool(
 );
 tool(
   "explore_overworld_session_area",
-  "Survey the current local area to reveal its points of interest, contacts, events, and exits.",
+  "Survey the current area. This reveals its points of interest, contacts, events, and exits.",
   {
     ...OVERWORLD_SESSION,
     area_id: z.string().describe("Area id."),
@@ -1932,7 +1937,7 @@ tool(
 );
 tool(
   "move_overworld_session_area",
-  "Walk inside town by area_route_id or route_id, or a visible destination area_id.",
+  "Move within the current town. Pass a visible area_route_id, route_id, or destination area_id.",
   AREA_MOVE_INPUT({
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -1941,7 +1946,7 @@ tool(
 );
 tool(
   "work_overworld_session_job",
-  "Work a discovered job; use exact option_id for authored scenes.",
+  "Work a discovered job. For a scene with options, pass the required exact option_id.",
   {
     ...OVERWORLD_SESSION,
     job_id: z.string().describe("Job id."),
@@ -1952,14 +1957,14 @@ tool(
 );
 tool(
   "start_overworld_session_quest",
-  "Start a discovered quest as an embedded RPG session; play via step_action, and non-death endings fold back automatically.",
+  "Start a discovered quest. Use its returned rpg_session_id with step_action. Non-death endings return to the overworld automatically.",
   {
     ...OVERWORLD_SESSION,
     quest_id: z.string().describe("Quest id."),
     approach_id: z
       .string()
       .optional()
-      .describe("Required launch approach id when the quest advertises launch options."),
+      .describe("Required approach id when the quest shows launch options."),
     ...EMBEDDED_QUEST_SEED,
     ...PLAYER_HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -1970,11 +1975,11 @@ tool(
 );
 tool(
   "complete_overworld_session_quest",
-  "Fold back an ended child only when its ending response still exposes rpg_session_id; non-death endings fold automatically.",
+  "Return an ended child quest manually only if its ending still includes rpg_session_id. Non-death endings normally return automatically.",
   {
     ...OVERWORLD_SESSION,
     rpg_session_id: SESSION_HANDLE(
-      "Ended child RPG handle from rpg_session_id; distinct from parent overworld session_id.",
+      "Ended child rpg_session_id. Do not use the parent overworld_session_id.",
     ),
     expected_rpg_state_hash: z.string().optional().describe("Reject stale RPG state."),
     ...OVERWORLD_ACTION_CONTEXT,
@@ -1995,26 +2000,26 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions by calling with session_id set to the exact current parent overworld_session_id and story_choice_id set to that exact visible id. Merge visible revealOption/reviewOption arguments into that call; they do not replace session_id, and option_id/reveal_id are mutually exclusive. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.",
+  "Inspect a visible story choice without choosing it. Pass the parent session_id and exact story_choice_id from journey.storyChoice, Station ['inspect', id], or departure_interactions. Add option_id or reveal_id, not both. option_id returns one option's full detail. reveal_id unlocks staged options for this session and survives export or restore. Compact output omits repeated board and world data. Set compact_result:false for the full story.",
   z
     .object({
       ...OVERWORLD_SESSION,
       story_choice_id: z
         .string()
         .describe(
-          "Id from journey.storyChoice, Station inspect action, or legacy departure_interactions.",
+          "Exact id from journey.storyChoice, Station ['inspect', id], or departure_interactions.",
         ),
       option_id: z
         .string()
         .optional()
         .describe(
-          "Option id from compact story.options. Compact output returns only that option's new detail and unchanged receipt; compact_result:false validates the id but returns the canonical full story.",
+          "Exact id from story.options. Compact output returns that option's detail without changing state.",
         ),
       reveal_id: z
         .string()
         .optional()
         .describe(
-          "Expansion id from revealOption; exclusive with option_id. Success authorizes this live session/story only.",
+          "Exact revealOption id. Do not combine with option_id. The reveal applies only to this session and story.",
         ),
       ...OVERWORLD_ACTION_CONTEXT,
     })
@@ -2026,11 +2031,11 @@ tool(
 );
 tool(
   "choose_overworld_session_story",
-  "Choose a visible option; reveal first. story_choice_id disambiguates Station support.",
+  "Choose a visible story option. If revealOption exists, reveal it first. Pass story_choice_id for a Station support choice.",
   {
     ...OVERWORLD_SESSION,
-    choice: z.string().describe("Visible option id; departure options are inferred."),
-    story_choice_id: z.string().optional().describe("Optional Station support story id."),
+    choice: z.string().describe("Exact visible option id. Departure story id is inferred."),
+    story_choice_id: z.string().optional().describe("Story id required for Station support."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.choose_overworld_session_story(defaultCompactOverworld(a)),
@@ -2049,7 +2054,7 @@ tool(
 );
 
 const RPG_SESSION_ID = REQUIRED_SESSION_HANDLE(
-  "Child handle: rpg_session_id; never overworld_session_id.",
+  "Child rpg_session_id. Do not use overworld_session_id.",
 );
 const RPG_SESSION_ID_ALIAS = REQUIRED_SESSION_HANDLE("Alias for session_id.");
 const RPG_SESSION_INPUT = (shape: ZodRawShape) =>
@@ -2062,7 +2067,7 @@ const RPG_SESSION_INPUT = (shape: ZodRawShape) =>
     "session_id",
     "rpg_session_id",
   );
-const ACTION_ID = z.string().describe("Id from legal or unavailable action rows.");
+const ACTION_ID = z.string().describe("Exact id from actions or unavailable rows.");
 const ACTION_ID_ALIAS = z.string().describe("Alias for action_id.");
 const RPG_STEP_ACTION_INPUT = (shape: ZodRawShape) =>
   requireArgumentGroups(
@@ -2081,7 +2086,7 @@ const RPG_STEP_ACTION_INPUT = (shape: ZodRawShape) =>
 
 tool(
   "generate_rpg_pack",
-  "Mint and validate a deterministic RPG pack from a seed, writing nothing; play it via new_game's generate_rpg_seed.",
+  "Generate and validate a deterministic RPG pack from a seed without writing files. Start it with new_game.generate_rpg_seed.",
   {
     seed: G.describe("Generation seed."),
   },
@@ -2090,7 +2095,7 @@ tool(
 
 tool(
   "new_game",
-  "Start an RPG session on the default or a generated pack; returns session_id, state_hash, and a compact context with its legend.",
+  "Start an RPG session with the default or a generated pack. Returns session_id, state_hash, compact context, and its legend.",
   {
     generate_rpg_seed: G.optional().describe("Seed from generate_rpg_pack."),
     seed: z.number().int().safe().optional().describe("Runtime seed."),
@@ -2102,9 +2107,9 @@ tool(
 );
 tool(
   "start_world_quest",
-  "Start an RPG session for a shipped quest by id — a dev/QA entry point into the RPG runtime; players reach quests in-world via the overworld. Returns session_id, state_hash, and a compact context with its legend.",
+  "Start a shipped quest directly for development or QA. Players normally enter quests from the overworld. Returns session_id, state_hash, compact context, and its legend.",
   {
-    world_quest_id: z.string().describe("Shipped quest id (from the overworld quest registry)."),
+    world_quest_id: z.string().describe("Quest id from the shipped overworld quest registry."),
     seed: z.number().int().safe().optional().describe("Runtime seed."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -2115,19 +2120,19 @@ tool(
 
 tool(
   "get_observation",
-  "Read RPG context; embedded quests include parent journey.",
+  "Read the current RPG context without acting. Embedded quests also include the parent journey.",
   RPG_SESSION_INPUT({
     ...PLAYER_HIDE_GRAPH,
     ...IF_STATE_HASH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
-    include_character_continuity: B("Recover embedded continuity."),
+    include_character_continuity: B("Include the embedded quest's character continuity."),
   }),
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(
   "list_legal_actions",
-  "List legal RPG actions and authored unavailable choices with reasons.",
+  "List legal actions and visible blocked actions with reasons.",
   RPG_SESSION_INPUT({
     ...IF_STATE_HASH,
     compact_actions: z
@@ -2135,8 +2140,8 @@ tool(
       .optional()
       .describe(
         PLAY_MODE === "pure"
-          ? "True returns bare action ids; defaults to labeled options."
-          : "False returns labeled options.",
+          ? "Set true for action ids without labels. The default includes labels."
+          : "Set false to include action labels.",
       ),
   }),
   (a) => api.list_legal_actions(defaultCompactActions(a)),
@@ -2144,7 +2149,7 @@ tool(
 
 tool(
   "step_action",
-  "Apply a legal RPG action or select an unavailable id for its authored reason.",
+  "Take one legal RPG action. You may also submit a visible unavailable id to receive its blocked reason.",
   RPG_STEP_ACTION_INPUT({
     ...EXPECTED_STATE_HASH,
     ...PLAYER_HIDE_GRAPH,
@@ -2156,7 +2161,7 @@ tool(
 );
 tool(
   "get_state",
-  "Read the RPG session's state hash for change detection; raw or compact state is opt-in.",
+  "Read the RPG state hash without acting. Raw and compact state are optional.",
   RPG_SESSION_INPUT({
     ...IF_STATE_HASH,
     include_state: z.boolean().optional().describe("Include the raw state object."),
@@ -2166,7 +2171,7 @@ tool(
 );
 tool(
   "get_transcript",
-  "Summarize an RPG session's play history; per-turn rows and events are opt-in.",
+  "Summarize the RPG play history. Turn rows and events are optional.",
   RPG_SESSION_INPUT({
     ...S,
     include_source: z.boolean().optional(),
@@ -2181,7 +2186,7 @@ tool(
 );
 tool(
   "save_game",
-  "Serialize the RPG session to a save string for load_game; hash guards reject stale saves.",
+  "Create a save string for load_game. The expected hash rejects stale state.",
   RPG_SESSION_INPUT({
     ...EXPECTED_STATE_HASH,
     ...IF_STATE_HASH,
@@ -2192,7 +2197,7 @@ tool(
 );
 tool(
   "load_game",
-  "Restore an RPG session from a save string; returns a new session_id and a compact context with its legend.",
+  "Restore an RPG save as a new session. Returns a new session_id, compact context, and its legend.",
   {
     world_quest_id: z.string().optional().describe("World quest id."),
     generate_rpg_seed: G.optional().describe("Seed for generated-pack saves."),
@@ -2206,7 +2211,7 @@ tool(
 
 tool(
   "replay_trace",
-  "Replay a recorded action trace through the engine and verify the final state hash.",
+  "Replay an action trace and verify its final state hash.",
   {
     trace_path: z.string().describe("Trace path."),
     world_quest_id: z.string().optional().describe("World quest id."),
@@ -2216,7 +2221,7 @@ tool(
 
 tool(
   "adapt_story",
-  "Author and validate a new RPG pack from a story premise; returns the authoring report.",
+  "Create and validate an RPG pack from a story premise. Returns an authoring report.",
   {
     premise: z.string().describe("Story premise."),
     include_pack: z.boolean().optional().describe("Echo the authored pack."),
@@ -2226,7 +2231,7 @@ tool(
 
 tool(
   "inspect_trace",
-  "Inspect a recorded trace with per-step summaries, hash checks, and bug diagnosis.",
+  "Inspect an action trace. Returns step summaries, hash checks, and possible bug causes.",
   {
     trace_path: z.string().describe("Trace path."),
     world_quest_id: z.string().optional().describe("World quest id."),
@@ -2237,7 +2242,7 @@ tool(
 
 tool(
   "apply_content_patch",
-  "Apply a validated op-based content patch to a shipped quest and return proof; writes nothing.",
+  "Validate a proposed content patch for a shipped quest and return proof. Does not write files.",
   {
     ...WORLD_QUEST_SOURCE,
     include_pack: z.boolean().optional().describe("Echo the patched pack."),

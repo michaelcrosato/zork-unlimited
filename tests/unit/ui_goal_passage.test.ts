@@ -64,9 +64,9 @@ describe("Goal Passage human UI", () => {
     expect(text).toContain(
       "from Queensbury town, through Saratoga city, Albany city, to Colonie town",
     );
-    expect(text).toContain("3 roads, 66 road min");
-    expect(text).toContain("Supplies -3 to 3; fatigue +3 to 3 (ready)");
-    expect(text).toContain("A road incident stops the passage for your decision.");
+    expect(text).toContain("Roads: 3. Time: 66 min.");
+    expect(text).toContain("Supplies -3, 3 left. Fatigue +3 to 3; condition ready.");
+    expect(text).toContain("A road encounter stops you. Choose a response.");
     expect(text).not.toContain("Oneonta city");
     expect(text).not.toContain("oneonta_tanners_fever");
     expect(text).not.toContain("road_");
@@ -96,7 +96,7 @@ describe("Goal Passage human UI", () => {
           stopReason: "resource_boundary",
         }),
       ),
-    ).toContain("before another road would worsen your travel condition");
+    ).toContain("before another road would cause a supply shortage or worsen your condition");
   });
 
   it("builds a Night Watch action from the engine forecast and wires the engine-owned action", () => {

@@ -60,7 +60,7 @@ export function render(obs: RpgObservation): string {
   for (const action of obs.blocked_actions) {
     lines.push(`Unavailable: ${action.command} — ${action.reason}`);
   }
-  if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
+  if (obs.inventory.length) lines.push(`[Carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
   return lines.join("\n");
 }
@@ -112,7 +112,7 @@ function optionForParsedAction(
   if (matches.length > 1) {
     return {
       ok: false,
-      reason: `"${raw.trim()}" maps to more than one current action. Use an exact command from \`actions\`.`,
+      reason: `More than one action matches "${raw.trim()}". Type an exact command from \`actions\`.`,
     };
   }
   return { ok: false, reason: "You can't do that right now." };
@@ -139,7 +139,7 @@ export function resolveActionOption(
   if (exactLegal.length > 1) {
     return {
       ok: false,
-      reason: `"${raw.trim()}" matches more than one current action. Use an exact command from \`actions\`.`,
+      reason: `More than one action matches "${raw.trim()}". Type an exact command from \`actions\`.`,
     };
   }
   const blocked = enumerateRpgBlockedActions(index, state).find(
@@ -254,7 +254,7 @@ async function main(): Promise<void> {
   }
 
   if (!interactive && !state.ended) {
-    console.error("\nThe command list did not reach an ending.");
+    console.error("\nThe scripted commands ended before the quest did.");
     process.exitCode = 1;
   }
 

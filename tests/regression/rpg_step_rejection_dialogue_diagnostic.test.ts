@@ -57,7 +57,9 @@ describe("bug_0512 — dialogue is an interruptible exchange", () => {
     });
     expect(read.observation.room).toBe("byre_yard");
     expect(read.observation.dialogue).not.toBeNull();
-    expect(read.events.map((event) => event.text ?? "").join(" ")).toMatch(/last tally/i);
+    expect(read.events.map((event) => event.text ?? "").join(" ")).toMatch(
+      /opening tally recorded three wolves/i,
+    );
 
     const followup = step("ask_byre");
     expect(followup.ok).toBe(true);

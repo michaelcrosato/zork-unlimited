@@ -151,14 +151,11 @@ describe("Albany opening departure recap", () => {
         activeFieldTerm: promiseFieldTerm,
       });
       expect(compactDuty).toEqual(["duty", "selected", promiseTitle, null, null]);
-      expect(rawPromise.title, `${path} source title`).toContain("Duty");
-      expect(promiseTitle, `${path} projected title`).toBe(
-        rawPromise.title.replace(/\bDuty\b/gu, "Promise"),
-      );
-      expect(fullDuty?.title).not.toBe(rawPromise.title);
+      expect(promiseTitle, `${path} projected title`).toBe(rawPromise.title);
+      expect(fullDuty?.title).toBe(rawPromise.title);
       const terminalRecap = renderDepartureRecap(session.view().departureRecap!).join("\n");
       expect(terminalRecap).toContain(`Wolf-Winter promise: ${promiseTitle}`);
-      expect(terminalRecap).not.toContain(rawPromise.title);
+      expect(terminalRecap).toContain(rawPromise.title);
       expect(session.snapshot()).toEqual(beforeSnapshot);
       expect(session.snapshotHash()).toBe(beforeHash);
     }
@@ -182,8 +179,8 @@ describe("Albany opening departure recap", () => {
       .compactView()
       .station_dispatch_board?.[4].find(([slot]) => slot === "field_team");
 
-    expect(rawSolo.title).toBe("Leave with a Solo Field Team");
-    expect(soloTitle).toBe("Ride alone");
+    expect(rawSolo.title).toBe("Travel Alone");
+    expect(soloTitle).toBe("Travel Alone");
     expect(fullSolo).toMatchObject({
       status: "selected",
       title: soloTitle,
@@ -191,11 +188,9 @@ describe("Albany opening departure recap", () => {
     });
     expect(compactSolo).toEqual(["field_team", "selected", soloTitle, null, null]);
     expect(renderDepartureRecap(solo.view().departureRecap!).join("\n")).toContain(
-      "Second rider: Ride alone",
+      "Second rider: Travel Alone",
     );
-    expect(renderDepartureRecap(solo.view().departureRecap!).join("\n")).not.toContain(
-      rawSolo.title,
-    );
+    expect(renderDepartureRecap(solo.view().departureRecap!).join("\n")).toContain(rawSolo.title);
     expect(solo.snapshot()).toEqual(beforeSoloSnapshot);
     expect(solo.snapshotHash()).toBe(beforeSoloHash);
   });
@@ -407,12 +402,8 @@ describe("Albany opening departure recap", () => {
 
     const authenticatedRecap = session.view().departureRecap!;
     const terminal = render(session.view());
-    expect(terminal).toContain(
-      "Start the mission now; choosing an available road is the next step, and planning is optional.",
-    );
-    expect(terminal).toContain(
-      `Start with \`start ${WOLF.title}\`; route selection follows before commitment.`,
-    );
+    expect(terminal).toContain("Start now by choosing an available road. Planning is optional.");
+    expect(terminal).toContain(`Start with \`start ${WOLF.title}\`, then choose a route.`);
     const board = session.view().stationDispatchBoard;
     if (!board) throw new Error("Expected the Station dispatch board.");
     expect(board.support).toHaveLength(3);
@@ -421,9 +412,7 @@ describe("Albany opening departure recap", () => {
       WOLF.launch!.options.map((option) => option.id),
     );
     const renderedBoard = renderStationDispatchBoard(session.view()).join("\n");
-    expect(renderedBoard).toContain(
-      "Optional dispatch support — field kit, relief wagon, or second rider:",
-    );
+    expect(renderedBoard).toContain("Optional support — field kit, relief wagon, or second rider:");
     for (const support of board.support) {
       expect(renderedBoard).toContain(`${support.label} —`);
       expect(renderedBoard).toContain(support.purpose);
@@ -434,30 +423,30 @@ describe("Albany opening departure recap", () => {
     expect(renderedBoard).toContain("Talk to June Pike: `talk June Pike`");
     expect(terminal).toContain(`${WOLF.title} field briefing:`);
     expect(terminal).toContain(board.guidance);
-    expect(terminal).not.toContain(`${WOLF.title} dispatch recap:`);
+    expect(terminal).not.toContain(`${WOLF.title} departure plan:`);
     expect(terminal).not.toContain(`Background: ${REGISTRATION.profiles[0]!.title}`);
-    expect(terminal).toContain("Already set: `review dispatch`.");
+    expect(terminal).toContain("Current plan: `review dispatch`.");
     const boundedRecap = renderDepartureRecap(authenticatedRecap).join("\n");
-    expect(boundedRecap).toContain(`${WOLF.title} dispatch recap:`);
+    expect(boundedRecap).toContain(`${WOLF.title} departure plan:`);
     expect(boundedRecap).toContain(`Background: ${REGISTRATION.profiles[0]!.title}`);
-    expect(boundedRecap).toContain("Plan slots and exact selected terms: `review dispatch`.");
+    expect(boundedRecap).toContain("Review all choices and costs: `review dispatch`.");
     expect(boundedRecap).not.toContain(REGISTRATION.profiles[0]!.tradeoff);
     const reviewedTerms = renderDepartureRecapTerms(authenticatedRecap).join("\n");
-    expect(reviewedTerms).toContain(`Active term: ${REGISTRATION.profiles[0]!.tradeoff}`);
-    expect(reviewedTerms).toContain(`Active term: ${dutyFieldTerm}`);
-    expect(reviewedTerms).toContain(`Active term: ${evidenceFieldTerm}`);
+    expect(reviewedTerms).toContain(`Effect: ${REGISTRATION.profiles[0]!.tradeoff}`);
+    expect(reviewedTerms).toContain(`Effect: ${dutyFieldTerm}`);
+    expect(reviewedTerms).toContain(`Effect: ${evidenceFieldTerm}`);
     expect(reviewedTerms).toContain("Field kit: Open (optional)");
     expect(reviewedTerms).not.toContain(PREPARATION.profiles[0]!.tradeoff);
     expect(terminal.indexOf(`${WOLF.title} field briefing:`)).toBeLessThan(
       terminal.indexOf("Depart now:"),
     );
     expect(terminal.indexOf("Depart now:")).toBeLessThan(
-      terminal.indexOf("Optional support (independent"),
+      terminal.indexOf("Optional support (`review support` for details):"),
     );
-    expect(terminal.indexOf("Optional support (independent")).toBeLessThan(
-      terminal.indexOf("Already set: `review dispatch`."),
+    expect(terminal.indexOf("Optional support (`review support` for details):")).toBeLessThan(
+      terminal.indexOf("Current plan: `review dispatch`."),
     );
-    expect(terminal.indexOf("Take the Exposed Ridge Road")).toBeGreaterThan(
+    expect(terminal.indexOf("Take the Exposed Ridge")).toBeGreaterThan(
       terminal.indexOf(`${WOLF.title} field briefing:`),
     );
     const promotedLaunch = terminal.slice(terminal.indexOf("Depart now:"));
@@ -549,12 +538,10 @@ describe("Albany opening departure recap", () => {
     const openTerminal = render(first.view());
     expect(openTerminal).not.toContain("Second rider: Open (optional)");
     expect(openTerminal).toContain(
-      `Set: background, promise, report. Dispatch ${String(openWindow.committedMinutes)}m;`,
+      `Background, promise, and report are set. Current setup: ${String(openWindow.committedMinutes)}m. Final setup:`,
     );
-    expect(openTerminal).toContain(
-      "Compare; named choice commits. Start Wolf-Winter to decline the rest.",
-    );
-    expect(openTerminal).toContain("Already set: `review dispatch`.");
+    expect(openTerminal).toContain("Optional support remains. Start Wolf-Winter to skip it.");
+    expect(openTerminal).toContain("Current plan: `review dispatch`.");
     first.talkToCharacter(ALLY.contact);
     expect(first.journey().storyChoice?.kind).toBe("ally");
     expect(first.view().departureRecap?.dispatch).toEqual({
@@ -613,9 +600,9 @@ describe("Albany opening departure recap", () => {
       title: projectedTitle(presentOpeningAlly(ALLY, solo.snapshot().character), soloOption.id),
     });
     expect(render(solo.view())).not.toContain("Dispatch sealed:");
-    expect(render(solo.view())).toContain("Already set: `review dispatch`.");
+    expect(render(solo.view())).toContain("Current plan: `review dispatch`.");
     expect(renderDepartureRecap(solo.view().departureRecap!).join("\n")).toContain(
-      "Dispatch sealed:",
+      `Departure plan complete: ${String(explicitSoloWindow.ledgerMinutes)} min — on time.`,
     );
 
     const questStart = first.view().questStarts.find(([questId]) => questId === WOLF.id);
@@ -755,8 +742,12 @@ describe("Albany opening departure recap", () => {
     if (!delayedRecap?.dispatch) throw new Error("Expected delayed Station dispatch recap.");
     const delayedTerminal = render(delayed.view());
     expect(delayedTerminal).not.toContain("Dispatch sealed:");
-    expect(delayedTerminal).toContain(`Dispatch ${String(delayedRecap.dispatch.minutes)}m—delayed`);
-    expect(renderDepartureRecap(delayedRecap).join("\n")).toContain("Dispatch sealed:");
+    expect(delayedTerminal).toContain(
+      `Setup took ${String(delayedRecap.dispatch.minutes)}m, so the dispatch is late.`,
+    );
+    expect(renderDepartureRecap(delayedRecap).join("\n")).toContain(
+      `Departure plan complete: ${String(delayedRecap.dispatch.minutes)} min — delayed.`,
+    );
     expect(delayed.snapshot()).toEqual(beforeSnapshot);
     expect(delayed.snapshotHash()).toBe(beforeHash);
   });
@@ -850,7 +841,7 @@ describe("Albany opening departure recap", () => {
             : null,
         ]);
         expect(stage.compact.station_dispatch_board).toBeUndefined();
-        expect(stage.terminal).toContain(`${WOLF.title} dispatch recap:`);
+        expect(stage.terminal).toContain(`${WOLF.title} departure plan:`);
       } else {
         expect(stage.compact.departure_recap).toBeUndefined();
         expect(stage.compact.station_dispatch_board?.[4].map((row) => row.slice(0, 3))).toEqual(
@@ -858,8 +849,8 @@ describe("Albany opening departure recap", () => {
             .filter((entry) => entry.status !== "open_optional")
             .map((entry) => [entry.slot, entry.status, entry.title]),
         );
-        expect(stage.terminal).not.toContain(`${WOLF.title} dispatch recap:`);
-        expect(stage.terminal).toContain("Already set: `review dispatch`.");
+        expect(stage.terminal).not.toContain(`${WOLF.title} departure plan:`);
+        expect(stage.terminal).toContain("Current plan: `review dispatch`.");
       }
       const visible = JSON.stringify(recap);
       for (const alternative of [

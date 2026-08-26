@@ -36,17 +36,17 @@ const highRng = (): Rng => ({
 const rules = buildRpgRules(index, () => highRng());
 const step = makeStep(rules);
 const OPENING_ROOM_TEXT =
-  "A shallow bowl of black peat and broken reed, ringed by taller hags. It smells of old musk and blood. The Gallowmere sow is here — a great grey animal, heavy across the shoulders, her tusks yellowed and her eyes small and still. The charge angle you read at the kill-site shows you the blind-side opening before the first tusk-swing. The gully is back to the south.";
+  "Before your first attack, STRIKE the blind side WITH hunting-knife to gain +2 attack. This option locks after you use it or take a counterattack. Go south to retreat to the Moor Gully. The Gallowmere sow waits in the reeds.";
 const OPENING_OBJECT_TEXT =
-  "The fighting angle Cradoc's ground described: the sow rolls right as she charges, lifting her left tusk late and showing a narrow blind-side opening to a hunter who has read both ground and wind.";
+  "STRIKE the blind side WITH hunting-knife before your first attack to gain +2 attack. The option requires the kill-site ground and wind-stone preparations.";
 const SPENT_OPENING_ROOM_TEXT =
-  "The Gallowmere hollow, black peat and broken reed churned by the fight. The wounded sow is still on you; the clean first opening has passed into the close exchange of tusk and knife. The gully is back to the south.";
+  "The first-round chance to STRIKE the blind side is gone. Continue to ATTACK Gallowmere sow, or go south to the Moor Gully.";
 const SPENT_OPENING_OBJECT_TEXT =
-  "The first exchange has spent the clean opening. The sow is wounded and still fighting; now her blind side shifts with every tusk-swing instead of holding as a first-cut angle.";
+  "The chance to STRIKE the blind side expired after the first counterattack. Continue with ATTACK Gallowmere sow.";
 const UNLEARNED_ROOM_TEXT =
-  "A shallow bowl of black peat and broken reed, ringed by taller hags. It smells of old musk and blood. The Gallowmere sow is here — a great grey animal, heavy across the shoulders, her tusks yellowed and her eyes small and still. She has seen you come in from the right quarter and she knows it. The gully is back to the south.";
+  "ATTACK Gallowmere sow to continue the hunt. Go south to retreat to the Moor Gully. The great grey sow waits among black peat and broken reeds.";
 const UNLEARNED_OBJECT_TEXT =
-  "The sow must have a blind side, but without the kill-site's charge angle you cannot read it under the rush of tusk and shoulder.";
+  "You cannot STRIKE the blind side because you did not read the kill-site ground. Continue with ATTACK Gallowmere sow.";
 
 function actId(s: GameState, id: string): GameState {
   const opt = enumerateRpgActions(index, s).find((o) => o.id === id);
@@ -168,7 +168,9 @@ describe("bug_0447 — Gallowmere turns learned charge-angle prep into a fight t
     const s = fullPrepToHollow();
     expect(commands(s)).toContain("strike the blind side with hunting-knife");
     expect(commands(s)).toContain("attack Gallowmere sow");
-    expect(buildRpgObservation(index, s).description).toContain("blind-side opening");
+    expect(buildRpgObservation(index, s).description).toContain(
+      "Before your first attack, STRIKE the blind side WITH hunting-knife",
+    );
   });
 
   it("hunters who skipped the kill-site do not get the learned blind-side tactic", () => {
@@ -253,12 +255,16 @@ describe("bug_0447 — Gallowmere turns learned charge-angle prep into a fight t
       .filter((e): e is { type: "narration"; text: string } => e.type === "narration")
       .map((e) => e.text)
       .join("\n");
-    expect(narration).toContain("the angle Cradoc died leaving for you");
+    expect(narration).toContain(
+      "You STRIKE the blind side with your hunting-knife before the left tusk rises",
+    );
     expect(s.flags["blind_side_struck"]).toBe(true);
     expect(s.vars["attack"]).toBe(beforeAttack + 2);
     expect(s.vars["score"]).toBe(beforeScore);
     expect(actionIds(s)).not.toContain("use_hunting_knife_on_sow_blind_side");
-    expect(buildRpgObservation(index, s).description).toContain("first cut found the blind side");
+    expect(buildRpgObservation(index, s).description).toContain(
+      "You struck the blind side and gained +2 attack",
+    );
   });
 
   it("signposts the ridge closure while preserving both post-kill routes", () => {
@@ -268,7 +274,8 @@ describe("bug_0447 — Gallowmere turns learned charge-angle prep into a fight t
       s = actId(s, "attack_gallowmere_sow");
     }
     expect(s.flags["sow_slain"]).toBe(true);
-    const closure = "The hunt closes on the ridge to the north; the gully is back to the south.";
+    const closure =
+      "The Gallowmere sow is dead. Go north to the Moor Ridge to finish the hunt, or south to the Moor Gully.";
     const full = buildRpgObservation(index, s);
     expect(full.description).toContain(closure);
     expect(actionIds(s)).toEqual(expect.arrayContaining(["go_north", "go_south"]));

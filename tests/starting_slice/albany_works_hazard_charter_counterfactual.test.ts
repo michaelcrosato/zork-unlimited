@@ -175,7 +175,7 @@ describe("Albany Works hazard-shift charter", () => {
     expect(atCompletion.view().events.map((candidate) => candidate.id)).not.toContain(EVENT);
     expect(atCompletion.view().jobChoices).toEqual(expectedJobChoices());
     expect(() => atCompletion.resolveEvent(EVENT, WITNESS_CHARTER)).toThrow(
-      /must be made before completing wolf_winter|not available/i,
+      /event option closed when you completed wolf_winter/i,
     );
   });
 
@@ -260,9 +260,7 @@ describe("Albany Works hazard-shift charter", () => {
       expect(result.minutes).toBe(minutes);
       expect(session.snapshot().minutes - before.minutes).toBe(minutes);
       expect(session.view().regionRenown[REGION]).toBe(renownBefore + renown);
-      expect(() => session.workLocalJob(JOB, forbidden)).toThrow(
-        /not available in this journey|completed with a different authored option/i,
-      );
+      expect(() => session.workLocalJob(JOB, forbidden)).toThrow(/unavailable in this journey/i);
     },
   );
 

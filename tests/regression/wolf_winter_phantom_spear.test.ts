@@ -42,8 +42,7 @@ describe("bug_0191 — The Wolf-Winter: real carried spear, no stale Cade attrib
     const start = pack.rooms.find((r) => r.id === "steading_yard");
     expect(start, "steading_yard must exist").toBeDefined();
     const desc = start!.description.toLowerCase();
-    expect(desc).toContain("spear");
-    expect(desc).toContain("already");
+    expect(desc).toContain("you arrive with the albany relief spear");
 
     const spear = pack.objects.find((o) => o.id === "relief_spear");
     expect(spear).toMatchObject({ id: "relief_spear", held: true });
@@ -64,9 +63,9 @@ describe("bug_0191 — The Wolf-Winter: real carried spear, no stale Cade attrib
     // The clue must still name the two things actually gathered: counsel + the jerkin.
     expect(read).toMatch(/CADE/i);
     expect(read).toMatch(/JERKIN/i);
-    // And it must make clear the spear is already had (so no one looks for one).
-    expect(read).toMatch(/spear/i);
-    expect(read).toMatch(/ALREADY/i);
+    // It no longer names the already-held spear at all, so it cannot send the player
+    // searching for a second one.
+    expect(read).not.toMatch(/spear/i);
   });
 
   it("the yearling-kill journal carries no Cade attribution (true on the no-dialogue route)", () => {

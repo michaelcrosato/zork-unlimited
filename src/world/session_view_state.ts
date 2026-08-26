@@ -182,7 +182,7 @@ function pendingRoadLocationNode(
     id: `road:${encounter.edgeId}`,
     name: `On ${encounter.route}: ${encounter.from} to ${encounter.to}`,
     services: [],
-    description: `${encounter.event.summary} You are still between ${encounter.from} and ${encounter.to}; resolve the road encounter before doing town business in ${encounter.to}.`,
+    description: `${encounter.event.summary} You are between ${encounter.from} and ${encounter.to}. Resolve this encounter before taking actions in ${encounter.to}.`,
   };
 }
 

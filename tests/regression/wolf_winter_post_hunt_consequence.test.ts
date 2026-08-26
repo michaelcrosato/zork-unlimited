@@ -322,7 +322,9 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       });
       expect(options(state).map((option) => option.id)).toContain("go_north");
       expect(barActionId(state, route.item)).toBeTruthy();
-      expect(observation.description).toMatch(/bar their inner gate[^]*carry it into dawn/i);
+      expect(observation.description).toMatch(
+        /Choose here[^]*BAR inner cattle-gate[^]*keep it for daylight repair/i,
+      );
     }
   });
 
@@ -594,7 +596,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         endingId: "ending_held_gate_barred",
         state: split,
         finalActionId: barActionId(split, "split_rail_guard"),
-        returnText: "behind the inner gate you barred",
+        returnText: "behind the barred inner gate",
         memoryId: "memory:wolf_winter_inner_gate_barred",
         worldFactIds: [
           "fact:wolf_winter_bloodshed",
@@ -608,7 +610,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         endingId: "ending_held_timber_saved",
         state: retainSplitGuard(),
         finalActionId: "go_north",
-        returnText: "sound timber you carried out",
+        returnText: "timber you saved can begin the outer-fence repair",
         memoryId: "memory:wolf_winter_repair_timber_saved",
         worldFactIds: [
           "fact:wolf_winter_bloodshed",
@@ -621,7 +623,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         endingId: "ending_held",
         state: ordinaryHeldFork(),
         finalActionId: "go_north",
-        returnText: "guard wood was spent in the fighting",
+        returnText: "fight used the guard wood",
         memoryId: "memory:wolf_winter_guard_wood_spent",
         worldFactIds: [
           "fact:wolf_winter_bloodshed",
@@ -785,14 +787,14 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       {
         id: "send_wagon_to_cade",
         goalId: "carry_hedricks_packet_north",
-        goalText: "Carry Hayden's packet",
-        consequence: "replaces the broken outer paling",
+        goalText: "Take Hayden's packet",
+        consequence: "repairs the outer fence",
       },
       {
         id: "send_wardens_north",
         goalId: "travel_north_with_albany_wardens",
         goalText: "Travel with Hayden's wardens",
-        consequence: "outer paling waits",
+        consequence: "outer fence remains broken",
       },
     ] as const;
 
@@ -816,7 +818,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       });
       expect(() =>
         completed.api.rest_overworld_session({ session_id: completed.overworldSessionId }),
-      ).toThrow(/presented story consequence/i);
+      ).toThrow(/choose the open story option before taking another action/i);
 
       const selected = completed.api.choose_overworld_session_story({
         session_id: completed.overworldSessionId,

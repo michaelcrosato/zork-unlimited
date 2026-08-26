@@ -71,7 +71,7 @@ describe("Station dispatch board", () => {
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
-        "Ready to depart now with background, Wolf-Winter promise, and report set; field kit, one relief wagon, or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.",
+        "You can leave now. Set: background, Wolf-Winter promise, and report. Optional: field kit, one relief wagon, or second rider. They affect support, costs, or later results, not your field plan.",
     });
     expect(board.guidance.length).toBeLessThanOrEqual(STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT);
     expect(board.support.map((entry) => [entry.slot, entry.status, entry.selectedTitle])).toEqual(
@@ -95,14 +95,14 @@ describe("Station dispatch board", () => {
       "June Pike, second rider",
     ]);
     expect(board.support.map((entry) => entry.purpose)).toEqual([
-      "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
-      "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
-      "Second rider: optionally ask about cattle-first authority, or ride alone.",
+      "Optionally choose one field kit for a specific danger at Cade's farm.",
+      "Optionally assign Albany's last wagon to one of three needs. The other two go without it.",
+      "Optionally ask June to manage cattle safety, or travel alone.",
     ]);
     expect(board.support.map((entry) => entry.detailHint)).toEqual([
-      "Compare kits only if you want their exact cost and field use.",
-      "Compare destinations only if you want to decide who is protected.",
-      "Talk only to compare exact terms; this adds no combat power.",
+      "Compare field kits to see their cost and exact use.",
+      "Compare assignments to see who receives support.",
+      "Talk to June to compare her exact terms.",
     ]);
     expect(board.support.map((entry) => entry.action)).toEqual([
       {
@@ -143,7 +143,7 @@ describe("Station dispatch board", () => {
     );
     const sharedDispatchStatus = sharedWolfHillRouteDispatchStatus(fullRouteSummaries);
     expect(sharedDispatchStatus).toBe(
-      "Set: background, promise, report. Dispatch 10m; final 10–60m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
+      "Background, promise, and report are set. Current setup: 10m. Final setup: 10–60m; all on time. Optional support remains. Start Wolf-Winter to skip it.",
     );
 
     const compact = session.compactView();
@@ -158,10 +158,10 @@ describe("Station dispatch board", () => {
     );
     // V6 presents the legal roads and selected core first, with one relevance-first
     // overview standing in for all three unopened optional-support rows.
-    expect(Buffer.byteLength(JSON.stringify(compact.station_dispatch_board), "utf8")).toBe(578);
-    expect(Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8")).toBe(741);
+    expect(Buffer.byteLength(JSON.stringify(compact.station_dispatch_board), "utf8")).toBe(573);
+    expect(Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8")).toBe(525);
     expect(OVERWORLD_COMPACT_LEGEND.station_dispatch_board).toContain(
-      "Pre-review hides open_optional",
+      "Before review, overview lists open kit, wagon, and rider categories.",
     );
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
       6,
@@ -182,7 +182,7 @@ describe("Station dispatch board", () => {
     ]);
     expect(compact.station_dispatch_board?.[5]).toEqual([
       STATION_DISPATCH_SUPPORT_REVEAL_ID,
-      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+      "Optional: a field kit using Repair, Streetwise, or Mediation; plus Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
     ]);
     expect(JSON.stringify(compact.station_dispatch_board)).not.toContain(PREPARATION.id);
     expect(JSON.stringify(compact.station_dispatch_board)).not.toContain(RELIEF_ALLOCATION.id);
@@ -193,17 +193,17 @@ describe("Station dispatch board", () => {
     expect(compactStationDispatchBoardSupport(board)).toEqual([
       [
         "preparation",
-        "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
+        "Optionally choose one field kit for a specific danger at Cade's farm.",
         ["inspect", PREPARATION.id],
       ],
       [
         "relief_allocation",
-        "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
+        "Optionally assign Albany's last wagon to one of three needs. The other two go without it.",
         ["inspect", RELIEF_ALLOCATION.id],
       ],
       [
         "field_team",
-        "Second rider: optionally ask about cattle-first authority, or ride alone.",
+        "Optionally ask June to manage cattle safety, or travel alone.",
         ["talk", ALLY.contact, "June Pike"],
       ],
     ]);
@@ -217,8 +217,8 @@ describe("Station dispatch board", () => {
     );
     expect(compactRouteSummaries).toEqual(routeOnlySummaries);
     expect(routeOnlySummaries).toEqual([
-      "Open crest: 30m, 1 supply, fatigue +25; cattle alarm starts at 1; clear sight of the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.",
-      "Sheltered lee: 75m, 2 supplies, fatigue +10; cattle alarm starts at 0; hedges conceal the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.",
+      "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Cattle alarm starts at 1, but you can see the byre and weather clearly. This road chooses no field plan.",
+      "Sheltered Stockway — 75 minutes, 2 supplies, +10 fatigue. Cattle alarm starts at 0, but hedges hide the byre and weather. This road chooses no field plan.",
     ]);
     for (let index = 0; index < fullRouteSummaries.length; index += 1) {
       expect(fullRouteSummaries[index]).toBe(
@@ -242,14 +242,14 @@ describe("Station dispatch board", () => {
     );
     const stationContextBytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
     expect(promptBytes).toBe(15_720);
-    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(34_535);
-    expect(34_535).toBeLessThanOrEqual(34_868);
+    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(34_351);
+    expect(34_351).toBeLessThanOrEqual(34_868);
     const firstStationAggregate =
       promptBytes +
       pureCatalogBytes +
       stationContextBytes +
       Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
-    expect(firstStationAggregate).toBe(38_155);
+    expect(firstStationAggregate).toBe(37_896);
     expect(firstStationAggregate).toBeLessThanOrEqual(38_495);
 
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });
@@ -265,7 +265,7 @@ describe("Station dispatch board", () => {
     if (!clonedReveal) throw new Error("Expected a cloned support reveal.");
     (clonedReveal as [string, string])[1] = "Forged label";
     expect(compact.station_dispatch_board?.[5]?.[1]).toBe(
-      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+      "Optional: a field kit using Repair, Streetwise, or Mediation; plus Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
     );
 
     expect(session.snapshot()).toEqual(before);
@@ -284,42 +284,41 @@ describe("Station dispatch board", () => {
         selected: [],
         openMask: 7,
         overview:
-          "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+          "Optional: a field kit using Repair, Streetwise, or Mediation; plus Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
       },
       {
         selected: ["preparation"],
         openMask: 6,
         overview:
-          "Optional support: Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+          "Optional: Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
       },
       {
         selected: ["relief_allocation"],
         openMask: 5,
         overview:
-          "Optional support: kits use Repair, Streetwise, or Mediation; plus a cattle-first second rider. Review only if one interests you.",
+          "Optional: a field kit using Repair, Streetwise, or Mediation; plus June as a cattle-safety rider. Review only what interests you.",
       },
       {
         selected: ["field_team"],
         openMask: 3,
         overview:
-          "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon. Review only if one interests you.",
+          "Optional: a field kit using Repair, Streetwise, or Mediation; plus Albany's last relief wagon. Review only what interests you.",
       },
       {
         selected: ["preparation", "relief_allocation"],
         openMask: 4,
-        overview:
-          "Optional support: a cattle-first second rider. Review only if one interests you.",
+        overview: "Optional: June as a cattle-safety rider. Review only what interests you.",
       },
       {
         selected: ["preparation", "field_team"],
         openMask: 2,
-        overview: "Optional support: Albany's last relief wagon. Review only if one interests you.",
+        overview: "Optional: Albany's last relief wagon. Review only what interests you.",
       },
       {
         selected: ["relief_allocation", "field_team"],
         openMask: 1,
         overview:
-          "Optional support: kits use Repair, Streetwise, or Mediation. Review only if one interests you.",
+          "Optional: a field kit using Repair, Streetwise, or Mediation. Review only what interests you.",
       },
       {
         selected: ["preparation", "relief_allocation", "field_team"],
@@ -328,14 +327,14 @@ describe("Station dispatch board", () => {
       },
     ];
     const frozenV5RowBytes: Readonly<Record<number, number>> = Object.freeze({
-      0: 395,
-      1: 470,
-      2: 485,
-      3: 560,
-      4: 495,
-      5: 570,
-      6: 585,
-      7: 660,
+      0: 374,
+      1: 439,
+      2: 448,
+      3: 513,
+      4: 460,
+      5: 525,
+      6: 534,
+      7: 599,
     });
     expect(PREPARATION.profiles.map((profile) => profile.check_disclosure?.skill_label)).toEqual([
       "Repair",
@@ -398,7 +397,7 @@ describe("Station dispatch board", () => {
               "preparation",
               "open_optional",
               null,
-              "Optional kit: compare without choosing; covers one named danger.",
+              "Optional field kit: helps with one specific danger.",
               ["inspect", PREPARATION.id],
             ],
         testCase.selected.includes("relief_allocation")
@@ -407,7 +406,7 @@ describe("Station dispatch board", () => {
               "relief_allocation",
               "open_optional",
               null,
-              "Optional wagon: compare without choosing; send Albany's last to one crisis.",
+              "Optional wagon: support one need; leave two unsupported.",
               ["inspect", RELIEF_ALLOCATION.id],
             ],
         testCase.selected.includes("field_team")
@@ -416,7 +415,7 @@ describe("Station dispatch board", () => {
               "field_team",
               "open_optional",
               null,
-              "Optional rider: ask June before choosing; one cattle line, never combat.",
+              "Optional rider: June helps cattle safety, never combat.",
               ["talk", ALLY.contact, "June Pike"],
             ],
       ];
@@ -461,11 +460,11 @@ describe("Station dispatch board", () => {
 
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
     const preparedGuidance =
-      "Ready to depart now with background, Wolf-Winter promise, report, and field kit set; one relief wagon or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.";
+      "You can leave now. Set: background, Wolf-Winter promise, report, and field kit. Optional: one relief wagon or second rider. They affect support, costs, or later results, not your field plan.";
     expect(session.view().stationDispatchBoard?.guidance).toBe(preparedGuidance);
     expect(session.compactView().station_dispatch_board?.[2]).toMatch(
       new RegExp(
-        `^Set: background, promise, report\\. Dispatch ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m;`,
+        `^Background, promise, and report are set\\. Current setup: ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m\\.`,
         "u",
       ),
     );
@@ -493,7 +492,7 @@ describe("Station dispatch board", () => {
     ]);
     expect(row("field_team")?.[4]).toEqual(["talk", ALLY.contact, "June Pike"]);
     const riderOnlyGuidance =
-      "Ready to depart now with background, Wolf-Winter promise, report, field kit, and relief wagon set; second rider remains optional and changes cost or aftermath, not your Wolf-Winter approach.";
+      "You can leave now. Set: background, Wolf-Winter promise, report, field kit, and relief wagon. Optional: second rider. They affect support, costs, or later results, not your field plan.";
     expect(session.view().stationDispatchBoard?.guidance).toBe(riderOnlyGuidance);
     expect(session.compactView().station_dispatch_board?.[3]?.[3]).toBe(1);
 
@@ -510,9 +509,11 @@ describe("Station dispatch board", () => {
       session.compactView().station_dispatch_board?.[4].filter((entry) => entry[4] !== null),
     ).toEqual([]);
     const fullySetGuidance =
-      "Ready to depart now with background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice set; no optional support remains.";
+      "You can leave now. Set: background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice. No optional support remains.";
     expect(session.view().stationDispatchBoard?.guidance).toBe(fullySetGuidance);
-    expect(session.compactView().station_dispatch_board?.[2]).toMatch(/^Dispatch \d+m—on time;/u);
+    expect(session.compactView().station_dispatch_board?.[2]).toMatch(
+      /^Setup took \d+m, so the dispatch is on time\./u,
+    );
     expect(session.compactView().station_dispatch_board?.[3]?.[3]).toBe(0);
     expect(session.compactView().station_dispatch_board?.[5]).toBeNull();
     expect(session.snapshot().stationDispatchSupportReveals).toBeUndefined();
@@ -538,12 +539,12 @@ describe("Station dispatch board", () => {
       session.talkToCharacter(ALLY.contact);
       session.chooseJourneyStory(optionId);
       const guidance =
-        "Ready to depart now with background, Wolf-Winter promise, report, and riding choice set; field kit or one relief wagon remain optional and change cost or aftermath, not your Wolf-Winter approach.";
+        "You can leave now. Set: background, Wolf-Winter promise, report, and riding choice. Optional: field kit or one relief wagon. They affect support, costs, or later results, not your field plan.";
 
       expect(session.view().stationDispatchBoard?.guidance).toBe(guidance);
       expect(session.compactView().station_dispatch_board?.[2]).toMatch(
         new RegExp(
-          `^Set: background, promise, report\\. Dispatch ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m;`,
+          `^Background, promise, and report are set\\. Current setup: ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m\\.`,
           "u",
         ),
       );
@@ -597,21 +598,21 @@ describe("Station dispatch board", () => {
         "preparation",
         "open_optional",
         null,
-        "Optional kit: compare without choosing; covers one named danger.",
+        "Optional field kit: helps with one specific danger.",
         ["inspect", PREPARATION.id],
       ],
       [
         "relief_allocation",
         "open_optional",
         null,
-        "Optional wagon: compare without choosing; send Albany's last to one crisis.",
+        "Optional wagon: support one need; leave two unsupported.",
         ["inspect", RELIEF_ALLOCATION.id],
       ],
       [
         "field_team",
         "open_optional",
         null,
-        "Optional rider: ask June before choosing; one cattle line, never combat.",
+        "Optional rider: June helps cattle safety, never combat.",
         ["talk", ALLY.contact, "June Pike"],
       ],
     ]);
@@ -705,7 +706,7 @@ describe("Station dispatch board", () => {
     for (const alteredQuests of [mismatchedQuests, missingQuests]) {
       const generic = compactOverworldView({ ...view, quests: alteredQuests });
       expect(generic.station_dispatch_board?.[2]).toBe(
-        "Dispatch 10m committed; ready to depart now.",
+        "Setup: 10 minutes committed; ready to depart now.",
       );
       expect(summaries(generic)).toEqual(
         alteredQuests
@@ -732,7 +733,7 @@ describe("Station dispatch board", () => {
         localView: { ...state.localView, quests: alteredQuests },
       });
       expect(sessionCompact.station_dispatch_board?.[2]).toBe(
-        "Dispatch 10m committed; ready to depart now.",
+        "Setup: 10 minutes committed; ready to depart now.",
       );
       expect(summaries(sessionCompact)).toEqual(
         alteredQuests
@@ -920,7 +921,7 @@ describe("Station dispatch board", () => {
     });
     expect(waiting?.launch.approaches.every((approach) => !approach.availableNow)).toBe(true);
     expect(waiting?.guidance).toBe(
-      "No road is open with background, Wolf-Winter promise, and report set; field kit, one relief wagon, or second rider remain optional and change cost or aftermath, not your approach.",
+      "No road is open yet. Set: background, Wolf-Winter promise, and report. Optional: field kit, one relief wagon, or second rider. They affect support, costs, or later results, not your field plan.",
     );
     expect(waiting?.guidance.length).toBeLessThanOrEqual(
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,

@@ -575,7 +575,7 @@ describe("MCP journey surface", () => {
 
     expect(compact.result.text).toBe(full.result.entry.text);
     expect(compact.result.text).toContain("Rowan Quill");
-    expect(compact.result.text).toContain("what matters before the office closes");
+    expect(compact.result.text).toContain("registration, emergency authority, public records");
     expect("observation" in compact).toBe(false);
     expect(JSON.stringify(compact.result)).not.toContain(full.result.entry.id);
   });
@@ -634,7 +634,7 @@ describe("MCP journey surface", () => {
     expect(fullTalk.result.entry.text).toBe(uiTalk.entry.text);
     expect(compactTalk.result.text).toBe(uiTalk.entry.text);
     expect(uiTalk.entry.text).toBe(`${uiCard.summary} ${uiCard.agenda}`);
-    expect(uiTalk.entry.text).toMatch(/Cade/i);
+    expect(uiTalk.entry.text).toMatch(/Wolf-Winter/i);
     expect(uiTalk.entry.text).toMatch(/Hedrick|Gallowmere/i);
     expect(uiTalk.entry.text).toMatch(/current journey goal|journey ledger/i);
     expect(uiTalk.entry.text).not.toMatch(/controlling source certification|settled packets/i);
@@ -709,13 +709,12 @@ describe("MCP journey surface", () => {
         id: "continue",
         label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
         consequence:
-          "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
+          "Assign Albany's only dawn relief wagon. Then find Hedrick in Queensbury and complete The Gallowmere. Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision 40.",
       },
       {
         id: "end",
         label: "End here",
-        consequence:
-          "Close this journey here and keep its read-only record; this journey cannot resume.",
+        consequence: "End this journey and keep its read-only record. You cannot resume it.",
       },
     ] as const;
     const sourceJourney = source.journey();
@@ -828,13 +827,10 @@ describe("MCP journey surface", () => {
       (profile) => profile.id === "albany:ledger_advocate",
     );
     if (!ledgerProfile) throw new Error("expected the Ledger Advocate profile");
-    const ledgerTrigger = ledgerProfile.trigger_category?.replace(/\.$/u, "");
-    if (!ledgerTrigger) throw new Error("expected the Ledger Advocate field trigger");
     const ledgerJournalText = `${ledgerProfile.summary} ${ledgerProfile.preview} ${ledgerProfile.consequence}`;
     expect(fullAction.result.entry.text).toBe(ledgerJournalText);
     expect(fullAction.result.consequence).toBe(
-      `${ledgerProfile.summary} ${ledgerProfile.preview} ` +
-        `Field trigger: ${ledgerTrigger}. ${ledgerProfile.consequence}`,
+      `${ledgerProfile.preview} Best for: ${ledgerProfile.trigger_category} ${ledgerProfile.consequence}`,
     );
     expect(compactAction.result).toMatchObject({
       storyChoiceId: fullAction.result.storyChoiceId,
@@ -850,14 +846,7 @@ describe("MCP journey surface", () => {
       journeyDecision: fullAction.result.journeyDecision,
     });
     const compactResultJson = JSON.stringify(compactAction.result);
-    const firstConsequence = compactResultJson.indexOf(fullAction.result.consequence);
-    expect(firstConsequence).toBeGreaterThanOrEqual(0);
-    expect(
-      compactResultJson.indexOf(
-        fullAction.result.consequence,
-        firstConsequence + fullAction.result.consequence.length,
-      ),
-    ).toBe(-1);
+    expect(compactResultJson.match(/"consequence":/gu)).toHaveLength(1);
     expect(compactAction.snapshot_hash).toBe(fullAction.snapshot_hash);
     expect(compactAction.journey).toEqual(compactJourneyPresentation(fullAction.journey));
     expect(compactAction.journey).not.toEqual(fullAction.journey);
@@ -915,14 +904,14 @@ describe("MCP journey surface", () => {
             "immediateCost",
             "tradeoff",
           ]);
-          expect(fullOption.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
+          expect(fullOption.consequence).toMatch(/^Benefit: .+ Cost: .+\. Tradeoff: .+$/);
           expect(fullOption.consequence).toContain(`Cost: ${fullOption.summary.immediateCost}.`);
           const isReadyMadeDispatch =
             WORLD.opening_registration?.doctrines?.some(
               (doctrine) => doctrine.id === fullOption.id,
             ) === true;
           expect(fullOption.consequence).toContain(
-            `Boundary: ${isReadyMadeDispatch ? "Other duty/evidence pairs close." : fullOption.summary.tradeoff}`,
+            `Tradeoff: ${isReadyMadeDispatch ? "Other duty/evidence pairs close." : fullOption.summary.tradeoff}`,
           );
           expect(openingSelectionReceiptWordCount(fullOption.consequence)).toBeLessThanOrEqual(
             OPENING_SELECTION_RECEIPT_WORD_LIMIT,
@@ -1043,7 +1032,7 @@ describe("MCP journey surface", () => {
     ).toBe(true);
     expect(compactPreparationStory.options.map((option) => option.summary?.highlights)).toEqual(
       fullPreparationStory.options.map((option) => [
-        { label: "Governing skill", value: option.summary?.checkFit },
+        { label: "Check skill", value: option.summary?.checkFit },
       ]),
     );
     expect(
@@ -1152,11 +1141,10 @@ describe("MCP journey surface", () => {
           .join("|");
         const expectedOverviewByOpenSupport: Readonly<Record<string, string>> = {
           "preparation|relief_allocation|field_team":
-            "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+            "Optional: a field kit using Repair, Streetwise, or Mediation; plus Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
           "relief_allocation|field_team":
-            "Optional support: Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
-          field_team:
-            "Optional support: a cattle-first second rider. Review only if one interests you.",
+            "Optional: Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
+          field_team: "Optional: June as a cattle-safety rider. Review only what interests you.",
         };
         expect(compactBoard[5]).toEqual([
           STATION_DISPATCH_SUPPORT_REVEAL_ID,
@@ -1317,7 +1305,7 @@ describe("MCP journey surface", () => {
       for (const option of compactInspection.story.options) {
         expect(option).not.toHaveProperty("situationalBoundary");
       }
-      expect(JSON.stringify(compactInspection.story)).not.toContain("May never trigger");
+      expect(JSON.stringify(compactInspection.story)).not.toContain("may not trigger");
       const exactCandidateId =
         kind === "preparation"
           ? "albany:prep_relief_protocol"
@@ -1339,11 +1327,11 @@ describe("MCP journey surface", () => {
       expect(optionInspection.story.inspectedOption?.consequence).toBe(canonicalOption.consequence);
       if (kind === "preparation") {
         expect(optionInspection.story.inspectedOption?.situationalBoundary).toBe(
-          "May never trigger. In LURE, foul the first feed cast, fail the public wedge, spend the split-rail guard to redirect the yearling alive, then return to Cade before the loft cast. A clean cast, braced rail, or other recovery gets no benefit.",
+          "This bonus may not trigger. In LURE, it applies only if you foul the first feed cast, fail the public wedge, use the split-rail guard to redirect the yearling alive, and return to Cade before the loft cast. A clean cast, braced rail, or different recovery gives no bonus.",
         );
       } else if (kind === "ally") {
         expect(optionInspection.story.inspectedOption?.situationalBoundary).toBe(
-          "May never trigger. June lowers cattle alarm when a recovered LURE leaves the herd pressing, or prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized failed first FORTIFY seal at pressure 3+. Clean DRIVE, pressure-2/mobile-stabilized FORTIFY gain nothing; no combat help; first wolf death ends her help.",
+          "June's help may not trigger. She lowers cattle alarm after recovered LURE if the herd presses. She prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized first FORTIFY failure at pressure 3+. No help for clean DRIVE, lower/stabilized FORTIFY, or combat. Her help ends when a wolf dies.",
         );
       } else {
         expect(optionInspection.story.inspectedOption).not.toHaveProperty("situationalBoundary");
@@ -1646,7 +1634,7 @@ describe("MCP journey surface", () => {
     expect(initial.story.options).toHaveLength(1);
     expect(initial.story.options[0]).toMatchObject({
       id: shortcutId,
-      label: expect.stringContaining("Ready-made dispatch"),
+      label: expect.stringContaining("Ready-made setup"),
     });
     const initialJson = JSON.stringify(initial.story);
     expect(initialJson.indexOf('"revealOption"')).toBeLessThan(initialJson.indexOf('"options"'));
@@ -1704,7 +1692,7 @@ describe("MCP journey surface", () => {
     );
     expect(refreshedStory.options.every((option) => option.consequence === "")).toBe(true);
     expect(refreshedStory).not.toHaveProperty("revealOption");
-    expect(JSON.stringify(refreshedStory).match(/HUNT — Outcome/gu)).toHaveLength(1);
+    expect(JSON.stringify(refreshedStory).match(/HUNT — Fight the wolves/gu)).toHaveLength(1);
 
     const detail = a.inspect_overworld_session_story({
       session_id: started.session_id,
@@ -1759,7 +1747,7 @@ describe("MCP journey surface", () => {
     );
     expect(resumedRevealed.journey.storyChoice).not.toHaveProperty("revealOption");
     expect(
-      JSON.stringify(resumedRevealed.journey.storyChoice).match(/HUNT — Outcome/gu),
+      JSON.stringify(resumedRevealed.journey.storyChoice).match(/HUNT — Fight the wolves/gu),
     ).toHaveLength(1);
     const resumedRefresh = a.get_overworld_session_context({
       session_id: resumedRevealed.session_id,
@@ -1814,14 +1802,14 @@ describe("MCP journey surface", () => {
       (candidate) => candidate.id === doctrine.lead_source_option_id,
     )!;
     const exactReceipt =
-      `${doctrine.preview} Exact opening cost: ${doctrine.immediate_cost}. ` +
-      `${doctrine.consequence} Registered role — ${profile.title}. ` +
-      `Packet commitments: duty — ${oathOption.title}; source — ${sourceOption.title}.`;
+      `${doctrine.preview} Cost: ${doctrine.immediate_cost}. ` +
+      `${doctrine.consequence} Background: ${profile.title}. ` +
+      `Promise: ${oathOption.title}. Report: ${sourceOption.title}.`;
     expect(directShortcutChoice.result.consequence).toBe(exactReceipt);
     expect(directShortcutChoice.result.displaySummary).toBe(
-      `Ready-made dispatch chosen — Background: ${profile.title}; ` +
-        `Wolf-Winter promise: ${oathOption.title.replace(/\bDuty\b/gu, "Promise")}; ` +
-        `Report: ${sourceOption.title}. Optional field kit, relief wagon, second rider, and road remain open.`,
+      `Quick setup chosen. Background: ${profile.title}. ` +
+        `Wolf-Winter promise: ${oathOption.title.replace(/\bDuty\b/gu, "Promise")}. ` +
+        `Report: ${sourceOption.title}. You can still choose a field kit, relief wagon, second rider, and route.`,
     );
     expect(directShortcutChoice.result.displaySummary).not.toMatch(
       /\b(role|duty|source|preparation|relief allocation|field-team)\b/iu,
@@ -2058,17 +2046,17 @@ describe("MCP journey surface", () => {
     expect(firstSummary).not.toHaveProperty("checkFit");
     expect(secondSummary).not.toHaveProperty("checkFit");
     expect(firstSummary.highlights).toEqual([
-      { label: "Governing skill", value: "Repair +0 vs DC 12" },
+      { label: "Check skill", value: "Repair +0 vs DC 12" },
     ]);
     expect(secondSummary.highlights).toEqual([
-      { label: "Governing skill", value: "Streetwise +0 vs DC 12" },
+      { label: "Check skill", value: "Streetwise +0 vs DC 12" },
     ]);
     const firstReceipt =
       `Benefit: ${firstProfile.trigger_category ?? firstProfile.title} ` +
-      `Cost: ${firstSummary.immediateCost}. Boundary: ${firstProfile.tradeoff}`;
+      `Cost: ${firstSummary.immediateCost}. Tradeoff: ${firstProfile.tradeoff}`;
     const secondReceipt =
       `Benefit: ${secondProfile.trigger_category ?? secondProfile.title} ` +
-      `Cost: ${secondSummary.immediateCost}. Boundary: ${secondProfile.tradeoff}`;
+      `Cost: ${secondSummary.immediateCost}. Tradeoff: ${secondProfile.tradeoff}`;
     expect(firstDetail.story.inspectedOption).toMatchObject({
       id: optionId,
       checkFit: "Repair +0 vs DC 12",
@@ -2209,7 +2197,7 @@ describe("MCP journey surface", () => {
     const allocationReceipt =
       `Benefit: ${selectedAllocation.trigger_category ?? selectedAllocation.protects} ` +
       `Cost: ${selectedAllocationSummary.immediateCost}. ` +
-      `Boundary: Leaves exposed: ${selectedAllocation.leaves_exposed}`;
+      `Tradeoff: Leaves exposed: ${selectedAllocation.leaves_exposed}`;
     expect(allocationDetail.story.inspectedOption).toMatchObject({
       id: allocationOptionId,
       consequence: allocationReceipt,
@@ -2266,7 +2254,7 @@ describe("MCP journey surface", () => {
       const receipt =
         `Benefit: ${allocationOption.trigger_category ?? allocationOption.protects} ` +
         `Cost: ${presented.summary!.immediateCost}. ` +
-        `Boundary: Leaves exposed: ${allocationOption.leaves_exposed}`;
+        `Tradeoff: Leaves exposed: ${allocationOption.leaves_exposed}`;
       expect(presented.consequence).toBe(receipt);
       expect(openingSelectionReceiptWordCount(receipt)).toBeLessThanOrEqual(
         OPENING_SELECTION_RECEIPT_WORD_LIMIT,
@@ -2311,10 +2299,12 @@ describe("MCP journey surface", () => {
 
     expect(inspected).not.toHaveProperty("departure_recap");
     expect(inspected.departure_recap_terms).toBeDefined();
-    expect(inspected.story.inspectedOption?.situationalBoundary).toContain("May never trigger.");
+    expect(inspected.story.inspectedOption?.situationalBoundary).toContain(
+      "June's help may not trigger.",
+    );
     // An exhaustive audit covered all 4*3*3*3*3 = 324 legal Station setups;
     // this setup was the largest exact June response.
-    expect(JSON.stringify(inspected).length).toBe(2_034);
+    expect(JSON.stringify(inspected).length).toBe(1_834);
     expect(JSON.stringify(inspected).length).toBeLessThanOrEqual(2_048);
   });
 
@@ -2581,7 +2571,7 @@ describe("MCP journey surface", () => {
       }),
     ).toThrow(/does not accept embedded field "overworldSessionId"/);
     expect(() => a.rest_overworld_session({ session_id: restored.session_id })).toThrow(
-      /presented story consequence/i,
+      /Choose the open story option/i,
     );
 
     const uiBranch = OverworldSession.restore(WORLD, snapshot);
@@ -2596,7 +2586,7 @@ describe("MCP journey surface", () => {
     expect(mcpBranch.journey).toEqual(uiBranch.journey());
     expect(mcpBranch.journey.storyChoice).toBeNull();
     expect(mcpBranch.journey.goalGuidance).toBe(
-      "Objective route: take the road toward Saratoga Springs city. Queensbury town is 2 roads and about 60 road minutes away.",
+      "Next road: Saratoga Springs city. Queensbury town is 2 roads away, about 60 travel minutes.",
     );
     expect(JSON.stringify(mcpBranch.journey.goalGuidance)).not.toMatch(
       /targetQuestId|endingId|wolf_winter|content\/rpg|win_conditions|maneuver_/i,

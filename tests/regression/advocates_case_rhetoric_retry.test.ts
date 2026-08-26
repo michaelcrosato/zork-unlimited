@@ -38,17 +38,17 @@ const RESOLVED_OSWIN_PRESENCE_SOURCE_HASH =
 const POST_DISMISSAL_READ_PREDECESSOR_SOURCE_HASH =
   "d8b85620ac7ee8b4672f25e8b5a1552478b3d9d6add0b4894df32bb09dd19dff";
 const POST_DISMISSAL_READ_SOURCE_HASH =
-  "c9c92f95afba12b968d4d5e1aa9701749e0048140bc486b090233584f6e66396";
+  "e4b26db74d454274b5abe1977603206f142d62dedab1e7dd096cc7c97eb583f5";
 const EXPELLED_ENDING_TEXT =
-  "Craf gets his weight into you before you reach the doorway, and after that the choice is no longer yours. Oswin arrives in the antechamber with the measured expression of a man who had anticipated this outcome and is not surprised by it. The deputy notes the disturbance in the hearing record. Marta's bolts remain impounded; Oswin's notice stands. Marta's claim remains unresolved when market day ends. *** You have fallen. ***\n";
+  "Craf kills you in the market. The deputy records the disturbance, Marta's broadcloth remains impounded, and Oswin's notice stands. *** You have fallen. ***\n";
 const UNTOUCHED_CASE_RECORD_TEXT =
-  "The case slate on the clerk's table: 'Holm, Marta — impound notice filed by Warden Oswin under Guild Schedule, Article Fourteen. Goods held. Hearing: this session.' The alderman's deputy is in the hall; the case is waiting for a party to make the argument. The slate and its stylus are there to be used.\n";
+  "The case record says Warden Oswin impounded Marta Holm's twelve broadcloth bolts under Guild Schedule, Article Fourteen. The deputy is ready to hear the case before noon.\n";
 const FAILED_CASE_RECORD_TEXT =
-  "The case slate on the clerk's table. Marta's original impound filing remains pending after the deputy adjourned the first presentation without ruling. The slate and stylus remain ready for a corrected legal sequence.\n";
+  "The first appeal was adjourned, so Marta's impound remains pending and Craf still blocks north. If you read all three documents, PRESENT certified register extract with the charter citation and certified precedent packet on case record to retry in the required order.\n";
 const RESOLVED_CASE_RECORD_TEXT =
-  "The case slate on the clerk's table, the original impound filing still legible beneath the deputy's disposition: 'discharged, charter exemption confirmed.' The word 'pending' is struck through. The slate and stylus remain with the hearing record.\n";
+  "The case record now says, 'Discharged. Charter exemption confirmed.' The deputy struck through the pending impound.\n";
 const CASE_RECORD_READ_TEXT =
-  "The filed lines read: 'Holm, Marta — impound. Warden: Oswin (Weavers' Guild). Article: Schedule Fourteen, unlicensed sale. Goods: twelve bolts broadcloth, held. Claimant response: pending.' That is the original guild claim and response field; the deputy's current disposition, if any, is recorded on the same slate.\n";
+  "The original case entry says, 'Marta Holm. Warden Oswin. Schedule Fourteen: unlicensed sale. Twelve broadcloth bolts held.' If the appeal remains pending, PRESENT certified precedent packet WITH case record. A completed ruling stays complete.\n";
 
 const lethalRng = (): Rng => {
   let draw = 0;
@@ -237,7 +237,9 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
 
       expect(resolved.flags["appeal_attempted"]).toBe(true);
       expect(resolved.flags["oswin_overruled"]).toBe(true);
-      expect(full.description).toContain("case slate has been struck through");
+      expect(full.description).toContain(
+        "Exemption confirmed. Impound discharged. Warden's notice void.",
+      );
       expect(ids).toContain("examine_case_record");
       expect(ids).toContain("read_case_record");
       expect(full.available_actions.map((action) => action.id)).toEqual(ids);
@@ -266,7 +268,9 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     expect(resolved.vars["score"]).toBe(10);
     expect(resolved.vars["rhetoric"]).toBe(3);
     expect(resolved.journal).toHaveLength(1);
-    expect(resolved.journal[0]).toContain("Appeal made and accepted");
+    expect(resolved.journal[0]).toContain(
+      "The deputy accepted your presentation, verified Marta's exemption, and voided the impound",
+    );
     for (const id of UNREAD_EVIDENCE_ACTIONS) expect(ids).not.toContain(id);
     for (const id of [
       "examine_charter_roll",
@@ -353,7 +357,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     expect(obs.ended).toBe(true);
     expect(obs.ending_id).toBe("ending_exempted");
     expect(obs.state.vars.score).toBe(50);
-    expect(obs.ending?.text).toContain("charter exemption confirmed");
+    expect(obs.ending?.text).toContain("The deputy confirmed Marta's charter exemption");
     expect(obs.description).toContain("Final score: 50 of 50.");
     expect(validateRpg(pack).findings).toHaveLength(0);
   });
@@ -375,9 +379,8 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     const presentation = presented.events
       .flatMap((event) => (event.type === "narration" ? [event.text] : []))
       .join(" ");
-    expect(presentation).toContain("certified precedent packet");
-    expect(presentation).toContain("any certified register extract you gathered");
-    expect(presentation).not.toContain("the certified register extract follows");
+    expect(presentation).toContain("The deputy verifies the official records");
+    expect(presentation).not.toContain("the certified registration");
     expect(presentation).not.toContain("reads the register");
     s = chooseWith(successfulStep, presented.state, "go_north");
 
@@ -409,7 +412,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
 
       expect(stall.flags["oswin_overruled"]).toBe(true);
       expect(full.room).toBe("market_stall");
-      expect(full.description).toContain("Oswin has not returned to the stall");
+      expect(full.description).toContain("Oswin has left");
       expect(full.npcs_present).toEqual([]);
       expect(ids).toEqual(RESOLVED_STALL_ACTIONS);
       expect(full.available_actions.map((action) => action.id)).toEqual(RESOLVED_STALL_ACTIONS);
@@ -431,7 +434,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
 
     expect(failedAppeal.flags["appeal_attempted"]).toBe(true);
     expect(failedAppeal.flags["oswin_overruled"]).toBeUndefined();
-    expect(failedProjection.full.description).toContain("Oswin on the street-side of the stall");
+    expect(failedProjection.full.description).toContain("Marta and Oswin wait here");
     expect(failedProjection.full.npcs_present).toContainEqual({
       id: "oswin",
       name: "Warden Oswin",
@@ -445,9 +448,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     const failedTalk = actWith(step, failedAppeal, "talk_oswin");
     expect(
       failedTalk.events.flatMap((event) => (event.type === "narration" ? [event.text] : [])),
-    ).toContain(
-      'Warden Oswin: "The matter is with the alderman\'s deputy. I have nothing to add.\n"',
-    );
+    ).toContain('Warden Oswin: "The deputy has the case. I have nothing more to add.\n"');
 
     let combatOnly = chooseWith(combatStep, initStateForRpgPack(index, 7), "go_north");
     const firstAttack = actWith(combatStep, combatOnly, "attack_craf");
@@ -463,9 +464,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
 
     expect(combatOnly.flags["craf_defeated"]).toBe(true);
     expect(combatOnly.flags["oswin_overruled"]).toBeUndefined();
-    expect(combatProjection.full.description).toContain(
-      "Oswin, the Weavers' Guild warden, occupies the street-side of the stall",
-    );
+    expect(combatProjection.full.description).toContain("Marta and Oswin wait beside the stall");
     expect(combatProjection.full.npcs_present).toContainEqual({
       id: "oswin",
       name: "Warden Oswin",
@@ -571,7 +570,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
       expect(full.score, scenario.label).toBe(scenario.score);
       expect(full.ending, scenario.label).toEqual({
         id: "ending_expelled",
-        title: "Expelled from the Market",
+        title: "Killed in the Market",
         text: EXPELLED_ENDING_TEXT,
         death: true,
       });
@@ -582,7 +581,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
       expect(compact.ending_id, scenario.label).toBe("ending_expelled");
       expect(compact.ending, scenario.label).toEqual({
         id: "ending_expelled",
-        title: "Expelled from the Market",
+        title: "Killed in the Market",
         text: EXPELLED_ENDING_TEXT.trimEnd(),
         death: true,
       });
