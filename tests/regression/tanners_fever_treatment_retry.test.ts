@@ -98,11 +98,11 @@ describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () =
     const failedText = narrations(failed.events);
 
     expect(failedText).toContain("physick check: d20 1 + 9 = 10 vs 12");
-    expect(failedText).toContain("will not hear the same loose case twice");
-    expect(failedText).toMatch(/inspect Edric/i);
+    expect(failedText).toContain("Godwin rejects your first treatment case");
+    expect(failedText).toMatch(/LOOK AT Edric/i);
     expect(failedText).toMatch(/read Godwin's case notes/i);
-    expect(failedText).toMatch(/inspect the meadowsweet/i);
-    expect(failedText).toMatch(/treat Edric again at the bedside/i);
+    expect(failedText).toMatch(/LOOK AT meadowsweet/i);
+    expect(failedText).toMatch(/TREAT Edric WITH meadowsweet after ordering the evidence/i);
     expect(state.flags.confrontation_attempted).toBe(true);
     expect(state.flags.treatment_given).toBeUndefined();
     expect(state.inventory).toContain("meadowsweet");
@@ -131,8 +131,8 @@ describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () =
     expect(obs.ended).toBe(true);
     expect(obs.ending_id).toBe("ending_recovered");
     expect(obs.state.vars.score).toBe(pack.meta.max_score);
-    expect(obs.ending?.text).toContain("Godwin has the revised formula");
-    expect(obs.ending?.text).not.toContain("forced passage instead of winning the bedside case");
+    expect(obs.ending?.text).toContain("Godwin stopped the wormwood tonic");
+    expect(obs.ending?.text).toContain("Edric should recover by week's end");
     expect(validateRpg(pack).findings).toHaveLength(0);
   });
 
@@ -147,10 +147,10 @@ describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () =
     expect(failedText).not.toMatch(
       /three(?:-| )to(?:-| )one|three parts extract to one part water/i,
     );
-    expect(failedText).toMatch(/inspect Edric/i);
+    expect(failedText).toMatch(/LOOK AT Edric/i);
     expect(failedText).toMatch(/read Godwin's case notes/i);
-    expect(failedText).toMatch(/inspect the meadowsweet/i);
-    expect(failedText).toMatch(/treat Edric again at the bedside/i);
+    expect(failedText).toMatch(/LOOK AT meadowsweet/i);
+    expect(failedText).toMatch(/TREAT Edric WITH meadowsweet after ordering the evidence/i);
     expect(actionIds(state)).not.toContain("use_meadowsweet_on_sick_edric");
 
     state = play(state, [

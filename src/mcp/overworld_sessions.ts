@@ -47,7 +47,7 @@ export type OverworldMcpJourneyField<
 };
 
 export const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
-  "Snapshot hash mismatch; refresh the current overworld context.";
+  "The overworld state changed since your last read. Refresh with get_overworld_session_context.";
 export const OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH = 24;
 
 type OverworldMcpSnapshotGuardOptions = {
@@ -464,7 +464,11 @@ export class OverworldMcpSessionStore {
 
   get(sessionId: string): OverworldSession {
     const session = refreshOverworldSessionEntry(this.sessions, sessionId);
-    if (!session) throw new Error(`Unknown overworld session "${sessionId}".`);
+    if (!session) {
+      throw new Error(
+        `Overworld session "${sessionId}" was not found. Pass the current parent overworld_session_id.`,
+      );
+    }
     return session;
   }
 

@@ -427,7 +427,7 @@ const OPENING_STORY_CHOICE_DISPLAY_PREFIX: Readonly<
 
 const OPENING_STORY_CHOICE_PLAIN_OUTCOME: Readonly<Record<string, string>> = Object.freeze({
   "albany:ally_june_cattle_first": "June joined you as the second rider.",
-  "albany:ally_june_relay_only": "June declined the subordinate relay and remained at the Station.",
+  "albany:ally_june_relay_only": "June would not accept your orders and stayed at the Station.",
   "albany:ally_travel_solo": "June remained at the Station; you will ride alone.",
 });
 
@@ -816,8 +816,8 @@ export class OverworldSession {
     if (!area) return null;
     if (this.currentId === destination.id) {
       return this.currentAreaId === area.id
-        ? `Objective location reached: ${area.name}. Follow the visible authored lead here.`
-        : `Objective town reached: move toward ${area.name} to find the authored lead.`;
+        ? `You reached the goal location: ${area.name}. Use the visible lead here.`
+        : `You reached the goal town. Move toward ${area.name} to find the lead.`;
     }
 
     const cacheKey = `${this.currentId}->${destination.id}`;
@@ -826,7 +826,7 @@ export class OverworldSession {
     const next = route?.steps[0]?.to;
     if (!next) return null;
     const roadCount = route.steps.length;
-    const guidance = `Objective route: take the road toward ${next.name}. ${destination.name} is ${String(roadCount)} ${roadCount === 1 ? "road" : "roads"} and about ${String(route.totalMinutes)} road minutes away.`;
+    const guidance = `Next road: ${next.name}. ${destination.name} is ${String(roadCount)} ${roadCount === 1 ? "road" : "roads"} away, about ${String(route.totalMinutes)} travel minutes.`;
     this.journeyGoalGuidanceByRoute.set(cacheKey, guidance);
     return guidance;
   }
@@ -974,9 +974,9 @@ export class OverworldSession {
     leadSourceTitle: string;
   }): string {
     return (
-      `${args.doctrine.preview} Exact opening cost: ${args.doctrine.immediate_cost}. ` +
-      `${args.doctrine.consequence} Registered role — ${args.profileTitle}. ` +
-      `Packet commitments: duty — ${args.reliefOathTitle}; source — ${args.leadSourceTitle}.`
+      `${args.doctrine.preview} Cost: ${args.doctrine.immediate_cost}. ` +
+      `${args.doctrine.consequence} Background: ${args.profileTitle}. ` +
+      `Promise: ${args.reliefOathTitle}. Report: ${args.leadSourceTitle}.`
     );
   }
 
@@ -987,9 +987,9 @@ export class OverworldSession {
   }): string {
     const promiseTitle = args.reliefOathTitle.replace(/\bDuty\b/gu, "Promise");
     return (
-      `Ready-made dispatch chosen — Background: ${args.profileTitle}; ` +
-      `Wolf-Winter promise: ${promiseTitle}; Report: ${args.leadSourceTitle}. ` +
-      "Optional field kit, relief wagon, second rider, and road remain open."
+      `Quick setup chosen. Background: ${args.profileTitle}. ` +
+      `Wolf-Winter promise: ${promiseTitle}. Report: ${args.leadSourceTitle}. ` +
+      "You can still choose a field kit, relief wagon, second rider, and route."
     );
   }
 
@@ -2016,8 +2016,8 @@ export class OverworldSession {
         goalCompletion = {
           goalVersion: pending!.goalVersion!,
           goalId: pending!.goalId!,
-          messageSuffix: `Another authored lead is ready: ${nextGoal.text}`,
-          continueConsequencePrefix: `Continue with the next objective: ${nextGoal.text}`,
+          messageSuffix: `Next goal: ${nextGoal.text}`,
+          continueConsequencePrefix: `Continue to the next goal: ${nextGoal.text}`,
         };
       }
     }
@@ -2058,9 +2058,7 @@ export class OverworldSession {
   assertJourneyAcceptingDecision(): void {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
-      throw new Error(
-        "Choose the presented story consequence, background, Wolf-Winter promise, report, field kit, relief wagon, or second rider before taking another action.",
-      );
+      throw new Error("Choose the open story option before taking another action.");
     }
   }
 
@@ -2975,7 +2973,7 @@ export class OverworldSession {
         tool: OPPORTUNITY_EXPLORE_AREA_TOOL,
         arguments: { area_id: currentArea.id },
         command: `explore ${currentArea.id}`,
-        label: `Explore ${currentArea.name} to advance local discovery.`,
+        label: `Explore ${currentArea.name} to reveal more local leads.`,
       };
     }
 
@@ -2992,7 +2990,7 @@ export class OverworldSession {
           tool: OPPORTUNITY_SCOUT_POI_TOOL,
           arguments: { poi_id: poi.id },
           command: `scout ${poi.id}`,
-          label: "Scout a visible local point of interest to advance local discovery.",
+          label: "Scout a visible point of interest to reveal more local leads.",
         };
       }
     }
@@ -3012,7 +3010,7 @@ export class OverworldSession {
             tool: OPPORTUNITY_EXPLORE_SITE_TOOL,
             arguments: { site_id: site.id },
             command: `explore site ${site.id}`,
-            label: "Explore a visible local site to advance local discovery.",
+            label: "Explore a visible site to reveal more local leads.",
           };
         }
       } catch {
@@ -3039,7 +3037,7 @@ export class OverworldSession {
         tool: OPPORTUNITY_TALK_CONTACT_TOOL,
         arguments: { character_id: characterId },
         command: `talk ${characterId}`,
-        label: "Talk to a visible local contact to advance local discovery.",
+        label: "Talk to a visible contact to reveal more local leads.",
       };
     }
     if (interaction?.plan.action.kind === "event") {
@@ -3048,7 +3046,7 @@ export class OverworldSession {
         tool: OPPORTUNITY_INVESTIGATE_EVENT_TOOL,
         arguments: { event_id: eventId },
         command: `investigate ${eventId}`,
-        label: "Investigate a visible local event to advance local discovery.",
+        label: "Investigate a visible event to reveal more local leads.",
       };
     }
     const eventChoice = this.liveEventChoices(this.eventsByArea.get(currentArea.id) ?? [])[0];
@@ -3057,7 +3055,7 @@ export class OverworldSession {
         tool: OPPORTUNITY_RESOLVE_EVENT_TOOL,
         arguments: { event_id: eventChoice[0], option_id: eventChoice[1] },
         command: `resolve ${eventChoice[0]} ${eventChoice[1]}`,
-        label: "Choose a currently visible local event action to advance local discovery.",
+        label: "Choose a visible event option to reveal more local leads.",
       };
     }
     const jobChoice = this.liveJobChoices(
@@ -3068,7 +3066,7 @@ export class OverworldSession {
         tool: OPPORTUNITY_WORK_JOB_TOOL,
         arguments: { job_id: jobChoice[0], option_id: jobChoice[1] },
         command: `work ${jobChoice[0]} ${jobChoice[1]}`,
-        label: "Choose a currently visible local job action to advance local discovery.",
+        label: "Choose a visible job option to reveal more local leads.",
       };
     }
     return null;
@@ -3379,20 +3377,16 @@ export class OverworldSession {
       const contact = this.charactersById.get(registration.contact);
       const area = this.areasById.get(registration.area);
       throw new Error(
-        `Complete ${registration.title} with ${contact?.name ?? "the registration contact"} in ${area?.name ?? "the opening registration area"} before starting this journey's first quest.`,
+        `Before starting the first quest, complete ${registration.title} with ${contact?.name ?? "the registration contact"} in ${area?.name ?? "the registration area"}.`,
       );
     }
     const reliefOath = this.world.opening_relief_oath;
     if (reliefOath?.target_quest === questId && !this.openingReliefOathResolved()) {
-      throw new Error(
-        `Set ${reliefOath.title} before starting this journey's first relief dispatch.`,
-      );
+      throw new Error(`Choose ${reliefOath.title} before starting the first relief dispatch.`);
     }
     const leadSource = this.world.opening_lead_source;
     if (leadSource?.target_quest === questId && !this.openingLeadSourceResolved()) {
-      throw new Error(
-        `Certify ${leadSource.title} before starting this journey's first relief dispatch.`,
-      );
+      throw new Error(`Choose ${leadSource.title} before starting the first relief dispatch.`);
     }
     return {
       ...this.actionJournalState(),
@@ -3942,7 +3936,7 @@ export class OverworldSession {
     this.assertNoPendingRoadEncounter("following the current goal passage");
     const route = this.currentGoalRoute();
     if (!route || route.steps.length === 0) {
-      throw new Error("There is no current goal passage to follow from here.");
+      throw new Error("No goal route is available from here.");
     }
 
     const goalId = this.journeyState.goal.id;
@@ -3980,7 +3974,7 @@ export class OverworldSession {
     }
 
     if (legs.length === 0 || stopReason === null) {
-      throw new Error("The current goal passage could not advance along its visible route.");
+      throw new Error("The goal route cannot advance from here.");
     }
 
     const journeyDecision = this.recordOverworldDecision(

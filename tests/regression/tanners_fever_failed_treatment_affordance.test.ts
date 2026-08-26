@@ -37,7 +37,7 @@ const step = makeStep(buildRpgRules(index));
 
 const TREATMENT_ID = "use_meadowsweet_on_sick_edric";
 const BLOCKED_REASON =
-  "Godwin will hear a corrected treatment only after all three proofs are established: inspect Edric, read his case notes, and inspect the meadowsweet in hand.";
+  "The guaranteed TREAT retry is locked until you LOOK AT Edric, READ Godwin's case notes, and, while holding meadowsweet, LOOK AT meadowsweet.";
 const PREP_WITH_UNEXAMINED_HERB = [
   "examine_sick_edric",
   "go_west",
@@ -90,10 +90,10 @@ describe("bug_0511 - failed Tanner treatment keeps a visible recovery affordance
   it("keeps the exact recovery instructions complete and persistently unavailable", () => {
     const failed = failedTreatment();
     const failedText = narration(failed.events);
-    expect(failedText).toMatch(/inspect Edric/i);
+    expect(failedText).toMatch(/LOOK AT Edric/i);
     expect(failedText).toMatch(/read Godwin's case notes/i);
-    expect(failedText).toMatch(/inspect the meadowsweet/i);
-    expect(failedText).toMatch(/treat Edric again at the bedside/i);
+    expect(failedText).toMatch(/LOOK AT meadowsweet/i);
+    expect(failedText).toMatch(/TREAT Edric WITH meadowsweet after ordering the evidence/i);
 
     const recoveryEvent = failed.events.find(
       (event): event is Extract<GameEvent, { type: "narration" }> =>
@@ -104,7 +104,9 @@ describe("bug_0511 - failed Tanner treatment keeps a visible recovery affordance
     expect(recoveryEvent!.text).not.toMatch(/\.\.\.\(\+|#[0-9a-f]{12}/i);
 
     const latestJournal = failed.state.journal.at(-1);
-    expect(latestJournal).toMatch(/inspect Edric.*read his notes.*inspect the meadowsweet/is);
+    expect(latestJournal).toMatch(
+      /Finish Edric, case-notes, and meadowsweet evidence; then TREAT Edric WITH meadowsweet after ordering the evidence/is,
+    );
     expect(latestJournal?.length).toBeLessThanOrEqual(128);
 
     expect(enumerateRpgActions(index, failed.state).map((option) => option.id)).not.toContain(

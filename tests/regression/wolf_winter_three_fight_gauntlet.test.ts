@@ -232,7 +232,7 @@ const OPENING_COMBINATIONS: ReadonlyArray<{
     flank: "offside_cut",
     leader: "wait_out_feint",
     expectedHp: 12,
-    endingFragments: ["off-side return", "true rush"],
+    endingFragments: ["returning stroke", "true rush"],
   },
   {
     flank: "offside_cut",
@@ -244,13 +244,13 @@ const OPENING_COMBINATIONS: ReadonlyArray<{
     flank: "splinter_guard",
     leader: "wait_out_feint",
     expectedHp: 17,
-    endingFragments: ["failed rail", "true rush"],
+    endingFragments: ["hooked", "true rush"],
   },
   {
     flank: "splinter_guard",
     leader: "close_on_feint",
     expectedHp: 11,
-    endingFragments: ["failed rail", "recover"],
+    endingFragments: ["hooked", "recover"],
   },
 ];
 

@@ -59,15 +59,13 @@ function stationGuidance(recap: OpeningDepartureRecap, canDepart: boolean): stri
   const set = formatGuidanceList(setLabels, "and");
   if (optionalLabels.length === 0) {
     return canDepart
-      ? `Ready to depart now with ${set} set; no optional support remains.`
-      : `No road is open with ${set} set; no optional support remains.`;
+      ? `You can leave now. Set: ${set}. No optional support remains.`
+      : `No road is open yet. Set: ${set}. No optional support remains.`;
   }
   const optional = formatGuidanceList(optionalLabels, "or");
-  const remain = optionalLabels.length === 1 ? "remains" : "remain";
-  const change = optionalLabels.length === 1 ? "changes" : "change";
   return canDepart
-    ? `Ready to depart now with ${set} set; ${optional} ${remain} optional and ${change} cost or aftermath, not your Wolf-Winter approach.`
-    : `No road is open with ${set} set; ${optional} ${remain} optional and ${change} cost or aftermath, not your approach.`;
+    ? `You can leave now. Set: ${set}. Optional: ${optional}. They affect support, costs, or later results, not your field plan.`
+    : `No road is open yet. Set: ${set}. Optional: ${optional}. They affect support, costs, or later results, not your field plan.`;
 }
 
 const SUPPORT_COPY: Readonly<
@@ -78,23 +76,22 @@ const SUPPORT_COPY: Readonly<
 > = Object.freeze({
   preparation: {
     label: "One field kit",
-    purpose:
-      "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
-    inlinePurpose: "Optional kit: compare without choosing; covers one named danger.",
-    detailHint: "Compare kits only if you want their exact cost and field use.",
+    purpose: "Optionally choose one field kit for a specific danger at Cade's farm.",
+    inlinePurpose: "Optional field kit: helps with one specific danger.",
+    detailHint: "Compare field kits to see their cost and exact use.",
   },
   relief_allocation: {
     label: "Albany's last relief wagon",
     purpose:
-      "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
-    inlinePurpose: "Optional wagon: compare without choosing; send Albany's last to one crisis.",
-    detailHint: "Compare destinations only if you want to decide who is protected.",
+      "Optionally assign Albany's last wagon to one of three needs. The other two go without it.",
+    inlinePurpose: "Optional wagon: support one need; leave two unsupported.",
+    detailHint: "Compare assignments to see who receives support.",
   },
   field_team: {
     label: "Second rider",
-    purpose: "Second rider: optionally ask about cattle-first authority, or ride alone.",
-    inlinePurpose: "Optional rider: ask June before choosing; one cattle line, never combat.",
-    detailHint: "Talk only to compare exact terms; this adds no combat power.",
+    purpose: "Optionally ask June to manage cattle safety, or travel alone.",
+    inlinePurpose: "Optional rider: June helps cattle safety, never combat.",
+    detailHint: "Talk to June to compare her exact terms.",
   },
 });
 
@@ -504,20 +501,20 @@ function compactStationDispatchGuidance(
     : "no road is ready now";
   if (!board.dispatch) {
     return bounded(
-      `Dispatch unverified; ${departure}.`,
+      `Setup timing is unverified; ${departure}.`,
       "compact guidance",
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
     );
   }
   if (board.dispatch.state === "sealed" && board.dispatch.timing) {
     return bounded(
-      `Dispatch ${String(board.dispatch.minutes)}m ${board.dispatch.timing.replace("_", "-")}; ${departure}.`,
+      `Setup: ${String(board.dispatch.minutes)} minutes, ${board.dispatch.timing.replace("_", "-")}; ${departure}.`,
       "compact guidance",
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
     );
   }
   return bounded(
-    `Dispatch ${String(board.dispatch.minutes)}m committed; ${departure}.`,
+    `Setup: ${String(board.dispatch.minutes)} minutes committed; ${departure}.`,
     "compact guidance",
     STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
   );
@@ -530,19 +527,18 @@ function compactStationDispatchOverview(
   if (supportRevealed) return null;
   if (openSupport.length === 0) return null;
   const openSlots = new Set(openSupport.map((entry) => entry.slot));
-  const kit = openSlots.has("preparation") ? "kits use Repair, Streetwise, or Mediation" : null;
+  const kit = openSlots.has("preparation")
+    ? "a field kit using Repair, Streetwise, or Mediation"
+    : null;
   const wagon = openSlots.has("relief_allocation") ? "Albany's last relief wagon" : null;
-  const rider = openSlots.has("field_team") ? "a cattle-first second rider" : null;
+  const rider = openSlots.has("field_team") ? "June as a cattle-safety rider" : null;
   const other = [wagon, rider].filter((entry): entry is string => entry !== null);
   const categories = kit
     ? `${kit}${other.length > 0 ? `; plus ${formatGuidanceList(other, "or")}` : ""}`
     : formatGuidanceList(other, "or");
   return [
     STATION_DISPATCH_SUPPORT_REVEAL_ID,
-    bounded(
-      `Optional support: ${categories}. Review only if one interests you.`,
-      "compact overview",
-    ),
+    bounded(`Optional: ${categories}. Review only what interests you.`, "compact overview"),
   ];
 }
 

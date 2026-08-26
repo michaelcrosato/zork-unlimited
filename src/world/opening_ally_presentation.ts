@@ -16,12 +16,12 @@ function allyFieldCategory(
   option: ReturnType<typeof parseOpeningAlly>["options"][number],
 ): string {
   if (option.effects.some((effect) => effect.type === "add_companion")) {
-    return "Independent cattle-pressure ally";
+    return "June joins and controls cattle safety";
   }
   if (option.id === scene.solo_option_id) {
-    return "Solo field team; no ally action";
+    return "Travel alone; no ally action";
   }
-  return "No companion; relay terms refused";
+  return "June refuses and does not join";
 }
 
 function allySummary(

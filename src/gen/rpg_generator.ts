@@ -72,9 +72,12 @@ import { assertGeneratedRpgSeed } from "./seed.js";
  * emitted pack shape changes; the re-seal then re-stamps every entry. v1 → v2: the two-fight
  * gauntlet deepening (bug_0171). v2 → v3: the gauntlet becomes a declared, cumulative-survivable
  * `combat_guaranteed` promise (bug_0173) — the enemy stats and the meta flag change. v3 → v4:
- * root dialogue gains a re-greet variant after one-shot counsel topics retire.
+ * root dialogue gains a re-greet variant after one-shot counsel topics retire. v4 → v5:
+ * player-facing generated prose is rewritten for direct, action-first instructions. v5 → v6:
+ * the blocked hearth exit gives the exact themed seal command. Generated mechanics and structure
+ * are unchanged, but the emitted content hashes intentionally change.
  */
-export const RPG_GENERATOR_VERSION = 4;
+export const RPG_GENERATOR_VERSION = 6;
 
 /**
  * Tiny deterministic PRNG (mulberry32). Pure and self-contained: no global RNG,
@@ -130,8 +133,7 @@ type Theme = {
 const THEMES: readonly Theme[] = [
   {
     key: "forge",
-    setting:
-      "the cold root of a dead mountain forge, where the last live ember is said to lie at the deepest hearth",
+    setting: "an abandoned mountain forge. Its last live ember is in the deepest chamber",
     relic: "Ember-Heart",
     entryName: "The Forge Steps",
     hallName: "The Outer Forge",
@@ -141,11 +143,10 @@ const THEMES: readonly Theme[] = [
     hearthName: "The Forge Heart",
     vaultName: "The Ember Chamber",
     foeName: "slag sentinel",
-    foeDesc:
-      "A man-high figure of fused slag and dead cinder, slow with the deep cold but built to bar the way.",
+    foeDesc: "A human-sized slag creature blocks the way. It is slow, cold, and heavily armored.",
     wardenName: "cinder-wraith",
     wardenDesc:
-      "A taller horror of welded iron and banked coals, heavier and harder than the slag thing above, set to keep the inmost heat.",
+      "A larger iron creature guards the inner heat. It is stronger and tougher than the slag sentinel.",
     wardName: "cold-iron plate",
     barName: "iron pry-bar",
     sealName: "slag grate",
@@ -155,8 +156,7 @@ const THEMES: readonly Theme[] = [
   },
   {
     key: "barrow",
-    setting:
-      "a sea-king's flooded barrow, where a drowned crown rests in the deepest cell below the tide-line",
+    setting: "a flooded sea-king's tomb. The drowned crown is in the deepest chamber",
     relic: "drowned crown",
     entryName: "The Barrow Mouth",
     hallName: "The Antechamber",
@@ -166,11 +166,10 @@ const THEMES: readonly Theme[] = [
     hearthName: "The Sunken Stair",
     vaultName: "The Tide Cell",
     foeName: "barrow-draugr",
-    foeDesc:
-      "A grave-cold corpse risen in rusted mail, salt-stiff and slow, set to keep the crown from living hands.",
+    foeDesc: "A corpse in rusted mail blocks the way to the crown. It is slow and heavily armored.",
     wardenName: "tide-wight",
     wardenDesc:
-      "A king's huscarl drowned in his own war-gear, broader and grimmer than the draugr behind you, the crown's last keeper.",
+      "The king's drowned guard protects the crown. It is stronger and tougher than the first corpse.",
     wardName: "kelp-green hauberk",
     barName: "bronze prise-bar",
     sealName: "barnacled slab",
@@ -180,8 +179,7 @@ const THEMES: readonly Theme[] = [
   },
   {
     key: "crypt",
-    setting:
-      "the under-crypt of a fallen abbey, where a reliquary of unburnt gold waits behind the last sealed door",
+    setting: "the crypt below a fallen abbey. A gold reliquary waits behind the last sealed door",
     relic: "abbey reliquary",
     entryName: "The Crypt Stair",
     hallName: "The Ossuary",
@@ -191,11 +189,10 @@ const THEMES: readonly Theme[] = [
     hearthName: "The Sealed Sanctuary",
     vaultName: "The Reliquary Vault",
     foeName: "bound revenant",
-    foeDesc:
-      "A penitent dead thing wound in grave-linen, risen stiff and cold to guard the gold it died beside.",
+    foeDesc: "A corpse wrapped in burial cloth blocks the way to the gold. It is slow and armored.",
     wardenName: "choir-shade",
     wardenDesc:
-      "A great cowled dead thing taller than the revenant before it, iron-girt under its grave-linen, the reliquary's last warden.",
+      "A tall, iron-armored corpse guards the reliquary. It is stronger than the first revenant.",
     wardName: "saint's mail-shirt",
     barName: "iron crow-bar",
     sealName: "lead-sealed door",
@@ -205,8 +202,7 @@ const THEMES: readonly Theme[] = [
   },
   {
     key: "mine",
-    setting:
-      "the deepest gallery of an abandoned deep-mine, where a vein-heart of raw silver glows in the lowest stope",
+    setting: "an abandoned deep mine. A raw-silver vein-heart glows in the lowest chamber",
     relic: "vein-heart",
     entryName: "The Mine Adit",
     hallName: "The Pump-House",
@@ -216,11 +212,10 @@ const THEMES: readonly Theme[] = [
     hearthName: "The Choked Drift",
     vaultName: "The Lowest Stope",
     foeName: "rock-golem",
-    foeDesc:
-      "A lurching shape of fused tailings and dead ore, slow as the mountain but hard as the seam it guards.",
+    foeDesc: "A rock creature blocks the passage. It is slow and protected by hard ore.",
     wardenName: "deep-haunt",
     wardenDesc:
-      "A vast thing of caked ore and old timber, larger and meaner than the golem above, hunched over the silver glow.",
+      "A larger creature of ore and mine timber guards the silver. It is stronger than the first golem.",
     wardName: "rivet-plate jack",
     barName: "miner's gad-bar",
     sealName: "rubble-choked grille",
@@ -231,8 +226,7 @@ const THEMES: readonly Theme[] = [
   },
   {
     key: "tower",
-    setting:
-      "the storm-broken top of a wizard's ruined tower, where a star-glass orb still turns in the highest cell",
+    setting: "a ruined wizard's tower. A star-glass orb still turns in its highest chamber",
     relic: "star-glass orb",
     entryName: "The Tower Foot",
     hallName: "The Scriptorium",
@@ -243,17 +237,16 @@ const THEMES: readonly Theme[] = [
     vaultName: "The High Cell",
     foeName: "clay homunculus",
     foeDesc:
-      "A man-shaped thing of baked clay and old sigils, dull-eyed and slow, wound to keep the orb turning alone.",
+      "A human-shaped clay construct blocks the stairs. It is slow and marked with old symbols.",
     wardenName: "iron-bound watcher",
     wardenDesc:
-      "A great sigil-stitched automaton, taller and surer than the homunculus below, the orb's last unsleeping warden.",
+      "A tall metal construct guards the orb. It is stronger and tougher than the clay construct.",
     wardName: "sigil-stitched coat",
     barName: "brass lever-rod",
     sealName: "rune-locked hatch",
     leverVerb: "wrench",
     spiritName: "ghost-light",
-    spiritDesc:
-      "A cold blue mote that drifts the dead air of the tower, the last of a mind that lived here.",
+    spiritDesc: "A small blue light carries the last memories of someone who lived in the tower.",
   },
 ];
 
@@ -325,27 +318,23 @@ export function generateRpgPack(seed: number): RpgPack {
       {
         id: "entry",
         name: theme.entryName,
-        description:
-          `A way drops down into ${theme.setting}. You came for one thing: the ${theme.relic}. ` +
-          `The only road to it is down.`,
+        description: `Goal: find the ${theme.relic}. The stairs lead down into ${theme.setting}.`,
         exits: [{ direction: "down", to: "hall" }],
       },
       {
         id: "hall",
         name: theme.hallName,
         description:
-          `A cold vaulted hall. A worn inscription is cut into one wall, and by it lies a stout ` +
-          `${theme.barName}. A ${theme.spiritName} hangs in a niche, watching you. A low cell stands ` +
-          `to the west, a passage runs north into the dark, and the way climbs back up behind you.`,
+          `Exits: up, west, and north. The wall inscription marks where the ${theme.barName} was stored; TAKE ${theme.barName} if it is here. ` +
+          `A ${theme.spiritName} waits here and can answer questions.`,
         // Reactive prose once the bar is taken — the static line would otherwise contradict the
         // empty floor and the bar now in the player's hands (a single variant ⇒ cannot shadow).
         variants: [
           {
             when: [{ has_item: BAR }],
             text:
-              `A cold vaulted hall. A worn inscription is cut into one wall; the floor by it is bare ` +
-              `now, the ${theme.barName} that lay there in your own hands. A ${theme.spiritName} hangs ` +
-              `in a niche. A low cell stands to the west, a passage runs north, and the way climbs back up.`,
+              `Exits: up, west, and north. You carry the ${theme.barName} that lay beside the wall inscription. ` +
+              `A ${theme.spiritName} waits here and can answer questions.`,
           },
         ],
         objects: [INSCRIPTION, BAR],
@@ -358,9 +347,7 @@ export function generateRpgPack(seed: number): RpgPack {
       {
         id: "cell",
         name: theme.cellName,
-        description:
-          `A narrow side cell. Against the wall lies the long-dead one who came before you, still ` +
-          `wearing a whole suit of ${theme.wardName} the cold kept from rotting. He has no use for it now.`,
+        description: `Exit: east. This is where an intact ${theme.wardName} was found beside a dead explorer. Its first DON teaches a lasting braced stance and grants +2 defense against either guardian still standing. The bonus persists even if the ward is later dropped.`,
         objects: [WARD],
         exits: [{ direction: "east", to: "hall" }],
       },
@@ -368,14 +355,12 @@ export function generateRpgPack(seed: number): RpgPack {
         id: "gallery",
         name: theme.galleryName,
         description:
-          `A long gallery. Across the only way east stands the ${theme.foeName} — ${theme.foeDesc} ` +
-          `Slow is not the same as soft; better not to meet it under-armed. The way south leads back to the hall.`,
+          `Exit south returns to the hall. The ${theme.foeName} blocks the east exit. ${theme.foeDesc} ` +
+          `Prepare before fighting it.`,
         variants: [
           {
             when: [{ has_flag: FOE_DOWN }],
-            text:
-              `A long gallery. The ${theme.foeName} lies broken across the floor, and the way east stands open. ` +
-              `The way south leads back to the hall.`,
+            text: `Exits: south and east. The defeated ${theme.foeName} lies on the floor.`,
           },
         ],
         exits: [
@@ -392,15 +377,12 @@ export function generateRpgPack(seed: number): RpgPack {
         id: "span",
         name: theme.spanName,
         description:
-          `A deeper hall, colder than the last. Across the only way east stands the ${theme.wardenName} ` +
-          `— ${theme.wardenDesc} It is the worse of the two; come to it armed and counselled. The way west ` +
-          `leads back to the gallery.`,
+          `Exit west returns to the gallery. The ${theme.wardenName} blocks the east exit. ${theme.wardenDesc} ` +
+          `Prepare before fighting it.`,
         variants: [
           {
             when: [{ has_flag: WARDEN_DOWN }],
-            text:
-              `A deeper hall, colder than the last. The ${theme.wardenName} lies broken across the floor, and the ` +
-              `way east stands open. The way west leads back to the gallery.`,
+            text: `Exits: west and east. The defeated ${theme.wardenName} lies on the floor.`,
           },
         ],
         exits: [
@@ -417,15 +399,12 @@ export function generateRpgPack(seed: number): RpgPack {
         id: "hearth",
         name: theme.hearthName,
         description:
-          `The deep chamber at the quest's root. The way down is closed by a ${theme.sealName}, sealed ` +
-          `by the weight of ages — but its edge carries a worn lip, made to be levered by bar and brawn. ` +
-          `The way west leads back.`,
+          `Exit west returns to the last hall. A ${theme.sealName} blocks the way down. ` +
+          `${theme.leverVerb.toUpperCase()} ${theme.sealName} WITH ${theme.barName} to open it.`,
         variants: [
           {
             when: [{ quest_stage: { quest: GRATE_OPEN.quest, stage: GRATE_OPEN.stage } }],
-            text:
-              `The deep chamber at the quest's root. The ${theme.sealName} has been levered up off its lip ` +
-              `and stands open, baring a low way down into the dark below. The way west leads back.`,
+            text: `Exits: west and down. The opened ${theme.sealName} no longer blocks the stairs.`,
           },
         ],
         objects: [SEAL],
@@ -435,16 +414,16 @@ export function generateRpgPack(seed: number): RpgPack {
             direction: "down",
             to: "vault",
             conditions: [{ quest_stage: { quest: GRATE_OPEN.quest, stage: GRATE_OPEN.stage } }],
-            locked_msg: `The ${theme.sealName} is sealed fast. It must be levered aside first.`,
+            locked_msg:
+              `The ${theme.sealName} is sealed fast. ` +
+              `${theme.leverVerb.toUpperCase()} ${theme.sealName} WITH ${theme.barName}.`,
           },
         ],
       },
       {
         id: "vault",
         name: theme.vaultName,
-        description:
-          `A small round chamber at the very bottom. On a plinth of pale stone rests the ${theme.relic}, ` +
-          `whole and waiting, just as the old tales said.`,
+        description: `The ${theme.relic} rests on the stone platform. Reaching it completes the quest.`,
         objects: [RELIC],
         on_enter: [
           { add_journal: `You have reached the ${theme.relic}.` },
@@ -461,27 +440,31 @@ export function generateRpgPack(seed: number): RpgPack {
         description: "Letters cut deep into the cold stone.",
         takeable: false,
         read_text:
-          `TWO KEEPERS HOLD THE DEEP WAY. BOTH ARE SLOW IN THE COLD AND WILL NOT RISE TWICE IF STRUCK TRUE; ` +
-          `THE SECOND IS THE WORSE. THE ${theme.relic.toUpperCase()} LIES BELOW THE SEAL, AND ONLY A STRONG ` +
-          `ARM AND A GOOD BAR WILL OPEN THE WAY.`,
+          `THE ROUTE HELD TWO GUARDIANS. BOTH ARE SLOW; THE SECOND IS STRONGER. ` +
+          `IF THE FIRST GUARDIAN STILL STANDS, ATTACK ${theme.foeName.toUpperCase()}. ` +
+          `IF THE SECOND GUARDIAN STILL STANDS, ATTACK ${theme.wardenName.toUpperCase()}. ` +
+          `THE ${theme.relic.toUpperCase()} IS BELOW THE SEAL. ` +
+          `IF THE SEAL IS STILL CLOSED, ${theme.leverVerb.toUpperCase()} ` +
+          `${theme.sealName.toUpperCase()} WITH ${theme.barName.toUpperCase()}. ` +
+          `COMPLETED FIGHTS AND AN OPENED SEAL STAY COMPLETE.`,
       },
       {
         id: BAR,
         name: theme.barName,
         aliases: ["bar", "lever", "pry-bar", "prybar"],
-        description: `A stout iron bar the length of your arm, cold but sound — a lever, for an arm strong enough.`,
+        description: `The ${theme.barName} is strong enough. If you are not holding the ${theme.barName}, TAKE ${theme.barName}. If the ${theme.sealName} is still closed, ${theme.leverVerb.toUpperCase()} ${theme.sealName} WITH ${theme.barName}.`,
         takeable: true,
       },
       {
         id: WARD,
         name: theme.wardName,
         aliases: ["ward", "armour", "armor", "mail", "plate", "suit"],
-        description: `A whole suit of ${theme.wardName}, heavy and cold but unrusted — iron the keepers' blows would ring off.`,
+        description: `An intact ${theme.wardName}. If you are not holding the ${theme.wardName}, TAKE ${theme.wardName}. The first command, DON ${theme.wardName}, teaches a lasting braced stance and grants +2 defense against either guardian still standing. Before that DON, carrying the ward gives no bonus; afterward, the bonus persists even if the ward is dropped.`,
         // Reactive examine once donned (a single variant ⇒ cannot shadow).
         variants: [
           {
             when: [{ has_flag: WARD_DONNED }],
-            text: `The ${theme.wardName}, buckled on now over your own gear; its weight sits between you and the next blow.`,
+            text: `You completed the ${theme.wardName}'s first DON. Its learned +2 defense remains even if the ward is later dropped.`,
           },
         ],
         takeable: true,
@@ -498,10 +481,10 @@ export function generateRpgPack(seed: number): RpgPack {
               { set_flag: WARD_DONNED },
               { inc_var: { name: "defense", by: 2 } },
               {
-                add_journal: `You buckle on the ${theme.wardName}; it will turn the worst of the keepers' blows (+2 defense).`,
+                add_journal: `The ${theme.wardName}'s first DON teaches a lasting braced stance and grants +2 defense against either guardian still standing. The bonus persists even if the ward is later dropped.`,
               },
               {
-                narrate: `You strip the ${theme.wardName} from the old bones and buckle it on. It is cold and heavy, but it sits between you and the next blow.`,
+                narrate: `You put on the ${theme.wardName}, learn its braced weight, and gain lasting +2 defense. The bonus persists even if you later drop it.`,
               },
             ],
           },
@@ -511,11 +494,11 @@ export function generateRpgPack(seed: number): RpgPack {
         id: SEAL,
         name: theme.sealName,
         aliases: ["seal", "grate", "slab", "door", "grille", "hatch"],
-        description: `A ${theme.sealName} sealed fast by the weight of ages, with a worn lip at its edge made for a lever.`,
+        description: `A closed ${theme.sealName} with a worn edge. ${theme.leverVerb.toUpperCase()} ${theme.sealName} WITH ${theme.barName}.`,
         variants: [
           {
             when: [{ quest_stage: { quest: GRATE_OPEN.quest, stage: GRATE_OPEN.stage } }],
-            text: `The ${theme.sealName}, levered up off its lip and standing open; below it a low way drops down into the dark.`,
+            text: `The ${theme.sealName} is open. The way down is clear.`,
           },
         ],
         takeable: false,
@@ -537,16 +520,16 @@ export function generateRpgPack(seed: number): RpgPack {
               on_success: [
                 { set_quest_stage: { quest: GRATE_OPEN.quest, stage: GRATE_OPEN.stage } },
                 {
-                  add_journal: `You lever the ${theme.sealName} up off its lip; the way down stands open.`,
+                  add_journal: `You open the ${theme.sealName} with the ${theme.barName}. The way down is clear.`,
                 },
                 { inc_var: { name: "score", by: leverAward } },
                 {
-                  narrate: `You set the bar to the lip and throw your weight on it — stone cracks and the ${theme.sealName} heaves up off its seat. The way down is open.`,
+                  narrate: `You ${theme.leverVerb.toUpperCase()} the ${theme.sealName} open with the ${theme.barName}. The way down is clear.`,
                 },
               ],
               on_failure: [
                 {
-                  narrate: `The bar bites under the lip and your shoulders strain, but the ${theme.sealName} holds. Set your feet and try again.`,
+                  narrate: `The ${theme.sealName} does not move. Try again: ${theme.leverVerb.toUpperCase()} ${theme.sealName} WITH ${theme.barName}.`,
                 },
               ],
             },
@@ -557,7 +540,7 @@ export function generateRpgPack(seed: number): RpgPack {
         id: RELIC,
         name: theme.relic,
         aliases: ["relic", "prize", "treasure", "heart", "crown", "orb"],
-        description: `The ${theme.relic} itself, whole and waiting — the one thing you came down here to carry out.`,
+        description: `The ${theme.relic}. Reaching it completes the quest.`,
         takeable: false,
       },
     ],
@@ -572,11 +555,11 @@ export function generateRpgPack(seed: number): RpgPack {
           nodes: [
             {
               id: "spirit_root",
-              npc_text: `A warm thing, come down into the cold. Few do. Ask, if you would — I have watched this place a long age and remember everything.`,
+              npc_text: `I have watched this place for a long time. Ask about the guardians or the last explorer.`,
               variants: [
                 {
                   when: [{ any_of: [{ has_flag: HEARD_FOE }, { has_flag: HEARD_WARD }] }],
-                  text: `The ${theme.spiritName} gutters and steadies. Ask what else you need before you go deeper.`,
+                  text: `The ${theme.spiritName} waits. Ask any remaining question or leave.`,
                 },
               ],
               topics: [
@@ -584,7 +567,7 @@ export function generateRpgPack(seed: number): RpgPack {
                 // claimable only once. The ungated leave keeps the node terminating.
                 {
                   id: "ask_foe",
-                  prompt: `Ask how to beat the keepers below.`,
+                  prompt: `Ask about the keepers below.`,
                   conditions: [{ not_flag: HEARD_FOE }],
                   goto: "spirit_foe",
                 },
@@ -599,12 +582,12 @@ export function generateRpgPack(seed: number): RpgPack {
             },
             {
               id: "spirit_foe",
-              npc_text: `Two keepers stand between you and the deep — the ${theme.foeName} first, then the worse ${theme.wardenName} below it. Both are slow in the cold and will never be warmer; waiting does not mend them. Strike each hard and it will not rise twice. Here — take what warmth I can spare; let it ride your arm for both.`,
+              npc_text: `The route held two guardians: first the ${theme.foeName}, then the stronger ${theme.wardenName}. Both are slow. My warmth gives you +2 attack against either one still standing.`,
               effects: [
                 { set_flag: HEARD_FOE },
                 { inc_var: { name: "attack", by: 2 } },
                 {
-                  add_journal: `The ${theme.spiritName}'s warmth settles into your arm — you feel you could strike harder now, against both keepers (+2 attack).`,
+                  add_journal: `The ${theme.spiritName} gives you +2 attack; it applies to either guardian still standing.`,
                 },
               ],
               topics: [
@@ -613,11 +596,11 @@ export function generateRpgPack(seed: number): RpgPack {
             },
             {
               id: "spirit_ward",
-              npc_text: `One came before you, an age ago, and never climbed back out. He lies in the side-cell west of here, still in his ${theme.wardName}, whole and unrusted. He has no use for it now — better his iron on a living back than guarding old bones. You will want it for the second keeper.`,
+              npc_text: `The intact ${theme.wardName} found beside the dead explorer in the west cell teaches a lasting +2 defense stance on its first DON. The bonus applies to guardians still standing and persists even if the ward is later dropped.`,
               effects: [
                 { set_flag: HEARD_WARD },
                 {
-                  add_journal: `The ${theme.spiritName} speaks of one who came before, dead in the side-cell west of the hall in ${theme.wardName} that might yet turn the keepers' blows.`,
+                  add_journal: `The spirit said the ${theme.wardName} in the west cell teaches a lasting +2 defense stance on its first DON. The bonus persists even if the ward is later dropped.`,
                 },
               ],
               topics: [
@@ -681,25 +664,19 @@ export function generateRpgPack(seed: number): RpgPack {
       {
         id: "ending_victory",
         title: `Bearer of the ${theme.relic}`,
-        text:
-          `You lift the ${theme.relic} from its plinth and turn back toward the light above. The long cold ` +
-          `keeps the rest of this place, but its one living prize climbs the stair in your hands.`,
+        text: `You recover the ${theme.relic} and begin the climb back to the surface.`,
         death: false,
       },
       {
         id: "ending_fallen_sentinel",
         title: "Cold on the Stones",
-        text:
-          `The ${theme.foeName}'s last blow drops you among the dead in the gallery, and the grave chill ` +
-          `closes over you. The ${theme.relic} waits a while longer for a stronger arm.`,
+        text: `The ${theme.foeName} kills you in the gallery. The ${theme.relic} remains below.`,
         death: true,
       },
       {
         id: "ending_fallen_guardian",
         title: "Fallen at the Deep Door",
-        text:
-          `You went down under the ${theme.wardenName}'s blows a stone's throw from the deep, and the cold ` +
-          `takes you there. So near, and the ${theme.relic} no nearer for it.`,
+        text: `The ${theme.wardenName} kills you near the final chamber. The ${theme.relic} remains below.`,
         death: true,
       },
     ],

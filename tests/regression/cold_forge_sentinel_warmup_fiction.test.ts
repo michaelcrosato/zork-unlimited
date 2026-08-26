@@ -83,18 +83,16 @@ describe("bug_0029 — the Cold Forge sentinel reads as a settled cold advantage
     expect(base).not.toContain("grinding to life");
     expect(enemyDesc).not.toContain("grinding to cold life");
     // Positive: the cold now reads as a constant — it will not get worse.
-    expect(base).toMatch(/no swifter than it is now|holds no fire to rouse it/);
-    expect(enemyDesc).toMatch(/as .*as it will ever be|half-life/);
+    expect(base).toMatch(/waiting does not strengthen the sentinel/);
+    expect(enemyDesc).toMatch(/waiting does not make it stronger/);
   });
 
   it("the inscription denies an approaching heat and the spirit denies that waiting makes it worse", () => {
     // The "wakes to heat" lore is preserved, but the dead, unkindle-able fire makes
     // clear no heat is coming.
-    expect(inscription).toMatch(/long dead|will not kindle|never .*warm/);
+    expect(inscription).toMatch(/forge cannot be relit/);
     // The spirit's counsel explicitly denies the false "hurry / it gets harder" read.
-    expect(spiritCounsel).toMatch(
-      /as slow now as it will ever be|will never be warm|do not fear that waiting/,
-    );
+    expect(spiritCounsel).toMatch(/waiting will not strengthen it/);
   });
 
   it("LIVE: the bellows_walk room the player sees carries the reframed prose, not a warm-up clock", () => {
@@ -104,7 +102,7 @@ describe("bug_0029 — the Cold Forge sentinel reads as a settled cold advantage
     expect(s.current).toBe("bellows_walk");
     const shown = desc(s).toLowerCase();
     expect(shown).not.toContain("grinding slowly to life");
-    expect(shown).toMatch(/no swifter than it is now|holds no fire to rouse it/);
+    expect(shown).toMatch(/waiting does not strengthen the sentinel/);
   });
 
   it("reachability/balance intact — sentinel retuned for teeth (bug_0101); canonical buffed route (seed 1) still wins 50/50", () => {

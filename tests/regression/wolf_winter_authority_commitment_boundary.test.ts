@@ -25,29 +25,30 @@ const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const FULL = { compact_context: false, compact_result: false } as const;
-const COMMITMENT_WARNING =
-  /commit north[^]*no retreat[^]*(?:no )?lure\/drive\/combat (?:switch|shut)/i;
-const CADE_STANCE = /HOUSEHOLD[^]*exposes property[^]*saves seals[^]*failed-seat aid/i;
-const ALBANY_STANCE = /ALBANY[^]*covers property[^]*spends seals[^]*no aid/i;
+const COMMITMENT_WARNING = /Choosing FORTIFY[^]*closes retreat[^]*HUNT[^]*LURE[^]*DRIVE/i;
+const CADE_STANCE =
+  /Cade's shutters[^]*expose his property[^]*preserve Albany's relief seals[^]*failed-seal recovery/i;
+const ALBANY_STANCE =
+  /Albany's relief seals[^]*protect his property[^]*consume the public supply[^]*no Cade help/i;
 const FULL_DUTY_TERMS =
-  /breach full duty[^]*a roll-required first Albany Repair is 2 easier[^]*Mobile stabilizes a recovered miss[^]*dawn/i;
+  /violate Full Duty[^]*first Repair DC by 2[^]*mobile crew stabilizes a recovered failure[^]*dawn/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const NORTH_PENDING_GUIDANCE =
-  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+  "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
 const PALING_NORTH_GUIDANCE =
-  "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
+  "North is blocked. Complete the currently listed yearling or outer-seal action. During LURE, go south, west, and up, then CAST Cade's winter-feed sack THROUGH low wolf-hatch.";
 const MOUTH_NORTH_GUIDANCE =
-  "Follow the route actions shown here. The route either finishes directly or opens north when ready.";
+  "North is blocked. Complete the exact action shown here. That action either ends the quest or opens north.";
 const YARD_BLOCKED_SOUTH =
-  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
+  "South is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the currently displayed gear action, then go north.";
 const YARD_BLOCKED_WEST =
-  "West is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
+  "West is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the currently displayed gear action, then go north.";
 const PALING_BLOCKED_SOUTH =
-  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: follow shown paling steps until north opens.";
+  "South is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the shown Broken Paling action to open north.";
 const THRESHOLD_BLOCKED_SOUTH =
-  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: finish any shown threshold step, then go north.";
+  "South is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the shown Byre Door action, then go north.";
 const MOUTH_BLOCKED_SOUTH =
-  "South is closed. LURE complete: go north for the cattle count. DRIVE: resolve the crisis. FORTIFY: hold the dawn watch.";
+  "South is closed. After LURE, go north for the cattle count. During DRIVE, choose and finish a crisis evacuation. During FORTIFY, HOLD sealed-byre dawn watch.";
 const YARD_SECONDARY_BLOCKS = [
   ["south", YARD_BLOCKED_SOUTH],
   ["west", YARD_BLOCKED_WEST],
@@ -353,7 +354,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
       (action) => action.id === "ask_commit_albany_authority",
     );
     expect(authority?.command).toMatch(
-      /^ask: FINAL COMMITMENT — FORTIFY \/ ALBANY:[^]*no retreat\/switch[^]*preserve property[^]*spend public seals[^]*no aid after a roll-required failed seat[^]*Irreversible/i,
+      /^ask: CHOOSE FORTIFY \/ ALBANY[^]*Lose retreat[^]*protect Cade's property[^]*spend Albany's seals[^]*no help after a failed outer seal[^]*close other plans/i,
     );
     expect(authority?.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
 
@@ -376,8 +377,8 @@ describe("Wolf-Winter authority commitment boundary", () => {
 
     assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS, ["take_albany_relief_seals"]);
     assertNorthBlockedOnce(state, "take_albany_relief_seals");
-    expect(NORTH_PENDING_GUIDANCE.length).toBe(175);
-    expect(NORTH_PENDING_GUIDANCE.length).toBeLessThanOrEqual(180);
+    expect(NORTH_PENDING_GUIDANCE.length).toBe(214);
+    expect(NORTH_PENDING_GUIDANCE.length).toBeLessThanOrEqual(220);
 
     state = act(state, "take_albany_relief_seals");
     assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS);
@@ -391,18 +392,18 @@ describe("Wolf-Winter authority commitment boundary", () => {
     }));
 
     expect(metrics).toEqual([
-      { chars: 113, words: 19 },
-      { chars: 112, words: 19 },
-      { chars: 122, words: 19 },
-      { chars: 125, words: 20 },
-      { chars: 119, words: 20 },
+      { chars: 145, words: 24 },
+      { chars: 144, words: 24 },
+      { chars: 139, words: 24 },
+      { chars: 136, words: 24 },
+      { chars: 157, words: 25 },
     ]);
-    expect(Math.max(...metrics.map(({ chars }) => chars))).toBeLessThanOrEqual(125);
-    expect(metrics.reduce((total, { chars }) => total + chars, 0)).toBeLessThanOrEqual(600);
+    expect(Math.max(...metrics.map(({ chars }) => chars))).toBeLessThanOrEqual(165);
+    expect(metrics.reduce((total, { chars }) => total + chars, 0)).toBe(721);
     expect(ALL_SECONDARY_BLOCKED_COPY.every((message) => !TRUNCATION_MARKER.test(message))).toBe(
       true,
     );
-    expect(PALING_NORTH_GUIDANCE.length).toBe(116);
+    expect(PALING_NORTH_GUIDANCE.length).toBe(173);
     expect(PALING_NORTH_GUIDANCE.length).toBeLessThanOrEqual(180);
     expect(PALING_NORTH_GUIDANCE.length).toBeLessThanOrEqual(COMPACT_BLOCKED_EXIT_CHAR_LIMIT);
   });

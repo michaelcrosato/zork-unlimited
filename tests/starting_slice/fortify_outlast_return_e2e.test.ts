@@ -67,7 +67,7 @@ const CASES = {
     title: "Dawn Behind Cade's Shutters",
     serviceId: "albany:wolf_fortified_cade_terms_station_resupply",
     serviceAction: "resupply",
-    serviceTitle: "Claim the Preserved-Seal Road Stores",
+    serviceTitle: "Collect Preserved-Seal Supplies",
     memory: "memory:wolf_winter_fortified_cade_terms",
     oppositeMemory: "memory:wolf_winter_fortified_albany_authority",
     haydenMemory: "albany:memory_hayden_wolf_fortified_cade_terms",
@@ -90,11 +90,11 @@ const CASES = {
     ],
     dispatchTokens: [
       /household/i,
-      /whole herd/i,
+      /herd/i,
       /shutters/i,
       /outer property/i,
       /exposed/i,
-      /relief seals/i,
+      /seals/i,
       /unused|reserve/i,
     ],
   },
@@ -109,7 +109,7 @@ const CASES = {
     title: "Dawn Under Albany Seal",
     serviceId: "albany:wolf_fortified_albany_authority_station_rest",
     serviceAction: "rest",
-    serviceTitle: "Take the Authority-Watch Recovery Cot",
+    serviceTitle: "Rest After the Albany FORTIFY Watch",
     memory: "memory:wolf_winter_fortified_albany_authority",
     oppositeMemory: "memory:wolf_winter_fortified_cade_terms",
     haydenMemory: "albany:memory_hayden_wolf_fortified_albany_authority",
@@ -133,10 +133,10 @@ const CASES = {
     ],
     dispatchTokens: [
       /household/i,
-      /whole herd/i,
+      /herd/i,
       /outer property/i,
       /seal/i,
-      /relief seals/i,
+      /public seals/i,
       /spent/i,
       /refus/i,
     ],
@@ -463,7 +463,9 @@ function playFortify(stance: Stance) {
     action: contract.serviceAction,
     title: contract.serviceTitle,
     summary: expect.stringMatching(
-      stance === "cade" ? /household[^]*exposed[^]*unused/i : /authority[^]*spent[^]*refused help/i,
+      stance === "cade"
+        ? /FORTIFY under Cade's terms[^]*seals unused[^]*15 minutes[^]*exposed outer property remains recorded/i
+        : /Albany authority[^]*public seals[^]*without his help[^]*15 minutes[^]*clear fatigue/i,
     ),
     minutes: 15,
     providerId: HAYDEN,
@@ -615,7 +617,7 @@ describe("SS-F08 — fortify conduct survives the full Albany return", () => {
         expect.objectContaining({
           id: "use_fortify_dawn_watch",
           reason: expect.stringMatching(
-            /mobile-stabilized watch[^]*costs no HP even at pressure 3[^]*no injury benefit/i,
+            /mobile relief failure crew already prevents HP loss[^]*June cannot add an injury benefit/i,
           ),
         }),
       );
@@ -623,8 +625,8 @@ describe("SS-F08 — fortify conduct survives the full Albany return", () => {
       const june = step("talk_june_pike");
       expect(june.observation.dialogue?.npc_text).toMatch(
         stance === "cade"
-          ? /Cade's household terms[^]*outer property[^]*preserve Albany's seals[^]*mobile crew[^]*costs you no HP[^]*delay leaves pressure at 3[^]*no injury benefit[^]*Cade's ending/i
-          : /Albany's public seals[^]*cover Cade's property[^]*spend public stock[^]*refusal standing[^]*mobile crew[^]*costs you no HP[^]*delay leaves pressure at 3[^]*no injury benefit[^]*pressure nor ending/i,
+          ? /mobile relief crew[^]*Cade's recovered shutter seam[^]*costs no HP[^]*Strained \(3\)[^]*no HP benefit[^]*does not lower fortification pressure[^]*property remains exposed[^]*relief seals remain unused/i
+          : /mobile relief crew[^]*recovered Albany seal[^]*costs no HP[^]*Strained \(3\)[^]*no HP benefit[^]*does not lower fortification pressure[^]*property remains protected[^]*public seals are spent[^]*refusal stands/i,
       );
       step("ask_acknowledge");
       const completed = step("use_fortify_dawn_watch");
@@ -641,7 +643,7 @@ describe("SS-F08 — fortify conduct survives the full Albany return", () => {
         },
       });
       expect(finalState.journal.join("\n")).toMatch(
-        /mobile-stabilized seals hold through dawn without HP loss[^]*delayed pressure 3[^]*June adds no injury benefit/i,
+        /stabilized seals hold until dawn with no HP loss[^]*Strained pressure 3[^]*June adds no injury benefit/i,
       );
       expect(finalState.journal.join("\n")).not.toMatch(
         /June's lower cattle brace absorbs the Strained dawn watch|persistent -2 HP watch strain/i,

@@ -258,10 +258,10 @@ function completeReturn(choice: DawnChoice): CompletedReturn {
   expect(dispatch?.id).toBe("albany_dawn_dispatch");
   expect(
     dispatch?.options.find((option) => option.id === "send_wagon_to_cade")?.consequence,
-  ).toMatch(/Jamie Tanner.*one-time Market.*15-minute resupply.*whenever you claim it/i);
+  ).toMatch(/Reward: one 15-minute Market resupply.*taking Hedrick's packet alone/i);
   expect(
     dispatch?.options.find((option) => option.id === "send_wardens_north")?.consequence,
-  ).toMatch(/Emery Sloane.*one-time Greenway.*15-minute rest.*whenever you claim it/i);
+  ).toMatch(/Reward: one 15-minute Greenway rest.*traveling with the wardens/i);
 
   const selected = api.choose_overworld_session_story({
     session_id: launched.overworldSessionId,
@@ -358,9 +358,9 @@ describe("SS-F12 — Albany's dawn dispatch changes a named district service", (
       {
         id: WAGON_RULE_ID,
         action: "resupply",
-        title: "Claim Jamie's Solo-Packet Road Stores",
+        title: "Collect Solo-Packet Road Supplies",
         summary:
-          "Because you sent the dawn wagon back to Cade and carried Hedrick's packet north alone, Jamie Tanner holds a one-time Market road-store credit.",
+          "Available after sending the dawn wagon to Cade and carrying Hedrick's packet north alone. Spend 15 minutes to refill supplies to 8.",
         minutes: 15,
         providerId: "albany_city__market__contact",
         providerName: "Jamie Tanner",
@@ -371,7 +371,7 @@ describe("SS-F12 — Albany's dawn dispatch changes a named district service", (
       [
         WAGON_RULE_ID,
         "resupply",
-        "Claim Jamie's Solo-Packet Road Stores",
+        "Collect Solo-Packet Road Supplies",
         wagonBefore.serviceOffers[0]!.summary,
         15,
       ],
@@ -397,7 +397,7 @@ describe("SS-F12 — Albany's dawn dispatch changes a named district service", (
       changed: true,
       m: 15,
       supplies: [wagonBefore.supplies, wagonBefore.maxSupplies],
-      text: expect.stringContaining("Jamie Tanner holds a one-time Market road-store credit"),
+      text: expect.stringContaining("Available after sending the dawn wagon to Cade"),
     });
     expect(ordinary.result).toMatchObject({
       action: "resupply",
@@ -440,9 +440,9 @@ describe("SS-F12 — Albany's dawn dispatch changes a named district service", (
       {
         id: WARDENS_RULE_ID,
         action: "rest",
-        title: "Claim Emery's Greenway Watch Shelter",
+        title: "Rest at the Greenway Shelter",
         summary:
-          "Because you assigned the dawn wagon and wardens north, Emery Sloane holds a one-time Greenway watch-shelter claim for your part in their dispatch.",
+          "Available after assigning the dawn wagon and wardens north. Spend 15 minutes to clear fatigue.",
         minutes: 15,
         providerId: "albany_city__greenway__contact",
         providerName: "Emery Sloane",
@@ -453,7 +453,7 @@ describe("SS-F12 — Albany's dawn dispatch changes a named district service", (
       [
         WARDENS_RULE_ID,
         "rest",
-        "Claim Emery's Greenway Watch Shelter",
+        "Rest at the Greenway Shelter",
         wardensBefore.serviceOffers[0]!.summary,
         15,
       ],
@@ -485,7 +485,7 @@ describe("SS-F12 — Albany's dawn dispatch changes a named district service", (
       changed: true,
       m: 15,
       fatigue: [wardensBefore.fatigue, 0],
-      text: expect.stringContaining("Emery Sloane holds a one-time Greenway watch-shelter claim"),
+      text: expect.stringContaining("Available after assigning the dawn wagon and wardens north"),
     });
     expect(fullView(wardens).serviceOffers).toEqual([]);
 

@@ -249,8 +249,12 @@ describe("Albany Campus return-evidence mandate", () => {
         .events.find((candidate) => candidate.id === EVENT)
         ?.authored_scene?.options.map((option) => option.preview),
     ).toEqual([
-      expect.stringMatching(/20-minute clinic threshold card.*2 renown.*recovery cot/i),
-      expect.stringMatching(/45-minute route digest.*3 renown.*resupply cache/i),
+      expect.stringMatching(
+        /Cost now: 20 minutes.*Reward now: 1 Capital \/ Mohawk renown.*Later: a 20-minute clinic card for 2 renown and one 15-minute rest.*route digest closes/i,
+      ),
+      expect.stringMatching(
+        /Cost now: 20 minutes.*Reward now: 1 Capital \/ Mohawk renown.*Later: a 45-minute route digest for 3 renown and one 15-minute resupply.*clinic card closes/i,
+      ),
     ]);
 
     expect(UiOverworldSession.restore(WORLD, session.snapshot()).view().eventChoices).toEqual(

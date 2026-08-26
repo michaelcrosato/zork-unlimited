@@ -64,6 +64,7 @@ describe("compact legends", () => {
       47: "04e4a1a44b2ce7e3131a09e143add5fd5b599502715f901758da3ca681ccc1e6",
       48: "8c7f281cab4e663cc1fc0fac73d0af68e26499ff5bf67bfb63a7a74b240aa838",
       49: "ff1e6f0fa60641609dacce89ea162da62ead7952dd1c27818ba78452c033487d",
+      50: "8f529aa79a079bd08a0e5a4c3a8d7302f00e1f764ed5e092aed486517cd169e4",
     } as const;
     const signature = createHash("sha256")
       .update(
@@ -74,7 +75,7 @@ describe("compact legends", () => {
       )
       .digest("hex");
 
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(49);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(50);
     expect(signature).toBe(expectedSignatureByVersion[OVERWORLD_COMPACT_VIEW_VERSION]);
   });
 
@@ -108,12 +109,12 @@ describe("compact legends", () => {
     expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("preview|null");
     expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("quest_starts");
     expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("strategic_comparison");
-    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("dedicated strategic comparison");
-    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("retain full preview and consequence");
-    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("accepted action receipt");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("replaces duplicate preview text");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("keep preview and consequence");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("accepted result and journal");
     expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("Started quest rows omit launch");
     expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("starting them again is illegal");
-    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("persistent journal");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("selected terms");
   });
 
   it("describes unavailable jobs and optional aftermath without overstating either", () => {

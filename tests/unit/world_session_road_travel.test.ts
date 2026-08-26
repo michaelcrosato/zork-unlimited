@@ -113,7 +113,9 @@ describe("overworld road-scene cadence", () => {
     const ambientSession = new OverworldSession(world);
     const ambientRoad = ambientSession
       .view()
-      .exits.find((exit) => eventsByEdge.get(exit.id)?.title.endsWith("road report"));
+      .exits.find(
+        (exit) => eventsByEdge.has(exit.id) && eventsByEdge.get(exit.id)?.requires_choice !== true,
+      );
     expect(ambientRoad).toBeDefined();
     const ambientTravel = ambientSession.travel(ambientRoad!.id);
     expect(ambientTravel.roadEvent?.requires_choice).not.toBe(true);

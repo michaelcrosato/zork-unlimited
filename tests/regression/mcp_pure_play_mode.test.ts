@@ -56,11 +56,11 @@ const MCP_SERVER = join(ROOT, "src", "mcp", "server.ts");
 const TEST_RUN_SEED = 2731;
 const TEST_BUILD_COMMIT = "b".repeat(40);
 const CADE_HUNT_INSPECT_LABEL =
-  "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.";
+  "HUNT — Protect home and herd. Wolves may die; failure risks cattle. Cade's tactics and padded byre-jerkin help. Review. Go north or RELEASE JUNE to choose.";
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
-  "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions by calling with session_id set to the exact current parent overworld_session_id and story_choice_id set to that exact visible id. Merge visible revealOption/reviewOption arguments into that call; they do not replace session_id, and option_id/reveal_id are mutually exclusive. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.";
+  "Inspect a visible story choice without choosing it. Pass the parent session_id and exact story_choice_id from journey.storyChoice, Station ['inspect', id], or departure_interactions. Add option_id or reveal_id, not both. option_id returns one option's full detail. reveal_id unlocks staged options for this session and survives export or restore. Compact output omits repeated board and world data. Set compact_result:false for the full story.";
 
 async function withPureServer<T>(
   evidencePath: string,
@@ -395,7 +395,7 @@ async function launchPreparedPureWolf(client: Client): Promise<{
     route: ["albany:wolf_approach_sheltered_stockway", "Take the Sheltered Stockway"],
     preparation: {
       status: "imported",
-      title: "Reese's Works Fortification",
+      title: "Take Reese's Repair Plan",
     },
     childState: "actionable",
   });
@@ -645,7 +645,7 @@ describe("MCP pure play mode", () => {
   it("requires a unique currently visible route for the destination-area alias", () => {
     expect(resolveVisibleAreaRouteId([["r1", "market", 5]], "market")).toBe("r1");
     expect(() => resolveVisibleAreaRouteId([["r1", "market", 5]], "campus")).toThrow(
-      /not a currently visible destination/,
+      /not a visible destination/,
     );
     expect(() =>
       resolveVisibleAreaRouteId(
@@ -655,7 +655,7 @@ describe("MCP pure play mode", () => {
         ],
         "market",
       ),
-    ).toThrow(/multiple currently visible routes/);
+    ).toThrow(/More than one visible route leads to area/);
   });
 
   it("lets a visible exact selector resolve an otherwise ambiguous area_id", () => {
@@ -665,7 +665,7 @@ describe("MCP pure play mode", () => {
       ["campus_loop", "campus", 7],
     ] as const;
     expect(() => resolveAreaMoveSelector(routes, { area_id: "market" })).toThrow(
-      /multiple currently visible routes.*area_route_id or route_id/,
+      /More than one visible route leads to area.*Pass area_route_id or route_id/,
     );
     expect(
       resolveAreaMoveSelector(routes, { area_route_id: "market_short", area_id: "market" }, true),
@@ -675,10 +675,10 @@ describe("MCP pure play mode", () => {
     ).toBe("market_safe");
     expect(() =>
       resolveAreaMoveSelector(routes, { route_id: "hidden_edge", area_id: "market" }, true),
-    ).toThrow(/not a currently visible route/);
+    ).toThrow(/not visible from here/);
     expect(() =>
       resolveAreaMoveSelector(routes, { route_id: "market_short", area_id: "campus" }, true),
-    ).toThrow(/Conflicting route_id and area_id/);
+    ).toThrow(/route_id and area_id conflict/);
   });
 
   it("accepts the reported Civic-to-Transport-Hub edge through compact route_id", async () => {
@@ -764,10 +764,10 @@ describe("MCP pure play mode", () => {
         const selectedRoleText = textResult(selectedRoleCall);
         const selectedRole = textPayload(selectedRoleCall);
         expect(selectedRoleCall.isError).not.toBe(true);
-        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBe(6_330);
+        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBe(5_792);
         expect(Buffer.byteLength(selectedRoleText, "utf8")).toBeLessThanOrEqual(6_400);
         expect((selectedRole.result as { consequence?: string }).consequence).toContain(
-          "When Wolf-Winter starts from this journey, your Fieldcraft 4 sets its defense at 4 instead of 3.",
+          "In Wolf-Winter, Defense starts at 4 instead of 3.",
         );
         expect((selectedRole.result as { consequence?: string }).consequence).not.toMatch(
           /\b(?:DEF|LURE|HUNT)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation/gu,
@@ -786,7 +786,7 @@ describe("MCP pure play mode", () => {
             }
           ).inspectedOption?.consequence,
         ).toContain(
-          "Benefit: Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
+          "Benefit: Defense starts at 4. A clean first LURE feed prevents the final +1 cattle alarm. A split rail can help HUNT.",
         );
 
         const selectedDispatchCall = await client.callTool({
@@ -801,7 +801,7 @@ describe("MCP pure play mode", () => {
         const selectedDispatch = textPayload(selectedDispatchCall);
         expect(selectedDispatchCall.isError).not.toBe(true);
         const readyDispatchStatus =
-          "Set: background, promise, report. Dispatch 10m; final 10–60m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+          "Background, promise, and report are set. Current setup: 10m. Final setup: 10–60m; all on time. Optional support remains. Start Wolf-Winter to skip it.";
         const readyDispatchSummaries = stringsContaining(selectedDispatch, readyDispatchStatus);
         expect(readyDispatchSummaries).toHaveLength(2);
         expect(
@@ -809,19 +809,19 @@ describe("MCP pure play mode", () => {
         ).toBe(true);
         expect(selectedDispatchText.split(readyDispatchStatus)).toHaveLength(3);
         expect(selectedDispatchText).not.toContain("optional Station support remains");
-        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(9_035);
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(7_695);
         expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBeLessThanOrEqual(9_250);
-        expect(selectedDispatchText).not.toMatch(/\b(?:HUNT|LURE|DRIVE|FORTIFY)\b/gu);
+        expect(selectedDispatchText).not.toMatch(/\b(?:DEF|DRIVE|FORTIFY)\b/gu);
         expect(selectedDispatchText).not.toMatch(/\bWorks\b/gu);
         expect(selectedDispatchText).not.toMatch(
           /public (?:fence )?(?:brace|wedge)|yearling|bare spear/gu,
         );
         const consequence = (selectedDispatch.result as { consequence?: string }).consequence;
-        expect(consequence).toContain(
-          "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3. Aid-Only prevents one final ordinary rise in cattle alarm after a clean first feed; a foul still takes that rise. Hayden's report matters only if you hold Cade's ground; its exact brace terms appear before commitment at the steading.",
+        expect(consequence).toBe(
+          "Defense starts at 4 instead of 3. If the first LURE feed succeeds, cattle alarm rises one less at the end. Hayden's report can unlock a HUNT brace after a rail splits. Cost: 10 minutes and $0. Cost: 10 minutes and $0. Specialist preparation, the wagon, June, and both roads remain available. Background: Road Warden. Promise: Accept Aid-Only Terms. Report: Use Hayden's Frost Report.",
         );
         expect(consequence).not.toMatch(
-          /\b(?:DEF|HUNT|LURE|DRIVE|FORTIFY|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
+          /\b(?:DEF|DRIVE|FORTIFY|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
         );
         expect((selectedDispatch.journey as { acceptedDecisions?: number }).acceptedDecisions).toBe(
           5,
@@ -909,7 +909,7 @@ describe("MCP pure play mode", () => {
           arguments: { session_id: sessionId, area_id: hiddenDestinationId },
         });
         expect(compactRejected.isError).toBe(true);
-        expect(textResult(compactRejected)).toMatch(/not a currently visible destination/);
+        expect(textResult(compactRejected)).toMatch(/not a visible destination/);
         const afterCompactRejection = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",
@@ -965,9 +965,7 @@ describe("MCP pure play mode", () => {
               },
             });
             expect(rejected.isError, selectorName).toBe(true);
-            expect(textPayload(rejected).error, selectorName).toMatch(
-              /not a currently visible route/i,
-            );
+            expect(textPayload(rejected).error, selectorName).toMatch(/not visible from here/i);
             const afterSelectorRejection = textPayload(
               await client.callTool({
                 name: "get_overworld_session_context",
@@ -989,9 +987,7 @@ describe("MCP pure play mode", () => {
             },
           });
           expect(destinationRejected.isError).toBe(true);
-          expect(textPayload(destinationRejected).error).toMatch(
-            /not a currently visible destination/,
-          );
+          expect(textPayload(destinationRejected).error).toMatch(/not a visible destination/);
           const after = textPayload(
             await client.callTool({
               name: "get_overworld_session_context",
@@ -1161,7 +1157,7 @@ describe("MCP pure play mode", () => {
     expect(talkAssertions).toEqual([true, true, true, true, true, true]);
   });
 
-  it("keeps singleton recovery handles out of full multi-session errors", async () => {
+  it("keeps live recovery handles out of full multi-session errors while naming the parent field", async () => {
     await withFullServer(async (client) => {
       const listed = await client.listTools();
       const fullRead = listed.tools.find((tool) => tool.name === "get_overworld_session_context");
@@ -1173,14 +1169,14 @@ describe("MCP pure play mode", () => {
           Object.entries(tool.inputSchema).filter(([key]) => key !== "$schema"),
         ),
       }));
-      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(40_374);
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(38_759);
       expect(fullRead?.description).toBe(
-        "Read compact context; Station support uses the exact V6 board [5] id.",
+        "Read current context without acting. Station support uses the exact board[5] id.",
       );
       expect(
         (fullRead?.inputSchema.properties as Record<string, { description?: string }> | undefined)
           ?.reveal_station_dispatch_support?.description,
-      ).toBe("Durable read-only reveal; pass the exact Station V6 board [5] id.");
+      ).toBe("Reveal Station support without changing state. Pass the exact board[5] id.");
 
       const first = textPayload(await client.callTool({ name: "start_overworld", arguments: {} }));
       const second = textPayload(await client.callTool({ name: "start_overworld", arguments: {} }));
@@ -1196,7 +1192,7 @@ describe("MCP pure play mode", () => {
       const text = (rejected.content as { type: string; text?: string }[])[0]?.text ?? "";
       expect(text).not.toContain(String(first.session_id));
       expect(text).not.toContain(String(second.session_id));
-      expect(text).not.toContain("overworld_session_id");
+      expect(text).toContain("Pass the current parent overworld_session_id.");
       expect(text).not.toContain("rpg_session_id");
     });
   });
@@ -1271,7 +1267,7 @@ describe("MCP pure play mode", () => {
         },
       });
       expect(planConflict.isError).toBe(true);
-      expect(textResult(planConflict)).toMatch(/Conflicting destination_town_id and dest_town_id/);
+      expect(textResult(planConflict)).toMatch(/destination_town_id and dest_town_id conflict/);
       const planAfter = textPayload(
         await client.callTool({
           name: "get_overworld_session_context",
@@ -1329,9 +1325,7 @@ describe("MCP pure play mode", () => {
         },
       });
       expect(travelConflict.isError).toBe(true);
-      expect(textResult(travelConflict)).toMatch(
-        /Conflicting destination_town_id and dest_town_id/,
-      );
+      expect(textResult(travelConflict)).toMatch(/destination_town_id and dest_town_id conflict/);
       const travelConflictAfter = textPayload(
         await client.callTool({
           name: "get_overworld_session_context",
@@ -1349,7 +1343,7 @@ describe("MCP pure play mode", () => {
       });
       expect(roadDestinationConflict.isError).toBe(true);
       expect(textResult(roadDestinationConflict)).toMatch(
-        /exactly one of road_id or destination_town_id/,
+        /Pass exactly one: road_id or destination_town_id/,
       );
       const roadDestinationAfter = textPayload(
         await client.callTool({
@@ -1445,7 +1439,7 @@ describe("MCP pure play mode", () => {
           arguments: { session_id: rpgSessionId, rpg_session_id: "r-conflict" },
         });
         expect(conflict.isError, `${name} conflict`).toBe(true);
-        expect(textResult(conflict), name).toMatch(/Conflicting session_id and rpg_session_id/);
+        expect(textResult(conflict), name).toMatch(/session_id and rpg_session_id conflict/);
       }
 
       const menu = textPayload(
@@ -1465,7 +1459,7 @@ describe("MCP pure play mode", () => {
         },
       });
       expect(stepConflict.isError).toBe(true);
-      expect(textResult(stepConflict)).toMatch(/Conflicting session_id and rpg_session_id/);
+      expect(textResult(stepConflict)).toMatch(/session_id and rpg_session_id conflict/);
       const actionConflictBefore = textPayload(
         await client.callTool({
           name: "get_state",
@@ -1482,7 +1476,7 @@ describe("MCP pure play mode", () => {
         },
       });
       expect(actionConflict.isError).toBe(true);
-      expect(textResult(actionConflict)).toMatch(/Conflicting action_id and action/);
+      expect(textResult(actionConflict)).toMatch(/action_id and action conflict/);
       const actionConflictAfter = textPayload(
         await client.callTool({
           name: "get_state",
@@ -1712,9 +1706,7 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(contactConflict.isError).toBe(true);
-        expect(textPayload(contactConflict).error).toMatch(
-          /Conflicting character_id and contact_id/,
-        );
+        expect(textPayload(contactConflict).error).toMatch(/character_id and contact_id conflict/);
         expect(await parentState()).toEqual(beforeContactConflict);
 
         await callPlayerTool(client, "scout_overworld_session_poi", {
@@ -1775,7 +1767,7 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(areaConflict.isError).toBe(true);
-        expect(textPayload(areaConflict).error).toMatch(/Conflicting area_route_id and area_id/);
+        expect(textPayload(areaConflict).error).toMatch(/area_route_id and area_id conflict/);
         expect(await parentState()).toEqual(beforeAreaConflict);
 
         const beforeRouteAliasConflict = await parentState();
@@ -1789,7 +1781,7 @@ describe("MCP pure play mode", () => {
         });
         expect(routeAliasConflict.isError).toBe(true);
         expect(textPayload(routeAliasConflict).error).toMatch(
-          /Conflicting area_route_id and route_id/,
+          /area_route_id and route_id conflict/,
         );
         expect(await parentState()).toEqual(beforeRouteAliasConflict);
 
@@ -1804,7 +1796,7 @@ describe("MCP pure play mode", () => {
         });
         expect(routeDestinationConflict.isError).toBe(true);
         expect(textPayload(routeDestinationConflict).error).toMatch(
-          /Conflicting route_id and area_id/,
+          /route_id and area_id conflict/,
         );
         expect(await parentState()).toEqual(beforeRouteDestinationConflict);
 
@@ -1819,7 +1811,7 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(tripleConflict.isError).toBe(true);
-        expect(textPayload(tripleConflict).error).toMatch(/Conflicting route selector and area_id/);
+        expect(textPayload(tripleConflict).error).toMatch(/route selector and area_id conflict/);
         expect(await parentState()).toEqual(beforeTripleConflict);
 
         const ready = await callPlayerTool(client, "move_overworld_session_area", {
@@ -1858,7 +1850,7 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(rpgConflict.isError).toBe(true);
-        expect(textPayload(rpgConflict).error).toMatch(/Conflicting session_id and rpg_session_id/);
+        expect(textPayload(rpgConflict).error).toMatch(/session_id and rpg_session_id conflict/);
         expect(await parentState()).toEqual(beforeRpgConflict);
         const afterConflictRead = await callPlayerTool(client, "get_observation", {
           rpg_session_id: rpgSessionId,
@@ -1889,7 +1881,7 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(actionAliasConflict.isError).toBe(true);
-        expect(textPayload(actionAliasConflict).error).toMatch(/Conflicting action_id and action/);
+        expect(textPayload(actionAliasConflict).error).toMatch(/action_id and action conflict/);
         expect(await parentState()).toEqual(beforeActionAliasConflict);
 
         const stepped = await callPlayerTool(client, "step_action", {
@@ -1946,7 +1938,7 @@ describe("MCP pure play mode", () => {
         });
         expect(planConflict.isError).toBe(true);
         expect(textPayload(planConflict).error).toMatch(
-          /Conflicting destination_town_id and dest_town_id/,
+          /destination_town_id and dest_town_id conflict/,
         );
         const afterPlan = await callPlayerTool(client, "get_overworld_session_context", parent);
         expect(afterPlan.snapshot_hash).toBe(beforePlan.snapshot_hash);
@@ -1971,7 +1963,7 @@ describe("MCP pure play mode", () => {
         });
         expect(roadDestinationConflict.isError).toBe(true);
         expect(textPayload(roadDestinationConflict).error).toMatch(
-          /exactly one of road_id or destination_town_id/,
+          /Pass exactly one: road_id or destination_town_id/,
         );
         const afterRoadDestinationConflict = await callPlayerTool(
           client,
@@ -2171,7 +2163,7 @@ describe("MCP pure play mode", () => {
           "albany:source_jamie_market_testimony",
         );
         const expectedGuidance =
-          "Set: background, promise, report. Dispatch 20m; final 20–65m; support can delay dispatch. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+          "Background, promise, and report are set. Current setup: 20m. Final setup: 20–65m; support can delay dispatch. Optional support remains. Start Wolf-Winter to skip it.";
         const stationedBoard = (
           stationed.context as { station_dispatch_board?: OpeningCompactStationDispatchBoard }
         ).station_dispatch_board;
@@ -2194,7 +2186,7 @@ describe("MCP pure play mode", () => {
         });
         expect(delta.station_dispatch_board[2]).toBe(expectedGuidance);
         const revealBytes = Buffer.byteLength(JSON.stringify(revealed), "utf8");
-        expect(revealBytes).toBe(1_098);
+        expect(revealBytes).toBe(1_047);
         expect(revealBytes).toBeLessThanOrEqual(1_100);
       });
     } finally {
@@ -2249,7 +2241,7 @@ describe("MCP pure play mode", () => {
       expect(fullJune).not.toHaveProperty("station_dispatch_modal");
       const fullJuneText = JSON.stringify(fullJune);
       const preparedDispatchStatus =
-        "Set: background, promise, report. Dispatch 30m; final 30–50m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+        "Background, promise, and report are set. Current setup: 30m. Final setup: 30–50m; all on time. Optional support remains. Start Wolf-Winter to skip it.";
       const fullJuneSummaries = stringsContaining(fullJune, preparedDispatchStatus);
       expect(fullJuneSummaries).toHaveLength(2);
       expect(fullJuneSummaries.every((summary) => summary.startsWith(preparedDispatchStatus))).toBe(
@@ -2257,7 +2249,7 @@ describe("MCP pure play mode", () => {
       );
       expect(fullJuneText.split(preparedDispatchStatus)).toHaveLength(3);
       expect(fullJuneText).not.toContain("optional Station support remains");
-      expect(Buffer.byteLength(fullJuneText, "utf8")).toBe(8_916);
+      expect(Buffer.byteLength(fullJuneText, "utf8")).toBe(7_915);
     });
   }, 120_000);
 
@@ -2277,9 +2269,9 @@ describe("MCP pure play mode", () => {
           ),
         }));
         const pureCatalogBytes = Buffer.byteLength(JSON.stringify(pureCatalogProjection), "utf8");
-        expect(pureCatalogBytes).toBe(16_773);
-        expect(pureCatalogBytes - 16_694).toBe(79);
-        expect(15_720 + 2_042 + pureCatalogBytes).toBe(34_535);
+        expect(pureCatalogBytes).toBe(16_738);
+        expect(pureCatalogBytes - 16_694).toBe(44);
+        expect(15_720 + 2_042 + pureCatalogBytes).toBe(34_500);
         expect(15_720 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(34_868);
         for (const tool of listed.tools) {
           expect(
@@ -2310,20 +2302,20 @@ describe("MCP pure play mode", () => {
           (tool) => tool.name === "get_overworld_session_context",
         );
         expect(contextTool?.description).toBe(
-          "Read compact context; Station reveal-only yields V1 delta.",
+          "Read current compact context without acting. A Station reveal returns only its new fields.",
         );
         expect(contextTool?.inputSchema.properties).toHaveProperty(
           "include_departure_recap_terms",
           expect.objectContaining({
             type: "boolean",
-            description: "Exact selected plan terms.",
+            description: "Include the full terms of the selected plan.",
           }),
         );
         expect(contextTool?.inputSchema.properties).toHaveProperty(
           "reveal_station_dispatch_support",
           expect.objectContaining({
             type: "string",
-            description: "V6 board [5] id; reveal-only needs latest if_snapshot_hash.",
+            description: "Station board[5] reveal id. Also pass the latest if_snapshot_hash.",
           }),
         );
 
@@ -2336,11 +2328,11 @@ describe("MCP pure play mode", () => {
           | undefined;
         expect(storyChoiceProperties?.choice).toMatchObject({
           type: "string",
-          description: "Visible option id; departure options are inferred.",
+          description: "Exact visible option id. Departure story id is inferred.",
         });
         expect(storyChoiceProperties?.story_choice_id).toMatchObject({
           type: "string",
-          description: "Optional Station support story id.",
+          description: "Story id required for Station support.",
         });
         expect(storyChoiceProperties?.choice).not.toHaveProperty("enum");
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
@@ -2355,7 +2347,7 @@ describe("MCP pure play mode", () => {
           "include_character_continuity",
           expect.objectContaining({
             type: "boolean",
-            description: "Recover embedded continuity.",
+            description: "Include the embedded quest's character continuity.",
           }),
         );
 
@@ -2370,7 +2362,7 @@ describe("MCP pure play mode", () => {
         expect(goalPassageProperties).toHaveProperty("session_id");
         expect(
           (goalPassageProperties?.session_id as { description?: string } | undefined)?.description,
-        ).toMatch(/parent.*overworld_session_id.*(?:not|never) rpg_session_id/i);
+        ).toBe("Parent overworld_session_id. Do not use rpg_session_id.");
         expect(goalPassageProperties).toHaveProperty("expected_snapshot_hash");
         expect(goalPassageProperties).not.toHaveProperty("destination_town_id");
         expect(goalPassageProperties).not.toHaveProperty("road_id");
@@ -2387,7 +2379,7 @@ describe("MCP pure play mode", () => {
         const beforeStartPayload = textPayload(beforeStart);
         expect(beforeStartPayload).toMatchObject({
           ok: false,
-          error: expect.stringMatching(/must begin with start_overworld/i),
+          error: "Start pure play with start_overworld.",
         });
         expect(beforeStartPayload).not.toHaveProperty("expected_session_field");
         expect(beforeStartPayload).not.toHaveProperty("overworld_session_id");
@@ -2424,7 +2416,8 @@ describe("MCP pure play mode", () => {
         const recovery = textPayload(second);
         expect(recovery).toMatchObject({
           ok: false,
-          error: expect.stringMatching(/already has exactly one fresh overworld session/i),
+          error:
+            "Pure play allows one new overworld session. Continue with the recovered overworld_session_id.",
           expected_session_field: "overworld_session_id",
           overworld_session_id: sessionId,
         });
@@ -2556,10 +2549,10 @@ describe("MCP pure play mode", () => {
           (candidate) => candidate.name === "list_legal_actions",
         )?.inputSchema.properties as Record<string, { description?: string }> | undefined;
         expect(legalActionSchema?.compact_actions?.description).toMatch(
-          /true returns bare action ids.*defaults to labeled options/i,
+          /Set true for action ids without labels[^]*default includes labels/i,
         );
         expect(legalActionSchema?.session_id?.description).toMatch(
-          /child.*rpg_session_id.*(?:not|never) overworld_session_id/i,
+          /Child rpg_session_id[^]*Do not use overworld_session_id/i,
         );
         const storyInspectionTool = listed.tools.find(
           (candidate) => candidate.name === "inspect_overworld_session_story",
@@ -2628,7 +2621,7 @@ describe("MCP pure play mode", () => {
           }
         ).storyChoice;
         expect(registrationChoice?.kind).toBe("registration");
-        expect(registrationChoice?.message).toContain("you must choose one permanent background");
+        expect(registrationChoice?.message).toContain("Choose one permanent background.");
         expect(JSON.stringify(registrationChoice?.options)).not.toMatch(
           /\b(?:DEF|import|fieldTrigger)\b/i,
         );
@@ -2651,9 +2644,8 @@ describe("MCP pure play mode", () => {
         expect(missingParentInspection.isError).toBe(true);
         expect(textPayload(missingParentInspection)).toMatchObject({
           ok: false,
-          error: expect.stringMatching(
-            /requires the exact current parent overworld_session_id.*missing, malformed, stale, or unknown/i,
-          ),
+          error:
+            "Pass the current parent overworld_session_id. The supplied session_id is missing, invalid, stale, or unknown.",
           expected_session_field: "overworld_session_id",
           expected_argument: "session_id",
           returned_handle_field: "overworld_session_id",
@@ -2699,7 +2691,8 @@ describe("MCP pure play mode", () => {
           expect(staleInspection).toMatchObject({
             ok: false,
             snapshot_hash: registration.snapshot_hash,
-            rejection_reason: expect.stringMatching(/snapshot hash mismatch/i),
+            rejection_reason:
+              "The overworld state changed since your last read. Refresh with get_overworld_session_context.",
             overworld_session_id: sessionId,
           });
           expect(staleInspection).not.toHaveProperty("story");
@@ -2769,7 +2762,7 @@ describe("MCP pure play mode", () => {
         expect(defaultCivicMessages).not.toMatch(/role\s*→\s*duty\s*→\s*evidence/i);
         expect(defaultCivicMessages).not.toMatch(/June Pike|second field seat/i);
         expect(oathChoice?.message).toBe(
-          `The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open. ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
+          `The Wolf-Winter: use a ready-made promise and report or choose them separately. Every approach stays open. ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
         );
         expect(
           oathChoice?.options?.every(
@@ -2921,14 +2914,24 @@ describe("MCP pure play mode", () => {
         expect(stationLegend).toContain(
           "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null]",
         );
-        expect(stationLegend).toContain("remaining_optional_count");
-        expect(stationLegend).toContain("Pre-review hides open_optional;overview=[id,label]");
-        expect(stationLegend).toContain("names only open kit/wagon/rider categories");
-        expect(stationLegend).toContain("Repair/Streetwise/Mediation");
-        expect(stationLegend).toContain("get-context(reveal_station_dispatch_support=exact id)");
-        expect(stationLegend).toContain("receipt survives refresh/export/restore");
-        expect(stationLegend).toContain("['inspect',story_choice_id]");
-        expect(stationLegend).toContain("['talk',character_id,contact_name]");
+        expect(stationLegend).toContain(
+          "dispatch=[state,minutes,timing|null,remaining_optional_count]",
+        );
+        expect(stationLegend).toContain(
+          "row=[slot,status,selected_title|null,purpose|null,action|null]",
+        );
+        expect(stationLegend).toContain(
+          "role/duty/evidence/preparation/relief_allocation/field_team=",
+        );
+        expect(stationLegend).toContain("=background/promise/report/kit/wagon/rider.");
+        expect(stationLegend).toContain(
+          "Before review, overview lists open kit, wagon, and rider categories.",
+        );
+        expect(stationLegend).toContain(
+          "Call get-context with reveal_station_dispatch_support set to its exact id.",
+        );
+        expect(stationLegend).toContain("Returned rows give inspect or talk actions.");
+        expect(stationLegend).toContain("Support is optional and chooses no strategy.");
         expect(JSON.stringify(cumulativeLegend).length).toBeLessThanOrEqual(7_200);
         const stationedContext = stationed.context as CompactAreaContext;
         expect(stationedContext.departure_contact_leads).toBeUndefined();
@@ -2937,14 +2940,14 @@ describe("MCP pure play mode", () => {
         expect(stationedBoard?.slice(0, 2)).toEqual([6, "wolf_winter"]);
         const stationedGuidance = stationedBoard?.[2];
         expect(stationedGuidance).toBe(
-          "Set: background, promise, report. Dispatch 5m; final 5–55m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
+          "Background, promise, and report are set. Current setup: 5m. Final setup: 5–55m; all on time. Optional support remains. Start Wolf-Winter to skip it.",
         );
         expect(stationedBoard?.[3]).toEqual(["committed", 5, null, 3]);
         expect(stationedBoard?.[4].map(([slot]) => slot)).toEqual(["role", "duty", "evidence"]);
         expect(stationedBoard?.[4].every((row) => row[3] === null && row[4] === null)).toBe(true);
         expect(stationedBoard?.[5]).toEqual([
           STATION_DISPATCH_SUPPORT_REVEAL_ID,
-          "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+          "Optional: a field kit using Repair, Streetwise, or Mediation; plus Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
         ]);
         const hiddenStationJson = JSON.stringify(stationedBoard);
         expect(hiddenStationJson).not.toContain("albany:wolf_preparation");
@@ -2981,7 +2984,9 @@ describe("MCP pure play mode", () => {
         ]);
         expect(
           (supportReview.legend_delta as Record<string, string>).station_dispatch_support,
-        ).toMatch(/explicit read-only Station support detail/i);
+        ).toBe(
+          "[[support_slot,purpose,action|null],...] optional Station support. preparation=field kit, relief_allocation=relief wagon, field_team=second rider. action is ['inspect',story_choice_id] or ['talk',character_id,contact_name]. Support changes dispatch cost or aftermath, not the available Wolf-Winter strategies.",
+        );
         const missingRevealBase = await client.callTool({
           name: "get_overworld_session_context",
           arguments: {
@@ -2990,7 +2995,9 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(missingRevealBase.isError).toBe(true);
-        expect(textResult(missingRevealBase)).toMatch(/requires if_snapshot_hash/i);
+        expect(textPayload(missingRevealBase).error).toBe(
+          "Also pass if_snapshot_hash from the latest compact context.",
+        );
         const staleRevealBase = await client.callTool({
           name: "get_overworld_session_context",
           arguments: {
@@ -3000,7 +3007,9 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(staleRevealBase.isError).toBe(true);
-        expect(textResult(staleRevealBase)).toMatch(/base hash is stale/i);
+        expect(textPayload(staleRevealBase).error).toBe(
+          "The snapshot changed. Read a new compact context, then reveal again.",
+        );
         const afterRejectedReveal = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",
@@ -3056,27 +3065,27 @@ describe("MCP pure play mode", () => {
               "preparation",
               "open_optional",
               null,
-              "Optional kit: compare without choosing; covers one named danger.",
+              "Optional field kit: helps with one specific danger.",
               ["inspect", "albany:wolf_preparation"],
             ],
             [
               "relief_allocation",
               "open_optional",
               null,
-              "Optional wagon: compare without choosing; send Albany's last to one crisis.",
+              "Optional wagon: support one need; leave two unsupported.",
               ["inspect", "albany:wolf_relief_allocation"],
             ],
             [
               "field_team",
               "open_optional",
               null,
-              "Optional rider: ask June before choosing; one cattle line, never combat.",
+              "Optional rider: June helps cattle safety, never combat.",
               ["talk", "albany_city__transport_hub__june_pike", "June Pike"],
             ],
           ]),
         );
         const revealReceiptBytes = Buffer.byteLength(JSON.stringify(revealed), "utf8");
-        expect(revealReceiptBytes).toBe(1_081);
+        expect(revealReceiptBytes).toBe(1_025);
         expect(revealReceiptBytes).toBeLessThanOrEqual(1_100);
         const repeatedReveal = textPayload(
           await client.callTool({
@@ -3195,7 +3204,7 @@ describe("MCP pure play mode", () => {
           ].sort(),
         );
         expect(preparationChoice?.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
-        expect(JOURNEY_STORY_CHOICE_COMPARISON_VERSION).toBe(11);
+        expect(JOURNEY_STORY_CHOICE_COMPARISON_VERSION).toBe(12);
         expect(preparationChoice?.kind).toBe("preparation");
         expect(preparationChoice?.inspectedOption).toBeNull();
         expect(preparationChoice?.reviewOption).toEqual({
@@ -3216,7 +3225,7 @@ describe("MCP pure play mode", () => {
           throw new Error("expected visible works-fortification preparation");
         expect(worksFortification.summary).not.toHaveProperty("checkFit");
         expect(worksFortification.summary).toMatchObject({
-          highlights: [{ label: "Governing skill", value: "Repair +4 vs DC 12" }],
+          highlights: [{ label: "Check skill", value: "Repair +4 vs DC 12" }],
         });
         const detailed = textPayload(
           await client.callTool({
@@ -3243,9 +3252,9 @@ describe("MCP pure play mode", () => {
           checkFit: "Repair +4 vs DC 12",
           dispatchForecast: { proofHash: expect.stringMatching(/^[0-9a-f]{64}$/) },
           consequence:
-            "Benefit: Opening repair at Cade's first loose paling rail. " +
+            "Benefit: First loose fence rail: Repair check with a guaranteed recovery. " +
             "Cost: 10 minutes and $0. " +
-            "Boundary: Replaces the ordinary wedge and forfeits Hayden's frost-brace line.",
+            "Tradeoff: Replaces the public wedge and closes Hayden's frost brace.",
         });
         expect(Object.keys(detailedPreparation.inspectedOption ?? {}).sort()).toEqual(
           ["checkFit", "consequence", "dispatchForecast", "id", "label"].sort(),
@@ -3318,7 +3327,7 @@ describe("MCP pure play mode", () => {
         const preparedBoard = (prepared.context as CompactAreaContext).station_dispatch_board;
         expect(preparedBoard?.[0]).toBe(6);
         expect(preparedBoard?.[2]).toMatch(
-          /^Set: background, promise, report\. Dispatch \d+m; final \d+–\d+m; (?:all on time|support can delay dispatch|already late)\. Compare; named choice commits\. Start Wolf-Winter to decline the rest\.$/,
+          /^Background, promise, and report are set\. Current setup: \d+m\. Final setup: \d+–\d+m; (?:all on time|support can delay dispatch|already late)\. Optional support remains\. Start Wolf-Winter to skip it\.$/,
         );
         expect(preparedBoard?.[3]?.[3]).toBe(2);
         expect(
@@ -3353,7 +3362,9 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(missingJuneBase.isError).toBe(true);
-        expect(textResult(missingJuneBase)).toMatch(/requires expected_snapshot_hash/i);
+        expect(textPayload(missingJuneBase).error).toBe(
+          "To talk to June here, pass expected_snapshot_hash from the revealed Station board.",
+        );
         const staleJuneBase = await client.callTool({
           name: "talk_overworld_session_contact",
           arguments: {
@@ -3363,7 +3374,9 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(staleJuneBase.isError).toBe(true);
-        expect(textResult(staleJuneBase)).toMatch(/base hash is stale/i);
+        expect(textPayload(staleJuneBase).error).toBe(
+          "The snapshot changed. Read the latest Station response, then talk to June.",
+        );
         const afterRejectedJune = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",
@@ -3452,7 +3465,7 @@ describe("MCP pure play mode", () => {
         );
         if (!cattleFirst) throw new Error("expected June's visible cattle-first option");
         const juneModalBytes = Buffer.byteLength(JSON.stringify(juneConversation), "utf8");
-        expect(juneModalBytes).toBe(3_908);
+        expect(juneModalBytes).toBe(3_493);
         expect(juneModalBytes).toBeLessThanOrEqual(4_000);
         const inspectedAlly = textPayload(
           await client.callTool({
@@ -3481,8 +3494,8 @@ describe("MCP pure play mode", () => {
           },
         });
         expect(repeatedJune.isError).toBe(true);
-        expect(textResult(repeatedJune)).toMatch(
-          /choose the presented story consequence|finish.*story choice|gameplay.*paused/i,
+        expect(textPayload(repeatedJune).error).toBe(
+          "Choose the open story option before taking another action.",
         );
         const afterRepeatedJune = textPayload(
           await client.callTool({
@@ -3579,7 +3592,7 @@ describe("MCP pure play mode", () => {
         );
         const allocatedBoard = (allocated.context as CompactAreaContext).station_dispatch_board;
         expect(allocatedBoard?.[2]).toBe(
-          "Dispatch 35m—on time; roads change arrival, not dispatch. No opening-delay failure pressure.",
+          "Setup took 35m, so the dispatch is on time. Roads change arrival costs only. No late-dispatch penalty applies.",
         );
         expect(allocatedBoard?.[3]?.[3]).toBe(0);
         expect(allocatedBoard?.[4].filter(([, status]) => status === "open_optional")).toEqual([]);
@@ -3754,7 +3767,8 @@ describe("MCP pure play mode", () => {
         });
         expect(repeatedQuestStart.isError).toBe(true);
         expect(textPayload(repeatedQuestStart)).toMatchObject({
-          error: expect.stringMatching(/Finish the active embedded quest/i),
+          error:
+            "Finish the active quest with its rpg_session_id before taking another overworld action.",
           expected_session_field: "rpg_session_id",
           expected_argument: "session_id",
           returned_handle_field: "rpg_session_id",
@@ -3781,8 +3795,8 @@ describe("MCP pure play mode", () => {
         expect(childUsedForParent.isError).toBe(true);
         const childUsedForParentPayload = textPayload(childUsedForParent);
         expectSessionRecoveryEnvelope(childUsedForParentPayload, "overworld_session_id");
-        expect(String(childUsedForParentPayload.error)).toMatch(
-          /requires the parent overworld_session_id, not the active RPG child handle/i,
+        expect(childUsedForParentPayload.error).toBe(
+          "This overworld tool needs the parent overworld_session_id, not the active child rpg_session_id.",
         );
         await expectParentUnchanged();
 
@@ -3809,10 +3823,10 @@ describe("MCP pure play mode", () => {
           expect(rejected.isError, label).toBe(true);
           const payload = textPayload(rejected);
           expectSessionRecoveryEnvelope(payload, "overworld_session_id");
-          expect(String(payload.error), label).toMatch(
-            /requires the exact current parent overworld_session_id/i,
+          expect(payload.error, label).toContain("Pass the current parent overworld_session_id.");
+          expect(payload.error, label).toContain(
+            "The supplied session_id is missing, invalid, stale, or unknown.",
           );
-          expect(String(payload.error), label).toMatch(/missing, malformed, stale, or unknown/i);
           expect(String(payload.error), label).not.toMatch(/RPG|child/i);
           if (label === "Cycle 14 one-character parent near-miss") {
             expect(JSON.stringify(payload)).not.toContain(cycle14ParentNearMiss);
@@ -3857,8 +3871,8 @@ describe("MCP pure play mode", () => {
         expect(talked.ok).toBe(true);
         const talkContext = talked.context as RpgCompactContext;
         const talkActions = talkContext.actions;
-        expect(talkContext.dialogue?.[1]).toMatch(
-          /Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Choosing one closes the rest[^]*Preparation helps without choosing[^]*TONIGHT'S GROUND —/i,
+        expect(talkContext.dialogue?.[1]).toBe(
+          "Reviews choose nothing. Choose LURE, DRIVE, or FORTIFY in review. Choose HUNT with GO north or RELEASE JUNE. One choice permanently closes the rest. PREPARE SUPPORT chooses nothing.\nFIELD CONDITION — steady scent channel. At the opening, LAY downwind feed line WITH Cade's winter-feed sack succeeds without a check. Later feed and cattle-alarm costs remain.",
         );
         expect(talkContext.dialogue?.[1].length).toBeLessThanOrEqual(360);
         expect(talkActions).toEqual(
@@ -3907,11 +3921,11 @@ describe("MCP pure play mode", () => {
           Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
         ).toMatchObject({
           ask_wolves:
-            "ask: PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; tactics only, no plan commitment.",
+            "ask: PREPARE SUPPORT — Learn the quick HUNT tactic for +2 attack and +5 score. This does not choose HUNT.",
           ask_byre:
-            "ask: PREPARE SUPPORT — HUNT guarded/patient line: grants the safer combat tactic; no plan commitment.",
+            "ask: PREPARE SUPPORT — Learn the guarded HUNT tactic. This does not choose HUNT.",
           ask_hunt: CADE_HUNT_INSPECT_COMMAND,
-          ask_leave: "ask: LEAVE — Exit Cade's plan review; this action commits nothing.",
+          ask_leave: "ask: LEAVE — Exit without choosing a plan.",
         });
         const huntAction = labeledActions.find((action) => action.id === "ask_hunt");
         expect(MCP_ACTION_LABEL_CHAR_LIMIT).toBe(160);
@@ -4199,7 +4213,9 @@ describe("MCP pure play mode", () => {
           expect(ended.run_evidence).toMatchObject({
             recorded: false,
             retryable: true,
-            message: expect.stringMatching(/journey ended.*exactly one more call.*end choice/i),
+            message: expect.stringMatching(
+              /journey ended[^]*evidence was not saved[^]*exactly one more End call[^]*same parent session[^]*retry/i,
+            ),
           });
 
           const blockedAfterCommittedExit = await client.callTool({
@@ -4210,7 +4226,9 @@ describe("MCP pure play mode", () => {
           expect(textPayload(blockedAfterCommittedExit)).toMatchObject({
             ok: false,
             overworld_session_id: launch.overworldSessionId,
-            error: expect.stringMatching(/exit receipt is the final run event/i),
+            error: expect.stringMatching(
+              /exit receipt is final[^]*do not take another gameplay action/i,
+            ),
           });
           expect(textPayload(blockedAfterCommittedExit)).not.toHaveProperty("rpg_session_id");
 
@@ -4342,7 +4360,9 @@ describe("MCP pure play mode", () => {
         expect(afterExit.isError).toBe(true);
         expect((afterExit.content as unknown[])[0]).toMatchObject({
           type: "text",
-          text: expect.stringMatching(/exit receipt is the final run event/i),
+          text: expect.stringMatching(
+            /exit receipt is final[^]*do not take another gameplay action/i,
+          ),
         });
       });
 

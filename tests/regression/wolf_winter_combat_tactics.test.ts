@@ -30,8 +30,7 @@ const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
-const YEARLING_DEFEAT_JOURNAL =
-  "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
+const YEARLING_DEFEAT_JOURNAL = "The yearling wolf is dead at the Broken Paling.";
 
 type Outcome = "best" | "worst";
 
@@ -161,7 +160,9 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(options(state).find((option) => option.id === childId)).toMatchObject({
       combat: { attack_bonus: 0, defense_bonus: 1, one_shot: true, phase: "follow_through" },
     });
-    expect(buildRpgObservation(index, state).description).toContain("recoils alive");
+    expect(buildRpgObservation(index, state).description).toContain(
+      "DRIVE the set spear through the yearling's committed rush",
+    );
 
     const staleRoot = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
       type: "MANEUVER",
@@ -175,7 +176,7 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(state.flags.yearling_spear_driven).toBe(true);
     expect(state.flags.yearling_down).toBe(true);
     expect(state.vars.hp).toBe(25);
-    expect(narration(finish)).toContain("jerkin's hide shoulder");
+    expect(narration(finish)).toContain("padded byre-jerkin protects you");
     expect(narration(finish)).not.toContain("No worn armor");
     expect(optionIds(state)).not.toContain("attack_yearling_wolf");
     const staleChild = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
@@ -206,9 +207,9 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(state.inventory).toContain("byre_jerkin");
     expect(state.flags.jerkin_donned).not.toBe(true);
     expect(state.vars.defense).toBe(3);
-    expect(narration(finish)).toContain("keep the spear crosswise");
-    expect(narration(finish)).toContain("No worn armor");
-    expect(narration(finish)).not.toContain("jerkin's hide shoulder");
+    expect(narration(finish)).toContain("drive the set Albany relief spear");
+    expect(narration(finish)).toContain("not wearing the padded byre-jerkin");
+    expect(narration(finish)).not.toContain("padded byre-jerkin protects you");
   });
 
   it("keeps the ordinary HUNT defeat journal neutral while north remains legal", () => {
@@ -302,7 +303,9 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(options(state).find((option) => option.id === childId)).toMatchObject({
       combat: { attack_bonus: 1, defense_bonus: 0, one_shot: true, phase: "follow_through" },
     });
-    expect(buildRpgObservation(index, state).description).toContain("guarded line");
+    expect(buildRpgObservation(index, state).description).toContain(
+      "PIN the flank-wolf against the braced rail",
+    );
 
     const flankFinish = act(state, childId, "worst");
     state = flankFinish.state;
@@ -314,9 +317,7 @@ describe("Wolf-Winter authored combat tactics", () => {
       "split_rail_guard",
     ]);
     expect(buildRpgObservation(index, state).description).toContain("finishing thrust");
-    expect(state.journal).toContain(
-      "You put the flank-wolf down across the byre threshold; the dark of the byre runs on north.",
-    );
+    expect(state.journal).toContain("The flank-wolf is dead at the Byre Door.");
     expect(state.journal.join(" ")).not.toContain("as it cuts for your off side");
   });
 
@@ -334,7 +335,9 @@ describe("Wolf-Winter authored combat tactics", () => {
       action: { type: "USE", target: "paling_rail" },
     });
     expect(recovery?.skill_check).toBeUndefined();
-    expect(buildRpgObservation(index, state).description).toContain("use the rail again");
+    expect(buildRpgObservation(index, state).description).toContain(
+      "BIND split paling-rail to make a split-rail guard",
+    );
 
     state = act(state, "bind_paling_rail").state;
     expect(state.flags.split_rail_guard_made).toBe(true);
@@ -342,8 +345,10 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(optionIds(state)).not.toContain("bind_paling_rail");
     expect(optionIds(state)).not.toContain("drop_split_rail_guard");
     const carriedAtGap = buildRpgObservation(index, state);
-    expect(carriedAtGap.description).toContain("ride in your hands");
-    expect(carriedAtGap.description).toContain("rough guard for the byre door");
+    expect(carriedAtGap.description).toContain(
+      "You carry the split-rail guard for later use at the Byre Door",
+    );
+    expect(carriedAtGap.description).toContain("it does not slow this attack");
     expect(carriedAtGap.visible_objects.map((object) => object.id)).not.toContain("paling_rail");
     expect(optionIds(state)).not.toContain("examine_paling_rail");
     const staleCarriedLook = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
@@ -390,12 +395,12 @@ describe("Wolf-Winter authored combat tactics", () => {
       "d",
       "split_rail_guard",
     ]);
-    expect(buildRpgObservation(index, state).description).toContain("splinters");
+    expect(buildRpgObservation(index, state).description).toContain("The guard is broken");
 
     state = act(state, "go_south").state;
     const spentAtGap = buildRpgObservation(index, state);
-    expect(spentAtGap.description).toContain("broke with the flank-wolf at the byre door");
-    expect(spentAtGap.description).toContain("no guard remains");
+    expect(spentAtGap.description).toContain("split-rail guard broke against the flank-wolf");
+    expect(spentAtGap.description).toContain("No guard remains");
     expect(spentAtGap.description).not.toContain("guard you carry");
     expect(spentAtGap.visible_objects.map((object) => object.id)).not.toContain("paling_rail");
     expect(optionIds(state)).not.toContain("examine_paling_rail");
@@ -423,7 +428,7 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(optionIds(state)).toContain("attack_flank_wolf");
     expect(optionIds(state).filter((id) => id.startsWith("maneuver_flank_wolf_"))).toEqual([]);
     let observation = buildRpgObservation(index, state);
-    expect(observation.description).toContain("only a plain spear exchange remains");
+    expect(observation.description).toContain("Otherwise, ATTACK flank-wolf");
     expect(observation.description).not.toContain("west above");
 
     state = act(state, "attack_flank_wolf", "best").state;
@@ -433,7 +438,7 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(optionIds(state)).toContain("attack_grey_leader");
     expect(optionIds(state).filter((id) => id.startsWith("maneuver_grey_leader_"))).toEqual([]);
     observation = buildRpgObservation(index, state);
-    expect(observation.description).toContain("only plain spear work remains");
+    expect(observation.description).toContain("Otherwise, ATTACK grey leader");
   });
 
   it("makes the leader's guarded wait and violent close distinct, exclusive endings", () => {
@@ -490,8 +495,12 @@ describe("Wolf-Winter authored combat tactics", () => {
       one_shot: true,
       phase: "follow_through",
     });
-    expect(buildRpgObservation(index, waited).description).toContain("true rush");
-    expect(buildRpgObservation(index, closed).description).toContain("Drive again");
+    expect(buildRpgObservation(index, waited).description).toContain(
+      "TAKE the grey leader's true rush",
+    );
+    expect(buildRpgObservation(index, closed).description).toContain(
+      "DRIVE again before the grey leader can recover",
+    );
 
     const wrongChild = makeStep(buildRpgRules(index, () => outcomeRng("best")))(waited, {
       type: "MANEUVER",
@@ -504,8 +513,7 @@ describe("Wolf-Winter authored combat tactics", () => {
     const violentState = finishLeader(closed, closeChildId);
     expect(guardedState.flags.leader_true_rush_taken).toBe(true);
     expect(violentState.flags.leader_driven_before_recovery).toBe(true);
-    const leaderJournal =
-      "The grey leader falls among the straw; beyond her the cattle stand unhurt.";
+    const leaderJournal = "The grey leader is dead. The cattle beyond it are unhurt.";
     expect(guardedState.journal).toContain(leaderJournal);
     expect(violentState.journal).toContain(leaderJournal);
     expect(guardedState.journal.join(" ")).not.toContain(
@@ -515,10 +523,10 @@ describe("Wolf-Winter authored combat tactics", () => {
     const violentEnding = buildRpgObservation(index, violentState);
     expect(guardedEnding.ending_id).toBe("ending_held");
     expect(violentEnding.ending_id).toBe("ending_held");
-    expect(guardedEnding.ending?.text).toContain("off-side return");
-    expect(guardedEnding.ending?.text).toContain("true rush");
-    expect(violentEnding.ending?.text).toContain("flank-wolf's return");
-    expect(violentEnding.ending?.text).toContain("before the old leader could recover");
+    expect(guardedEnding.ending?.text).toContain("flank-wolf's returning stroke");
+    expect(guardedEnding.ending?.text).toContain("TOOK her true rush");
+    expect(violentEnding.ending?.text).toContain("flank-wolf's returning stroke");
+    expect(violentEnding.ending?.text).toContain("before she recovered");
     expect(guardedEnding.score).toBe(violentEnding.score);
     expect(guardedEnding.score).toBe(55);
     expect(guardedEnding.max_score).toBe(60);

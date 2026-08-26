@@ -82,17 +82,18 @@ const OPENING_CLARITY_SOURCE_HASH =
   "8981df5bb46a5173e1dcc43b4560f07042e4e9a338e885433a68089fec328038";
 const CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH =
   "99afa4a376f7c18a6871a784473d375773661032000cabe7171bfbe1742755fa";
+const CLEAR_PROSE_REWRITE_SOURCE_HASH =
+  "8e950b43ce3da425397192365aec6f6ea29ab78b41f572a136154fdb07c80fbc";
 const CADE_PEER_PLAN_PARITY_SOURCE_HASH =
   "08ddb7ce41d319fa34db896ba032cbf69edcf0b0d2a5fd413c457b28091be777";
-const YEARLING_DEFEAT_JOURNAL =
-  "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
+const YEARLING_DEFEAT_JOURNAL = "The yearling wolf is dead at the Broken Paling.";
 const CADE_HUNT_INSPECT_LABEL =
-  "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.";
+  "HUNT — Protect home and herd. Wolves may die; failure risks cattle. Cade's tactics and padded byre-jerkin help. Review. Go north or RELEASE JUNE to choose.";
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const CADE_LURE_ROOT_LABEL =
-  "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details.";
+  "LURE — Move the wolves alive and protect the herd. Costs Cade's last feed; the fence stays broken. First-action failure adds 2 cattle alarm. Review only.";
 const JUNE_HUNT_ACKNOWLEDGEMENT_LABEL =
-  "PREPARE — HUNT / KEEP JUNE: keep cattle-first aid; first wolf death breaks agreement. North crossing is FINAL COMMITMENT; closes other plans.";
+  "KEEP JUNE — Keep her cattle-first help. Going north chooses HUNT and closes other plans; the first wolf death ends her agreement.";
 
 const WOLF_WINTER_EXTERNAL_FLAGS = [
   "jamie_market_testimony_certified",
@@ -336,7 +337,7 @@ describe("Wolf-Winter compact authored prose", () => {
     if (!root) throw new Error("expected Cade's root node");
     expect(root.npc_text.trimEnd().length).toBeLessThanOrEqual(360);
     expect(root.npc_text).toMatch(
-      /Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Choosing one closes the rest[^]*Preparation helps without choosing/i,
+      /Reviews choose nothing[^]*Choose LURE, DRIVE, or FORTIFY in review[^]*Choose HUNT with GO north or RELEASE JUNE[^]*One choice permanently closes the rest[^]*PREPARE SUPPORT chooses nothing/i,
     );
 
     const rules = buildRpgRules(index);
@@ -391,10 +392,10 @@ describe("Wolf-Winter compact authored prose", () => {
     );
     expect(talked.context.choices).toEqual(
       expect.arrayContaining([
-        expect.arrayContaining(["ask_hunt", expect.stringMatching(/^HUNT — Goal:/)]),
-        expect.arrayContaining(["ask_lure", expect.stringMatching(/^LURE — Goal:/)]),
-        expect.arrayContaining(["ask_drive", expect.stringMatching(/^DRIVE — Goal:/)]),
-        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^FORTIFY — Goal:/)]),
+        expect.arrayContaining(["ask_hunt", expect.stringMatching(/^HUNT — Protect home/)]),
+        expect.arrayContaining(["ask_lure", expect.stringMatching(/^LURE — Move the wolves/)]),
+        expect.arrayContaining(["ask_drive", expect.stringMatching(/^DRIVE — Evacuate/)]),
+        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^FORTIFY — Protect/)]),
       ]),
     );
     expect(talked.context.choices?.some(([id]) => id === "go_west")).toBe(false);
@@ -453,13 +454,13 @@ describe("Wolf-Winter compact authored prose", () => {
     state = actById(state, "talk_houndsman");
 
     const cade = compactWithActions(state);
-    expect(cade.dialogue?.[1]).toMatch(/Cross north or RELEASE JUNE, if offered, to choose HUNT/i);
+    expect(cade.dialogue?.[1]).toMatch(/Choose HUNT with GO north or RELEASE JUNE/i);
     expect(cade.choices).toContainEqual(["ask_hunt", CADE_HUNT_INSPECT_LABEL]);
 
     state = actById(state, "ask_byre");
     const guarded = compactWithActions(state);
     expect(guarded.dialogue?.[1]).toMatch(
-      /PREPARE SUPPORT[^]*gain the guarded\/patient HUNT tactic[^]*without committing a plan/i,
+      /Guarded HUNT[^]*shown BRACE, WEDGE, SET, SPLICE, or BIND rail action[^]*HOLD the spear point[^]*TAKE the grey leader's true rush/i,
     );
     expect(state.flags.heard_plan).toBe(true);
     expect(state.flags.strategy_lure_committed).not.toBe(true);
@@ -470,7 +471,7 @@ describe("Wolf-Winter compact authored prose", () => {
     state = actById(state, "talk_june_pike");
     const june = compactWithActions(state);
     expect(june.choices?.find(([id]) => id === "ask_release_june_for_hunt")?.[1]).toMatch(
-      /FINAL COMMITMENT[^]*HUNT \/ RELEASE JUNE/i,
+      /^CHOOSE HUNT \/ RELEASE JUNE/i,
     );
     state = actById(state, "ask_release_june_for_hunt");
     expect(state.flags.june_hunt_released).toBe(true);
@@ -499,18 +500,18 @@ describe("Wolf-Winter compact authored prose", () => {
 
       const offered = compactWithActions(state);
       expect(offered.dialogue?.[1]).toMatch(
-        /optional quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*committing first closes it[^]*lesson returns to the plan menu[^]*choose LURE again to commit/i,
+        /Learn Cade's quick HUNT tactic now[^]*\+2 attack[^]*\+5 score[^]*choosing LURE permanently closes that lesson[^]*Going north without choosing LURE chooses HUNT/i,
       );
       expect(offered.dialogue?.[1] ?? "").not.toMatch(TRUNCATION_MARKER);
       expect(offered.choices).toEqual(
         expect.arrayContaining([
           [
             "ask_quick_lesson",
-            "PREPARE SUPPORT — Learn quick spear line (+2 attack/+5 tally); returns to comparison and does not commit LURE.",
+            "PREPARE SUPPORT — Learn the quick HUNT tactic for +2 attack and +5 score. This does not choose LURE.",
           ],
           [
             "ask_commit_lure",
-            "FINAL COMMITMENT — LURE: spend Cade's finite feed on three casts; leave paling broken; close HUNT/DRIVE/FORTIFY. Irreversible.",
+            "CHOOSE LURE — Consume Cade's only feed sack in three actions, leave the paling broken, and permanently close HUNT, DRIVE, and FORTIFY.",
           ],
         ]),
       );
@@ -527,7 +528,7 @@ describe("Wolf-Winter compact authored prose", () => {
       expect(state.flags.heard_counsel).toBe(true);
       expect(state.vars).toMatchObject({ attack: 7, score: 5 });
       const returned = compactWithActions(state);
-      expect(returned.dialogue?.[1]).toMatch(/quick spear-hand/i);
+      expect(returned.dialogue?.[1]).toMatch(/You know the quick HUNT tactic/i);
       expect(returned.choices).toContainEqual(["ask_lure", CADE_LURE_ROOT_LABEL]);
       expect(returned.actions).toEqual(
         expect.arrayContaining(["ask_hunt", "ask_lure", "ask_drive", "ask_fortify"]),
@@ -548,8 +549,12 @@ describe("Wolf-Winter compact authored prose", () => {
       const reselected = compactWithActions(state);
       expect(reselected.actions).toContain("ask_commit_lure");
       expect(reselected.actions).not.toContain("ask_quick_lesson");
-      expect(reselected.dialogue?.[1]).toMatch(/commit here/i);
-      if (limitedDuty) expect(reselected.dialogue?.[1]).toMatch(/aid-only lure benefit/i);
+      expect(reselected.dialogue?.[1]).toMatch(/Choose LURE here/i);
+      if (limitedDuty) {
+        expect(reselected.dialogue?.[1]).toMatch(
+          /Aid-Only oath prevents LURE's final \+1 cattle alarm/i,
+        );
+      }
 
       state = actById(state, "ask_commit_lure");
       expect(state.flags.strategy_lure_committed).toBe(true);
@@ -558,7 +563,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(CADE_PEER_PLAN_PARITY_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(CLEAR_PROSE_REWRITE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(CADE_PEER_PLAN_PARITY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(OPENING_CLARITY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(COMMITMENT_LABELS_SOURCE_HASH);
@@ -608,8 +614,8 @@ describe("Wolf-Winter compact authored prose", () => {
       label: "enemy:yearling_wolf.on_defeat[0]",
       text: YEARLING_DEFEAT_JOURNAL,
     });
-    expect(YEARLING_DEFEAT_JOURNAL.length).toBe(92);
-    expect(YEARLING_DEFEAT_JOURNAL.trim().split(/\s+/u)).toHaveLength(20);
+    expect(YEARLING_DEFEAT_JOURNAL.length).toBe(47);
+    expect(YEARLING_DEFEAT_JOURNAL.trim().split(/\s+/u)).toHaveLength(9);
 
     for (const { label, text } of entries) {
       expectExactCompact(
@@ -660,13 +666,13 @@ describe("Wolf-Winter compact authored prose", () => {
     const dayBook = pack.objects.find((object) => object.id === "day_book")?.read_text;
     expect(dayBook).toBeDefined();
     const compactDayBook = narrationText(dayBook ?? "");
-    expect(compactDayBook).toMatch(/spear/i);
+    expect(compactDayBook).not.toMatch(/spear/i);
     expect(compactDayBook).toMatch(/Cade/i);
     expect(compactDayBook).toMatch(/jerkin/i);
-    expect(compactDayBook).toMatch(/watchman[^]*standing/i);
-    expect(compactDayBook).toMatch(/trusted spear[^]*bled/i);
-    expect(compactDayBook).toMatch(/both/i);
-    expect(compactDayBook).toMatch(/less[^]*gambl/i);
+    expect(compactDayBook).toMatch(/Three wolves/i);
+    expect(compactDayBook).toMatch(/\+2 attack/i);
+    expect(compactDayBook).toMatch(/\+2 defense/i);
+    expect(compactDayBook).toMatch(/bonuses affect fights still ahead/i);
     expect(compactDayBook).not.toMatch(/no wolf[^]*pull you down/i);
     expect(compactDayBook).not.toMatch(/set[^]*drive|wheel[^]*turn|wait[^]*true rush/i);
 
@@ -676,13 +682,13 @@ describe("Wolf-Winter compact authored prose", () => {
       return compactText(text.trimEnd(), COMPACT_DIALOGUE_CHAR_LIMIT);
     };
     const counsel = compactNode("cade_wolves");
-    expect(counsel).toMatch(/quick/i);
-    expect(counsel).toMatch(/set[^]*drive/i);
-    expect(counsel).toMatch(/wheel[^]*turn/i);
-    expect(counsel).toMatch(/close[^]*drive/i);
-    expect(counsel).toMatch(/fast[^]*guard opens/i);
-    expect(counsel).toMatch(/jerkin/i);
-    expect(counsel).toMatch(/both[^]*no wolf[^]*pull you down/i);
+    expect(counsel).toMatch(/SET the Albany relief spear[^]*yearling's rush[^]*shown DRIVE/i);
+    expect(counsel).toMatch(/WHEEL[^]*flank-wolf[^]*TURN/i);
+    expect(counsel).toMatch(/CLOSE[^]*grey leader[^]*DRIVE again/i);
+    expect(counsel).toMatch(/\+2 attack[^]*\+5 score/i);
+    expect(counsel).toMatch(
+      /DON padded byre-jerkin[^]*\+2 defense[^]*Both make worst-roll HUNT safe/i,
+    );
     // The irreversible lure commitment is commonly read through this compact
     // dialogue field. Its missed +5 cannot be hidden below a truncation boundary.
     const lureWarning = cade?.dialogue.nodes
@@ -695,17 +701,17 @@ describe("Wolf-Winter compact authored prose", () => {
     expect(lureWarning).toBeDefined();
     const lure = compactText(lureWarning?.trimEnd() ?? "", COMPACT_DIALOGUE_CHAR_LIMIT);
     expect(lure).toMatch(
-      /optional quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*committing first closes it/i,
+      /Learn Cade's quick HUNT tactic now[^]*\+2 attack[^]*\+5 score[^]*choosing LURE permanently closes that lesson/i,
     );
-    expect(lure).toMatch(/lesson returns to the plan menu[^]*choose LURE again to commit/i);
+    expect(lure).toMatch(/Going north without choosing LURE chooses HUNT/i);
     expect(lure).not.toMatch(TRUNCATION_MARKER);
     const plan = compactNode("cade_byre");
     expect(plan).toMatch(/guarded/i);
     expect(plan).toMatch(/wedge/i);
     expect(plan).toMatch(/rail/i);
-    expect(plan).toMatch(/(?:split[^]*bind|bind[^]*split)/i);
-    expect(plan).toMatch(/wait[^]*true rush/i);
-    expect(plan).toMatch(/patient alternative[^]*closing early/i);
+    expect(plan).toMatch(/shown BRACE, WEDGE, SET, SPLICE, or BIND rail action/i);
+    expect(plan).toMatch(/HOLD[^]*feint[^]*TAKE[^]*true rush/i);
+    expect(plan).toMatch(/rail aids combat[^]*cannot redirect a wolf alive/i);
 
     const journalForNode = (id: string): string => {
       const effects = cade?.dialogue.nodes.find((node) => node.id === id)?.effects ?? [];
@@ -713,16 +719,15 @@ describe("Wolf-Winter compact authored prose", () => {
       return compactMcpVisibleJournalProse(text);
     };
     const counselJournal = journalForNode("cade_wolves");
-    expect(counselJournal).toMatch(/quick\/open/i);
+    expect(counselJournal).toMatch(/quick HUNT tactic/i);
     expect(counselJournal).toMatch(/set[^]*drive/i);
     expect(counselJournal).toMatch(/wheel[^]*turn/i);
     expect(counselJournal).toMatch(/close[^]*drive/i);
     const planJournal = journalForNode("cade_byre");
-    expect(planJournal).toMatch(/guarded\/patient/i);
-    expect(planJournal).toMatch(/set the rail[^]*tonight's ground/i);
-    expect(planJournal).toMatch(/bind only an ordinary split/i);
-    expect(planJournal).not.toMatch(/\bwedge\b/i);
-    expect(planJournal).toMatch(/wait[^]*true rush/i);
+    expect(planJournal).toMatch(/guarded HUNT tactic/i);
+    expect(planJournal).toMatch(/shown rail action/i);
+    expect(planJournal).toMatch(/shown HOLD\/TAKE pair/i);
+    expect(planJournal).toMatch(/cannot redirect a wolf alive/i);
   });
 });
 
@@ -765,7 +770,7 @@ const TACTICAL_ROUTES: readonly TacticalRoute[] = [
     flankChild: "turn_through_return",
     leader: "wait_out_feint",
     leaderChild: "take_true_rush",
-    identity: [/off-side return/i, /true rush/i],
+    identity: [/returning stroke/i, /true rush/i],
   },
   {
     label: "off-side turn + close",
@@ -783,7 +788,7 @@ const TACTICAL_ROUTES: readonly TacticalRoute[] = [
     flankChild: "hook_over_guard",
     leader: "wait_out_feint",
     leaderChild: "take_true_rush",
-    identity: [/failed rail/i, /true rush/i],
+    identity: [/split-rail guard/i, /true rush/i],
   },
   {
     label: "splinter guard + close",
@@ -792,7 +797,7 @@ const TACTICAL_ROUTES: readonly TacticalRoute[] = [
     flankChild: "hook_over_guard",
     leader: "close_on_feint",
     leaderChild: "drive_before_recovery",
-    identity: [/failed rail/i, /recover/i],
+    identity: [/split-rail guard/i, /recover/i],
   },
   {
     label: "saved brace-stake + crossbrace",
@@ -801,7 +806,7 @@ const TACTICAL_ROUTES: readonly TacticalRoute[] = [
     flankChild: "wrench_brace_stake",
     leader: "crossbrace_saved_stake",
     leaderChild: "turn_over_crossbrace",
-    identity: [/quick pin/i, /brace-stake/i, /spent/i],
+    identity: [/brace-stake/i, /SET it across your spear/i, /consumed/i],
   },
 ];
 

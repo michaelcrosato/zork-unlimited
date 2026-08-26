@@ -40,7 +40,7 @@ describe("bug_0037 — the Barrow Mouth opens with a clear objective", () => {
     expect(startText).toContain("circlet");
     expect(startText).toMatch(/barrow-lord/);
     // It reads as the player's objective, not mere scenery.
-    expect(startText).toMatch(/came|take/);
+    expect(startText).toContain("find");
     // The original orientation beat — the only way is down — is preserved.
     expect(startText).toContain("down");
   });

@@ -38,7 +38,7 @@ describe("OverworldMcpSessionStore", () => {
     expect(store.get(first.session_id)).toBe(first.session);
     expect(store.get(third.session_id)).toBe(third.session);
     expect(() => store.get(second.session_id)).toThrow(
-      `Unknown overworld session "${second.session_id}".`,
+      `Overworld session "${second.session_id}" was not found. Pass the current parent overworld_session_id.`,
     );
   });
 
@@ -55,7 +55,7 @@ describe("OverworldMcpSessionStore", () => {
     expect(store.get(first.session_id)).toBe(first.session);
     expect(store.get(restored.session_id)).toBe(restored.session);
     expect(() => store.get(second.session_id)).toThrow(
-      `Unknown overworld session "${second.session_id}".`,
+      `Overworld session "${second.session_id}" was not found. Pass the current parent overworld_session_id.`,
     );
   });
 });

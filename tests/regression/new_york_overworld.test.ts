@@ -24,14 +24,20 @@ describe("New York overworld graph", () => {
     expect(world.scale.population_floor).toBe(10_000);
     expect(world.nodes.length).toBeGreaterThanOrEqual(240);
     expect(world.quests.length).toBe(12);
-    expect(world.design_rules.join(" ")).toContain("not globally selectable");
-    expect(world.design_rules.join(" ")).toContain("notice boards start empty");
-    expect(world.design_rules.join(" ")).toContain("one local quest lead");
-    expect(world.design_rules.join(" ")).toContain("first-class local areas");
-    expect(world.design_rules.join(" ")).toContain("discoverable local job");
-    expect(world.design_rules.join(" ")).toContain("actionable travel beats");
+    expect(world.design_rules.join(" ")).toContain("not all available at the start");
+    expect(world.design_rules.join(" ")).toContain("Notice boards start empty");
+    expect(world.design_rules.join(" ")).toContain(
+      "next area, job, site, and quest lead available here",
+    );
+    expect(world.design_rules.join(" ")).toContain(
+      "Every local area has a point of interest, a named contact, and an event",
+    );
+    expect(world.design_rules.join(" ")).toContain("discoverable timed job");
+    expect(world.design_rules.join(" ")).toContain(
+      "Only authored road scenes stop travel for a choice",
+    );
     expect(world.design_rules.join(" ")).toContain("ambient reports never block");
-    expect(world.design_rules.join(" ")).toContain("looped local-area route graph");
+    expect(world.design_rules.join(" ")).toContain("connected route network");
     expect(world.regions.length).toBe(9);
     expect(world.regional_arcs.length).toBe(world.regions.length);
   });
@@ -177,18 +183,18 @@ describe("New York overworld graph", () => {
 
     const event = world.road_events.find((roadEvent) => roadEvent.edge === albanyExit?.id);
     expect(event).toBeDefined();
-    expect(event?.title).toBe("Thruway shoulder flare-up");
+    expect(event?.title).toBe("Blocked Thruway Shoulder");
     expect(event?.title.toLowerCase()).not.toContain("road report");
-    expect(event?.summary).toContain("Between Albany city and Colonie town");
-    expect(event?.summary).toContain("jackknifed box truck");
+    expect(event?.summary).toContain("I-90 between Albany and Colonie");
+    expect(event?.summary).toContain("jackknifed truck");
     expect(event?.summary).not.toMatch(/Albany city to Colonie town|Colonie town to Albany city/);
     expect(event?.requires_choice).toBe(true);
     expect(event?.active_goal_ids).toBeUndefined();
     expect(event?.retire_after_quest).toBeUndefined();
     expect(event?.responses).toMatchObject({
-      cautious_scout: { label: "Walk the flare line" },
-      assist_travelers: { label: "Help right the box truck" },
-      press_on: { label: "Thread the narrow shoulder" },
+      cautious_scout: { label: "Inspect the Safe Route" },
+      assist_travelers: { label: "Help Move the Truck" },
+      press_on: { label: "Push Through the Gap" },
     });
   });
 
@@ -224,7 +230,7 @@ describe("New York overworld graph", () => {
 
     const risingRiver = byId.get("road_event_rome_city__oneida_city");
     expect(risingRiver).toMatchObject({
-      title: "The river at the mile stones",
+      title: "Rising Water Near the Weir",
       active_goal_ids: [
         "rome_breaking_weir",
         "rome_breaking_weir_household_correction",
@@ -232,10 +238,15 @@ describe("New York overworld graph", () => {
       ],
       retire_after_quest: "breaking_weir",
     });
-    expect(risingRiver?.summary).toContain("upper weir is groaning");
+    expect(risingRiver?.summary).toContain("upper weir may fail");
     expect(risingRiver?.summary).not.toMatch(/Rome city to Oneida city|Oneida city to Rome city/);
 
-    const generic = world.road_events.find((event) => event.title.endsWith("road report"));
+    const generic = world.road_events.find(
+      (event) =>
+        event.requires_choice !== true &&
+        event.active_goal_ids === undefined &&
+        event.retire_after_quest === undefined,
+    );
     expect(generic).toBeDefined();
     expect(generic?.requires_choice).toBeUndefined();
     expect(generic?.active_goal_ids).toBeUndefined();
@@ -284,14 +295,18 @@ describe("New York overworld graph", () => {
     expect(local.length).toBeGreaterThan(0);
     expect(local.length).toBeLessThan(world.quests.length);
     expect(new Set(world.quests.map((quest) => quest.source)).size).toBe(world.quests.length);
-    expect(world.design_rules.join(" ")).toContain("anchored to specific local areas");
+    expect(world.design_rules.join(" ")).toContain("only from its listed local area");
 
     const areasById = new Map(world.areas.map((area) => [area.id, area]));
     for (const quest of world.quests) {
       const area = areasById.get(quest.area);
       expect(area, quest.id).toBeDefined();
       expect(area?.home, quest.id).toBe(quest.home);
-      expect(quest.discovery, quest.id).toContain(area?.name);
+      if (quest.id === "wolf_winter") {
+        expect(quest.discovery).toContain("Old Cade");
+      } else {
+        expect(quest.discovery, quest.id).toContain(area?.name);
+      }
     }
   });
 
@@ -661,7 +676,7 @@ describe("New York overworld graph", () => {
     expect(variant).toMatchObject({
       after_relationship_memories: ["albany:memory_emery_wolf_bloodied_byre_evacuated"],
       summary:
-        "Emery has the bloodied-byre count: exactly two wolves are dead, old grey remains in the abandoned byre, two cattle are missing, and the people are safe.",
+        "Emery records two dead wolves, the old grey in the abandoned barn, two missing cattle, and every person safe.",
     });
     expect(`${variant?.summary} ${variant?.agenda}`).not.toMatch(/high wood/i);
   });
@@ -942,18 +957,18 @@ describe("New York overworld graph", () => {
     const stationSite = sitesById.get("albany_city__transport_hub__site");
     const wolfWinter = questsById.get("wolf_winter");
 
-    expect(albany?.description).toContain("Hudson roads");
-    expect(civic?.summary).toContain("winter-relief petitions");
-    expect(station?.summary).toContain("Rowan's circled petition");
-    expect(station?.summary).toContain("hill-road dispatch");
-    expect(station?.discovery).toContain("wolf-winter packet linking Albany's relief desk");
-    expect(stationPoi?.summary).toContain("Hayden's route pin");
-    expect(stationPoi?.summary).toContain("Old Cade waiting");
-    expect(hayden?.agenda).toContain("controlling source certification");
-    expect(hayden?.agenda).toContain("Old Cade's steading");
+    expect(albany?.description).toContain("about 101,698 residents");
+    expect(civic?.summary).toContain("notice board, official counters, and local records");
+    expect(station?.summary).toContain("local roads, buses, rail lines");
+    expect(station?.summary).toContain("freight routes");
+    expect(station?.discovery).toContain("road conditions");
+    expect(stationPoi?.summary).toContain("Scout Albany Station Quarter Route Yard");
+    expect(stationPoi?.summary).toContain("route trouble");
+    expect(hayden?.agenda).toContain("winter dispatches");
+    expect(hayden?.agenda).toContain("field returns");
     expect(stationEvent?.title).toBe("Hayden Hale's Cade Return Filing Standard");
-    expect(stationEvent?.summary).toContain("truthful Wolf-Winter return");
-    expect(stationEvent?.summary).toContain("physical loss");
+    expect(stationEvent?.summary).toContain("administrative filing method");
+    expect(stationEvent?.summary).toContain("Cade's return");
     expect(stationEvent?.authored_scene).toMatchObject({
       id: "albany:cade-return-filing-standard",
       required_poi_id: "albany_city__transport_hub__poi",
@@ -971,12 +986,12 @@ describe("New York overworld graph", () => {
         },
       ],
     });
-    expect(stationJob?.summary).toMatch(/wolf-winter/i);
-    expect(stationSite?.discovery).toContain("Rowan's docket mark");
-    expect(stationSite?.discovery).toContain("Old Cade's byre tag");
-    expect(wolfWinter?.discovery).toContain("Albany Station Quarter");
-    expect(wolfWinter?.discovery).toContain("cattle byre");
-    expect(wolfWinter?.discovery).toContain("Albany's civic records");
+    expect(stationJob?.summary).toMatch(/follow-up crew for Cade/i);
+    expect(stationSite?.discovery).toContain("Albany Station Quarter");
+    expect(stationSite?.discovery).toContain("Signal Yard");
+    expect(wolfWinter?.discovery).toContain("Old Cade");
+    expect(wolfWinter?.discovery).toContain("household and cattle");
+    expect(wolfWinter?.discovery).toContain("June Pike");
     expect(wolfWinter?.discovery).toContain("live dispatch");
     expect(wolfWinter?.discovery).not.toContain("posted on the station board");
 
@@ -1025,12 +1040,12 @@ describe("New York overworld graph", () => {
     expect(scene?.options).toEqual([
       expect.objectContaining({
         id: "protect_trapped_public_shift",
-        title: "Protect the trapped public Works shift",
+        title: "Rescue the Trapped Shift",
         terms: { minutes: 80, renown: 5 },
       }),
       expect.objectContaining({
         id: "inventory_outbound_cold_set_stock",
-        title: "Inventory and seal the outbound cold-set reserve for the next dispatch",
+        title: "Inventory the Repair Reserve",
         terms: { minutes: 35, renown: 2 },
       }),
       expect.objectContaining({
@@ -1242,25 +1257,25 @@ describe("New York overworld graph", () => {
       {
         id: "relief_resident_shelter_allocated",
         after_relationship_memories: ["albany:memory_jamie_relief_resident_shelter_allocated"],
-        summary: expect.stringContaining("Market warm-room list"),
-        agenda: expect.stringContaining("one fast fatigue recovery"),
+        summary: expect.stringContaining("Market warm room"),
+        agenda: expect.stringContaining("one fast fatigue rest"),
       },
       {
         id: "wolf_relief_protocol_allocated",
         after_relationship_memories: ["albany:memory_jamie_wolf_relief_protocol_allocated"],
-        summary: expect.stringContaining("named-call relief order"),
-        agenda: expect.stringContaining("one accountable attempt"),
+        summary: expect.stringContaining("cattle protocol"),
+        agenda: expect.stringContaining("one Mediation attempt"),
       },
       {
         id: "market_testimony_certified",
         after_relationship_memories: ["albany:memory_jamie_market_testimony_certified"],
-        summary: expect.stringContaining("certification number"),
-        agenda: expect.stringContaining("feed-hauler route"),
+        summary: expect.stringContaining("certified the missing-feed witnesses"),
+        agenda: expect.stringContaining("fodder-loft route"),
       },
       {
         id: "sponsored_ledger_advocate",
         after_relationship_memories: ["albany:memory_jamie_sponsored_ledger_advocate"],
-        summary: expect.stringContaining("Ledger Advocate"),
+        summary: expect.stringContaining("Relief Advocate background"),
         agenda: expect.stringContaining("named witnesses"),
       },
     ]);
@@ -1274,50 +1289,50 @@ describe("New York overworld graph", () => {
         id: "relief_mobile_reserve_allocated",
         after_relationship_memories: ["albany:memory_hayden_relief_mobile_reserve_allocated"],
         summary: expect.stringContaining("last relief wagon"),
-        agenda: expect.stringContaining("already recovered fortification seam"),
+        agenda: expect.stringContaining("one recovered FORTIFY failure"),
       },
       {
         id: "wolf_fortified_cade_terms",
         after_relationship_memories: ["albany:memory_hayden_wolf_fortified_cade_terms"],
-        summary: expect.stringContaining("whole herd reached dawn behind his shutters"),
-        agenda: expect.stringContaining("exposed outer property"),
+        summary: expect.stringContaining("household and herd safe"),
+        agenda: expect.stringContaining("exposed property"),
       },
       {
         id: "wolf_fortified_albany_authority",
         after_relationship_memories: ["albany:memory_hayden_wolf_fortified_albany_authority"],
-        summary: expect.stringContaining("outer property reached dawn inside the sealed line"),
-        agenda: expect.stringContaining("spent public stock"),
+        summary: expect.stringContaining("household, herd, and property safe"),
+        agenda: expect.stringContaining("spent supplies"),
       },
       {
         id: "wolf_winter_returned_road_warden",
         after_quests: ["wolf_winter"],
         after_relationship_memories: ["albany:memory_hayden_sponsored_road_warden"],
-        summary: expect.stringContaining("sponsorship"),
-        agenda: expect.stringContaining("honest field account"),
+        summary: expect.stringContaining("Road Warden return"),
+        agenda: expect.stringContaining("honest field report"),
       },
       {
         id: "wolf_winter_and_gallowmere_closed",
         after_quests: ["wolf_winter", "gallowmere"],
-        summary: expect.stringContaining("crossed both"),
+        summary: expect.stringContaining("closed both Wolf-Winter and The Gallowmere"),
         agenda: expect.stringContaining("current journey goal"),
       },
       {
         id: "wolf_winter_closed",
         after_quests: ["wolf_winter"],
-        summary: expect.stringContaining("return board"),
+        summary: expect.stringContaining("closed Wolf-Winter and recorded Cade's return"),
         agenda: expect.stringContaining("current journey goal"),
       },
       {
         id: "frost_report_certified",
         after_relationship_memories: ["albany:memory_hayden_frost_report_certified"],
-        summary: expect.stringContaining("frost-heave sketch"),
-        agenda: expect.stringContaining("dangerous line"),
+        summary: expect.stringContaining("certified his frost report"),
+        agenda: expect.stringContaining("public wedge"),
       },
       {
         id: "sponsored_road_warden",
         after_relationship_memories: ["albany:memory_hayden_sponsored_road_warden"],
-        summary: expect.stringContaining("Road-Warden field kit"),
-        agenda: expect.stringContaining("fieldcraft record"),
+        summary: expect.stringContaining("Road Warden background"),
+        agenda: expect.stringContaining("Fieldcraft helps"),
       },
     ]);
 
@@ -1416,19 +1431,25 @@ describe("New York overworld graph", () => {
     expect(world.local_jobs.length).toBe(world.areas.length);
     expect(world.road_events.length).toBe(world.edges.length);
     expect(world.exploration_sites.length).toBe(world.areas.length);
-    expect(world.design_rules.join(" ")).toContain("Every local area has at least one point");
-    expect(world.design_rules.join(" ")).toContain("current local area's POIs");
+    expect(world.design_rules.join(" ")).toContain("Every local area has a point of interest");
+    expect(world.design_rules.join(" ")).toContain("Only the current area's points of interest");
     expect(world.design_rules.join(" ")).toContain(
-      "Every local area has a regional exploration site",
+      "Every local area has one larger exploration site",
     );
-    expect(world.design_rules.join(" ")).toContain("consume time and write journal leads");
-    expect(world.design_rules.join(" ")).toContain("consumes supplies and adds fatigue");
-    expect(world.design_rules.join(" ")).toContain("deterministic travel delay");
-    expect(world.design_rules.join(" ")).toContain("distance-based road time separately");
-    expect(world.design_rules.join(" ")).toContain("earn regional renown");
-    expect(world.design_rules.join(" ")).toContain("regional arc anchored");
-    expect(world.design_rules.join(" ")).toContain("Every road has a road event");
-    expect(world.design_rules.join(" ")).toContain("Regional exploration sites");
+    expect(world.design_rules.join(" ")).toContain(
+      "consume time and record discoveries in the journal",
+    );
+    expect(world.design_rules.join(" ")).toContain("Roads cost supplies and add fatigue");
+    expect(world.design_rules.join(" ")).toContain("Shortages and fatigue add travel delay");
+    expect(world.design_rules.join(" ")).toContain(
+      "Route planning lists road time, condition delay, supplies, and fatigue separately",
+    );
+    expect(world.design_rules.join(" ")).toContain(
+      "Resolve enough events in a region's listed towns",
+    );
+    expect(world.design_rules.join(" ")).toContain("complete its regional arc");
+    expect(world.design_rules.join(" ")).toContain("Every road has an ambient report");
+    expect(world.design_rules.join(" ")).toContain("Local actions can reveal exploration sites");
 
     for (const node of world.nodes) {
       const minimumLocalScale =
@@ -1539,8 +1560,8 @@ describe("New York overworld graph", () => {
     expect(app).toContain('title: "Roads from here"');
     expect(overworldScreen).toContain("Roads from here");
     expect(app).toContain("pendingRoadEncounter");
-    expect(app).toContain("Handled road encounter");
-    expect(app).toMatch(/Handled road encounter:[\s\S]{0,300}result\.entry\.text/);
+    expect(app).toContain("Road encounter resolved");
+    expect(app).toMatch(/Road encounter resolved:[\s\S]{0,300}result\.entry\.text/);
     expect(app).toContain('title: "Local movement"');
     expect(app).toContain('group: goalRelevant ? "Next for current goal" : "Local route"');
     expect(app).toContain("moveArea");

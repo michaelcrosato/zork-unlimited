@@ -40,9 +40,9 @@ function preparationCheckDisclosure(
   const signedModifier = modifier >= 0 ? `+${String(modifier)}` : String(modifier);
   const odds =
     successCount === 0
-      ? "has no successful natural roll (0%)"
-      : `succeeds on ${successCount === 20 ? "1" : String(minimumRoll)}-20 (${String(chance)}%)`;
-  return ` Current ${check.skill_label} modifier: ${signedModifier}. This d20 + ${String(modifier)} vs DC ${String(check.difficulty)} check ${odds}.`;
+      ? "No natural roll succeeds (0%)."
+      : `You succeed on ${successCount === 20 ? "1" : String(minimumRoll)}-20 (${String(chance)}%).`;
+  return ` Your ${check.skill_label} modifier is ${signedModifier}. Roll d20 ${signedModifier} against DC ${String(check.difficulty)}. ${odds}`;
 }
 
 /** Project the finite preparation catalog onto the generic journey-choice surface. */

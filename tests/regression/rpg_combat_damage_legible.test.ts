@@ -115,6 +115,14 @@ describe("bug_0131: combat damage narration is legible", () => {
     expect(hpEffect?.set_var.value).toBe(19); // exactly 1 HP lost — the floor, not the raw -6
   });
 
+  it("states death directly when the player's health reaches zero", () => {
+    const s = stateWith({ hp: 4, attack: 4, defense: 2, might: 3 });
+    const res = resolveAttack(s, sentinel, forcedRng([1, 1]));
+
+    expect(narrations(res.effects)).toContain("Your health reaches 0. You die.");
+    expect(res.effects).toContainEqual({ end_game: "ending_fallen" });
+  });
+
   it("the numeric damage is unchanged vs the old max(1, roll + atk - def) formula", () => {
     // Guards the byte-identical claim: the narration refactor must not move the math.
     for (let roll = 1; roll <= 6; roll++) {

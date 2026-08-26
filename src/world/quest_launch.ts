@@ -195,9 +195,9 @@ export function projectOverworldQuestLaunchOption(
 ): OverworldQuestLaunchProjection {
   const minutesAfter = resources.minutes + option.terms.minutes;
   if (resources.supplies < option.terms.supplies) {
-    const blockedReason =
-      `Requires ${String(option.terms.supplies)} supplies; ` +
-      `you have ${String(resources.supplies)}.`;
+    const requiredSupplyUnit = option.terms.supplies === 1 ? "supply" : "supplies";
+    const currentSupplyUnit = resources.supplies === 1 ? "supply" : "supplies";
+    const blockedReason = `Requires ${String(option.terms.supplies)} ${requiredSupplyUnit}. You have ${String(resources.supplies)} ${currentSupplyUnit}.`;
     return Object.freeze({
       available: false,
       minutesAfter,

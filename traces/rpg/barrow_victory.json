@@ -5,7 +5,7 @@
     "sunken_barrow"
   ],
   "trace_id": "tr_barrow_victory",
-  "content_hash": "27ef2e9ac97448cfeb96d4e940a638382b59907592bb3d68e669759bed2c3f67",
+  "content_hash": "e096dc159f94a0870092e0ffc50665cb5825f8251b122f1924f9b92436505fe7",
   "seed": 1,
   "initial_state": {
     "seed": 1,
@@ -102,5 +102,5 @@
       "item": "circlet"
     }
   ],
-  "expected_final_hash": "881bbe1d3a594ad78482d5b6f8bf44f3c6e781fcd6e29bae2a7c5d10a67fbdc1"
+  "expected_final_hash": "6d76b07fb943f37ec249a23bf589ffcaf5a7b7bf57a7cf8738efd7dbd801d02d"
 }

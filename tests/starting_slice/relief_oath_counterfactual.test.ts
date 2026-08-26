@@ -472,7 +472,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
         tradeoff: option.tradeoff,
       });
       expect(disclosedOptions.get(option.id)).toBe(
-        `Benefit: ${option.trigger_category} Cost: ${immediateCost}. Boundary: ${option.tradeoff}`,
+        `Benefit: ${option.trigger_category} Cost: ${immediateCost}. Tradeoff: ${option.tradeoff}`,
       );
       expect(disclosedOptions.get(option.id)?.match(/\S+/g)?.length).toBeLessThanOrEqual(32);
       expect(disclosedOptions.get(option.id)).not.toMatch(
@@ -636,7 +636,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       vars: { fortification_pressure: 1, repair: 0 },
     });
     expect(fullPass.flags.fortify_outer_seal_failed).not.toBe(true);
-    expect(fullPass.journal.join("\n")).toMatch(/full-duty boundary annex[^]*DC 12/i);
+    expect(fullPass.journal.join("\n")).toMatch(/Repair check succeeds at DC 12/i);
     expect(limitedFail).toMatchObject({
       flags: { fortify_outer_seal_attempted: true, fortify_outer_seal_failed: true },
       vars: { fortification_pressure: 2, repair: 0 },
@@ -660,10 +660,10 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       });
       expect(actionIds(miss)).toContain("use_albany_relief_seals_on_authority_emergency_bind");
       expect(actionIds(miss)).not.toContain("use_albany_relief_seals_on_fortify_outer_seal");
-      expect(miss.journal.join("\n")).toMatch(/no retry[^]*emergency/i);
+      expect(miss.journal.join("\n")).toMatch(/cannot be retried[^]*emergency/i);
     }
-    expect(fullMiss.journal.join("\n")).toMatch(/Cade still refuses aid/i);
-    expect(controlMiss.journal.join("\n")).toMatch(/Cade-aid refusal recorded/i);
+    expect(fullMiss.journal.join("\n")).toMatch(/Cade will not help/i);
+    expect(controlMiss.journal.join("\n")).toMatch(/Cade will not help/i);
 
     fullMiss = act(fullMiss, "use_albany_relief_seals_on_authority_emergency_bind");
     controlMiss = act(controlMiss, "use_albany_relief_seals_on_authority_emergency_bind");
@@ -700,7 +700,9 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       endingId: "ending_pack_diverted",
       vars: { cattle_alarm: 3 },
     });
-    expect(limitedClean.journal.join("\n")).toMatch(/suppresses only the last ordinary alarm/i);
+    expect(limitedClean.journal.join("\n")).toMatch(
+      /limited-duty herd count prevents the final 1 cattle alarm/i,
+    );
 
     let limitedFailed = act(commitLure(LIMITED), "use_winter_feed_sack_on_downwind_feed_line", 1);
     let controlFailed = act(commitLure(FULL), "use_winter_feed_sack_on_downwind_feed_line", 1);
@@ -736,7 +738,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       vars: { cattle_alarm: 4 },
     });
     expect(limitedFailed.journal.join("\n")).not.toMatch(
-      /suppresses only the last ordinary alarm/i,
+      /limited-duty herd count prevents the final 1 cattle alarm/i,
     );
 
     let juneRecovered = act(
@@ -775,7 +777,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       vars: { drive_kit_charges: 1, pack_drive: 1, cattle_alarm: 0, fieldcraft: 0 },
     });
     expect(unaffiliatedPass.flags.drive_opening_fouled).not.toBe(true);
-    expect(unaffiliatedPass.journal.join("\n")).toMatch(/personal-bond[^]*DC 10/i);
+    expect(unaffiliatedPass.journal.join("\n")).toMatch(/Fieldcraft check succeeds at DC 10/i);
     expect(fullFail).toMatchObject({
       flags: { drive_opening_fouled: true },
       vars: { drive_kit_charges: 1, pack_drive: 2, cattle_alarm: 1, fieldcraft: 0 },
@@ -795,7 +797,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       });
       expect(actionIds(miss)).not.toContain("use_drive_signal_rope_kit_on_drive_breach_signal");
       expect(actionIds(miss)).toContain("use_drive_hurdle_recovery");
-      expect(miss.journal.join("\n")).toMatch(/no retry/i);
+      expect(miss.journal.join("\n")).toMatch(/cannot be retried/i);
     }
 
     unaffiliatedMiss = act(unaffiliatedMiss, "use_drive_hurdle_recovery");

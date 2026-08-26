@@ -54,7 +54,7 @@ describe("RPG play CLI world quest source", () => {
 
     expect(result.status, output).toBe(1);
     expect(output).not.toContain("Usage:");
-    expect(output).toContain("The command list did not reach an ending.");
+    expect(output).toContain("The scripted commands ended before the quest did.");
   });
 
   it("plays a shipped quest by world quest id and records a replayable world-bound trace", () => {

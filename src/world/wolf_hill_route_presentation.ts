@@ -18,9 +18,9 @@ const EXPOSED_RIDGE_OPTION_ID = "albany:wolf_approach_exposed_ridge";
 const SHELTERED_STOCKWAY_OPTION_ID = "albany:wolf_approach_sheltered_stockway";
 const ROUTE_SUMMARIES = Object.freeze({
   exposedRidge:
-    "Open crest: 30m, 1 supply, fatigue +25; cattle alarm starts at 1; clear sight of the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.",
+    "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Cattle alarm starts at 1, but you can see the byre and weather clearly. This road chooses no field plan.",
   shelteredStockway:
-    "Sheltered lee: 75m, 2 supplies, fatigue +10; cattle alarm starts at 0; hedges conceal the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.",
+    "Sheltered Stockway — 75 minutes, 2 supplies, +10 fatigue. Cattle alarm starts at 0, but hedges hide the byre and weather. This road chooses no field plan.",
 });
 
 const ROUTE_SUMMARY_MARKERS = Object.freeze([
@@ -80,26 +80,26 @@ function dispatchBriefing(window: QuestDispatchPresentationWindow | undefined): 
           ? "all on time"
           : "support can delay dispatch";
     return (
-      `Set: background, promise, report. Dispatch ${String(window.committedMinutes)}m; ` +
-      `final ${finalRange}; ${timing}. Compare; named choice commits. ` +
-      "Start Wolf-Winter to decline the rest."
+      `Background, promise, and report are set. Current setup: ${String(window.committedMinutes)}m. ` +
+      `Final setup: ${finalRange}; ${timing}. Optional support remains. ` +
+      "Start Wolf-Winter to skip it."
     );
   }
   if (window.status === "delayed" && window.ledgerMinutes !== undefined) {
     return (
-      `Dispatch ${String(window.ledgerMinutes)}m—delayed; roads change arrival, not delay. ` +
-      "First failure: lure/drive/hunt alarm +1; fortify +1."
+      `Setup took ${String(window.ledgerMinutes)}m, so the dispatch is late. Roads change arrival costs only. ` +
+      "The first failed LURE, DRIVE, or HUNT raises cattle alarm by 1; a failed FORTIFY raises winter pressure by 1."
     );
   }
   if (window.status === "on_time" && window.ledgerMinutes !== undefined) {
     return (
-      `Dispatch ${String(window.ledgerMinutes)}m—on time; roads change arrival, not dispatch. ` +
-      "No opening-delay failure pressure."
+      `Setup took ${String(window.ledgerMinutes)}m, so the dispatch is on time. Roads change arrival costs only. ` +
+      "No late-dispatch penalty applies."
     );
   }
   return (
-    "Dispatch unverified—neutral; roads change arrival, not dispatch. " +
-    "No opening-delay failure pressure."
+    "Dispatch timing is unverified. Roads change arrival costs only. " +
+    "No late-dispatch penalty applies."
   );
 }
 

@@ -157,8 +157,8 @@ describe("Station dispatch impact cards", () => {
     const rendered = renderTerminalStoryChoiceComparison(full);
     expect(rendered).not.toContain("Dispatch: +5m delay → 65m committed (delayed).");
     expect(rendered).toContain(
-      "Albany Station: ready to depart now, or choose the relief wagon's job; " +
-        "field-kit and riding choices are separate.",
+      "You can leave Albany Station now or assign the relief wagon. " +
+        "The field kit and June are separate choices.",
     );
     expect(rendered).not.toContain("Purpose:");
     expect(rendered.indexOf("Albany Station:")).toBeLessThan(rendered.indexOf("Relief wagon:"));

@@ -88,9 +88,8 @@ describe("bug_0398 — sunken_barrow signposts the shade as counsel before the w
     s = act(s, move("down"));
 
     const text = obsText(s);
-    expect(text).toContain("unwarned blade");
-    expect(text).toContain("old counsel");
-    expect(text).toContain("not an ambush");
+    expect(text).toContain("go west to talk to reaver's shade");
+    expect(text).toContain("its +3 defense ward helps only if the barrow-wight still stands");
     expect(text).not.toContain("something lingers");
   });
 
@@ -100,9 +99,9 @@ describe("bug_0398 — sunken_barrow signposts the shade as counsel before the w
     s = act(s, (a) => a.type === "TAKE" && (a as { item?: string }).item === "iron_bar");
 
     const text = obsText(s);
-    expect(text).toContain("rubble is scuffed bare");
-    expect(text).toContain("unwarned blade");
-    expect(text).toContain("old counsel");
+    expect(text).toContain("you have the iron bar");
+    expect(text).toContain("the reaver's shade west can grant a +3 defense ward");
+    expect(text).toContain("before the lethal fight north");
     expect(text).not.toContain("something lingers");
   });
 
@@ -113,8 +112,10 @@ describe("bug_0398 — sunken_barrow signposts the shade as counsel before the w
 
     const text = obsText(s);
     expect(text).toContain("reaver's shade");
-    expect(text).toContain("counsel given");
-    expect(text).toContain("no malice");
+    expect(text).toContain("you heard the reaver's shade");
+    expect(text).toContain(
+      "retrieve the iron bar only if lever stone slab with iron bar is still unfinished",
+    );
     expect(text).not.toContain("something lingers");
   });
 
@@ -123,8 +124,8 @@ describe("bug_0398 — sunken_barrow signposts the shade as counsel before the w
     unwarded = act(unwarded, move("down"));
     unwarded = act(unwarded, move("north"));
     const unwardedText = obsText(unwarded);
-    expect(unwardedText).toContain("unwarned blade");
-    expect(unwardedText).toContain("counsel before blood");
+    expect(unwardedText).toContain("this fight can kill you");
+    expect(unwardedText).toContain("gain the reaver's shade's +3 defense ward");
     expect(options(unwarded).map((o) => o.id)).toContain("go_south");
     expect(options(unwarded).map((o) => o.id)).toContain("attack_barrow_wight");
 
@@ -133,9 +134,9 @@ describe("bug_0398 — sunken_barrow signposts the shade as counsel before the w
     warded = learnWarding(warded);
     warded = act(warded, move("north"));
     const wardedText = obsText(warded);
-    expect(wardedText).toContain("warding trick");
-    expect(wardedText).toContain("not an unwarned one");
-    expect(wardedText).not.toContain("counsel before blood");
+    expect(wardedText).toContain("you have the reaver's shade's +3 defense ward");
+    expect(wardedText).toContain("the ward improves your odds");
+    expect(wardedText).toContain("can still kill you");
   });
 
   it("(e) examining the iron bar no longer frames the slab as a hard strength gate", () => {
@@ -147,9 +148,9 @@ describe("bug_0398 — sunken_barrow signposts the shade as counsel before the w
     );
     const text = narrations(examine.events).join(" ").toLowerCase();
 
-    expect(text).toContain("patient lever");
-    expect(text).toContain("not a verdict");
-    expect(text).toContain("heroic strength");
+    expect(text).toContain("lever stone slab");
+    expect(text).toContain("prise sealed sarcophagus");
+    expect(text).toContain("fatal ending");
     expect(text).not.toContain("if you have the strength");
   });
 

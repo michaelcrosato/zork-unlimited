@@ -80,7 +80,7 @@ function expectRoleplayReceipt(
     expect(detail.checkFit).toBe(args.checkFit);
   }
   expect(detail.consequence).toBe(
-    `Benefit: ${args.benefit} Cost: ${args.immediateCost}. Boundary: ${args.giveUp}`,
+    `Benefit: ${args.benefit} Cost: ${args.immediateCost}. Tradeoff: ${args.giveUp}`,
   );
   expect(openingSelectionReceiptWordCount(detail.consequence)).toBeLessThanOrEqual(
     OPENING_SELECTION_RECEIPT_WORD_LIMIT,
@@ -132,9 +132,7 @@ function expectPromptLevelReview(
 ): void {
   expect(compact.message).toBe(`${prompt.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`);
   expect(compact.options.every((option) => option.consequence === "")).toBe(true);
-  expect(
-    JSON.stringify(compact).match(/inspection is read-only and commits nothing/gu),
-  ).toHaveLength(1);
+  expect(JSON.stringify(compact).match(/Inspection does not choose it/gu)).toHaveLength(1);
   expect(JSON.stringify(compact)).not.toContain(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
 }
 
@@ -395,7 +393,7 @@ describe("compact journey projection", () => {
         check
           ? [
               {
-                label: "Governing skill",
+                label: "Check skill",
                 value: `${check.skill_label} ${signedModifier} vs DC ${String(check.difficulty)}`,
               },
             ]
@@ -416,7 +414,7 @@ describe("compact journey projection", () => {
           "consequence",
         ]);
         expect(detail.situationalBoundary).toBe(
-          "May never trigger. In LURE, foul the first feed cast, fail the public wedge, spend the split-rail guard to redirect the yearling alive, then return to Cade before the loft cast. A clean cast, braced rail, or other recovery gets no benefit.",
+          "This bonus may not trigger. In LURE, it applies only if you foul the first feed cast, fail the public wedge, use the split-rail guard to redirect the yearling alive, and return to Cade before the loft cast. A clean cast, braced rail, or different recovery gives no bonus.",
         );
         expect(detail.situationalBoundary!.length).toBeLessThanOrEqual(
           JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT,
@@ -577,9 +575,9 @@ describe("compact journey projection", () => {
     expect(JSON.stringify([compact, summary])).not.toContain("May never trigger");
     expect(JSON.stringify([compact, summary])).not.toContain("first wolf death ends her help");
     const benefits: Readonly<Record<string, string>> = {
-      "albany:ally_june_cattle_first": "Independent cattle-pressure ally",
-      "albany:ally_june_relay_only": "No companion; relay terms refused",
-      "albany:ally_travel_solo": "Solo field team; no ally action",
+      "albany:ally_june_cattle_first": "June joins and controls cattle safety",
+      "albany:ally_june_relay_only": "June refuses and does not join",
+      "albany:ally_travel_solo": "Travel alone; no ally action",
     };
     for (const sourceOption of ally.options) {
       const option = full.options.find((candidate) => candidate.id === sourceOption.id)!;
@@ -595,7 +593,7 @@ describe("compact journey projection", () => {
       if (sourceOption.id === "albany:ally_june_cattle_first") {
         expect(Object.keys(detail)).toEqual(["id", "label", "situationalBoundary", "consequence"]);
         expect(detail.situationalBoundary).toBe(
-          "May never trigger. June lowers cattle alarm when a recovered LURE leaves the herd pressing, or prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized failed first FORTIFY seal at pressure 3+. Clean DRIVE, pressure-2/mobile-stabilized FORTIFY gain nothing; no combat help; first wolf death ends her help.",
+          "June's help may not trigger. She lowers cattle alarm after recovered LURE if the herd presses. She prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized first FORTIFY failure at pressure 3+. No help for clean DRIVE, lower/stabilized FORTIFY, or combat. Her help ends when a wolf dies.",
         );
         expect(detail.situationalBoundary!.length).toBeLessThanOrEqual(
           JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT,
@@ -761,13 +759,12 @@ describe("compact journey projection", () => {
         id: "continue",
         label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
         consequence:
-          "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
+          "Assign Albany's only dawn relief wagon. Then find Hedrick in Queensbury and complete The Gallowmere. Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision 40.",
       },
       {
         id: "end",
         label: "End here",
-        consequence:
-          "Close this journey here and keep its read-only record; this journey cannot resume.",
+        consequence: "End this journey and keep its read-only record. You cannot resume it.",
       },
     ]);
   });
@@ -791,9 +788,9 @@ describe("compact journey projection", () => {
     expect(compact).toBe(full);
     expect(compact.pendingChoice?.options[0]).toEqual({
       id: "continue",
-      label: "Continue from this exact state",
+      label: "Continue from here",
       consequence:
-        "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 80, whichever comes first.",
+        "Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision 80.",
     });
   });
 });

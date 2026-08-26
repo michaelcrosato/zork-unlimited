@@ -29,7 +29,7 @@ export function JourneyChoiceScreen({ journey, onChoose }: JourneyChoiceScreenPr
         aria-labelledby="journey-choice-title"
         aria-describedby="journey-choice-message"
       >
-        <p className="kicker">Journey pause · decision {pendingChoice.atDecision}</p>
+        <p className="kicker">Journey decision {pendingChoice.atDecision}</p>
         <h1 id="journey-choice-title" ref={headingRef} tabIndex={-1}>
           {characterDied ? "Your character died" : "Continue this journey?"}
         </h1>
@@ -42,11 +42,10 @@ export function JourneyChoiceScreen({ journey, onChoose }: JourneyChoiceScreenPr
             className="journey-continuation-preview"
             aria-labelledby="journey-continuation-preview-title"
           >
-            <h2 id="journey-continuation-preview-title">After Continue: dawn relief dispatch</h2>
+            <h2 id="journey-continuation-preview-title">If you continue: choose dawn relief</h2>
             <p>{pendingChoice.continuationPreview.message}</p>
             <p className="journey-continuation-preview-lock">
-              These terms are locked for review. Continue opens this decision; only Continue or End
-              is legal now.
+              You cannot choose these options yet. Choose Continue or End first.
             </p>
             <div className="journey-continuation-preview-cards">
               {pendingChoice.continuationPreview.options.map((option) => (

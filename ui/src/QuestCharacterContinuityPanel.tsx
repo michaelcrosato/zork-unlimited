@@ -9,6 +9,17 @@ function idLabel(id: string): string {
     .join(" ");
 }
 
+const BACKGROUND_LABELS: Readonly<Record<string, string>> = Object.freeze({
+  "albany:road_warden": "Road Warden",
+  "albany:ledger_advocate": "Relief Advocate",
+  "albany:ironhands_repairer": "Field Repairer",
+  "albany:unaffiliated_courier": "Independent Courier",
+});
+
+function backgroundLabel(id: string): string {
+  return BACKGROUND_LABELS[id] ?? idLabel(id);
+}
+
 function importEffectLabel(
   effect: EmbeddedQuestCharacterContinuity["applied_campaign_import_effects"][number],
 ): string {
@@ -30,24 +41,26 @@ export function QuestCharacterContinuityPanel({
   const local = continuity.quest_local_profile;
   return (
     <section className="quest-character-continuity" aria-label="Quest-local profile">
-      <p className="kicker">Same persistent character</p>
-      <h3>Quest-local profile</h3>
+      <p className="kicker">Your same character</p>
+      <h3>Stats for this quest</h3>
       <dl>
         <div>
-          <dt>Persistent record</dt>
+          <dt>Journey character</dt>
           <dd>
-            {persistent.background ? idLabel(persistent.background) : "Unregistered character"} ·
-            Health {persistent.health.current}/{persistent.health.max}
+            {persistent.background
+              ? backgroundLabel(persistent.background)
+              : "Unregistered character"}{" "}
+            · Health {persistent.health.current}/{persistent.health.max}
           </dd>
         </div>
         <div>
-          <dt>Scenario numbers</dt>
+          <dt>Quest stats</dt>
           <dd>
             HP {local.hp} · ATK {local.attack} · DEF {local.defense}
           </dd>
         </div>
         <div>
-          <dt>Scenario skills</dt>
+          <dt>Quest skills</dt>
           <dd>
             {local.skills.length > 0
               ? local.skills.map((skill) => `${idLabel(skill.id)} ${skill.value}`).join(" · ")
@@ -59,7 +72,7 @@ export function QuestCharacterContinuityPanel({
           <dd>{local.inventory.length > 0 ? local.inventory.map(idLabel).join(", ") : "None"}</dd>
         </div>
         <div>
-          <dt>Campaign imports applied</dt>
+          <dt>Journey effects applied</dt>
           <dd>
             {continuity.applied_campaign_import_effects.length > 0
               ? continuity.applied_campaign_import_effects.map(importEffectLabel).join(" · ")

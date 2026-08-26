@@ -84,11 +84,9 @@ rooms:
   - id: moor_edge
     name: "The Moor's Edge"
     description: >
-      Grey afternoon rolls across the high moor toward the Gallowmere, the boggy
-      hollow northwest where Hedrick says the old sow lairs and his father died this
-      morning. Your hunting-knife is secured at your belt. Hedrick waits in the bothy
-      west; the moor path climbs north. Your history remains your own; on this moor,
-      the hunt is read in spoor, wind, and knife-work.
+      Go west to the Shepherd's Bothy to TALK TO Hedrick and READ shepherd's log.
+      Go north to follow the Moor Trail. Your hunting-knife is already secured
+      at your belt. The Gallowmere sow killed Hedrick's father this morning.
     exits:
       - { direction: west, to: shepherd_bothy }
       - { direction: north, to: moor_trail }
@@ -96,18 +94,15 @@ rooms:
   - id: shepherd_bothy
     name: "The Shepherd's Bothy"
     description: >
-      A low stone hut smelling of cold ash and old wool. Hedrick Cradoc — young,
-      red-eyed, the shepherd's only son — sits on a stool by the dead hearth. His
-      father's tracking-log lies open on the work-bench: years of spoor notes and
-      drift-marks for every herd and predator on this moor, the last entries all
-      about the Gallowmere sow. The moor is back through the door to the east.
+      At the work-bench, READ shepherd's log for instructions about the Gallowmere
+      sow. TALK TO Hedrick. Choose any displayed advice topic you still need. Go east
+      to return to the Moor's Edge. The low stone hut smells of cold ash and wool.
     # Reactive: once the log is read, the bench reads as already studied.
     variants:
       - when: [{ has_flag: read_log }]
         text: >
-          The shepherd's bothy. Hedrick sits by the cold hearth, quiet now you
-          have read his father's log. The log lies on the work-bench, its pages
-          turned. The moor is back to the east.
+          You have read the shepherd's log. TALK TO Hedrick if you still need
+          advice, or go east to return to the Moor's Edge.
     objects: [shepherd_log]
     exits:
       - { direction: east, to: moor_edge }
@@ -115,10 +110,10 @@ rooms:
   - id: moor_trail
     name: "The Moor Trail"
     description: >
-      A faint trod across the heather, the ground soft and black underfoot. Something
-      large passed here recently — the spoor still dimpling the wet peat northward.
-      A wide patch of churned ground lies to the east, dark and heavy with old blood:
-      the kill-site where the shepherd fell. The path climbs north into the gully.
+      If tracking is unfinished, go east and use the exact TRACK action shown for
+      kill-site ground and hunting-knife. It reconstructs the sow's charge and grants
+      persistent +2 attack. A completed hunt stays complete. Go north to the Moor Gully,
+      or south to the Moor's Edge.
     objects: [peat_sign]
     exits:
       - { direction: south, to: moor_edge }
@@ -128,25 +123,24 @@ rooms:
   - id: kill_site
     name: "The Kill Site"
     description: >
-      The place where old Cradoc fell. The heather is broken and black with old
-      blood, and the hoof-prints of the Gallowmere sow press deep in the peat all
-      around — big prints, the hind pair far wider-spaced than the fore, the charging
-      signature of a sow coming in fast. Your hunting-knife will let you read the
-      angle if you work the ground carefully. The moor trail is back to the west.
+      TRACK kill-site ground WITH hunting-knife to reconstruct the Gallowmere
+      sow's charge angle. Success grants persistent +2 attack. If the first check fails,
+      TRACK kill-site ground from a lower stance WITH hunting-knife; the second attempt is guaranteed. This does
+      not reopen a completed hunt. Go west to return to the Moor Trail.
     # Reactive: after a failed first reading, the disturbed ground truthfully frames
     # the one deterministic recovery; once read, it no longer invites close reading.
     variants:
       - when: [{ has_flag: found_kill }]
         text: >
-          The kill site, already read — hoof angle and charge line noted, the sow's
-          attack pivot clear in your mind. The moor trail is back to the west.
+          You have read the kill-site ground and gained +2 attack. Go west to return
+          to the Moor Trail.
       - when:
           - { has_flag: kill_site_attempted }
           - { not_flag: found_kill }
         text: >
-          The kill site after your first reading. The churned prints are still there,
-          but the clean charge-line only comes clear when you set Cradoc's last stance
-          against the deepest heel-mark. The moor trail is back to the west.
+          Your first TRACK attempt failed. TRACK kill-site ground from a lower stance
+          WITH hunting-knife; this retry is guaranteed. Go
+          west to return to the Moor Trail.
     objects: [spoor_ground]
     exits:
       - { direction: west, to: moor_trail }
@@ -154,20 +148,16 @@ rooms:
   - id: moor_gully
     name: "The Moor Gully"
     description: >
-      A dip in the moor where the black water stands all winter — the Gallowmere
-      proper. The ground narrows between two tall peat-hags, and a single old
-      standing stone tilts at the western lip: the wind-stone, pitted on its east
-      face and smooth on the west, marking exactly which way the wind runs through
-      the cut. The sow's lair is in the hollow to the north; the trail runs back
-      south. A hunter who does not read the wind-stone first is giving the sow the
-      upwind quarter — Hedrick's father's last mistake.
+      GAUGE wind-stone WITH hunting-knife before going north. Success grants
+      +2 defense and unlocks the north exit. Failure ends the game: the Gallowmere
+      sow gores you. Go south to return to the Moor Trail. Black water stands between
+      the peat banks.
     # Reactive: once wind is read, the gully looks passable.
     variants:
       - when: [{ has_flag: read_wind }]
         text: >
-          The Gallowmere Gully, the wind-quarter set and your angle confirmed — the
-          hollow is to the north and you are coming in right-handed, nothing for
-          the sow to smell ahead of you. The trail runs back south.
+          You have gauged the wind-stone and gained +2 defense. Go north to the
+          Gallowmere Hollow, or south to the Moor Trail.
     objects: [wind_stone]
     exits:
       - { direction: south, to: moor_trail }
@@ -175,32 +165,24 @@ rooms:
         to: moor_hollow
         conditions: [{ has_flag: read_wind }]
         locked_msg: >
-          You cannot enter the Gallowmere hollow without reading the wind first.
-          A sow this wise always comes from upwind, and going in blind is giving
-          her the kill. Use your hunting-knife on the wind-stone to take its
-          measure before you step past the cut.
+          The north exit is locked until you GAUGE wind-stone WITH hunting-knife.
+          Failure on that check ends the game.
 
   - id: moor_hollow
     name: "The Gallowmere Hollow"
     description: >
-      A shallow bowl of black peat and broken reed, ringed by taller hags. It
-      smells of old musk and blood. The Gallowmere sow is here — a great grey
-      animal, heavy across the shoulders, her tusks yellowed and her eyes small
-      and still. She has seen you come in from the right quarter and she knows it.
-      The gully is back to the south.
+      ATTACK Gallowmere sow to continue the hunt. Go south to retreat to the
+      Moor Gully. The great grey sow waits among black peat and broken reeds.
     # Reactive: once the sow is down the hollow opens north.
     variants:
       - when: [{ has_flag: sow_slain }]
         text: >
-          The Gallowmere hollow, the great sow down in the reed-bed, her flanks
-          gone still. The hunt closes on the ridge to the north; the gully is
-          back to the south.
+          The Gallowmere sow is dead. Go north to the Moor Ridge to finish the hunt,
+          or south to the Moor Gully.
       - when: [{ has_flag: blind_side_struck }]
         text: >
-          The Gallowmere hollow, black peat and broken reed underfoot. The sow is
-          still on you, but your first cut found the blind side Cradoc's ground
-          taught you: her left tusk is late now, her shoulder checked. The gully
-          is back to the south.
+          You struck the blind side and gained +2 attack. Continue with ATTACK
+          Gallowmere sow, or go south to the Moor Gully.
       - when:
           - { not_flag: sow_slain }
           - { not_flag: blind_side_struck }
@@ -210,17 +192,13 @@ rooms:
           # every RNG regime from the exact 24 HP opening state.
           - { var_lte: { name: hp, value: 23 } }
         text: >
-          The Gallowmere hollow, black peat and broken reed churned by the fight.
-          The wounded sow is still on you; the clean first opening has passed into
-          the close exchange of tusk and knife. The gully is back to the south.
+          The first-round chance to STRIKE the blind side is gone. Continue to ATTACK
+          Gallowmere sow, or go south to the Moor Gully.
       - when: [{ has_flag: found_kill }]
         text: >
-          A shallow bowl of black peat and broken reed, ringed by taller hags.
-          It smells of old musk and blood. The Gallowmere sow is here — a great
-          grey animal, heavy across the shoulders, her tusks yellowed and her eyes
-          small and still. The charge angle you read at the kill-site shows you
-          the blind-side opening before the first tusk-swing. The gully is back
-          to the south.
+          Before your first attack, STRIKE the blind side WITH hunting-knife to
+          gain +2 attack. This option locks after you use it or take a counterattack.
+          Go south to retreat to the Moor Gully. The Gallowmere sow waits in the reeds.
     objects: [sow_blind_side]
     exits:
       - { direction: south, to: moor_gully }
@@ -228,22 +206,20 @@ rooms:
         to: moor_ridge
         conditions: [{ has_flag: sow_slain }]
         locked_msg: >
-          The Gallowmere sow stands between you and the ridge; she will not
-          let you pass until one of you is down.
+          The north exit is locked while the Gallowmere sow lives. ATTACK
+          Gallowmere sow until you defeat her.
 
   - id: moor_ridge
     name: "The Moor Ridge"
     description: >
-      The high ground above the Gallowmere, the last of the grey light spreading
-      across the valley below. The sow is down in the hollow at your back. The
-      shepherds who winter on this ground are safe, and old Cradoc's boy will
-      have something to put in the log beside his father's last entry.
+      You defeated the Gallowmere sow and made the valley safe for the shepherds.
+      The last grey light crosses the valley below.
     # Locomotion win: score fires on entry, quest stage closes.
     on_enter:
       - set_quest_stage: { quest: gallowmere_hunt, stage: hunt_done }
       - add_journal: >
-          The Gallowmere sow is down. The high moor is quiet. Below, the valley
-          lies safe and the shepherds will not lose another to her this winter.
+          You killed the Gallowmere sow. The valley shepherds are safe from her
+          this winter.
       - inc_var: { name: score, by: 15 }
     exits:
       - { direction: south, to: moor_hollow }
@@ -253,9 +229,10 @@ objects:
     name: "hunting-knife"
     aliases: [knife, blade, edge, hunting blade, hunter's knife, huntsman's knife, hunting knife]
     description: >
-      A well-kept hunting-knife secured at your belt, its blade honed to a working
-      edge. Long use has worn the grip to your hand's shape. It will serve for reading
-      stone and ground, or for worse business at close quarters.
+      Its exact offered uses are TRACK kill-site ground WITH hunting-knife or the shown
+      lower-stance retry, GAUGE wind-stone WITH hunting-knife, and STRIKE the blind side
+      WITH hunting-knife. Use only each currently offered action; completed steps stay
+      complete. The knife is held and cannot be dropped.
     # Real starting gear, not prose-only equipment or a zero-payoff mandatory pickup.
     # `held` seeds fresh inventory and makes the knife non-droppable, matching the
     # same contract used by Wolf-Winter's Albany relief spear.
@@ -265,16 +242,14 @@ objects:
     name: "the blind side"
     aliases: [blind side, sow's blind side, opening, angle, charge angle, tusk line, left tusk, shoulder]
     description: >
-      The fighting angle Cradoc's ground described: the sow rolls right as she charges,
-      lifting her left tusk late and showing a narrow blind-side opening to a hunter who
-      has read both ground and wind.
+      STRIKE the blind side WITH hunting-knife before your first attack to gain
+      +2 attack. The option requires the kill-site ground and wind-stone preparations.
     variants:
       - when: [{ has_flag: sow_slain }]
-        text: "The blind-side opening has done its work; the great sow lies still in the reed-bed."
+        text: "The Gallowmere sow is dead, so the blind side can no longer be used."
       - when: [{ has_flag: blind_side_struck }]
         text: >
-          The blind side is marked now by your first cut: her shoulder checks whenever
-          she turns, and the left tusk comes late.
+          You already struck the blind side and gained +2 attack. It cannot be used again.
       - when:
           - { not_flag: sow_slain }
           - { not_flag: blind_side_struck }
@@ -283,13 +258,12 @@ objects:
           # earlier nonterminal beat costs HP, while every surviving reply costs 1+.
           - { var_lte: { name: hp, value: 23 } }
         text: >
-          The first exchange has spent the clean opening. The sow is wounded and still
-          fighting; now her blind side shifts with every tusk-swing instead of holding
-          as a first-cut angle.
+          The chance to STRIKE the blind side expired after the first counterattack.
+          Continue with ATTACK Gallowmere sow.
       - when: [{ none_of: [{ has_flag: found_kill }] }]
         text: >
-          The sow must have a blind side, but without the kill-site's charge angle you
-          cannot read it under the rush of tusk and shoulder.
+          You cannot STRIKE the blind side because you did not read the kill-site
+          ground. Continue with ATTACK Gallowmere sow.
     takeable: false
     interactions:
       # The blind pass (20260622T164710Z, seed 7) called out the climax: all the
@@ -319,32 +293,26 @@ objects:
           - set_flag: blind_side_struck
           - inc_var: { name: attack, by: 2 }
           - add_journal: >
-              You turned Cradoc's charge-angle into a first cut along the sow's blind
-              side; her tusk-line is broken and your follow-up strikes will land truer.
-              (+2 attack)
+              You struck the Gallowmere sow's blind side with the hunting-knife and
+              gained +2 attack.
           - narrate: >
-              You wait until the sow's shoulder rolls the way the kill-site promised,
-              then cut in low along the blind side before the left tusk can lift. She
-              checks hard in the reed-bed, and the whole fight changes shape: not just
-              a brute exchange now, but the angle Cradoc died leaving for you.
+              You STRIKE the blind side with your hunting-knife before the left tusk
+              rises. The cut slows the sow's turns and grants +2 attack for later strikes.
 
   - id: shepherd_log
     name: "shepherd's log"
     aliases: [log, ledger, journal, book, notes, tracking log, cradoc's log, shepherd log]
     description: >
-      A thick working log in Cradoc's close hand: years of spoor notes, kill-counts,
-      and range maps for the high flocks. The last pages are all Gallowmere sow — a
-      lifetime of knowledge about this moor distilled into one old man's careful
-      script.
+      The shepherd's log records the Gallowmere sow's location, wind warning, and
+      charge angle. READ shepherd's log only if that action is still offered; completed reading
+      stays recorded.
     # read_text is shown when the player READs the object; the interactions block
     # fires the one-shot flag-and-score effect on the first READ.
     read_text: >
-      The last entries read: 'SOW AT GALLOWMERE HOLLOW. ALWAYS COMES FROM UPWIND —
-      EAST OF NORTH THROUGH THE CUT. WIND-STONE AT THE GULLY-LIP MARKS THE RUN
-      EXACTLY: READ IT BEFORE YOU GO IN OR SHE HAS YOU BEFORE YOU SEE HER. THE
-      KILL-SITE TELLS THE CHARGE ANGLE — HOOF WIDER ON THE RIGHT IN THE RUN-UP,
-      PIVOTS THE LEFT TUSK UP. READ THE GROUND AND READ THE WIND AND SHE IS JUST A
-      VERY LARGE PIG. — CRADOC, LAST AUTUMN.'
+      Cradoc's last entries say the Gallowmere sow waits in the Gallowmere Hollow
+      and attacks from upwind. Use the exact TRACK action shown for kill-site ground
+      and hunting-knife, then GAUGE wind-stone WITH hunting-knife before entering.
+      Complete only the next offered preparation; finished steps stay complete.
     takeable: false
     interactions:
       - verb: READ
@@ -355,41 +323,39 @@ objects:
           - set_quest_stage: { quest: gallowmere_hunt, stage: log_read }
           - inc_var: { name: score, by: 5 }
           - add_journal: >
-              Cradoc's log, last entry: the sow comes from upwind, always east-of-north
-              through the cut — read the wind-stone at the gully lip before you go in,
-              and read the kill-site for the charge angle. Know both and she is beatable.
+              Cradoc's log records that the kill-site ground revealed the sow's charge
+              angle and the wind-stone revealed the safe approach to Gallowmere Hollow.
+              Complete only preparation still offered; a completed hunt stays complete.
 
   - id: peat_sign
     name: "peat sign"
     aliases: [sign, peat, trod, passage, hoofmarks, hoof marks, peat marks]
     description: >
-      Large hoofprints in the wet peat, still dimpling fresh — the sow's passage north
-      into the gully, probably this morning. Broad-spaced hinds. She was moving fast,
-      but the useful reading is not on this trod; the charge angle will be clearer at
-      the churned kill-site to the east, before you commit yourself to the gully.
+      These hoofprints lead north toward the Moor Gully. If tracking remains unfinished,
+      go east and use the offered TRACK action on the kill-site ground. Otherwise, the
+      recorded charge angle and +2 attack persist; a completed hunt stays complete.
     takeable: false
 
   - id: spoor_ground
     name: "kill-site ground"
     aliases: [ground, spoor, tracks, blood, marks, trail, kill, hoof, hoofprints, prints, site, kill site, kill-site]
     description: >
-      The churned peat and broken heather where Cradoc fell. The blood is dark and
-      crusted now, but the hoof-prints are clear in the soft ground — big prints, the
-      sow coming in fast from the east. Your hunting-knife will let you read the charge
-      angle off the strike-marks if you take your time with it.
+      TRACK kill-site ground WITH hunting-knife to reconstruct the Gallowmere sow's
+      charge angle and gain persistent +2 attack. If the first check fails, the shown
+      lower-stance TRACK action is a guaranteed retry. A completed hunt stays complete.
     # Reactive: a failed first reading names the remaining, deliberate recovery.
     variants:
       - when: [{ has_flag: found_kill }]
         text: >
-          The kill-site, already read — right tusk on the pivot, coming in low from
-          the east. You know the angle now.
+          You already TRACKED the kill-site ground and gained +2 attack. The ground
+          showed that the Gallowmere sow pivoted right and raised her left tusk when
+          charging. The bonus persists, and a completed hunt stays complete.
       - when:
           - { has_flag: kill_site_attempted }
           - { not_flag: found_kill }
         text: >
-          The churned peat after your first pass. The overlaid prints are no longer a
-          matter of luck: set the deepest heel-mark against Cradoc's last stance and
-          the charge-line will resolve.
+          Your first TRACK attempt failed. TRACK kill-site ground from a lower stance
+          WITH hunting-knife; this retry is guaranteed.
     takeable: false
     interactions:
       # The first tracking reading is a real check. Failure retires that random roll,
@@ -413,27 +379,21 @@ objects:
             - inc_var: { name: attack, by: 2 }
             - inc_var: { name: score, by: 10 }
             - add_journal: >
-                Kill-site read: the sow pivots right on the charge, rolling the left tusk
-                up. You know exactly which angle to take her from — the attack opens up
-                from her blind side. (+2 attack)
+                You TRACKED the kill-site ground. The spoor shows that the Gallowmere sow
+                pivoted right and raised her left tusk when charging. (+2 attack)
             - narrate: >
-                You set the blade-edge against the deepest print and work backward along
-                the run: hind-prints wide and forward-heavy, the left-hoof strike harder.
-                She pivots right on the kill, rolling the left tusk up. You know the
-                angle. A dagger of clarity opens in your chest — you did not have that
-                a minute ago.
+                You compare the deepest print with your hunting-knife and reconstruct how
+                the Gallowmere sow pivoted right, raised her left tusk, and exposed her
+                blind side. You gain persistent +2 attack; completed fights stay complete.
           on_failure:
             - set_flag: kill_site_attempted
             - add_journal: >
-                The first reading blurred in the overlaid hoofprints, but Cradoc's last
-                stance and the deepest heel-mark will settle the charge-line. The kill-site
-                can be read once more without trusting another lucky guess.
+                Your first TRACK attempt failed. TRACK kill-site ground from a lower
+                stance WITH hunting-knife for a guaranteed retry.
             - narrate: >
-                The ground tells you something but not enough on the first pass — too many
-                prints overlap where she milled after the kill. Cradoc's final stance and
-                the deepest heel-mark give you a fixed way through it now: set them together
-                and the charge-line will come clear. You will not be guessing at the same
-                spoor again.
+                The overlapping prints prevent a clear reading. TRACK kill-site ground
+                from a lower stance WITH hunting-knife; the next
+                attempt is guaranteed and consumes no item or HP.
 
       # Same player-facing track action after the failed first reading: no second die
       # roll, but the original successful preparation, reward, and combat option remain.
@@ -441,7 +401,7 @@ objects:
         item: hunting_knife
         target: spoor_ground
         command_verb: track
-        command_template: "track {target} against Cradoc's stance with {item}"
+        command_template: "track {target} from a lower stance with {item}"
         conditions:
           - all_of:
               - { has_flag: kill_site_attempted }
@@ -452,34 +412,26 @@ objects:
           - inc_var: { name: attack, by: 2 }
           - inc_var: { name: score, by: 10 }
           - add_journal: >
-              Kill-site read: the sow pivots right on the charge, rolling the left tusk
-              up. You know exactly which angle to take her from — the attack opens up
-              from her blind side. (+2 attack)
+              You TRACKED the kill-site ground. The spoor shows that the Gallowmere sow
+              pivoted right and raised her left tusk when charging. (+2 attack)
           - narrate: >
-              You set Cradoc's last stance against the deepest heel-mark and the overlaid
-              prints resolve at once: hind-prints wide and forward-heavy, the left-hoof
-              strike harder. She pivots right on the kill, rolling the left tusk up. You
-              know the angle. A dagger of clarity opens in your chest — you did not have
-              that a minute ago.
+              From a lower stance, you compare the deepest print with your hunting-knife
+              and reconstruct how the Gallowmere sow pivoted right, raised her left tusk,
+              and exposed her blind side. You gain persistent +2 attack; completed fights stay complete.
 
   - id: wind_stone
     name: "wind-stone"
     aliases: [stone, standing stone, old stone, pitted stone, wind stone, windstone, marker, standing]
     description: >
-      A shoulder-high standing stone at the gully's lip, pitted to a rough face on
-      its east side and smooth on the west — worn that way by the wind pouring out
-      of the cut for more winters than anyone has counted. The pitted face is the
-      receiving side: the wind runs north-east through this cut. Read it with your
-      blade before you go into the hollow and you will know exactly which quarter to
-      enter from so the sow has nothing to smell.
+      GAUGE wind-stone WITH hunting-knife before entering the Gallowmere
+      Hollow. Success grants +2 defense and unlocks the north exit. Failure ends the
+      game when the Gallowmere sow gores you. The stone's east face is deeply pitted.
     # Reactive: once wind is read, the stone shows as already worked.
     variants:
       - when: [{ has_flag: read_wind }]
         text: >
-          The wind-stone, already read — north-east wind through the cut, the sow
-          upwind to the north-east of the hollow. You entered from the south-west
-          and held the weather-gauge, and she had nothing to smell until you were
-          already moving.
+          You already GAUGED the wind-stone and gained +2 defense. The wind runs
+          northeast, so you can enter the Gallowmere Hollow from the southwest.
     takeable: false
     interactions:
       # Lore skill check — the ONE LETHAL obstacle (the pack's single one-shot death gate,
@@ -514,32 +466,28 @@ objects:
             - inc_var: { name: defense, by: 2 }
             - inc_var: { name: score, by: 10 }
             - add_journal: >
-                Wind-stone read: north-east wind through the cut, sow upwind to the
-                north-east. Entered from the south-west with the weather-gauge behind
-                you; she cannot smell you coming. (+2 defense)
+                You GAUGED the wind-stone. The wind runs northeast, so you can enter
+                from the southwest without warning the Gallowmere sow. (+2 defense)
             - narrate: >
-                You hold the flat of the blade into the air and feel the pull of it,
-                then set the edge to the stone's pitted face — the weathering reads
-                north-east, and Hedrick's telling clicks into place all at once. You
-                know the quarter. You angle in from the south-west, the wind behind you,
-                your approach invisible on the air. The sow is north of the hag and she
-                does not know you are coming.
+                You hold the hunting-knife against the wind-stone and confirm a
+                northeast wind. You choose the southwest approach, unlock the north
+                exit, and gain +2 defense.
           on_failure:
             - end_game: ending_gored
 
 npcs:
   - id: hedrick
     name: "Hedrick"
-    description: "Hedrick Cradoc, the dead shepherd's son — young, quiet, red-eyed, his father gone this morning. He sat up all night reading the log before he sent for you."
+    description: "Hedrick Cradoc is the dead shepherd's son. He can explain how the Gallowmere sow hunts and where his father failed."
     room: shepherd_bothy
     dialogue:
       root: hedrick_root
       nodes:
         - id: hedrick_root
           npc_text: >
-            You are the huntsman they sent for. Good. My father's log is on the
-            bench — he spent forty winters on this moor and wrote down everything
-            he knew. Ask what you need to know.
+            If the shepherd's log is unread, it is on the work-bench. READ shepherd's log.
+            Ask me about the Gallowmere sow or my father. The log contains forty years
+            of his notes.
           # bug_0325/0322 pattern: short variant on return after any topic heard,
           # so the full greeting does not re-fire on every return from a topic node.
           variants:
@@ -562,41 +510,35 @@ npcs:
               end: true
         - id: hedrick_sow
           npc_text: >
-            She comes from upwind. Always — my father wrote it a dozen times. She
-            holds the weather-gauge better than most dogs and she runs the gully
-            knowing the wind will carry your smell to her before you see her. There
-            is a standing stone at the gully lip, north face pitted by the east wind.
-            Read it with your blade before you step past the cut: it tells you exactly
-            where she waits and exactly how to enter so she has nothing on the air.
-            Get your angle right and she is just a very large pig. Go in wrong and she
-            is on you from behind a peat-hag before your knife is up. Heed the stone.
+            The Gallowmere sow's habit was to attack from upwind. If the wind-stone reading
+            is unfinished and GAUGE is offered, GAUGE wind-stone WITH hunting-knife before
+            entering the Gallowmere Hollow. A correct reading points to the southwest
+            approach and grants +2 defense. Before the stone was read, failure could let
+            her gore you and end the journey. Completed reading and combat stay complete.
           effects:
             - set_flag: heard_lore_counsel
             - inc_var: { name: lore, by: 5 }
             - add_journal: >
-                Hedrick: the sow holds the upwind quarter always. Read the wind-stone at
-                the gully lip with your blade — get the angle right and enter from the
-                lee side, and she cannot smell you coming. (+5 lore)
+                Hedrick warned that the wind-stone and hunting-knife reveal the safe
+                southwest approach to the Gallowmere Hollow. (+5 lore)
           topics:
             - id: hedrick_sow_back
               prompt: "Nod, and ask something else."
               goto: hedrick_root
         - id: hedrick_father
           npc_text: >
-            He was careful. Forty years on this moor and never badly hurt, and then
-            one morning in a hurry. I think he went in wrong-handed — he knew the
-            stone perfectly well and I think he was hurrying, the way you do when
-            you are sure you already know the answer. The log says everything he
-            knew. I hope you read it slower than he did.
+            My father rushed into the Gallowmere Hollow and misread the wind. His
+            shepherd's log records that mistake. READ shepherd's log if unfinished. If the sow
+            still stands, GAUGE wind-stone WITH hunting-knife when offered before entering; completed
+            preparation and combat stay complete.
           effects:
             - set_flag: heard_father
             - add_journal: >
-                Hedrick thinks his father went in too fast and misjudged the wind-quarter.
-                The log is the preparation; the stone is the discipline that matters
-                in the moment.
+                Hedrick said his father died after rushing and misreading the wind.
+                The shepherd's log and wind-stone preserve the safer approach.
           topics:
             - id: hedrick_father_back
-              prompt: "Nod. You will read careful."
+              prompt: "Promise to read carefully, then ask something else."
               goto: hedrick_root
 
 enemies:
@@ -624,9 +566,9 @@ enemies:
   - id: gallowmere_sow
     name: "Gallowmere sow"
     description: >
-      A great grey sow, heavy in the shoulder and long in the tusk — old, and well
-      past the age of caution. She has killed before and she is neither afraid nor
-      hurrying. She is simply waiting for you to give her the upwind quarter.
+      ATTACK Gallowmere sow to defeat her. STRIKE the blind side WITH hunting-knife
+      only while that action is offered; its +2 attack persists once gained. Otherwise,
+      continue with ATTACK Gallowmere sow. The old grey sow has long tusks and heavy shoulders.
     room: moor_hollow
     hp: 15
     attack: 5
@@ -635,8 +577,7 @@ enemies:
     death_ending: ending_taken
     on_defeat:
       - add_journal: >
-          The Gallowmere sow is down in the reed-bed, her flanks still and her
-          long grey sides no longer moving. The moor is quiet.
+          You killed the Gallowmere sow. The north exit to the Moor Ridge is open.
       - inc_var: { name: score, by: 10 }
 
 win_conditions:
@@ -652,28 +593,22 @@ endings:
   - id: ending_hunt_won
     title: "The Gallowmere Taken"
     text: >
-      The moor ridge, and the grey light going out across the valley below. You came
-      up out of the Gallowmere with the sow behind you in the reed-bed and the
-      shepherds safe below, and old Cradoc's boy can write the last line in his
-      father's log — the long tally closed. You walk down into the last of the light
-      carrying something that is not quite pride and not quite rest, but is close to
-      both. *** You have won. ***
+      You killed the Gallowmere sow and reached the Moor Ridge. The valley shepherds
+      are safe, and Hedrick can close his father's log. Grey evening settles over the
+      moor. *** You have won. ***
 
   - id: ending_gored
     title: "The Moor's Keeping"
     text: >
-      You misjudged the wind. The Gallowmere sow was on you from the north-east
-      hag before your knife came up — faster than you expected, from the quarter
-      you had not covered. The gully is a long way from the valley road. Old
-      Cradoc's log will have a second entry before the year is out, in Hedrick's
-      hand this time. *** You have fallen. ***
+      You failed to GAUGE the wind-stone. The Gallowmere sow attacked from the
+      northeast and gored you before you could raise the hunting-knife. This ending
+      cannot be retried within the journey. *** You have fallen. ***
     death: true
 
   - id: ending_taken
     title: "The Old Tusker Won"
     text: >
-      The sow was stronger than you were ready for. She went down hard, but she
-      went down on top of you, and the weight of her finished what the tusks began.
-      The Gallowmere hollow is quiet by nightfall. They will not find you until
-      the spring thaw. *** You have fallen. ***
+      The Gallowmere sow killed you in combat. Her tusks knocked you down, and she
+      crushed you under her weight. She remains alive in Gallowmere Hollow.
+      *** You have fallen. ***
     death: true

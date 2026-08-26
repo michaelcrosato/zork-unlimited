@@ -25,15 +25,15 @@ describe("opening ally contract", () => {
   it("presents capability, condition, additional and total time, and one real joining bond", () => {
     const prompt = presentOpeningAlly(ALLY, CHARACTER);
     const exactBenefits = [
-      "Independent cattle-pressure ally",
-      "No companion; relay terms refused",
-      "Solo field team; no ally action",
+      "June joins and controls cattle safety",
+      "June refuses and does not join",
+      "Travel alone; no ally action",
     ] as const;
     expect(prompt).toMatchObject({ id: ALLY.id, kind: "ally" });
     expect(prompt.message).toBe(`${ALLY.title}. ${ALLY.message}`);
     expect(prompt.options).toHaveLength(3);
     expect(prompt.options.find((option) => option.id === ALLY.solo_option_id)?.label).toBe(
-      "Ride alone",
+      "Travel Alone",
     );
     prompt.options.forEach((option, index) => {
       const authored = ALLY.options[index]!;
@@ -49,7 +49,7 @@ describe("opening ally contract", () => {
         "tradeoff",
       ]);
       expect(option.consequence).toBe(
-        `Benefit: ${exactBenefits[index]} Cost: ${cost}. Boundary: ${authored.tradeoff}`,
+        `Benefit: ${exactBenefits[index]} Cost: ${cost}. Tradeoff: ${authored.tradeoff}`,
       );
       expect(option.consequence).not.toContain(authored.preview);
       expect(openingSelectionReceiptWordCount(option.consequence)).toBeLessThanOrEqual(
@@ -58,19 +58,19 @@ describe("opening ally contract", () => {
     });
     expect(formatOpeningAllyCost({ minutes: 0 })).toBe("no added time");
     expect(formatOpeningAllyTimingDisclosure({ minutes: 15 })).toBe(
-      "Additional time after the 15-minute conversation: 15 minutes. Total time including the conversation: 30 minutes.",
+      "Conversation: 15 minutes. Choice adds: 15 minutes. Total: 30 minutes.",
     );
     expect(formatOpeningAllyChoiceTiming({ minutes: 15 })).toBe(
-      "15 minutes additional after 15-minute talk; 30 minutes total",
+      "15-minute talk + 15 minutes additional; 30 minutes total",
     );
     expect(openingAllyContactTimingSummary(ALLY)).toBe(
-      "Talking takes 15 minutes. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.",
+      "Talking takes 15 minutes. Let June Control Cattle Safety: 15 minutes additional, 30 minutes total; Ask June to Follow Your Orders: 5 minutes additional, 20 minutes total; Travel Alone: no added time, 15 minutes total.",
     );
     expect(openingAllyContactTimingSummary(ALLY, true)).toBe(
-      "The 15-minute conversation is already recorded; reviewing it now adds no time. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.",
+      "The 15-minute conversation is already recorded. Reviewing it adds 0 minutes. Let June Control Cattle Safety: 15 minutes additional, 30 minutes total; Ask June to Follow Your Orders: 5 minutes additional, 20 minutes total; Travel Alone: no added time, 15 minutes total.",
     );
     expect(openingAllyTotalTimingSummary(ALLY)).toBe(
-      "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.",
+      "All totals include the 15-minute conversation: Let June Control Cattle Safety: 15 minutes additional, 30 minutes total; Ask June to Follow Your Orders: 5 minutes additional, 20 minutes total; Travel Alone: no added time, 15 minutes total.",
     );
 
     const before = cloneCampaignCharacterState(CHARACTER);

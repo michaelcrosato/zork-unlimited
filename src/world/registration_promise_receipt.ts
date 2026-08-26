@@ -244,23 +244,23 @@ export function deriveRegistrationPromiseFoldbackReceipt(args: {
   switch (registrationProof.profile.id) {
     case "albany:road_warden":
       return (
-        `Registration receipt — Hayden Hale accepts the returned field account. ${fieldReturn} ` +
-        "Hayden's winter-packet promise changed active → kept."
+        `Registration complete. Hayden Hale accepts your field report. ${fieldReturn} ` +
+        "Promise kept: return Hayden's winter packet."
       );
     case "albany:ledger_advocate":
-      return `Registration receipt — Rowan Quill reconciles ${leadSourceProof.option.title} under ${reliefOathProof.option.title}. Exact return: ${fieldReturn} The truthful-account promise changed active → kept.`;
+      return `Registration complete. Rowan Quill records ${leadSourceProof.option.title} under ${reliefOathProof.option.title}. Result: ${fieldReturn} Promise kept: give a truthful account.`;
     case "albany:ironhands_repairer": {
       const condition = assertIronhandsEquipment(args.characterBefore, args.openingRegistration);
       return (
-        "Registration receipt — Reese Pryce records the insulated repair roll returned at " +
-        `condition ${String(condition)}/100 and releases the tool loan. Field return: ${fieldReturn} ` +
-        "The tool-return promise changed active → kept."
+        "Registration complete. Reese Pryce records the insulated repair roll at " +
+        `${String(condition)}/100 condition and closes the tool loan. Result: ${fieldReturn} ` +
+        "Promise kept: return Reese's tools."
       );
     }
     case "albany:unaffiliated_courier":
       return args.worldFactIds.includes(AUTHORITY_INVOKED_FACT_ID)
-        ? `Registration receipt — Rowan Quill publicly voids the emergency tag after lawful Albany authority was invoked. Exact return: ${fieldReturn} The tag-closure promise changed active → kept.`
-        : `Registration receipt — Rowan Quill records the emergency tag returned under Emery Sloane's witness. Exact return: ${fieldReturn} The tag-closure promise changed active → kept.`;
+        ? `Registration complete. Rowan Quill cancels the emergency tag after you used Albany authority. Result: ${fieldReturn} Promise kept: close the emergency tag.`
+        : `Registration complete. Rowan Quill records the emergency tag returned with Emery Sloane as witness. Result: ${fieldReturn} Promise kept: close the emergency tag.`;
     default:
       throw new Error(
         `Registration receipt does not support profile "${registrationProof.profile.id}".`,

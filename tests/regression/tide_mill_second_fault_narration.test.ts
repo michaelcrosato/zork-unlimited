@@ -65,8 +65,8 @@ describe("Tide-Mill second-fault repair narration", () => {
       target: "brake_pawl",
     });
 
-    expect(text).toMatch(/both faults are now put right/i);
-    expect(text).not.toMatch(/one fault of the two/i);
+    expect(text).toMatch(/both faults are fixed/i);
+    expect(text).not.toMatch(/one fault is fixed/i);
   });
 
   it("says both faults are fixed when the head-race is cleared second", () => {
@@ -76,8 +76,8 @@ describe("Tide-Mill second-fault repair narration", () => {
       target: "choked_sluice",
     });
 
-    expect(text).toMatch(/both faults are now put right/i);
-    expect(text).not.toMatch(/one fault of the two/i);
+    expect(text).toMatch(/both faults are fixed/i);
+    expect(text).not.toMatch(/one fault is fixed/i);
   });
 
   it("keeps the generic head-race alias legal after taking the billhook", () => {
@@ -88,6 +88,6 @@ describe("Tide-Mill second-fault repair narration", () => {
 
     expect(result.state.flags["sluice_clear"]).toBe(true);
     expect(result.state.vars.score).toBe(10);
-    expect(narration(result.events)).toMatch(/one fault of the two is put right/i);
+    expect(narration(result.events)).toMatch(/one fault is fixed/i);
   });
 });

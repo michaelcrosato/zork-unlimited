@@ -72,7 +72,7 @@ const takePlate = (a: Action) =>
 const donPlate = (a: Action) =>
   a.type === "USE" && (a as { item?: string }).item === "cold_iron_plate";
 
-const NUDGE_PHRASE = "hangs loose and unbuckled";
+const NUDGE_PHRASE = "carry the cold-iron plate but are not wearing it";
 
 /** Walk down to the Outer Forge. */
 function enterForge(seed = 7): GameState {
@@ -110,7 +110,7 @@ describe("bug_0118 — The Cold Forge nudges a carried-but-unworn plate at the f
     const s = toBellows(enterForge());
     expect(s.inventory).not.toContain("cold_iron_plate");
     const desc = norm(obs(s).description);
-    expect(desc).toContain("face it with every edge you can bring to bear");
+    expect(desc).toContain("can kill an unprepared fighter");
     expect(desc).not.toContain(NUDGE_PHRASE);
   });
 
@@ -121,7 +121,7 @@ describe("bug_0118 — The Cold Forge nudges a carried-but-unworn plate at the f
     s = toBellows(s);
     const desc = norm(obs(s).description);
     expect(desc).toContain(NUDGE_PHRASE);
-    expect(desc).toContain("better to don it now");
+    expect(desc).toContain("Now, DON cold-iron plate for +2 defense");
   });
 
   it("(4) with the plate DONNED the Bellows Walk reads the base text again (no nag)", () => {
@@ -134,7 +134,7 @@ describe("bug_0118 — The Cold Forge nudges a carried-but-unworn plate at the f
     s = toBellows(s);
     const desc = norm(obs(s).description);
     expect(desc).not.toContain(NUDGE_PHRASE);
-    expect(desc).toContain("face it with every edge you can bring to bear");
+    expect(desc).toContain("can kill an unprepared fighter");
   });
 
   it("(5) declared-order precedence: sentinel_stilled wins over the carried-unworn nudge", () => {
@@ -147,7 +147,7 @@ describe("bug_0118 — The Cold Forge nudges a carried-but-unworn plate at the f
     // even though the plate is still carried-unworn — post-combat is never nagged.
     const stilled: GameState = { ...s, flags: { ...s.flags, sentinel_stilled: true } };
     const desc = norm(obs(stilled).description);
-    expect(desc).toContain("The slag sentinel lies broken across the floor");
+    expect(desc).toContain("The slag sentinel is destroyed");
     expect(desc).not.toContain(NUDGE_PHRASE);
   });
 });

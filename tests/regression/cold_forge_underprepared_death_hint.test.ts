@@ -42,9 +42,9 @@ describe("bug_0391 — underprepared sentinel deaths point back to preparation",
     expect(state.flags["plate_donned"]).toBeUndefined();
 
     const obs = buildRpgObservation(index, state);
-    expect(obs.ending!.text).toContain("spirit's borrowed warmth");
-    expect(obs.ending!.text).toContain("dead master's cold-iron plate");
-    expect(obs.ending!.text).toContain("armed with every lesson");
-    expect(obs.description).toContain("spirit's borrowed warmth");
+    expect(obs.ending!.text).toContain("The lantern-spirit's +2 attack");
+    expect(obs.ending!.text).toContain("the cold-iron plate's first-DON +2 defense");
+    expect(obs.ending!.text).toContain("improve survival odds");
+    expect(obs.description).toContain("The lantern-spirit's +2 attack");
   });
 });

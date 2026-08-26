@@ -147,7 +147,7 @@ describe("overworld session road encounters", () => {
       route: "Test Road",
       arrivedAt: "Day 1, 09:00",
       timing:
-        "On the road from Albany to Colonie at Day 1, 09:00; resolve this route trouble before doing town business in Colonie.",
+        "Road encounter from Albany to Colonie at Day 1, 09:00. Resolve it before taking actions in Colonie.",
       event: roadEvent(),
     });
     expect(pending.options.map((option) => option.strategy)).toEqual([
@@ -185,7 +185,7 @@ describe("overworld session road encounters", () => {
       route: "Test Road",
       arrivedAt: "Day 1, 09:00",
       timing:
-        "On the road from Albany to Colonie at Day 1, 09:00; resolve this route trouble before doing town business in Colonie.",
+        "Road encounter from Albany to Colonie at Day 1, 09:00. Resolve it before taking actions in Colonie.",
       event: roadEvent(),
     });
     expect(restored?.options.map((option) => option.strategy)).toEqual([
@@ -352,9 +352,9 @@ describe("overworld session road encounters", () => {
         },
       },
     });
-    expect(resolution.result.entry.text).toContain("Lacking supplies");
-    expect(resolution.result.entry.text).toContain("On the road from TOWN_A to TOWN_B");
-    expect(resolution.result.entry.text).toContain("Afterward you arrive in TOWN_B.");
+    expect(resolution.result.entry.text).toContain("Supply shortage: +3 fatigue.");
+    expect(resolution.result.entry.text).toContain("Road encounter from TOWN_A to TOWN_B");
+    expect(resolution.result.entry.text).toContain("You arrive in TOWN_B.");
   });
 
   it("resolves press-on encounters without supply spend or renown", () => {
@@ -384,7 +384,7 @@ describe("overworld session road encounters", () => {
         renownGained: 0,
       },
     });
-    expect(resolution.result.entry.text).not.toContain("Lacking supplies");
+    expect(resolution.result.entry.text).not.toContain("Supply shortage");
   });
 
   it("applies resolved road encounters to journals and regional renown", () => {

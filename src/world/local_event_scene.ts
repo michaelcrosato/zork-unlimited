@@ -188,19 +188,19 @@ export function localEventSceneRequirementError(
     (questId) => !state.completedQuestIds.has(questId),
   );
   if (missing.length > 0) {
-    return `This authored choice becomes available only after completing ${missing.join(", ")}.`;
+    return `Complete ${missing.join(", ")} before choosing this event option.`;
   }
   const forbidden = (parsed.forbids_completed_quests ?? []).filter((questId) =>
     state.completedQuestIds.has(questId),
   );
   if (forbidden.length > 0) {
-    return `This authored choice must be made before completing ${forbidden.join(", ")}.`;
+    return `This event option closed when you completed ${forbidden.join(", ")}.`;
   }
   const completedJobs = (parsed.forbids_completed_jobs ?? []).filter((jobId) =>
     state.completedJobIds?.has(jobId),
   );
   return completedJobs.length > 0
-    ? `This authored choice must be made before completing local job ${completedJobs.join(", ")}.`
+    ? `This event option closed when you completed job ${completedJobs.join(", ")}.`
     : null;
 }
 

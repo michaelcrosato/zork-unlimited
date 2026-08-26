@@ -113,7 +113,9 @@ describe("Depth Contract #11 — Jamie Tanner's Market policy and disputed crate
     session.talkToCharacter(CONTACT);
     expect(session.view().events.map((event) => event.id)).not.toContain(EVENT);
     expect(session.view().jobs.map((job) => job.id)).not.toContain(JOB);
-    expect(() => session.investigateEvent(EVENT)).toThrow(/only after completing wolf_winter/i);
+    expect(() => session.investigateEvent(EVENT)).toThrow(
+      /Complete wolf_winter before choosing this event option/i,
+    );
     expect(() => session.workLocalJob(JOB, HOLD_FAST)).toThrow(/Complete quest "wolf_winter"/i);
 
     const returned = returnedToMarket();
@@ -273,9 +275,11 @@ describe("Depth Contract #11 — Jamie Tanner's Market policy and disputed crate
         [JOB, fast],
         [JOB, audit],
       ]);
-      expect(() => fastSession.workLocalJob(JOB)).toThrow(/Choose one authored option/i);
+      expect(() => fastSession.workLocalJob(JOB)).toThrow(
+        /Choose one option for Jamie's Disputed Crates/i,
+      );
       expect(() => fastSession.workLocalJob(JOB, policy === HOLD ? BID_FAST : HOLD_FAST)).toThrow(
-        /not available|requirements/i,
+        /unavailable in this journey/i,
       );
       const fastBefore = fastSession.snapshot();
       const fastRenownBefore = fastSession.view().regionRenown[REGION] ?? 0;
@@ -283,7 +287,11 @@ describe("Depth Contract #11 — Jamie Tanner's Market policy and disputed crate
       expect(fastResult).toMatchObject({ minutes: fastMinutes, alreadyKnown: false });
       expect(fastSession.snapshot().minutes - fastBefore.minutes).toBe(fastMinutes);
       expect(fastSession.view().regionRenown[REGION]).toBe(fastRenownBefore + fastRenown);
-      expect(fastResult.entry.text).toMatch(/policy|ledger|board/i);
+      expect(fastResult.entry.text).toMatch(
+        policy === HOLD
+          ? /household|kitchen|price/i
+          : /posted buyer order[^]*buyer chain is not fully audited/i,
+      );
       expect(fastSession.view().jobChoices).toEqual([]);
       expect(() => fastSession.workLocalJob(JOB, audit)).toThrow(/different authored option/i);
 

@@ -334,7 +334,7 @@ describe("opening preparation authoring", () => {
     expect(option.summary).not.toHaveProperty("highlights");
     expect(option.consequence).toBe(
       "Benefit: Civic works survey Cost: 25 minutes and $4. " +
-        "Boundary: The other specialist plans remain behind.",
+        "Tradeoff: The other specialist plans remain behind.",
     );
     expect(option.consequence).not.toMatch(/\b(?:DC|check|modifier|odds|success|failure)\b/i);
 
@@ -531,7 +531,7 @@ describe("opening preparation application and presentation", () => {
         tradeoff: "The other specialist plans remain behind.",
       },
       consequence:
-        "Benefit: Civic works survey Cost: 25 minutes and $4. Boundary: The other specialist plans remain behind.",
+        "Benefit: Civic works survey Cost: 25 minutes and $4. Tradeoff: The other specialist plans remain behind.",
     });
     expect(publicPrompt.options[0]!.consequence).not.toContain(scene.profiles[0]!.preview);
     expect(publicPrompt.options[0]!.consequence).not.toContain(scene.profiles[0]!.consequence);
@@ -546,7 +546,7 @@ describe("opening preparation application and presentation", () => {
     expect(sponsoredPrompt.options[0]!.summary?.immediateCost).toBe("10 minutes and $1");
     expect(sponsoredPrompt.options[0]!.consequence).toBe(
       "Benefit: Civic works survey Cost: 10 minutes and $1. " +
-        "Boundary: The other specialist plans remain behind.",
+        "Tradeoff: The other specialist plans remain behind.",
     );
     expect(sponsoredPrompt.options[0]!.consequence).not.toContain(scene.profiles[0]!.sponsor!.note);
 

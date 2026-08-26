@@ -37,17 +37,19 @@ function atCrown(inv: string[] = []) {
 describe("bug_0324 — beacon_crown description drops 'flint lies in the bed' once flint taken", () => {
   it("(a) base state (flint not in hand) → 'flint lies in the bed' present", () => {
     const desc = roomDescription(crown, atCrown([]));
-    expect(desc.toLowerCase()).toContain("flint lies in the bed");
+    expect(desc).toContain(
+      "The fire-bed is where the flint was kept; TAKE flint if it is here, or retrieve the flint if needed",
+    );
   });
 
   it("(b) flint in inventory → 'flint lies in the bed' absent", () => {
     const desc = roomDescription(crown, atCrown(["flint"]));
-    expect(desc.toLowerCase()).not.toContain("flint lies in the bed");
+    expect(desc).not.toContain("The fire-bed is where the flint was kept");
   });
 
   it("(b) flint in inventory → 'flint is in your hand' present", () => {
     const desc = roomDescription(crown, atCrown(["flint"]));
-    expect(desc.toLowerCase()).toContain("flint is in your hand");
+    expect(desc).toContain("You have the flint");
   });
 
   it("(c) pack validates green and ending_lit is defined with max_score 50", () => {

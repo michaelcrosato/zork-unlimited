@@ -232,12 +232,12 @@ export function openingAllyOptionById(
   return option ? OpeningAllyOptionSchema.parse(option) : null;
 }
 
-/** Keep the authored option identity while naming the solo choice in player-facing language. */
+/** Keep authored display labels on every ally option. */
 export function openingAllyOptionDisplayLabel(
-  scene: Pick<OpeningAlly, "solo_option_id">,
-  option: Pick<OpeningAllyOption, "id" | "title">,
+  _scene: Pick<OpeningAlly, "solo_option_id">,
+  option: Pick<OpeningAllyOption, "title">,
 ): string {
-  return option.id === scene.solo_option_id ? "Ride alone" : option.title;
+  return option.title;
 }
 
 export function formatOpeningAllyCost(terms: OpeningAllyTerms): string {
@@ -247,7 +247,7 @@ export function formatOpeningAllyCost(terms: OpeningAllyTerms): string {
 /** State both the follow-up cost and the cost from choosing to contact the ally. */
 export function formatOpeningAllyTimingDisclosure(terms: OpeningAllyTerms): string {
   const totalMinutes = OPENING_ALLY_CONTACT_MINUTES + terms.minutes;
-  return `Additional time after the ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute conversation: ${formatOpeningAllyCost(terms)}. Total time including the conversation: ${String(totalMinutes)} minutes.`;
+  return `Conversation: ${String(OPENING_ALLY_CONTACT_MINUTES)} minutes. Choice adds: ${formatOpeningAllyCost(terms)}. Total: ${String(totalMinutes)} minutes.`;
 }
 
 /** Keep the same total-time truth compact enough for the bounded selection receipt. */
@@ -255,7 +255,7 @@ export function formatOpeningAllyChoiceTiming(terms: OpeningAllyTerms): string {
   const totalMinutes = OPENING_ALLY_CONTACT_MINUTES + terms.minutes;
   const additional =
     terms.minutes === 0 ? "no added time" : `${String(terms.minutes)} minutes additional`;
-  return `${additional} after ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute talk; ${String(totalMinutes)} minutes total`;
+  return `${String(OPENING_ALLY_CONTACT_MINUTES)}-minute talk + ${additional}; ${String(totalMinutes)} minutes total`;
 }
 
 function openingAllyOptionTimingSummary(scene: OpeningAlly): string {
@@ -274,7 +274,7 @@ function openingAllyOptionTimingSummary(scene: OpeningAlly): string {
 
 /** Disclose totals without asserting whether this session has already paid for the conversation. */
 export function openingAllyTotalTimingSummary(scene: OpeningAlly): string {
-  return `Totals include the standard ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute conversation: ${openingAllyOptionTimingSummary(scene)}.`;
+  return `All totals include the ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute conversation: ${openingAllyOptionTimingSummary(scene)}.`;
 }
 
 /** Summarize every option before the player spends the initial conversation time. */
@@ -283,7 +283,7 @@ export function openingAllyContactTimingSummary(
   conversationAlreadyPaid = false,
 ): string {
   const conversation = conversationAlreadyPaid
-    ? `The ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute conversation is already recorded; reviewing it now adds no time.`
+    ? `The ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute conversation is already recorded. Reviewing it adds 0 minutes.`
     : `Talking takes ${String(OPENING_ALLY_CONTACT_MINUTES)} minutes.`;
   return `${conversation} ${openingAllyOptionTimingSummary(scene)}.`;
 }

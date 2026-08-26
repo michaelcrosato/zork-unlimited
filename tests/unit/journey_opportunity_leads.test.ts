@@ -78,7 +78,7 @@ function genericOpportunityState() {
 
 describe("journey opportunity projection", () => {
   it("keeps return-opportunity guidance neutral about the active journey state", () => {
-    expect(JOURNEY_OPPORTUNITY_GUIDANCE).toContain("leave these leads for later");
+    expect(JOURNEY_OPPORTUNITY_GUIDANCE).toContain("leave the work for later");
     expect(JOURNEY_OPPORTUNITY_GUIDANCE).not.toContain("keep your objective");
   });
 
@@ -142,7 +142,7 @@ describe("journey opportunity projection", () => {
     const deferredClone = cloneJourneyOpportunityPresentation(deferredPresentation);
     expect(deferredPresentation).toEqual({
       guidance:
-        "Choose the shown journey option first. 2 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.",
+        "Choose the current journey option first. 2 optional follow-up leads remain. Complete any other required choice. The leads return when play resumes.",
       leads: [],
       deferredLeadCount: 2,
     });
@@ -157,7 +157,7 @@ describe("journey opportunity projection", () => {
       leads: [base.leads[0]!],
     });
     expect(one?.guidance).toBe(
-      "Choose the shown journey option first. 1 optional aftermath lead remains; if another choice follows, finish it too. District details return when play resumes.",
+      "Choose the current journey option first. 1 optional follow-up lead remains. Complete any other required choice. The leads return when play resumes.",
     );
 
     expect(() =>

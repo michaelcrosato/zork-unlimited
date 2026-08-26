@@ -336,9 +336,9 @@ describe("SS-F11 — saved Wolf-Winter wood changes Albany's one-time service", 
       {
         id: SAVED_RULE_ID,
         action: "resupply",
-        title: "Reclaim the Unused Repair-Wagon Stores",
+        title: "Collect Unused Repair-Wagon Supplies",
         summary:
-          "Because Cade already has sound timber for the broken paling, Hayden returns the repair wagon's food, lamp oil, and road gear to the Station Quarter relief tag.",
+          "Available when Cade already has sound timber for the broken fence. Spend 15 minutes to refill supplies to 8.",
         minutes: 15,
       },
     ]);
@@ -346,9 +346,9 @@ describe("SS-F11 — saved Wolf-Winter wood changes Albany's one-time service", 
       {
         id: BARRED_RULE_ID,
         action: "rest",
-        title: "Take the Released Night-Watch Cot",
+        title: "Rest After the Gate Holds",
         summary:
-          "Because the inner cattle gate held behind the committed guard wood, Hayden closes the overnight watch request and releases a warmed Road Warden cot at the Station Quarter.",
+          "Available after the inner cattle gate holds with the committed guard wood. Spend 15 minutes to clear fatigue.",
         minutes: 15,
       },
     ]);
@@ -363,7 +363,7 @@ describe("SS-F11 — saved Wolf-Winter wood changes Albany's one-time service", 
       [
         SAVED_RULE_ID,
         "resupply",
-        "Reclaim the Unused Repair-Wagon Stores",
+        "Collect Unused Repair-Wagon Supplies",
         savedBefore.serviceOffers[0]!.summary,
         15,
       ],
@@ -372,7 +372,7 @@ describe("SS-F11 — saved Wolf-Winter wood changes Albany's one-time service", 
       [
         BARRED_RULE_ID,
         "rest",
-        "Take the Released Night-Watch Cot",
+        "Rest After the Gate Holds",
         barredBefore.serviceOffers[0]!.summary,
         15,
       ],
@@ -461,8 +461,8 @@ describe("SS-F11 — saved Wolf-Winter wood changes Albany's one-time service", 
       fatigueBefore: barredBefore.fatigue,
       fatigueAfter: 0,
     });
-    expect(quick.result.message).toContain("inner cattle gate held");
-    expect(ordinary.result.message).not.toContain("inner cattle gate held");
+    expect(quick.result.message).toContain("inner cattle gate holds");
+    expect(ordinary.result.message).not.toContain("inner cattle gate holds");
     expect(quick.observation.serviceOffers).toEqual([]);
     expect(ordinary.observation.serviceOffers.map((offer) => offer.id)).toEqual([SAVED_RULE_ID]);
     expect(compactContext(barred).service_offers).toBeUndefined();
@@ -518,7 +518,7 @@ describe("SS-F11 — saved Wolf-Winter wood changes Albany's one-time service", 
       m: 15,
       supplies: [expect.any(Number), 8],
       text: expect.stringContaining("Cade already has sound timber"),
-      entry: ["service", "Reclaim the Unused Repair-Wagon Stores", expect.any(String)],
+      entry: ["service", "Collect Unused Repair-Wagon Supplies", expect.any(String)],
     });
     expect(accepted.context.service_offers).toBeUndefined();
     expect(accepted).not.toHaveProperty("observation");

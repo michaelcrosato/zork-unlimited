@@ -119,8 +119,8 @@ function completeWolfWithBaseHaydenAtDecision22(session: OverworldSession): stri
   const baseCard = haydenCard(session);
   const baseCopy = contactCopy(baseCard);
   expect(baseCard).not.toHaveProperty("variants");
-  expect(baseCopy).toContain("controlling source certification");
-  expect(baseCopy).toContain("Old Cade's steading");
+  expect(baseCopy).toContain("dispatches road wardens and relief crews");
+  expect(baseCopy).toContain("route reports, winter dispatches, and field returns");
   expect(baseCopy).not.toMatch(/current journey goal|return board|crossed both/i);
 
   const beforeTalk = session.journey().acceptedDecisions;
@@ -229,12 +229,12 @@ function startGallowmereAfterWolf(
   ).toEqual(["gallowmere"]);
   expect(OverworldSession.restore(world, afterDispatch).snapshot()).toEqual(afterDispatch);
   expect(session.journey().goalGuidance).toBe(
-    "Objective route: take the road toward Saratoga Springs city. Queensbury town is 2 roads and about 60 road minutes away.",
+    "Next road: Saratoga Springs city. Queensbury town is 2 roads away, about 60 travel minutes.",
   );
 
   session.travel(ALBANY_TO_SARATOGA);
   expect(session.journey().goalGuidance).toBe(
-    "Objective route: take the road toward Queensbury town. Queensbury town is 1 road and about 26 road minutes away.",
+    "Next road: Queensbury town. Queensbury town is 1 road away, about 26 travel minutes.",
   );
   session.resolveRoadEncounter("press_on");
   session.travel(SARATOGA_TO_QUEENSBURY);
@@ -242,7 +242,7 @@ function startGallowmereAfterWolf(
   expect(session.journey().acceptedDecisions).toBe(26);
 
   expect(session.journey().goalGuidance).toBe(
-    "Objective town reached: move toward Queensbury Market Streets to find the authored lead.",
+    "You reached the goal town. Move toward Queensbury Market Streets to find the lead.",
   );
   expect(session.view().areaExits.map((route) => route.id)).toContain(QUEENSBURY_MARKET_ROUTE);
   expect(session.view().quests.map((quest) => quest.id)).toContain("gallowmere");
@@ -259,7 +259,7 @@ function startGallowmereAfterWolf(
     startedQuestIds: ["gallowmere", "wolf_winter"],
   });
   expect(session.journey().goalGuidance).toBe(
-    "Objective location reached: Queensbury Market Streets. Follow the visible authored lead here.",
+    "You reached the goal location: Queensbury Market Streets. Use the visible lead here.",
   );
   return session;
 }
@@ -280,14 +280,14 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     expect(route?.totalDistanceMi).toBeCloseTo(57.6, 8);
 
     expect(route?.steps[0]?.roadEvent).toMatchObject({
-      title: "The northbound relief line",
+      title: "Queensbury Shepherd Warning",
       summary:
-        "Snow ruts and Albany relief-wagon tracks braid the road between the capital and Saratoga Springs. Wardens at each turnout repeat the same fresh warning: a shepherd was killed above Queensbury, and his son is waiting with the spoor record.",
+        "Wardens on the Albany–Saratoga road report that a shepherd was killed near Queensbury. His son is waiting with the tracking record.",
     });
     expect(route?.steps[1]?.roadEvent).toMatchObject({
-      title: "Moor sign on the Queensbury road",
+      title: "Gallowmere tracks on the Queensbury road",
       summary:
-        "Beyond Saratoga the freight road climbs into colder country. Shepherds point out churned verges and a broad, deep track turning toward the Gallowmere hills before Queensbury.",
+        "Before Queensbury, shepherds point out churned verges and one broad, deep track turning toward the Gallowmere hills.",
     });
     expect(route?.steps.map((step) => step.roadEvent?.title)).not.toContain(
       "I-87 / New York State Thruway road report",
@@ -296,14 +296,11 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     const civic = world.areas.find((area) => area.id === "queensbury_town__civic_core");
     const market = world.areas.find((area) => area.id === "queensbury_town__market");
     expect(civic).toMatchObject({
-      summary:
-        "Road wardens pin fresh snow reports beside the municipal notices. One black-bordered shepherd's petition points from these steps toward Hedrick Cradoc in the market streets.",
+      summary: "This area holds the notice board, official counters, and local records.",
     });
     expect(market).toMatchObject({
-      summary:
-        "Wool carts and winter stalls crowd the market, but Hedrick Cradoc's mud-dark tracking log has opened a hard circle of silence: his father died on the high moor that morning.",
-      discovery:
-        "Exploring it can reveal Hedrick's Gallowmere lead, resupply opportunities, and what the old grey sow left in the peat above town.",
+      summary: "This area has shops, food, supplies, and local rumors.",
+      discovery: "Explore it to find quest leads, supplies, and unposted work.",
     });
 
     expect(
@@ -312,19 +309,17 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       name: "Hedrick Cradoc",
       role: "shepherd's son",
       faction: "Queensbury Shepherds",
-      summary:
-        "Hedrick Cradoc waits beside his father's tracking log, red-eyed and peat-stained after carrying word down from the high moor.",
-      agenda:
-        "Needs a hunter to read the sign his father left, judge the Gallowmere wind, and take the old grey sow before another shepherd dies.",
+      summary: "Hedrick Cradoc is the shepherd's son for Queensbury Market Streets.",
+      agenda: "Hedrick Cradoc wants help with local problems before they spread to nearby roads.",
     });
     expect(world.quests.find((quest) => quest.id === "gallowmere")).toMatchObject({
       home: "queensbury_town",
       area: "queensbury_town__market",
       discovery:
-        "Hedrick Cradoc waits in Queensbury Market Streets with his dead father's tracking log and a same-morning trail to the old grey Gallowmere sow.",
+        "Find Hedrick in Queensbury Market Streets. His father was killed this morning, and his tracking log leads to the Gallowmere sow.",
     });
     expect(world.area_edges.find((edge) => edge.id === QUEENSBURY_MARKET_ROUTE)).toMatchObject({
-      route: "Follow the shepherds' petition from the civic steps to Hedrick's market stall",
+      route: "Go from Queensbury Civic Center to Queensbury Market Streets",
     });
   });
 
@@ -349,7 +344,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       expect(session.journey()).toMatchObject({
         goal: { version: 3, id: "oneonta_tanners_fever", status: "active" },
         goalGuidance:
-          "Objective route: take the road toward Saratoga Springs city. Oneonta city is 6 roads and about 153 road minutes away.",
+          "Next road: Saratoga Springs city. Oneonta city is 6 roads away, about 153 travel minutes.",
       });
     },
   );
@@ -378,6 +373,12 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       migrated.snapshot(),
     );
 
+    const authenticatedCampaignEntry = current.journalEntries.find(
+      (entry) => entry.kind === "campaign",
+    );
+    if (!authenticatedCampaignEntry) {
+      throw new Error("Expected the authenticated current campaign goal journal.");
+    }
     const forgedCampaignCopy = structuredClone(current);
     const campaignEntry = forgedCampaignCopy.journalEntries.find(
       (entry) => entry.kind === "campaign",
@@ -385,6 +386,49 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     if (!campaignEntry) throw new Error("Expected the authenticated campaign goal journal.");
     campaignEntry.text += " Forged route.";
     expect(() => OverworldSession.restore(world, forgedCampaignCopy)).toThrow(
+      /campaign journal entry.*forged/i,
+    );
+
+    const predecessorCampaignCopy = structuredClone(current);
+    const predecessorEntry = predecessorCampaignCopy.journalEntries.find(
+      (entry) => entry.kind === "campaign",
+    );
+    if (!predecessorEntry) throw new Error("Expected the predecessor campaign goal journal.");
+    predecessorEntry.title = "Send the wagon back to Cade";
+    predecessorEntry.text =
+      "The wagon and the saved timber close Cade's breach before the next night. You take Hedrick's packet north alone.";
+    expect(() => OverworldSession.restore(world, predecessorCampaignCopy)).toThrow(
+      /campaign journal entry.*forged/i,
+    );
+
+    predecessorCampaignCopy.worldHash = "0".repeat(64);
+    const predecessorRestored = OverworldSession.restore(world, predecessorCampaignCopy);
+    const normalizedEntry = predecessorRestored
+      .snapshot()
+      .journalEntries.find((entry) => entry.kind === "campaign");
+    expect(normalizedEntry).toMatchObject({
+      title: authenticatedCampaignEntry.title,
+      text: authenticatedCampaignEntry.text,
+    });
+
+    const nearPredecessorCampaignCopy = structuredClone(predecessorCampaignCopy);
+    const nearPredecessorEntry = nearPredecessorCampaignCopy.journalEntries.find(
+      (entry) => entry.kind === "campaign",
+    );
+    if (!nearPredecessorEntry) throw new Error("Expected the near-predecessor campaign journal.");
+    nearPredecessorEntry.text += " Altered.";
+    expect(() => OverworldSession.restore(world, nearPredecessorCampaignCopy)).toThrow(
+      /campaign journal entry.*forged/i,
+    );
+
+    const crossOutcomePredecessorCopy = structuredClone(predecessorCampaignCopy);
+    const crossOutcomeEntry = crossOutcomePredecessorCopy.journalEntries.find(
+      (entry) => entry.kind === "campaign",
+    );
+    if (!crossOutcomeEntry) throw new Error("Expected the cross-outcome campaign journal.");
+    crossOutcomeEntry.text =
+      "The wagon replaces the broken outer paling while Cade keeps the whole herd in; the diverted pack remains alive in the high wood. You take Hedrick's packet north alone.";
+    expect(() => OverworldSession.restore(world, crossOutcomePredecessorCopy)).toThrow(
       /campaign journal entry.*forged/i,
     );
 
@@ -608,7 +652,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       const bothClosedCopy = contactCopy(bothClosedCard);
       bothClosedCopies.push(bothClosedCopy);
       expect(bothClosedCard).not.toHaveProperty("variants");
-      expect(bothClosedCopy).toMatch(/Cade/i);
+      expect(bothClosedCopy).toMatch(/Wolf-Winter/i);
       expect(bothClosedCopy).toMatch(/Hedrick|Gallowmere/i);
       expect(bothClosedCopy).toMatch(/crossed|closed|settled|filed/i);
       expect(bothClosedCopy).toMatch(/current journey goal|journey ledger/i);

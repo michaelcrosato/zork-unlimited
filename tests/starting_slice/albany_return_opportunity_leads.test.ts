@@ -33,7 +33,7 @@ const GREENWAY = "albany_city__greenway";
 const GREENWAY_EVENT = "albany_city__greenway__event";
 const FULL = { compact_context: false, compact_result: false } as const;
 const EXPECTED_DEFERRED_GUIDANCE =
-  "Choose the shown journey option first. 5 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.";
+  "Choose the current journey option first. 5 optional follow-up leads remain. Complete any other required choice. The leads return when play resumes.";
 
 const EXPECTED_LEADS: readonly JourneyOpportunityLeadPresentation[] = [
   {
@@ -461,7 +461,7 @@ describe("optional return opportunity leads", () => {
         tool: "talk_overworld_session_contact",
         arguments: { character_id: STATION_CONTACT },
         command: `talk ${STATION_CONTACT}`,
-        label: "Talk to the job's visible local contact.",
+        label: "Talk to the required contact.",
       },
     });
 
@@ -475,7 +475,7 @@ describe("optional return opportunity leads", () => {
       tool: "explore_overworld_session_area",
       arguments: { area_id: STATION },
       command: `explore ${STATION}`,
-      label: "Explore Albany Station Quarter to advance local discovery.",
+      label: "Explore Albany Station Quarter to reveal more local leads.",
     });
 
     expect(session.snapshot()).toEqual(before);
@@ -506,7 +506,7 @@ describe("optional return opportunity leads", () => {
     );
     continueEnd.chooseJourney("continue");
     expect(() => continueEnd.explainOpportunity({ kind: "job", id: CADE_JOB })).toThrow(
-      /choose the presented story consequence/i,
+      /choose the open story option/i,
     );
 
     const road = atNorthGoal();

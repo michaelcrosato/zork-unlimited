@@ -34,7 +34,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const NORTH_PENDING_GUIDANCE =
-  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+  "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
 
 const world = loadOverworldManifest(process.cwd());
 const preparation =
@@ -90,21 +90,22 @@ const ORDINARY_PREPARATION_SEED = seedForSeededOpeningFlag(
 const WORKS = "albany:prep_works_fortification";
 const DROVER = "albany:prep_drover_route";
 const RELIEF = "albany:prep_relief_protocol";
-const RELIEF_TRIGGER_CATEGORY = "Herd calming after the public-rail lure recovery.";
+const RELIEF_TRIGGER_CATEGORY =
+  "After the failed-feed, failed-wedge rail recovery: Mediation DC 12.";
 const RELIEF_PREVIEW =
-  "Commit to the lure, foul its first feed cast, fail the public wedge, then bind and spend the split-rail guard to redirect the yearling alive. Return to Cade before the loft cast to open one Mediation check (DC 12). A clean cast, braced rail, or any other recovery does not qualify. Success lowers cattle alarm by 1; failure raises it by 1. The protocol retires either way without blocking the lure, and Mediation training improves the check.";
+  "This applies only after a failed first LURE feed, a failed public wedge, and a bound split rail that redirects the yearling alive. Return to Cade before the loft feed and make one Mediation check at DC 12. Success lowers cattle alarm by 1; failure raises it by 1. The protocol is then spent.";
 const IRONHANDS = "albany:ironhands_repairer";
 const COURIER = "albany:unaffiliated_courier";
 const LEDGER = "albany:ledger_advocate";
 const WARDEN = "albany:road_warden";
 const WORKS_STAKES =
-  "Success braces the breach immediately; failure splits the rail but leaves a guaranteed cold-set recovery that raises cattle alarm by 1, plus 1 if dispatch began late.";
+  "Success braces the fallen paling-rail. Failure splits it but enables one guaranteed SPLICE that raises cattle alarm by 1, plus another 1 if the dispatch began late.";
 const DROVER_STAKES =
-  "Success redirects the yearling alive and lowers cattle alarm by 1; failure spends the route without added pressure, while rail or spear recovery remains.";
+  "Success redirects the yearling wolf alive and lowers cattle alarm by 1. Failure changes nothing. This route can be attempted once; the rail or spear recovery remains available.";
 const DROVER_DRIVE_STAKES =
-  "Success removes the folded shutter's extra pack-pressure beat and prevents the later -2 HP overrun brace; failure leaves that cost. The route retires either way, and the loose hurdle remains mandatory.";
+  "Success lowers pack drive by 1 and prevents the later 2 HP overrun swing-gate brace. Failure leaves that cost. This route can be attempted once, and the loose drive hurdle remains required.";
 const RELIEF_STAKES =
-  "Success lowers cattle alarm by 1; failure raises it by 1. The protocol is spent either way, and the committed lure route remains open.";
+  "Success lowers cattle alarm by 1; failure raises it by 1. The protocol can be attempted once, and LURE continues either way.";
 
 const DROVER_ROUTE_CASES = [
   {
@@ -484,25 +485,27 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
           `${checkCase.skillLabel} ${signedModifier} vs DC 12`,
         );
         expect(presented?.consequence, background.id).toMatch(
-          /^Benefit: .+ Cost: .+\. Boundary: .+$/,
+          /^Benefit: .+ Cost: .+\. Tradeoff: .+$/,
         );
         expect(presented?.consequence.match(/\S+/g)?.length, background.id).toBeLessThanOrEqual(32);
-        expect(presented?.consequence, background.id).not.toContain(checkCase.skillLabel);
-        expect(presented?.consequence, background.id).not.toContain("DC 12");
+        expect(presented?.consequence, background.id).toContain(
+          `Benefit: ${authored.trigger_category}`,
+        );
+        expect(presented?.consequence, background.id).not.toContain(authored.preview);
       }
     }
 
     const drover = preparation.profiles.find((candidate) => candidate.id === DROVER);
     if (!drover) throw new Error("Missing Emery's Drover Route.");
     expect(drover.preview).toBe(
-      "After the first lure cast or DRIVE shutter fails, the route opens one Streetwise check (DC 12). On LURE, success redirects the yearling alive and lowers cattle alarm by 1; failure spends the route while rail or fight remains at the same pressure. On DRIVE, success removes the failed shutter's extra pack-pressure beat; failure leaves it. Either DRIVE outcome still requires the loose hurdle, but success prevents the later overrun brace and its persistent -2 HP strain before the same three crisis priorities. Streetwise training improves either attempt without class-locking it.",
+      "After the first LURE feed or DRIVE signal fails, make one Streetwise check at DC 12. For LURE, success redirects the yearling alive and lowers cattle alarm by 1. For DRIVE, success removes the extra pack-pressure step. Failure spends the route. DRIVE still requires the loose hurdle either way.",
     );
     const droverDetail = presentOpeningPreparation(
       preparation,
       registration.profiles[0]!.character,
     ).options.find((option) => option.id === DROVER)?.consequence;
     expect(droverDetail).toBe(
-      `Benefit: ${drover.trigger_category} Cost: 20 minutes and $4. Boundary: ${drover.tradeoff}`,
+      `Benefit: ${drover.trigger_category} Cost: 20 minutes and $4. Tradeoff: ${drover.tradeoff}`,
     );
     expect(droverDetail).not.toContain(drover.preview);
   });
@@ -521,7 +524,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       stakes: WORKS_STAKES,
     });
     expect(narrationForAction(works, "examine_paling_rail")).toMatch(
-      /Repair check at DC 12[^]*closing Hayden's frost-brace line[^]*Success braces[^]*Failure opens the marked cold-set splice[^]*no second roll[^]*raises cattle alarm by 1[^]*ordinary hunt[^]*combat funnel[^]*committed fouled lure[^]*living scent-pen/i,
+      /Repair check \(DC 12\)[^]*Success braces it[^]*Failure closes Hayden's frost-jammed door-brace option[^]*guaranteed SPLICE[^]*raises cattle alarm by 1[^]*brace affects only fights still ahead[^]*does not reopen completed fights[^]*failed LURE feed action[^]*redirect the yearling wolf alive only while TURN is offered/i,
     );
     expect(works).toEqual(worksBefore);
     expect(works.flags.rail_attempted).not.toBe(true);
@@ -539,7 +542,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       stakes: DROVER_STAKES,
     });
     expect(narrationForAction(drover, "examine_drover_route_marks")).toMatch(
-      /Streetwise[^]*DC 12[^]*Success[^]*yearling alive[^]*lowers cattle alarm by 1[^]*Failure spends the route without adding pressure[^]*rail or spear recovery remains/i,
+      /Streetwise check \(DC 12\)[^]*attempted once[^]*Success redirects the yearling wolf alive[^]*lowers cattle alarm by 1[^]*Failure changes nothing[^]*rail or spear recovery remains available/i,
     );
     expect(drover).toEqual(droverBefore);
     expect(drover.flags.drover_route_attempted).not.toBe(true);
@@ -558,7 +561,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       stakes: DROVER_DRIVE_STAKES,
     });
     expect(narrationForAction(driveDrover, "examine_drive_drover_route_marks")).toMatch(
-      /first DRIVE shutter[^]*Streetwise[^]*DC 12[^]*extra pack-pressure[^]*-2 HP[^]*Failure leaves[^]*loose hurdle remains/i,
+      /drive shutter signal fails[^]*Streetwise check \(DC 12\)[^]*Success lowers pack drive by 1[^]*prevents the later 2 HP overrun swing-gate brace[^]*failure leaves that cost[^]*loose drive hurdle is still required/i,
     );
     expect(driveDrover).toEqual(driveDroverBefore);
     expect(driveDrover.flags.drover_route_attempted).not.toBe(true);
@@ -578,7 +581,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       stakes: RELIEF_STAKES,
     });
     expect(narrationForAction(relief, "examine_relief_protocol_docket")).toMatch(
-      /fouled lure[^]*failed public wedge[^]*bound split-rail guard[^]*Mediation[^]*DC 12[^]*Success lowers cattle alarm by 1[^]*failure raises it by 1[^]*retires either way[^]*lure continues/i,
+      /after a failed first feed action and split-rail guard recovery[^]*Mediation check[^]*DC 12[^]*attempted once[^]*Success lowers cattle alarm by 1[^]*failure raises it by 1[^]*LURE continues either way/i,
     );
     expect(relief).toEqual(reliefBefore);
     expect(relief.flags.relief_protocol_attempted).not.toBe(true);
@@ -935,7 +938,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       tradeoff: reliefProfile?.tradeoff,
     });
     expect(presented?.consequence).toBe(
-      `Benefit: ${RELIEF_TRIGGER_CATEGORY} Cost: 30 minutes and $4. Boundary: ${reliefProfile?.tradeoff}`,
+      `Benefit: ${RELIEF_TRIGGER_CATEGORY} Cost: 30 minutes and $4. Tradeoff: ${reliefProfile?.tradeoff}`,
     );
     expect(presented?.consequence).not.toContain(RELIEF_PREVIEW);
     let specialist = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, LEDGER)));
@@ -992,7 +995,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       { includeActions: true },
     );
     expect(splitGuardObservation.description).toMatch(
-      /Cade holds Jamie's sealed docket[^]*call its named sequence here/i,
+      /CALL Jamie's sealed relief protocol[^]*used once here/i,
     );
     expect(splitGuardObservation.available_actions.map((action) => action.id)).toEqual(
       expect.arrayContaining(["use_relief_protocol_docket", "go_west"]),
@@ -1002,7 +1005,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       message: NORTH_PENDING_GUIDANCE,
     });
     expect(splitGuardCompact.text).toMatch(
-      /Cade holds Jamie's sealed docket[^]*call its named sequence here/i,
+      /CALL Jamie's sealed relief protocol[^]*used once here/i,
     );
     expect(splitGuardCompact.actions).toEqual(
       expect.arrayContaining(["use_relief_protocol_docket", "go_west"]),
@@ -1041,7 +1044,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     });
     const bracedObservation = buildRpgObservation(index, braced);
     expect(bracedObservation.description).toMatch(
-      /Jamie's protocol required the failed wedge and spent split-rail guard[^]*braced recovery leaves its docket sealed/i,
+      /braced fallen paling-rail redirected the yearling alive[^]*Jamie's sealed relief protocol is still available because it required a split-rail guard, not this braced recovery/i,
     );
     expect(compactRpgObservation(bracedObservation, []).text).toBe(
       bracedObservation.description.trimEnd(),

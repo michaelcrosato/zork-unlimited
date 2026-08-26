@@ -143,6 +143,6 @@ describe("bug_0196 — The Breaking Weir: a combatless skill-check chain", () =>
       .join(" ");
     expect(narr, "failure narrate must exist").not.toBe("");
     expect(narr.toLowerCase()).not.toContain("never clipped");
-    expect(narr.toLowerCase()).toContain("nerve"); // the death is nerve failing, honestly
+    expect(narr).toMatch(/lose your footing[^]*life-line snap tears loose[^]*flood carries you/i);
   });
 });

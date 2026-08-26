@@ -79,7 +79,7 @@ describe("bug_0401 — factors_mark retires Breckel after Harwick folds", () => 
     expect(s.flags.factor_shamed).toBe(true);
     expect(s.flags.breckel_defeated).toBeUndefined();
     const obs = buildRpgObservation(index, s);
-    expect(obs.description).toContain("Breckel has stepped back");
+    expect(obs.description).toContain("Harwick yielded, Breckel no longer blocks the gate");
     expect(obs.enemies_present).toEqual([]);
     expect(obs.available_actions.map((a) => a.id)).not.toContain("attack_breckel");
     expect(obs.available_actions.map((a) => a.id)).toContain("go_north");

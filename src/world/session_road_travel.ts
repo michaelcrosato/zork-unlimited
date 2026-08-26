@@ -114,7 +114,7 @@ export function applyOverworldSessionRoadTravel(
   edgeId: string,
 ): OverworldRecordedTravelLeg {
   if (state.pendingRoadEncounter) {
-    throw new Error("Address the pending road encounter before choosing another road.");
+    throw new Error("Resolve the pending road encounter before choosing another road.");
   }
   const edge = state.roadExitsByTownAndId.get(state.currentId)?.get(edgeId);
   if (!edge) throw new Error("That road is not reachable from here.");

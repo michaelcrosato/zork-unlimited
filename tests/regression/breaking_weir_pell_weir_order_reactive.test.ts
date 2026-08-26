@@ -41,7 +41,7 @@ describe("bug_0319 — pell_weir order-reactive: walk phrase accurate in both or
   it("pell_weir base npc_text directs un-counselled player to ask about the walk", () => {
     const node = getPellNode("pell_weir");
     // The new phrasing redirects the player to seek walk counsel before stepping on it
-    expect(node.npc_text).toMatch(/ask me about that/i);
+    expect(node.npc_text).toMatch(/learn the safe crossing method, then RIG storm-walk/i);
   });
 
   it("pell_weir has exactly one variant gated on heard_walk", () => {
@@ -61,7 +61,7 @@ describe("bug_0319 — pell_weir order-reactive: walk phrase accurate in both or
     const variant = variants[0];
     expect(variant).toBeDefined();
     // When walk counsel was given first, the back-reference is accurate
-    expect(variant!.text).toMatch(/which i'?ve told you of/i);
+    expect(variant!.text).toMatch(/safe crossing method[^]*RIG storm-walk WITH life-line/i);
   });
 
   it("both base and variant still reference the storm-walk and the three obstacles", () => {
@@ -71,10 +71,10 @@ describe("bug_0319 — pell_weir order-reactive: walk phrase accurate in both or
     expect(first).toBeDefined();
     expect(node.npc_text).toMatch(/storm-walk/i);
     expect(node.npc_text).toMatch(/head-rack/i);
-    expect(node.npc_text).toMatch(/relief-race/i);
+    expect(node.npc_text).toMatch(/seized winch-gate/i);
     expect(first!.text).toMatch(/storm-walk/i);
     expect(first!.text).toMatch(/head-rack/i);
-    expect(first!.text).toMatch(/relief-race/i);
+    expect(first!.text).toMatch(/seized winch-gate/i);
   });
 
   it("pell_weir effects are unchanged — heard_plan flag and journal still fire", () => {

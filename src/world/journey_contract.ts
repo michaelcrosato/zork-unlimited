@@ -13,10 +13,10 @@ export const INITIAL_JOURNEY_GOAL = Object.freeze({
 } as const);
 
 export const OPENING_CHAPTER_HORIZON =
-  "Wolf-Winter is a complete opening chapter. End closes the journey there; Continue carries its consequences into the optional Gallowmere chapter." as const;
+  "Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter." as const;
 
 export const INITIAL_JOURNEY_GOAL_GUIDANCE =
-  `Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves. ${OPENING_CHAPTER_HORIZON}` as const;
+  `Complete Wolf-Winter. Jobs, events, and sites can help you find it, but they do not complete this goal. ${OPENING_CHAPTER_HORIZON}` as const;
 
 export type JourneyChoice = "continue" | "end";
 export type JourneyChoiceReason = "checkpoint" | "goal_completed" | "character_died";
@@ -414,7 +414,7 @@ export type JourneyGoalPassagePresentation = Readonly<{
 }>;
 
 export const JOURNEY_OPPORTUNITY_GUIDANCE =
-  "When town actions are available: Here now — finish setup, then investigate/work. Mapped district — if away, return, then walk there. Route not yet mapped — if away, return, then Explore Area to reveal routes. Or leave these leads for later." as const;
+  "Optional local work: if you are in its area, finish any setup and start it. If its area is mapped, travel there first. If the route is unknown, explore the town to reveal it. You may also leave the work for later." as const;
 
 export type JourneyOpportunityAccess = "here" | "mapped" | "route_unmapped";
 export type JourneyOpportunityKind = "event" | "job";
@@ -1063,24 +1063,25 @@ function pendingChoiceMessage(state: JourneyContractSnapshot): string {
   const checkpoint = hasReason(pending, "checkpoint");
   const goal = hasReason(pending, "goal_completed");
   if (hasReason(pending, "character_died")) {
-    return `Your character died before completing the current goal after ${pending.atDecision} meaningful decisions. This run cannot continue; end the journey to preserve its truthful unfinished-goal receipt.`;
+    const decisionUnit = pending.atDecision === 1 ? "decision" : "decisions";
+    return `Your character died before completing the current goal, after ${String(pending.atDecision)} ${decisionUnit}. You cannot continue. End the journey to keep the unfinished goal and history for review.`;
   }
   const continueTo = continuationCheckpoint(state, pending);
-  const goalBoundary = goal ? "another goal completes" : "the current goal completes";
-  const continueBoundary = `${goalBoundary} or the first safe journey break at or after decision ${String(continueTo)}, whichever comes first`;
+  const goalBoundary = goal ? "you complete another goal" : "you complete the current goal";
+  const continueBoundary = `${goalBoundary} or reach the first safe break on or after decision ${String(continueTo)}`;
   if (checkpoint && goal) {
     if (pending.atDecision !== pending.checkpoint) {
-      return `At the first safe journey break after decision ${String(pending.checkpoint)}, now at decision ${String(pending.atDecision)}, you completed your current goal. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
+      return `You completed the current goal at decision ${String(pending.atDecision)}, the first safe break after decision ${String(pending.checkpoint)}. Continue keeps all progress. End makes this journey read-only. If you continue, the next Continue/End choice appears when ${continueBoundary}.`;
     }
-    return `You completed your current goal at safe journey break ${String(pending.checkpoint)}. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
+    return `You completed the current goal at safe break ${String(pending.checkpoint)}. Continue keeps all progress. End makes this journey read-only. If you continue, the next Continue/End choice appears when ${continueBoundary}.`;
   }
   if (checkpoint) {
     if (pending.atDecision !== pending.checkpoint) {
-      return `At the first safe journey break after decision ${String(pending.checkpoint)}, now at decision ${String(pending.atDecision)}, this journey choice is ready. Any active quest is paused exactly where it stands. Continue resumes this exact state; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
+      return `You reached the first safe break after decision ${String(pending.checkpoint)}, now at decision ${String(pending.atDecision)}. Any active quest is paused with its progress saved. Continue from here, or end and keep a read-only record. The next Continue/End choice appears when ${continueBoundary}.`;
     }
-    return `You reached safe journey break ${String(pending.checkpoint)}. Any active quest is paused exactly where it stands. Continue resumes this exact state; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
+    return `You reached safe break ${String(pending.checkpoint)}. Any active quest is paused with its progress saved. Continue from here, or end and keep a read-only record. The next Continue/End choice appears when ${continueBoundary}.`;
   }
-  return `You completed your current goal after decision ${String(pending.atDecision)}. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
+  return `You completed the current goal after decision ${String(pending.atDecision)}. Continue keeps all progress. End makes this journey read-only. If you continue, the next Continue/End choice appears when ${continueBoundary}.`;
 }
 
 function affix(base: string, prefix: string | undefined, suffix: string | undefined): string {
@@ -1120,7 +1121,7 @@ function pendingChoicePresentation(
           id: "end" as const,
           label: "End this journey",
           consequence:
-            "The journey becomes read-only; its receipt preserves the unfinished goal and completed history.",
+            "End now. You cannot continue after death. The unfinished goal and completed history remain available for review.",
         }),
       ])
     : (() => {
@@ -1128,9 +1129,9 @@ function pendingChoicePresentation(
         return Object.freeze([
           Object.freeze({
             id: "continue" as const,
-            label: goalContext?.continueLabel ?? "Continue from this exact state",
+            label: goalContext?.continueLabel ?? "Continue from here",
             consequence: affix(
-              `Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision ${String(continueTo)}, whichever comes first.`,
+              `Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision ${String(continueTo)}.`,
               goalContext?.continueConsequencePrefix,
               goalContext?.continueConsequenceSuffix,
             ),
@@ -1138,8 +1139,7 @@ function pendingChoicePresentation(
           Object.freeze({
             id: "end" as const,
             label: "End here",
-            consequence:
-              "Close this journey here and keep its read-only record; this journey cannot resume.",
+            consequence: "End this journey and keep its read-only record. You cannot resume it.",
           }),
         ]);
       })();
@@ -1817,7 +1817,7 @@ export function chooseJourney(
   }
   const pending = state.pendingChoice;
   if (choice === "continue" && hasReason(pending, "character_died")) {
-    throw new Error("This character died; end the journey to preserve its final receipt.");
+    throw new Error("This character died. End the journey; it cannot continue.");
   }
   const retentionEvent: JourneyRetentionEventSnapshot = {
     sequence: state.retentionHistory.length + 1,

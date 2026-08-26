@@ -283,7 +283,7 @@ describe("overworld local action planning", () => {
     );
     expect(() =>
       planOverworldAreaExploration({ ...baseState, discoveredAreaIds: new Set() }),
-    ).toThrow(/map that district/);
+    ).toThrow(/area is not mapped/i);
     expect(() =>
       planOverworldAreaExploration({ ...baseState, currentAreaId: "other_area" }),
     ).toThrow(/Move to that local area/);
@@ -400,7 +400,7 @@ describe("overworld local action planning", () => {
     );
     expect(() =>
       planOverworldLocalJobCompletion({ ...baseState, discoveredJobIds: new Set() }),
-    ).toThrow(/before working that job/);
+    ).toThrow(/job is not discovered/i);
     expect(() =>
       planOverworldLocalJobCompletion({ ...baseState, currentAreaId: "other_area" }),
     ).toThrow(/Move to that local area/);
@@ -490,7 +490,7 @@ describe("overworld local action planning", () => {
     );
     expect(() =>
       planOverworldSiteExploration({ ...baseState, discoveredSiteIds: new Set() }),
-    ).toThrow(/Scout a local point of interest/);
+    ).toThrow(/Take a fresh local action in this area/i);
     expect(() =>
       planOverworldSiteExploration({ ...baseState, currentAreaId: "other_area" }),
     ).toThrow(/Move to that local area/);

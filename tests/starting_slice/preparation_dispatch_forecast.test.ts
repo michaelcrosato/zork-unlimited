@@ -85,17 +85,17 @@ describe("authenticated Albany preparation dispatch forecast", () => {
       "albany:prep_works_fortification": {
         finalMinutes: { minimum: 65, maximum: 85 },
         classification: "delayed_guaranteed",
-        line: "Dispatch forecast if chosen: 65–85m. Delayed even if you leave later capacity unassigned and depart solo; later choices only seal the final total.",
+        line: "If chosen, dispatch totals 65–85m. Dispatch will be delayed even if you leave the wagon unassigned and ride alone.",
       },
       "albany:prep_drover_route": {
         finalMinutes: { minimum: 60, maximum: 80 },
         classification: "threshold_crossing",
-        line: "Dispatch forecast if chosen: 60–80m. On time at 60m; later optional choices can make dispatch delayed.",
+        line: "If chosen, dispatch totals 60–80m. 60m is on time; later wagon or rider choices could cause delay.",
       },
       "albany:prep_relief_protocol": {
         finalMinutes: { minimum: 70, maximum: 90 },
         classification: "delayed_guaranteed",
-        line: "Dispatch forecast if chosen: 70–90m. Delayed even if you leave later capacity unassigned and depart solo; later choices only seal the final total.",
+        line: "If chosen, dispatch totals 70–90m. Dispatch will be delayed even if you leave the wagon unassigned and ride alone.",
       },
     } as const;
     for (const [id, result] of Object.entries(expected)) {
@@ -122,7 +122,7 @@ describe("authenticated Albany preparation dispatch forecast", () => {
     expect(JSON.stringify(stagedDetail).length).toBeLessThanOrEqual(750);
     expect(renderTerminalStoryChoiceComparison(full)).not.toContain("Dispatch forecast if chosen:");
     expect(renderTerminalStoryChoiceDetail(full, drover)).toContain(
-      "Dispatch forecast if chosen: 60–80m. On time at 60m; later optional choices can make dispatch delayed.",
+      "If chosen, dispatch totals 60–80m. 60m is on time; later wagon or rider choices could cause delay.",
     );
 
     const api = createToolApi({ root: process.cwd() });
@@ -189,7 +189,7 @@ describe("authenticated Albany preparation dispatch forecast", () => {
     expect(forecastById(session, "albany:prep_relief_protocol")).toMatchObject({
       finalMinutes: { minimum: 35, maximum: 55 },
       classification: "on_time_guaranteed",
-      line: "Dispatch forecast if chosen: 35–55m. On time for every remaining optional capacity or field-team choice; choose later to seal the total.",
+      line: "If chosen, dispatch totals 35–55m. Every remaining wagon and rider option stays on time. Choose them to set the final total.",
     });
   });
 

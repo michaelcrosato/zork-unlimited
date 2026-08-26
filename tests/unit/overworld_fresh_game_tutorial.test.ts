@@ -29,14 +29,20 @@ describe("fresh-game tutorial", () => {
     expect(copy).toMatch(/local lead.*Albany/is);
     expect(copy).toMatch(/supplies.*fatigue/is);
     expect(copy).toMatch(/scout.*talk.*investigate.*explore/is);
-    expect(copy).toMatch(/lead's area.*roads.*rest.*resupply/is);
-    expect(copy).toMatch(/Goal Passage.*road costs.*pauses/is);
+    expect(copy).toMatch(/lead's area.*Road cost.*rest.*resupply/is);
+    expect(copy).toContain(
+      "Follow Goal takes the first road, then stops at the goal, an encounter, or before a new supply shortage or worse fatigue delay.",
+    );
+    expect(copy).toContain(
+      "Accepted consequential actions count; context and repeated information do not.",
+    );
     expect(copy).toMatch(/journal.*save.*export.*resume/is);
-    expect(copy).toMatch(/thresholds.*40.*80.*every 40/is);
-    expect(copy).toMatch(/pause safely.*never mid-combat.*dialogue/is);
-    expect(copy).toContain("Wolf-Winter is a complete opening chapter.");
-    expect(copy).toContain("End closes the journey there");
-    expect(copy).toContain("Continue carries its consequences");
+    expect(copy).toContain(
+      "It pauses after goals, at 40 and 80 decisions, then every 40; never during combat or dialogue.",
+    );
+    expect(copy).toContain("Wolf-Winter ends the opening chapter.");
+    expect(copy).toContain("Choose End to stop there");
+    expect(copy).toContain("Continue to carry its results");
     expect(copy).toContain("optional Gallowmere chapter");
     expect(copy).not.toMatch(/another goal completion/i);
     expect(copy).not.toMatch(/wolf_winter|world_quest_id|session_id|mcp__/i);
@@ -92,6 +98,6 @@ describe("fresh-game tutorial", () => {
     );
 
     expect(start?.description).toMatch(/fresh.*tutorial/i);
-    expect(restore?.description).toMatch(/without replaying.*tutorial/i);
+    expect(restore?.description).toMatch(/tutorial is not repeated/i);
   });
 });

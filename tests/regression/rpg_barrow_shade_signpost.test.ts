@@ -49,7 +49,7 @@ const desc = (s: GameState): string => buildRpgObservation(index, s).description
 
 // The cue must draw a player to the side cell (safe/helpful counsel before the
 // north fight) and must not collapse into a bare "empty side cell" reading.
-const CUE = /old counsel, not an ambush|counsel before blood/;
+const CUE = /go west to TALK TO reaver's shade/i;
 
 describe("bug_0170 — Entry Hall signposts the optional shade in the side cell", () => {
   it("the base description (bar not yet taken) telegraphs the watchful side cell", () => {
@@ -58,7 +58,7 @@ describe("bug_0170 — Entry Hall signposts the optional shade in the side cell"
     expect(s.current).toBe("entry_hall");
     expect(s.inventory).not.toContain("iron_bar");
     expect(desc(s)).toMatch(CUE);
-    expect(desc(s)).toContain("unwarned blade");
+    expect(desc(s)).toContain("its +3 defense ward helps only if the barrow-wight still stands");
     expect(desc(s)).not.toContain("something lingers");
   });
 
@@ -69,9 +69,9 @@ describe("bug_0170 — Entry Hall signposts the optional shade in the side cell"
     expect(s.current).toBe("entry_hall");
     expect(s.inventory).toContain("iron_bar");
     // The bar-variant still drops the stale-bar clause (bug_0028) AND keeps the cue.
-    expect(desc(s)).toContain("scuffed bare");
-    expect(desc(s)).toMatch(CUE);
-    expect(desc(s)).toContain("unwarned blade");
+    expect(desc(s)).toContain("You have the iron bar");
+    expect(desc(s)).toContain("the reaver's shade west can grant a +3 defense ward");
+    expect(desc(s)).toContain("before the lethal fight north");
     expect(desc(s)).not.toContain("something lingers");
   });
 

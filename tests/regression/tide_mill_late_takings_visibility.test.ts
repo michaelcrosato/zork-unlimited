@@ -91,23 +91,23 @@ describe("Tide-Mill compact post-gate view exposes the takings fork", () => {
     expect(gateUp.context.here).toEqual(["wheel_room", "The Wheel-Room"]);
     expect(gateUp.context.text.length).toBeLessThanOrEqual(COMPACT_DESCRIPTION_CHAR_LIMIT);
     expect(gateUp.context.text).not.toMatch(/\.\.\.\(\+\d+ chars\)$/);
-    expect(gateUp.context.text).toMatch(/down=open staith/i);
-    expect(gateUp.context.text).toMatch(/south=mill-floor\/counting-nook/i);
-    expect(gateUp.context.text).toMatch(/down saves the boat now/i);
+    expect(gateUp.context.text).toMatch(/go down to the Staith now to save the boat/i);
+    expect(gateUp.context.text).toMatch(/review the Mill-House or Counting-Nook/i);
     expect(gateUp.context.text).not.toMatch(/detour/i);
     expect(gateUp.context.text).not.toMatch(/tempts you/i);
-    expect(gateUp.context.text).toMatch(/Ives's coin-bag/i);
-    expect(gateUp.context.text).toMatch(/counting-desk/i);
+    expect(gateUp.context.text).toMatch(/POCKET coin-bag costs 5 score permanently/i);
+    expect(gateUp.context.text).toMatch(/coin-bag action still available is optional/i);
     expect(gateUp.context.text).not.toMatch(/last account/i);
     expect(gateUp.context.exits).toEqual(expect.arrayContaining(["down", "east", "south", "west"]));
 
     const millHouse = step(api, started.session_id, "go_south");
-    expect(millHouse.context.text).toMatch(/counting-nook where Ives's takings still sit/i);
+    expect(millHouse.context.text).toMatch(
+      /optional coin-bag choice, if still available, is in the Counting-Nook east/i,
+    );
     expect(millHouse.context.text).not.toMatch(/tempts you/i);
     const nook = step(api, started.session_id, "go_east");
-    expect(nook.context.text).toMatch(/coin-bag.*counting-desk/i);
-    expect(nook.context.text).toMatch(/heavy and unattended/i);
-    expect(nook.context.text).not.toMatch(/choice/i);
+    expect(nook.context.text).toMatch(/leave the coin-bag here for the clean rescue/i);
+    expect(nook.context.text).toMatch(/POCKET coin-bag for a permanent 5-point loss/i);
 
     const actions = api.list_legal_actions({
       session_id: started.session_id,

@@ -28,51 +28,51 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 
 const LOFT_PENDING =
-  "Cade's local feed-plan instruction takes you across the feed-hauler's crawlboard with his sack. Below, the flank-wolf circles from the low hatch. Cast the second measure through it before dropping east.";
+  "CAST Cade's winter-feed sack THROUGH low wolf-hatch before going east. The flank-wolf circles below. You crossed the feed-hauler's crawlboard with Cade's winter-feed sack.";
 const LOFT_PENDING_EAST_BLOCK =
-  "The hauled ladder leaves no retreat. Complete the committed second feed cast through the low hatch before dropping east.";
+  "East is blocked, and the hauled ladder prevents retreat. First, CAST Cade's winter-feed sack THROUGH low wolf-hatch.";
 const LOFT_POST_CAST =
-  "The second feed measure is spent beyond the low hatch. The flank-wolf followed it alive into the high wood, leaving the byre threshold empty east. The hauled ladder still leaves no retreat.";
+  "Go east through the low wolf-hatch. The flank-wolf followed the second feed cast alive into the high wood. Retreat remains closed because you hauled up the ladder.";
 const HATCH_PENDING =
-  "A low fodder hatch above the byre door. The flank-wolf circles the post below without looking up. The hauled store ladder lies behind you across the hay; east through this hatch is the committed drop, with no safe climb back during the fight.";
+  "CAST Cade's winter-feed sack THROUGH low wolf-hatch during LURE, or go east and DRIVE from the fodder-loft drop behind the flank-wolf during HUNT, if those actions are offered. The hauled ladder prevents retreat after you cross.";
 const HATCH_POST_CAST =
-  "The low hatch now frames an empty door-post. The second feed measure lies beyond it, and the flank-wolf followed that scent alive into the high wood. East is the committed drop; the hauled ladder gives no safe climb back.";
+  "Go east through the low wolf-hatch. The flank-wolf followed the second feed measure into the high wood alive. The hauled ladder prevents retreat.";
 const FINAL_LURE_LIVING =
-  "Both younger wolves are alive in the high wood beyond the spent scent line. Cade's last feed measure remains: cast it through the outer scent gate to draw old grey after them. The herd's current alarm still decides its cost. The door is south.";
+  "CAST Cade's winter-feed sack THROUGH outer scent gate to redirect the grey leader. Both younger wolves are alive in the high wood. Current cattle alarm determines the result. The Byre Door is south.";
 const FINAL_LURE_HYBRID =
-  "The yearling lies dead at the paling, but the flank-wolf followed the second feed cast alive into the high wood. Cade's last measure remains: cast it through the outer scent gate to draw old grey away. Earlier blood and cattle alarm still stand. The door is south.";
+  "CAST Cade's winter-feed sack THROUGH outer scent gate to redirect the grey leader. The flank-wolf is alive in the high wood, the yearling wolf is dead, and existing cattle alarm remains. The Byre Door is south.";
 const JUNE_PENDING =
-  "The old grey leader waits between you and the bellowing cattle. June Pike reaches the inner rail from the lower stock path. The failed lure left the herd pressing; speak to her before the last cast if her cattle-first authority still matters. The byre door is south.";
+  "TALK TO Road Warden June Pike before the final feed cast if you want her cattle-first help. The failed first LAY action raised cattle alarm, and the grey leader blocks the herd. The Byre Door is south.";
 const PACK_REDIRECTED_LIVING =
-  "The grey leader is alive beyond the broken paling, following the last feed cast and the two younger wolves into the high wood. The only unfinished action is north: stand among the cattle and close the exact count. The spent threshold south is closed.";
+  "Go north and stand among the cattle to finish the count. South is closed. All three wolves followed the final feed cast into the high wood alive.";
 const PACK_REDIRECTED_HYBRID =
-  "The yearling lies dead at the broken paling. Beyond it, the grey leader follows the last feed cast and the living flank-wolf into the high wood. The only unfinished action is north: stand among the cattle and close the exact count. The spent threshold south is closed.";
+  "Go north and stand among the cattle to finish the count. South is closed. The grey leader and flank-wolf followed the final feed cast into the high wood alive; the yearling wolf is dead.";
 const POST_DIVERSION_DOOR =
-  "The byre threshold is empty. The remaining living wolves followed Cade's final scent beyond the broken paling into the high wood. The only unfinished route is north through the byre mouth to stand among the cattle and close the exact count.";
+  "Go north through the byre mouth and stand among the cattle to finish the count. The Byre Door is empty because Cade's final feed cast drew the living wolves into the high wood.";
 const POST_DIVERSION_PALING =
-  "The broken paling no longer holds a living wolf. Cade's final scent drew the remaining pack into the high wood. Continue north through the empty threshold and byre mouth to stand among the cattle; the yard south is closed.";
+  "Continue north through the empty Byre Door and byre mouth until you stand among the cattle. South is closed. Cade's final feed cast drew the living wolves into the high wood.";
 const POST_DIVERSION_YARD =
-  "Cade's wolf line is finished: the remaining living wolves followed the spent feed into the high wood. Do not leave by the south gate or return to the store. Go north through the settled paling, empty threshold, and byre mouth; standing among the cattle closes the exact count Albany still needs.";
+  "The cattle count is unfinished. Go north through the broken paling, byre door, and byre mouth until you stand among the cattle. South and west are closed. Cade's feed drew the living wolves into the high wood.";
 const POST_DIVERSION_STORE =
-  "Cade's feed sack is spent and the remaining living wolves are already in the high wood. Store work cannot close the watch now. Leave east for the yard, then keep north through the empty wolf line until you stand among the cattle.";
+  "Go east to the Byre-Yard, then continue north until you stand among the cattle. Store actions cannot finish the watch. Cade's feed sack is spent, and the living wolves are in the high wood.";
 const POST_DIVERSION_STEADING =
-  "Cade's final feed cast has already drawn the remaining living wolves into the high wood, but the dawn count is unfinished. Go north through the gate, then keep going north through the empty wolf line until you stand among the cattle.";
+  "The cattle count is unfinished. Go north through the gate and continue north until you stand among the cattle. Cade's final feed cast already drew the living wolves into the high wood.";
 const POST_DIVERSION_CADE =
-  "Pack's clear of the byre. Do not go south or back to the store. From this yard go north through the settled paling, north through the empty threshold, and north past the spent scent. Stand among the cattle and take the exact count; then Albany gets the truth.";
+  "Go north through the Broken Paling, Byre Door, and Deep in the Byre. Do not go south or west to the Store-Shed. Stand Among the Cattle to record the surviving wolves and cattle for Albany.";
 const POST_DIVERSION_YARD_BLOCKED_SOUTH =
-  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
+  "South is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the currently displayed gear action, then go north.";
 const POST_DIVERSION_YARD_BLOCKED_WEST =
-  "West is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
+  "West is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the currently displayed gear action, then go north.";
 const POST_DIVERSION_PALING_BLOCKED_SOUTH =
-  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: follow shown paling steps until north opens.";
+  "South is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the shown Broken Paling action to open north.";
 const POST_DIVERSION_DOOR_BLOCKED_SOUTH =
-  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: finish any shown threshold step, then go north.";
+  "South is closed. After LURE, go north for the cattle count. During DRIVE or FORTIFY, complete the shown Byre Door action, then go north.";
 const POST_DIVERSION_MOUTH_BLOCKED_SOUTH =
-  "South is closed. LURE complete: go north for the cattle count. DRIVE: resolve the crisis. FORTIFY: hold the dawn watch.";
+  "South is closed. After LURE, go north for the cattle count. During DRIVE, choose and finish a crisis evacuation. During FORTIFY, HOLD sealed-byre dawn watch.";
 const MOUTH_NORTH_GUIDANCE =
-  "Follow the route actions shown here. The route either finishes directly or opens north when ready.";
+  "North is blocked. Complete the exact action shown here. That action either ends the quest or opens north.";
 const PLAIN_COMBAT =
-  "The old grey leader waits between you and the bellowing cattle in the byre's dark heart, shaping a practiced feint. Cade may have taught you to hold or close; a saved guard offers another catch. Without either, only plain spear work remains. The door is south.";
+  "Use one exact action shown. Cade's plan offers HOLD the spear point and wait out the grey leader's feint. His lesson offers CLOSE before the grey leader can finish her feint. Saved rail gear offers its own named maneuver. Otherwise, ATTACK grey leader.";
 
 type Recovery = "clean" | "fouled_split" | "fouled_braced" | "hybrid_guard";
 
@@ -321,7 +321,7 @@ describe("Wolf-Winter post-cast state truth", () => {
     expect(blocked).toContainEqual(
       expect.objectContaining({
         id: "use_winter_feed_sack_on_outer_scent_gate",
-        reason: expect.stringMatching(/authority.*speak to her/i),
+        reason: expect.stringMatching(/First, TALK TO Road Warden June Pike[^]*cattle-first help/i),
       }),
     );
     expect(
@@ -330,7 +330,7 @@ describe("Wolf-Winter post-cast state truth", () => {
       }).unavailable,
     ).toContainEqual([
       "use_winter_feed_sack_on_outer_scent_gate",
-      "June has reached the pressing cattle under the authority you granted. Speak to her first: her one cattle-line intervention lowers cattle alarm by 1 before the last scent cast.",
+      "First, TALK TO Road Warden June Pike. Her cattle-first help lowers cattle alarm by 1 before the final feed cast.",
     ]);
 
     state = act(state, "talk_june_pike");

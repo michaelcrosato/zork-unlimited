@@ -8,6 +8,7 @@ import {
   campaignStoryChoiceRefKey,
   type CampaignStoryChoiceRef,
 } from "./campaign_story_choices.js";
+import { hashState } from "../core/hash.js";
 
 export const JOURNEY_CAMPAIGN_START_TOWN_ID = "albany_city" as const;
 /**
@@ -52,23 +53,23 @@ export const ALBANY_DAWN_DISPATCH_CHOICE_IDS = Object.freeze([
 export type AlbanyDawnDispatchChoiceId = (typeof ALBANY_DAWN_DISPATCH_CHOICE_IDS)[number];
 
 export const ALBANY_DAWN_DISPATCH_TEASER =
-  "At Albany Station Quarter, Hayden Hale has one dawn relief wagon and another live packet: Hedrick Cradoc's father was killed that morning by an old grey sow above Queensbury. Continue to first decide where the wagon goes, then carry Hedrick's Gallowmere lead north." as const;
+  "Hayden has one dawn relief wagon. He also has a Queensbury report: an old grey sow killed Hedrick Cradoc's father this morning. Continue to assign the wagon, then take Hedrick's Gallowmere lead north." as const;
 export const ALBANY_DAWN_DISPATCH_CONTINUE_LABEL =
   "Continue: decide the dawn wagon, then take the Gallowmere lead" as const;
 export const ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX =
-  "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through." as const;
+  "Assign Albany's only dawn relief wagon. Then find Hedrick in Queensbury and complete The Gallowmere." as const;
 
 export const ALBANY_DAWN_DISPATCH_GOALS = Object.freeze({
   send_wagon_to_cade: campaignGoal(
     "carry_hedricks_packet_north",
-    "Carry Hayden's packet to Hedrick Cradoc in Queensbury Market Streets and see The Gallowmere through.",
+    "Take Hayden's packet to Hedrick Cradoc in Queensbury Market Streets. Complete The Gallowmere.",
     "gallowmere",
     "queensbury_town",
     "queensbury_town__market",
   ),
   send_wardens_north: campaignGoal(
     "travel_north_with_albany_wardens",
-    "Travel with Hayden's wardens to Hedrick Cradoc in Queensbury Market Streets and see The Gallowmere through.",
+    "Travel with Hayden's wardens to Hedrick Cradoc in Queensbury Market Streets. Complete The Gallowmere.",
     "gallowmere",
     "queensbury_town",
     "queensbury_town__market",
@@ -84,22 +85,22 @@ export type TannersFeverAccountabilityChoiceId =
   (typeof TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS)[number];
 
 export const TANNERS_FEVER_ACCOUNTABILITY_CONTEXT =
-  "Edric will recover, and Godwin's triple-strength wormwood dose has been stopped; Oneonta still has to decide how the correction enters the record." as const;
+  "Edric will recover, and Godwin's triple-strength dose has stopped. Decide whether Oneonta records the correction privately or publicly." as const;
 
 export const TANNERS_FEVER_ACCOUNTABILITY_TEASER =
-  "Continue, and you will decide whether the corrected dose stays in the household record or becomes a public warning before carrying the next live packet to Rome." as const;
+  "Continue to choose a private household record or a public warning. Then take the next report to Rome." as const;
 
 export const TANNERS_FEVER_ACCOUNTABILITY_GOALS = Object.freeze({
   keep_household_correction: campaignGoal(
     "rome_breaking_weir_household_correction",
-    "With Edric's correction kept in the household record, travel to Rome Market Streets, find the lead for The Breaking Weir, and see it through.",
+    "Travel to Rome Market Streets and find The Breaking Weir. Edric's correction remains private.",
     "breaking_weir",
     "rome_city",
     "rome_city__market",
   ),
   publish_dosage_warning: campaignGoal(
     "rome_breaking_weir_public_warning",
-    "With Oneonta's dosage warning made public, travel to Rome Market Streets, find the lead for The Breaking Weir, and see it through.",
+    "Travel to Rome Market Streets and find The Breaking Weir. Oneonta's dosage warning is public.",
     "breaking_weir",
     "rome_city",
     "rome_city__market",
@@ -114,10 +115,10 @@ export const ROME_POST_WEIR_DISPATCH_CHOICE_IDS = Object.freeze([
 export type RomePostWeirDispatchChoiceId = (typeof ROME_POST_WEIR_DISPATCH_CHOICE_IDS)[number];
 
 export const ROME_POST_WEIR_DISPATCH_CONTEXT =
-  "The relief-race carries the flood crest around the valley, and Pell's downstream households wake alive." as const;
+  "Pell's relief channel carried the flood around the valley. The downstream households survived." as const;
 
 export const ROME_POST_WEIR_DISPATCH_TEASER =
-  "Two live packets wait beyond Rome: in Oswego, Marta Holm's best cloth is being seized despite her late husband's charter; in Greece, an old forge has gone cold around the Ember-Heart. Continue, and choose which lead to carry first." as const;
+  "Two reports wait. Oswego officials are seizing Marta Holm's cloth despite her inherited charter. Greece's old forge has gone cold around the Ember-Heart. Continue to choose which report to take first." as const;
 
 /**
  * These selected-first goals deliberately use new ids. The pre-choice
@@ -127,14 +128,14 @@ export const ROME_POST_WEIR_DISPATCH_TEASER =
 export const ROME_POST_WEIR_DISPATCH_GOALS = Object.freeze({
   take_oswego_charter_packet: campaignGoal(
     "oswego_advocates_case_first",
-    "Carry Rome's charter packet to Oswego Market Streets, find the lead for The Advocate's Case, and see it through.",
+    "Take Rome's charter packet to Oswego Market Streets. Complete The Advocate's Case.",
     "advocates_case",
     "oswego_city",
     "oswego_city__market",
   ),
   take_greece_forge_packet: campaignGoal(
     "greece_cold_forge_first",
-    "Carry Rome's forge packet to Greece Market Streets, find the lead for The Cold Forge, and see it through.",
+    "Take Rome's forge packet to Greece Market Streets. Complete The Cold Forge.",
     "cold_forge",
     "greece_town",
     "greece_town__market",
@@ -162,13 +163,13 @@ export const BREAKING_WEIR_CAMPAIGN_OUTCOMES = Object.freeze({
     id: "fields_held_race_spent",
     endingId: "ending_fields_held_race_spent",
     romeDispatchContext:
-      "The valley wakes dry with its winter grain intact, but the full crest has spent Pell's old gate and race-house; the farms have food now and no working relief-race for the next flood.",
+      "The valley is dry, and its winter grain survived. Pell's gate and relief channel are destroyed, so the next flood has no working bypass.",
   }),
   ending_race_held_fields_given: Object.freeze({
     id: "race_held_fields_given",
     endingId: "ending_race_held_fields_given",
     romeDispatchContext:
-      "The valley wakes dry and Pell's weir remains fit for another flood, but the lower farms' winter grain lies under silt; the old defense stands and the coming stores will be lean.",
+      "The valley is dry, and Pell's weir can handle another flood. The lower farms lost their winter grain, so food will be scarce.",
   }),
   ending_held: Object.freeze({
     id: "held",
@@ -207,97 +208,97 @@ export const WOLF_WINTER_CAMPAIGN_OUTCOMES = Object.freeze({
     id: "pack_diverted",
     endingId: "ending_pack_diverted",
     albanyReturnContext:
-      "Cade's cattle are whole and all three wolves remain alive in the high wood, but his finite winter feed is spent and the broken outer paling still leaves the herd exposed.",
+      "Cade's whole herd survived, and all three wolves are alive in the high wood. His winter feed is gone, and the broken outer fence still exposes the herd.",
   }),
   ending_pack_diverted_cattle_scattered: Object.freeze({
     id: "pack_diverted_cattle_scattered",
     endingId: "ending_pack_diverted_cattle_scattered",
     albanyReturnContext:
-      "Most of Cade's herd is safe and all three wolves remain alive in the high wood, but two cattle are still missing down the lower pasture, his finite winter feed is spent, and the outer paling remains broken.",
+      "Most of Cade's herd survived, and all three wolves are alive in the high wood. Two cattle are missing, the winter feed is gone, and the outer fence is broken.",
   }),
   ending_pack_diverted_after_blood: Object.freeze({
     id: "pack_diverted_after_blood",
     endingId: "ending_pack_diverted_after_blood",
     albanyReturnContext:
-      "The yearling is dead, the flank wolf and grey leader remain alive in the high wood, and most of Cade's herd is safe; two cattle are still missing down the lower pasture, his winter feed is spent, and the outer paling remains broken.",
+      "The yearling wolf died. The other two wolves are alive in the high wood. Most of the herd survived, but two cattle are missing, the winter feed is gone, and the outer fence is broken.",
   }),
   ending_bloodied_byre_evacuated: Object.freeze({
     id: "bloodied_byre_evacuated",
     endingId: "ending_bloodied_byre_evacuated",
     albanyReturnContext:
-      "The yearling and flank wolf are dead, and the old grey remains in Cade's abandoned byre. Cade and every person escaped, but two cattle are still missing and the outer line stands abandoned.",
+      "Cade and everyone else escaped. The yearling and flank wolf died; the old grey still holds the abandoned barn. Two cattle are missing, and the outer boundary is abandoned.",
   }),
   ending_bloodied_byre_evacuated_june_released: Object.freeze({
     id: "bloodied_byre_evacuated",
     endingId: "ending_bloodied_byre_evacuated_june_released",
     albanyReturnContext:
-      "The yearling and flank wolf are dead, and the old grey remains in Cade's abandoned byre. Cade and every person escaped, but two cattle are still missing and the outer line stands abandoned. June returned separately after you released her before HUNT; her cattle-first promise remains intact without a field-aid claim.",
+      "Cade and everyone else escaped. The yearling and flank wolf died; the old grey still holds the abandoned barn. Two cattle are missing, and the outer boundary is abandoned. You released June before HUNT, so she returned separately with her cattle-safety promise intact and earned no field-aid service.",
   }),
   ending_drive_cattle_wounded: Object.freeze({
     id: "drive_cattle_wounded",
     endingId: "ending_drive_cattle_wounded",
     albanyReturnContext:
-      "Cade's whole herd and every person escaped the steading, and all three wolves were driven clear alive; the spent signal-and-rope rig returned to Albany for repair, but you carry an untreated gate wound and the outer line stands abandoned.",
+      "Everyone and the whole herd escaped. All three wolves survived. The signal-and-rope rig returned for repair, but your gate wound is untreated and the outer boundary is abandoned.",
   }),
   ending_drive_person_cattle_lost: Object.freeze({
     id: "drive_person_cattle_lost",
     endingId: "ending_drive_person_cattle_lost",
     albanyReturnContext:
-      "Cade and every person escaped the steading, and all three wolves were driven clear alive; the spent signal-and-rope rig returned to Albany for repair, but the herd scattered during the retreat and the outer line stands abandoned.",
+      "Everyone escaped, and all three wolves survived. The rig returned for repair, but the herd scattered and the outer boundary is abandoned.",
   }),
   ending_drive_reserve_spent: Object.freeze({
     id: "drive_reserve_spent",
     endingId: "ending_drive_reserve_spent",
     albanyReturnContext:
-      "Cade's whole herd and every person escaped the steading, and all three wolves were driven clear alive without a wound at the byre; the spent signal-and-rope rig was cut apart and did not return, and the outer line stands abandoned.",
+      "Everyone and the whole herd escaped without a wound. All three wolves survived. The rig was destroyed, and the outer boundary is abandoned.",
   }),
   ending_fortified_cade_terms: Object.freeze({
     id: "fortified_cade_terms",
     endingId: "ending_fortified_cade_terms",
     albanyReturnContext:
-      "Cade's household and whole herd reached dawn behind his shutters, and all three wolves remain alive beyond the sealed line. You honored his terms and returned Albany's public relief seals unused, but the outer property remained exposed.",
+      "Cade's household and whole herd survived behind his shutters. All three wolves remain alive outside. You followed Cade's terms and returned Albany's seals, but the outer property remained exposed.",
   }),
   ending_fortified_albany_authority: Object.freeze({
     id: "fortified_albany_authority",
     endingId: "ending_fortified_albany_authority",
     albanyReturnContext:
-      "Cade's household, whole herd, and outer property reached dawn behind an Albany-sealed line, and all three wolves remain alive beyond it. You invoked lawful Albany authority and spent the public relief seals; Cade refused to help under that order.",
+      "Cade's household, whole herd, and outer property survived behind Albany's sealed boundary. All three wolves remain alive outside. You spent the public seals, and Cade refused to help under Albany's order.",
   }),
   ending_held_gate_barred: Object.freeze({
     id: "gate_barred",
     endingId: "ending_held_gate_barred",
     albanyReturnContext:
-      "Cade's cattle are alive behind the inner gate you barred, but the broken outer paling still leaves the steading on one last line.",
+      "Cade's cattle survived behind the barred inner gate. The outer fence is still broken, so only one boundary remains.",
   }),
   ending_held_gate_barred_june_released: Object.freeze({
     id: "gate_barred",
     endingId: "ending_held_gate_barred_june_released",
     albanyReturnContext:
-      "Cade's cattle are alive behind the inner gate you barred, but the broken outer paling still leaves the steading on one last line. June returned separately after you released her before HUNT; her cattle-first promise remains intact without a field-aid claim.",
+      "Cade's cattle survived behind the barred inner gate. The outer fence is still broken, so only one boundary remains. You released June before HUNT, so she returned separately with her cattle-safety promise intact and earned no field-aid service.",
   }),
   ending_held_timber_saved: Object.freeze({
     id: "timber_saved",
     endingId: "ending_held_timber_saved",
     albanyReturnContext:
-      "Cade's cattle are alive, and the sound timber you carried out gives him the first piece of the broken outer paling's repair.",
+      "Cade's cattle survived. The timber you saved can begin the outer-fence repair.",
   }),
   ending_held_timber_saved_june_released: Object.freeze({
     id: "timber_saved",
     endingId: "ending_held_timber_saved_june_released",
     albanyReturnContext:
-      "Cade's cattle are alive, and the sound timber you carried out gives him the first piece of the broken outer paling's repair. June returned separately after you released her before HUNT; her cattle-first promise remains intact without a field-aid claim.",
+      "Cade's cattle survived. The timber you saved can begin the outer-fence repair. You released June before HUNT, so she returned separately with her cattle-safety promise intact and earned no field-aid service.",
   }),
   ending_held: Object.freeze({
     id: "held",
     endingId: "ending_held",
     albanyReturnContext:
-      "Cade's cattle are alive, but the guard wood was spent in the fighting; the broken outer paling has no sound repair timber waiting.",
+      "Cade's cattle survived, but the fight used the guard wood. The broken outer fence has no repair timber.",
   }),
   ending_held_june_released: Object.freeze({
     id: "held",
     endingId: "ending_held_june_released",
     albanyReturnContext:
-      "Cade's cattle are alive, but the guard wood was spent in the fighting; the broken outer paling has no sound repair timber waiting. June returned separately after you released her before HUNT; her cattle-first promise remains intact without a field-aid claim.",
+      "Cade's cattle survived, but the fight used the guard wood. The broken outer fence has no repair timber. You released June before HUNT, so she returned separately with her cattle-safety promise intact and earned no field-aid service.",
   }),
 } as const satisfies Record<string, WolfWinterCampaignOutcomeContext>);
 
@@ -308,97 +309,95 @@ const WOLF_OUTCOME_BY_ID: ReadonlyMap<string, WolfWinterCampaignOutcomeContext> 
 const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
   pack_diverted: Object.freeze({
     send_wagon_to_cade:
-      "The wagon replaces the broken outer paling while Cade keeps the whole herd in; the diverted pack remains alive in the high wood. You take Hedrick's packet north alone.",
+      "The wagon repairs Cade's outer fence. His whole herd stays home, and the living pack stays in the high wood. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade watches the whole herd behind the broken outer line with no winter feed left, while the diverted pack remains alive in the high wood.",
+      "The wagon goes north. Cade keeps the whole herd behind a broken fence with no winter feed. The living pack stays in the high wood.",
   }),
   pack_diverted_cattle_scattered: Object.freeze({
     send_wagon_to_cade:
-      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; two cattle are still missing when you take Hedrick's packet north alone.",
+      "The wagon repairs Cade's outer fence and searches for the two missing cattle. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture, while the diverted pack remains alive in the high wood.",
+      "The wagon goes north. Cade's outer fence remains broken, two cattle are missing, and the living pack stays in the high wood.",
   }),
   pack_diverted_after_blood: Object.freeze({
     send_wagon_to_cade:
-      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; the yearling remains dead, the other two wolves remain alive, and two cattle are still missing when you take Hedrick's packet north alone.",
+      "The wagon repairs Cade's outer fence and searches for the two missing cattle. The yearling wolf is dead; the other two live. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood.",
+      "The wagon goes north. Cade's outer fence remains broken, and two cattle are missing. The yearling wolf is dead; the other two live in the high wood.",
   }),
   bloodied_byre_evacuated: Object.freeze({
     send_wagon_to_cade:
-      "The wagon returns for Cade and every evacuated person, all safe on the road, then begins the search for two missing cattle and a safe line around the abandoned byre; the yearling and flank wolf remain dead, and the old grey still holds the byre when you take Hedrick's packet north alone.",
+      "The wagon helps the evacuees, searches for two missing cattle, and marks a safe boundary around the abandoned barn. Two wolves are dead; the old grey still holds the barn. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade and every other person remain safe on the evacuation road, but two cattle are still missing, the yearling and flank wolf are dead, and the old grey remains in the abandoned byre.",
+      "The wagon goes north. The evacuees remain safe, but two cattle are missing. Two wolves are dead, and the old grey remains in the abandoned barn.",
   }),
   drive_cattle_wounded: Object.freeze({
     send_wagon_to_cade:
-      "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; your gate wound remains untreated and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone.",
+      "The wagon returns Cade's whole herd and repairs the abandoned outer boundary. All three wolves live outside it. Your gate wound is untreated, and the rig is in Albany for repair. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade keeps the whole herd on the evacuation road while all three wolves remain alive beyond the abandoned outer line, your gate wound remains untreated, and the spent signal-and-rope rig remains in Albany for repair.",
+      "The wagon goes north. Cade and the whole herd remain on the evacuation road. All three wolves live beyond the abandoned boundary. Your gate wound is untreated, and the rig is in Albany for repair.",
   }),
   drive_person_cattle_lost: Object.freeze({
     send_wagon_to_cade:
-      "The wagon returns with Cade and every evacuated person to search for the scattered herd and repair the abandoned outer line; all three wolves remain alive beyond it and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone.",
+      "The wagon helps the evacuees search for the scattered herd and repair the abandoned boundary. All three wolves live outside it, and the rig is in Albany for repair. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade and every other person remain safe on the evacuation road, but the herd remains scattered, all three wolves remain alive beyond the abandoned outer line, and the spent signal-and-rope rig remains in Albany for repair.",
+      "The wagon goes north. The evacuees remain safe, but the herd is scattered. All three wolves live beyond the abandoned boundary, and the rig is in Albany for repair.",
   }),
   drive_reserve_spent: Object.freeze({
     send_wagon_to_cade:
-      "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; the cut-apart signal-and-rope rig did not return when you take Hedrick's packet north alone.",
+      "The wagon returns Cade's whole herd and repairs the abandoned boundary. All three wolves live outside it, and the destroyed rig is gone. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade keeps the whole herd safe on the evacuation road while all three wolves remain alive beyond the abandoned outer line, but the cut-apart signal-and-rope rig did not return.",
+      "The wagon goes north. Cade and the whole herd remain safe on the evacuation road. All three wolves live beyond the abandoned boundary, and the destroyed rig is gone.",
   }),
   fortified_cade_terms: Object.freeze({
     send_wagon_to_cade:
-      "The wagon returns to cover Cade's exposed outer property while the household and whole herd remain behind his shutters; Albany's public relief seals came home unused. You take Hedrick's packet north alone.",
+      "The wagon protects Cade's exposed outer property. His household and herd stay behind the shutters, and Albany's seals remain unused. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade's household and whole herd remain secure behind his shutters, but the outer property stays exposed while Albany's unused public relief seals remain in reserve.",
+      "The wagon goes north. Cade's household and herd remain safe behind the shutters, but the outer property stays exposed. Albany's seals remain unused.",
   }),
   fortified_albany_authority: Object.freeze({
     send_wagon_to_cade:
-      "The wagon checks the outer property you preserved under Albany seal; Cade's household and whole herd remain secure, but the public relief seals were spent and his refusal remains on the return board. You take Hedrick's packet north alone.",
+      "The wagon checks the outer property protected by Albany's boundary. Cade's household and herd remain safe, but the public seals are spent and his refusal stays recorded. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade's household, whole herd, and outer property remain secure under Albany's sealed line, but the public relief seals are spent and Cade refused the recovery hand.",
+      "The wagon goes north. Cade's household, herd, and outer property remain safe behind Albany's boundary. The public seals are spent, and Cade refused to help.",
   }),
   gate_barred: Object.freeze({
     send_wagon_to_cade:
-      "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone.",
+      "The wagon repairs the outer fence. The inner-gate timber remains Cade's last barrier. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade keeps the cattle behind the barred inner gate while the outer paling waits.",
+      "The wagon goes north. Cade keeps the cattle behind the barred inner gate, and the outer fence remains broken.",
   }),
   timber_saved: Object.freeze({
     send_wagon_to_cade:
-      "The wagon and the saved timber close Cade's breach before the next night. You take Hedrick's packet north alone.",
+      "The wagon uses the saved timber to repair Cade's fence before night. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade uses the saved timber to begin the repair without it.",
+      "The wagon goes north. Cade uses the saved timber to begin the repair alone.",
   }),
   held: Object.freeze({
     send_wagon_to_cade:
-      "The wagon brings the sound wood the fight consumed and rebuilds Cade's exposed line. You take Hedrick's packet north alone.",
+      "The wagon brings replacement timber and repairs Cade's outer fence. You take Hedrick's packet north alone.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade faces the broken outer line without sound timber until another relief run.",
+      "The wagon goes north. Cade has no repair timber for the broken outer fence until another relief run.",
   }),
 } as const satisfies Record<WolfWinterCampaignOutcome, Record<AlbanyDawnDispatchChoiceId, string>>);
 
 const ALBANY_DAWN_DISPATCH_SERVICE_TERMS = Object.freeze({
-  send_wagon_to_cade:
-    "Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
-  send_wardens_north:
-    "Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  send_wagon_to_cade: "Reward: one 15-minute Market resupply for taking Hedrick's packet alone.",
+  send_wardens_north: "Reward: one 15-minute Greenway rest for traveling with the wardens.",
 } as const satisfies Record<AlbanyDawnDispatchChoiceId, string>);
 
 const TANNERS_FEVER_ACCOUNTABILITY_CONSEQUENCES = Object.freeze({
   keep_household_correction:
-    "Godwin records the corrected dose in Edric's household case book, preserving the family's trust in its longtime apothecary; other Oneonta patients receive no public warning about the three-to-one error.",
+    "Godwin records the correct dose in Edric's private household file. The family keeps control of the record, but other patients receive no warning about the three-to-one error.",
   publish_dosage_warning:
-    "The three-to-one error enters Oneonta's public apothecary ledger, warning future patients; Godwin faces public scrutiny, and the household loses control of Edric's private account.",
+    "Oneonta publishes the three-to-one error and warns future patients. Godwin faces public review, and Edric's family loses control of the private record.",
 } as const satisfies Record<TannersFeverAccountabilityChoiceId, string>);
 
 const ROME_POST_WEIR_DISPATCH_CONSEQUENCES = Object.freeze({
   take_oswego_charter_packet:
-    "Marta Holm's best cloth remains under seizure while her inherited charter waits to be heard. You carry the charter packet toward Oswego first; the Greece forge packet remains live.",
+    "Take Marta Holm's charter case to Oswego first. Her cloth remains seized, and the Greece forge report stays open.",
   take_greece_forge_packet:
-    "The last living coal of the old forge waits beneath Greece. You carry the forge packet toward Greece first; Marta Holm's Oswego case remains live.",
+    "Take the Ember-Heart forge report to Greece first. Marta Holm's Oswego case stays open.",
 } as const satisfies Record<RomePostWeirDispatchChoiceId, string>);
 
 export type JourneyCampaignStoryChoiceId =
@@ -473,6 +472,129 @@ export type JourneyCampaignJournalCopy = Readonly<{
   text: string;
 }>;
 
+/**
+ * Exact journal-copy digests from the immediately preceding authored prose.
+ *
+ * Campaign journals are durable save evidence, so a copy-only rewrite needs a
+ * narrow migration path. The goal id limits each allowlist, and the full digest
+ * covers both title and text. Anything except an exact predecessor remains
+ * subject to the normal forged-journal rejection.
+ */
+const ALBANY_DAWN_PREDECESSOR_JOURNAL_DIGESTS: Readonly<
+  Record<AlbanyDawnDispatchChoiceId, Readonly<Record<string, string>>>
+> = Object.freeze({
+  send_wagon_to_cade: Object.freeze({
+    pack_diverted: "35bd3f64f2cbb9536a856af9740079ef015801a8270eeee0340c4d6981af7542",
+    pack_diverted_cattle_scattered:
+      "3968aa16600d65d296be568b0318a858b5636a9b8a10a41bdc0f6d6e08c5ef09",
+    pack_diverted_after_blood: "75be5427c477e02f061f5450af6b1c5c48e73f1652fb355dac511e123a842721",
+    bloodied_byre_evacuated: "8e6fd0121605748816b92e875755ca0441e6e080fa5aaf3600f43455f0e1a772",
+    drive_cattle_wounded: "3ad7ccf8493eafbec2f564e372b6e150f539ace1b0caa9362fa7f5d009ec4efa",
+    drive_person_cattle_lost: "5e92e1d896c95f0c2cca802f4196f0a972b9d4b80842da03540661d079ed8170",
+    drive_reserve_spent: "dab8916d4db8592c289effc03d210280d167648cac9836af21192ab07175c4cf",
+    fortified_cade_terms: "98bc8b03e27c4285286ac7f7df772c4dd922524a1067fafd80498489b30fadf4",
+    fortified_albany_authority: "3f29ef4405140cb13dd670f7cce07256e8d421b6b03b20c4e9b0f73dac970aad",
+    gate_barred: "bfe3b781aa62f2e66dce2620054d4e6489854216b9975b800951dbfce6c0e2f3",
+    timber_saved: "906070e3510a8fc7f687810e6a30e50dfbaaf55944ff57757655ad141a96870f",
+    held: "6419ee1be6f94aa5f3304faff0e6a2143dac04190668cad519b0c4fd02783b5d",
+  }),
+  send_wardens_north: Object.freeze({
+    pack_diverted: "685fe785938a057ea54c038654dbb165b065f0132c7f4d20783dc69dc89f6724",
+    pack_diverted_cattle_scattered:
+      "abcc2f57c1a4fd08d96c9a59ff068ef259c43a148cce3a734a1673ba696e791b",
+    pack_diverted_after_blood: "bb0c7dcc80bb0526c0015f530fc3f303468f4073d8eb2910352c7a1c2813bbca",
+    bloodied_byre_evacuated: "92f16715b233e3b77997d1707c4bc4bd7b834e335102753c2c9711b5ed290657",
+    drive_cattle_wounded: "ab571d2fa1377c8ac40c22cfb4c7a2c3f917b76bcfe74a280488d34ae5a7ade2",
+    drive_person_cattle_lost: "f13fc06630a3f50aeb08882147f839893c8b54d8b41052ffd96a9f802b30241f",
+    drive_reserve_spent: "437f5c23a34044d0cc097942bbadf9ef3453cf8aeb5e21d8e3b3173cb1b726b6",
+    fortified_cade_terms: "f09c0f79c39f92c26547421daad5dec4d9627f663d025cc32ff578aa831f838b",
+    fortified_albany_authority: "cfb8708ef2f7d88e29a11cd72129afda2afdfdcfbde62aa1cc61c7820da2c31b",
+    gate_barred: "b6a6c5b3e1de3d313b029635bc2fdcdff771fadf90ea93cc9c122347981cf10a",
+    timber_saved: "498df52955d96c066676b698a03f182622a1bd92f26d3579ebb90c7bcfcdf0b9",
+    held: "15b3bef2c7f8d434fd4acab850d152fff973951693fb3af3261ce81b3b8332ff",
+  }),
+});
+
+const JOURNEY_CAMPAIGN_PREDECESSOR_JOURNAL_DIGESTS: ReadonlyMap<
+  string,
+  ReadonlySet<string>
+> = new Map([
+  [
+    "oneonta_tanners_fever",
+    new Set(["1be0fe8795f327b71878ac268aca954a43cfc925ec013152952a72f15744585f"]),
+  ],
+  [
+    "rome_breaking_weir_household_correction",
+    new Set(["2529537922215bf988ebe89a87aa3d72c6d140e8e03ff7561cd37d1588e923fc"]),
+  ],
+  [
+    "rome_breaking_weir_public_warning",
+    new Set(["208be0992b0a8ad33d7b5b9aff4d586a74f519cf8738f9f74bcd1933c7e4d97d"]),
+  ],
+  [
+    "rome_breaking_weir",
+    new Set(["7966eda2d44af4950fce863b83696e8c063847f9077f5e493c2b29bc16c03ff8"]),
+  ],
+  [
+    "oswego_advocates_case_first",
+    new Set(["22b0bb99da86df9bd8d98279709756308871e9bd7016e43f6f7ade4d214f5e1d"]),
+  ],
+  [
+    "greece_cold_forge_first",
+    new Set(["70d37fe38e8d5e74c4c1bf34d71a871ba9a74257e680af53075279910b4f3dc8"]),
+  ],
+  [
+    "oswego_advocates_case",
+    new Set(["0220874742df976f7762117fa35b0d49ab7300e8a730c0bf8ef543519088e8a9"]),
+  ],
+  [
+    "greece_cold_forge",
+    new Set(["5f62e02ddaeb5e5948915762a179c409b4575b3bb8d0a58f46d85134538a2d90"]),
+  ],
+  [
+    "amherst_dawn_beacon",
+    new Set(["995e925d8edd16c5ebf531a23ef9b111f7bc24b4ec0d876cfccbc15dbe8f3048"]),
+  ],
+  [
+    "cheektowaga_factors_mark",
+    new Set(["e4f1a64f028cef452c4f63fd2abccc825602ca448cb2e5bcaa333b1ca941868d"]),
+  ],
+  [
+    "tonawanda_falconers_ransom",
+    new Set(["1a185b7b26c86ebe42974e3274f514166c855e271defe85229e9ba0711bb3245"]),
+  ],
+  [
+    "new_york_tide_mill",
+    new Set(["21939acfce29bf0712187b5743930e8dbecbb20dd2cfb0ce5bd8bdf97ae3ece2"]),
+  ],
+  [
+    "riverhead_sunken_barrow",
+    new Set(["67e76aabf3936f0ddf7c06dff63bcd08287f59e0d6d08209c4e2f48c062f5a0c"]),
+  ],
+  [
+    "southampton_printers_night",
+    new Set(["b4d3a97b317a0012a37a8e354bc2f7948cfcfb9f08277af78f2ebe4a3d8177a1"]),
+  ],
+]);
+
+export function journeyCampaignGoalJournalIsExactPredecessorCopy(
+  definition: JourneyCampaignGoalDefinition,
+  copy: JourneyCampaignJournalCopy,
+  questOutcomeIds: ReadonlyMap<string, string>,
+): boolean {
+  const dispatchChoice = albanyDispatchChoiceForGoal(definition);
+  if (dispatchChoice) {
+    const outcome = wolfWinterCampaignOutcome(questOutcomeIds);
+    if (!outcome) return false;
+    return (
+      ALBANY_DAWN_PREDECESSOR_JOURNAL_DIGESTS[dispatchChoice][outcome.id] ===
+      hashState([copy.title, copy.text])
+    );
+  }
+  const acceptedDigests = JOURNEY_CAMPAIGN_PREDECESSOR_JOURNAL_DIGESTS.get(definition.id);
+  return acceptedDigests?.has(hashState([copy.title, copy.text])) ?? false;
+}
+
 export function wolfWinterCampaignOutcome(
   questOutcomeIds: ReadonlyMap<string, string>,
 ): WolfWinterCampaignOutcomeContext | null {
@@ -514,7 +636,7 @@ export function albanyDawnDispatchStoryChoice(
   return Object.freeze({
     id: ALBANY_DAWN_DISPATCH_ID,
     message:
-      "Wolf-Winter is complete. First choose where Albany's only dawn relief wagon goes: back to Cade or north with the wardens. After this choice, the displayed goal is to reach Hedrick Cradoc in Queensbury and see The Gallowmere through.",
+      "Wolf-Winter is complete. Send Albany's only dawn relief wagon to Cade or north with the wardens. Your next goal is The Gallowmere in Queensbury.",
     options: Object.freeze([
       Object.freeze({
         id: "send_wagon_to_cade" as const,
@@ -540,7 +662,7 @@ export function tannersFeverAccountabilityStoryChoice(): TannersFeverAccountabil
   return Object.freeze({
     id: TANNERS_FEVER_ACCOUNTABILITY_ID,
     message:
-      "Edric will recover, but the corrected dose still has to be recorded. Should the correction stay with the household or become a public warning?",
+      "Edric will recover. Keep the corrected dose in his private household record, or publish a warning for other patients.",
     options: Object.freeze([
       Object.freeze({
         id: "keep_household_correction" as const,
@@ -565,7 +687,7 @@ export function romePostWeirDispatchGoal(
 export function romePostWeirDispatchStoryChoice(): RomePostWeirDispatchStoryChoice {
   return Object.freeze({
     id: ROME_POST_WEIR_DISPATCH_ID,
-    message: "Which live packet should leave Rome in your hands first?",
+    message: "Choose the next report: Oswego's charter case or Greece's cold forge.",
     options: Object.freeze([
       Object.freeze({
         id: "take_oswego_charter_packet" as const,
@@ -766,14 +888,14 @@ export function journeyCampaignGoalJournalCopy(
     throw new Error("The initial journey goal does not have an activation journal entry.");
   }
   return Object.freeze({
-    title: "A new relief lead",
-    text: `The dispatch chain turns to the next live packet. ${definition.text}`,
+    title: "New goal",
+    text: definition.text,
   });
 }
 
 export const TANNERS_FEVER_CAMPAIGN_GOAL = campaignGoal(
   "oneonta_tanners_fever",
-  "Travel to Oneonta Market Streets, find the lead for The Tanner's Fever, and see it through.",
+  "Travel to Oneonta Market Streets. Find and complete The Tanner's Fever.",
   "tanners_fever",
   "oneonta_city",
   "oneonta_city__market",
@@ -782,7 +904,7 @@ export const TANNERS_FEVER_CAMPAIGN_GOAL = campaignGoal(
 /** Lookup-only compatibility for version 8 saves created before the accountability branch. */
 const LEGACY_ROME_BREAKING_WEIR_GOAL = campaignGoal(
   "rome_breaking_weir",
-  "Travel to Rome Market Streets, find the lead for The Breaking Weir, and see it through.",
+  "Travel to Rome Market Streets. Find and complete The Breaking Weir.",
   "breaking_weir",
   "rome_city",
   "rome_city__market",
@@ -791,7 +913,7 @@ const LEGACY_ROME_BREAKING_WEIR_GOAL = campaignGoal(
 /** Preserve these ids and their generic journal copy for existing version-8 saves. */
 const LEGACY_OSWEGO_ADVOCATES_CASE_GOAL = campaignGoal(
   "oswego_advocates_case",
-  "Travel to Oswego Market Streets, find the lead for The Advocate's Case, and see it through.",
+  "Travel to Oswego Market Streets. Find and complete The Advocate's Case.",
   "advocates_case",
   "oswego_city",
   "oswego_city__market",
@@ -799,7 +921,7 @@ const LEGACY_OSWEGO_ADVOCATES_CASE_GOAL = campaignGoal(
 
 const LEGACY_GREECE_COLD_FORGE_GOAL = campaignGoal(
   "greece_cold_forge",
-  "Travel to Greece Market Streets, find the lead for The Cold Forge, and see it through.",
+  "Travel to Greece Market Streets. Find and complete The Cold Forge.",
   "cold_forge",
   "greece_town",
   "greece_town__market",
@@ -810,42 +932,42 @@ const ORDERED_POST_BREAKING_WEIR_GOALS = Object.freeze([
   LEGACY_GREECE_COLD_FORGE_GOAL,
   campaignGoal(
     "amherst_dawn_beacon",
-    "Travel to Amherst Market Streets, find the lead for The Dawn Beacon, and see it through.",
+    "Travel to Amherst Market Streets. Find and complete The Dawn Beacon.",
     "dawn_beacon",
     "amherst_town",
     "amherst_town__market",
   ),
   campaignGoal(
     "cheektowaga_factors_mark",
-    "Travel to Cheektowaga Market Streets, find the lead for The Factor's Mark, and see it through.",
+    "Travel to Cheektowaga Market Streets. Find and complete The Factor's Mark.",
     "factors_mark",
     "cheektowaga_town",
     "cheektowaga_town__market",
   ),
   campaignGoal(
     "tonawanda_falconers_ransom",
-    "Travel to Tonawanda Market Streets, find the lead for The Falconer's Ransom, and see it through.",
+    "Travel to Tonawanda Market Streets. Find and complete The Falconer's Ransom.",
     "falconers_ransom",
     "tonawanda_town",
     "tonawanda_town__market",
   ),
   campaignGoal(
     "new_york_tide_mill",
-    "Travel to New York Waterfront, find the lead for The Tide-Mill, and see it through.",
+    "Travel to New York Waterfront. Find and complete The Tide-Mill.",
     "tide_mill",
     "new_york_city",
     "new_york_city__waterfront",
   ),
   campaignGoal(
     "riverhead_sunken_barrow",
-    "Travel to Riverhead Market Streets, find the lead for The Sunken Barrow, and see it through.",
+    "Travel to Riverhead Market Streets. Find and complete The Sunken Barrow.",
     "sunken_barrow",
     "riverhead_town",
     "riverhead_town__market",
   ),
   campaignGoal(
     "southampton_printers_night",
-    "Travel to Southampton Market Streets, find the lead for The Printer's Night, and see it through.",
+    "Travel to Southampton Market Streets. Find and complete The Printer's Night.",
     "printers_night",
     "southampton_town",
     "southampton_town__market",

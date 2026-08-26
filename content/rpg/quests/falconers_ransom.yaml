@@ -68,23 +68,22 @@ rooms:
   - id: hawk_yard
     name: "The Hawk-Yard"
     description: >
-      The manor's hawk-yard: a close stone court between the mews-building and the
-      stables, the air carrying the sharp mix of bird and hay that means a working
-      mews. Your trained tiercel sits hooded on the block at the centre of the yard,
-      the leather jesses on his legs still bearing the marks you put there. Aldric
-      of Haverstock stands near the block with the patient stillness of a man who
-      has arranged to be found exactly here. Guest chambers open to the east; the gate
-      lodge stands to the west; the stable yard lies through the arch to the north.
-      Thorn — Aldric's hired man — is visible in the archway.
+      Your tiercel is hooded on the block beside Aldric. READ falcon's jesses
+      to confirm your mark. Go east to the Guest Chambers for Aldric's bill of sale,
+      west to the Gate Lodge for his arrival record, or north to the Stable Yard.
+      Thorn guards the northern gate.
     # Reactive: once aldric_shamed, the yard reads as resolved.
     variants:
       - when: [{ has_flag: aldric_shamed }]
         text: >
-          The hawk-yard. Aldric has stepped back from the block, the calculation behind
-          his eyes running to which door he can reach without meeting the gate-keeper.
-          Your tiercel sits hooded on the block. Guest chambers are to the east, the gate
-          lodge to the west, and the stable yard — and the road — lie through the arch
-          to the north.
+          Aldric released your tiercel and stepped away from the block. Go north
+          through the Stable Yard to leave, east to the Guest Chambers, or west to
+          the Gate Lodge.
+      - when: [{ has_flag: thorn_defeated }]
+        text: >
+          You defeated Thorn, so the north gate is open. Your tiercel remains hooded
+          on the block beside Aldric. Go north through the Stable Yard to leave, east
+          to the Guest Chambers, or west to the Gate Lodge.
     objects: [falcon_jesses]
     exits:
       - { direction: east, to: guest_chambers }
@@ -94,23 +93,20 @@ rooms:
   - id: guest_chambers
     name: "The Guest Chambers"
     description: >
-      A well-appointed chamber in the east wing — better-furnished than a three-night
-      road visit warrants. A leather satchel sits open on the travelling chest, its
-      contents half-sorted as if something was moved in haste when you were announced.
-      A folded document lies half-under the riding gloves at the satchel's lip. The
-      hawk-yard is back to the west.
+      The bill of sale is partly hidden under riding gloves in Aldric's open satchel.
+      TAKE bill of sale and READ bill of sale to identify the forged seal and gain +3 cunning. The
+      Hawk-Yard is west.
     # Reactive: once the bill is taken, the satchel reads as emptied of interest.
     variants:
       - when: [{ has_flag: bill_read }]
         text: >
-          The guest chambers, the satchel still open on the chest. The forged seal's
-          tell is fixed in your head now, and the folded document is no longer hidden
-          under the riding gloves at the satchel's lip. The hawk-yard is back to the west.
+          You took and read the bill of sale. Its guild seal is forged. If the
+          ownership dispute is unresolved, go west to the Hawk-Yard and PRESENT bill
+          of sale against falcon's jesses. The Hawk-Yard is west.
       - when: [{ has_flag: hidden_bill_taken }]
         text: >
-          The guest chambers, the satchel still open on the chest and its riding gloves
-          disturbed. The folded document is no longer tucked at the satchel's lip. The
-          hawk-yard is back to the west.
+          You took the bill of sale. Retrieve the bill if needed, then READ bill of sale to identify
+          the forged seal and gain +3 cunning. The Hawk-Yard is west.
     objects: [hidden_bill]
     exits:
       - { direction: west, to: hawk_yard }
@@ -118,16 +114,16 @@ rooms:
   - id: gate_lodge
     name: "The Gate Lodge"
     description: >
-      The manor's gate lodge, where the porter keeps arrival and equipment records.
-      The current month's log lies open on the counter: every guest, every horse, every
-      piece of equipment that came through the gate this month, in the porter's steady
-      hand. The hawk-yard is back to the east.
+      The gate log was kept on the counter. TAKE gate log if it is here, or retrieve the log
+      if needed, then READ gate log for Aldric's entry, evidence, and +3 cunning. The Hawk-Yard
+      is east.
     # Reactive: once the log is read, the counter reads as already checked.
     variants:
       - when: [{ has_flag: log_read }]
         text: >
-          The gate lodge. The porter's log lies open on the counter, its relevant entry
-          already in your head. The hawk-yard is back to the east.
+          You read Aldric's entry in the gate log. It shows he brought no equipment
+          for keeping a falcon. If the ownership dispute is unresolved, go east to the
+          Hawk-Yard and PRESENT bill of sale against falcon's jesses. The Hawk-Yard is east.
     objects: [gate_log]
     exits:
       - { direction: east, to: hawk_yard }
@@ -135,46 +131,41 @@ rooms:
   - id: stable_yard
     name: "The Stable Yard"
     description: >
-      The stable yard behind the mews, the manor's main gate ahead in the north wall.
-      Thorn — Aldric's hired man, broad-shouldered, economical in his stillness — stands
-      in the gate passage. He is not from the manor. He will not move without a word from
-      Aldric, and that word has not come. The hawk-yard is back to the south.
+      Thorn blocks north. Go south to the Hawk-Yard and PRESENT bill of sale against
+      falcon's jesses to make Aldric call him off, or ATTACK Thorn. Combat risks death
+      and gives no confrontation score.
     # Two variants: social path (aldric_shamed) and combat path (thorn_defeated).
     variants:
       - when: [{ has_flag: aldric_shamed }]
         text: >
-          The stable yard, the main gate open. Thorn has stepped back from the passage —
-          Aldric has nothing left to enforce, and Thorn enforces things rather than
-          initiate them. The manor road lies north; the hawk-yard is back to the south.
+          Aldric yielded, Thorn no longer blocks the gate, and north is open. Go north
+          to the Manor Road or south to the Hawk-Yard.
       - when: [{ has_flag: thorn_defeated }]
         text: >
-          The stable yard, Thorn down across the gate passage. The manor road lies north;
-          the hawk-yard is back to the south.
+          Thorn is down, and the main gate is open. Go north to the Manor Road or
+          south to the Hawk-Yard.
     exits:
       - { direction: south, to: hawk_yard }
       - direction: north
         to: manor_road
         conditions: [{ any_of: [{ has_flag: aldric_shamed }, { has_flag: thorn_defeated }] }]
         locked_msg: >
-          Thorn has not moved from the gate passage. The road north is blocked while
-          he stands here — get past him or get Aldric to call him off.
+          Thorn blocks north. PRESENT bill of sale against falcon's jesses to make
+          Aldric call him off, or ATTACK Thorn. Combat risks death and
+          forfeits the confrontation score.
 
   - id: manor_road
     name: "The Manor Road"
     description: >
-      The road runs north from the manor gate into open country, the late morning light
-      level across the fields. Your tiercel rides steady on your wrist, hooded, the
-      familiar weight of him settling as you walk. Behind you the gate-keeper watches
-      from his lodge with the expression of a man who has seen this pattern before and
-      is not sorry to see it end this way. The road is clear.
+      You recovered your tiercel and cleared the manor gate. The Stable Yard is
+      south. Your bird rides hooded on your wrist.
     # Locomotion win (+15 capstone): reaches the full 50 on first entry and fires
     # end_game simultaneously. SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win
     # (bug_0116): the +15 is the last award and the win fires in the same step.
     on_enter:
       - set_quest_stage: { quest: falcon_recovery, stage: road_clear }
       - add_journal: >
-          The falcon is recovered and the manor is behind you. Aldric will have a
-          long explanation to give someone about the gate record and the bill.
+          You recovered your tiercel and reached the Manor Road. The manor is behind you.
       - inc_var: { name: score, by: 15 }
     exits:
       - { direction: south, to: stable_yard }
@@ -184,23 +175,21 @@ objects:
     name: "falcon's jesses"
     aliases: [jesses, jess, falcon jesses, bird jesses, tiercel jesses, leg straps, leather jesses, bird, falcon, tiercel, hood, hooded bird, hooded tiercel, block]
     description: >
-      The leather jesses on the tiercel's legs — a matched pair, your own work, with
-      your falconer's mark tooled into the cuff of each: a three-pointed crown, the
-      mark registered in the guild book at Carlisle. No one else uses this mark.
-      The bird's hood is your work too, the stitching unmistakable to anyone who
-      made it.
+      Your three-pointed-crown mark is tooled into both leather jesses and registered
+      with the Carlisle guild. READ falcon's jesses to confirm ownership.
     # Reactive: once read, the jesses read as already identified.
     variants:
       - when: [{ has_flag: jesses_read }]
         text: >
-          The falcon's jesses, already read — your mark on both cuffs, the three-pointed
-          crown guild-registered at Carlisle. The bird is yours and you have confirmed it.
+          You read the falcon's jesses. Your registered three-pointed-crown mark on
+          both cuffs proves the tiercel is yours. The bill of sale and gate log are
+          supporting evidence; gather and read only what remains unfinished.
     takeable: false
     read_text: >
-      A three-pointed crown tooled into the left cuff; the same on the right. Your mark,
-      cut by your own swivel-tool, registered in the Carlisle guild book two seasons back.
-      This is your bird. The jesses are proof enough for any falconer, and proof enough for
-      any court that has time to listen.
+      Both cuffs bear the three-pointed-crown mark you registered with the Carlisle
+      guild two seasons ago. The stitching also matches your work. The tiercel is
+      yours. Aldric's bill of sale and gate record supply the supporting evidence;
+      completed evidence remains valid.
     interactions:
       # First-read: +5 score (establishing ownership — the opening position).
       # One-shot: gated on not_flag jesses_read; retired on first READ.
@@ -212,16 +201,14 @@ objects:
           - set_quest_stage: { quest: falcon_recovery, stage: ownership_confirmed }
           - inc_var: { name: score, by: 5 }
           - add_journal: >
-              The jesses bear your mark — three-pointed crown, both cuffs, Carlisle guild
-              registration. The bird is yours. That is the starting position; the question
-              is whether a mark is enough against a forged bill. (+5)
+              Both jesses bear your registered three-pointed-crown mark, proving the
+              tiercel is yours. Aldric's bill of sale and the gate record were the
+              supporting evidence. If the dispute remains unresolved, complete only
+              evidence actions still offered; a completed resolution stays complete. (+5)
           - narrate: >
-              The three-pointed crown is on both cuffs, cut by your own swivel-tool — the
-              pattern you use and no one else does, in the Carlisle guild book if it ever
-              comes to a formal inquiry. This is your bird. Aldric knows it; he is watching
-              from the side of the block to see if you will say so aloud, and in front of
-              whom. A mark on a jess is real ownership. What he has in his coat — you can
-              see the fold of a document there — is the answer he is preparing for it.
+              You confirm your registered mark and stitching on both jesses. The
+              tiercel is yours. The bill of sale in the Guest Chambers and gate log
+              in the Gate Lodge are supporting evidence; complete only what remains.
       # The confrontation: USE hidden_bill ON falcon_jesses — spring the trap by presenting
       # the forged bill against the jesses in front of Aldric. Cunning DC 12.
       # Retires only on SUCCESS (bug_0456): a bad roll is a public falter, not Aldric
@@ -243,59 +230,41 @@ objects:
             - inc_var: { name: score, by: 10 }
             - set_quest_stage: { quest: falcon_recovery, stage: aldric_shamed }
             - add_journal: >
-                Aldric's scheme called out in one breath — forged seal, gate record with
-                no mews equipment, the jesses right there on the bird. He had no time to
-                choose which lie to stick to. He stepped back from the block. (+10)
+                You used Aldric's bill of sale to defeat his ownership claim in a
+                public confrontation. Aldric released the tiercel, and Thorn no longer
+                blocks the gate. (+10)
             - narrate: >
-                You hold the bill open at the seal and read the flaw aloud — the wax
-                spread wrong, applied dry rather than fresh, the impression of a seal
-                re-used on a document it was not made for — and you say it all at once,
-                quickly, in the same even tone a man uses when he already knows the answer
-                and is simply giving the other person the last chance to avoid the scene:
-                the bill says six weeks, the gate log says no mews equipment, and the jesses
-                say this bird was never anybody else's. Aldric's mouth opens. Closes. The
-                calculation runs — he can push back on the seal and you name the gate log;
-                he can name the gate log and you produce the jesses; he can dispute the
-                jesses and you produce all of it together, in the yard, with the gate-keeper
-                who is already watching from the lodge window. The scene is not worth the
-                bill. He steps away from the block.
+                You present Aldric's bill of sale against the falcon's jesses and defeat
+                his ownership claim in public. Aldric releases the tiercel, and the north
+                gate is open.
           on_failure:
             - narrate: >
-                The words do not close around him quickly enough. Aldric smiles as if
-                the bill's seal, the gate record, and the jesses are three separate
-                inconveniences instead of one trap, and he starts to turn the talk back
-                toward recovery fees. But the forged bill is still in your hand, the gate
-                log is still yours to name, and the bird's jesses are still on the block
-                between you. Thorn watches from the stable yard arch, but the evidence has
-                not left the yard. Press the bill against the jesses again before Aldric
-                settles the order of the story for you.
+                Aldric dismisses the evidence and keeps control of the tiercel. Thorn
+                still blocks north. Retry with PRESENT bill of sale against falcon's
+                jesses; the check has no penalty or lockout. Fighting Thorn
+                instead risks death and gives no confrontation score.
 
   - id: hidden_bill
     name: "bill of sale"
     aliases: [bill, sale, document, paper, papers, forged bill, purchase document, ownership document, satchel document, folded document, folded paper]
     description: >
-      A folded bill of sale from the satchel, dated six weeks past: 'One trained tiercel,
-      grey, hooded, to Aldric of Haverstock, from a licensed falconer of the Carlisle
-      guild.' The Carlisle guild seal is at the foot — but the wax is spread too wide,
-      the impression pressed too deep, the tell of a seal applied to dry paper rather
-      than to fresh wax at the moment of signing.
+      A bill of sale claims Aldric bought a trained grey tiercel six weeks ago. The
+      guild seal looks wrong. If you are not holding the bill, TAKE bill of sale. READ bill of sale to verify the forgery
+      and gain +3 cunning.
     # Reactive: once studied, the bill reads as already identified as forged.
     variants:
       - when: [{ has_flag: bill_read }]
         text: >
-          The bill of sale — already read, the forged seal plain to anyone who knows what
-          a guild impression looks like when it was applied fresh versus after the fact.
-          Aldric paid well for this; not well enough.
+          You read the bill of sale. The deep impression and uneven wax prove the
+          guild seal was applied after the document dried. If the ownership dispute
+          is unresolved, in the Hawk-Yard, PRESENT bill of sale against falcon's jesses.
     takeable: true
     take_effects:
       - set_flag: hidden_bill_taken
     read_text: >
-      The tiercel described is grey, hooded, trained — a match to your bird in every
-      particular. But the guild seal is wrong: the wax is too thick, the impression
-      pressed too deep, spreading at an angle that happens when a seal is applied to a
-      document already dry rather than in the moment of signing. This was not made at the
-      time of purchase. Someone made it for this occasion, or Aldric bought it already made.
-      There was no licensed sale.
+      The description matches your tiercel, but the guild seal is forged. Its wax is
+      too thick, and the impression was pressed into a dry document instead of fresh
+      wax during a licensed sale. The forged bill is evidence against Aldric's claim.
     interactions:
       # Close study of the bill: +10 score and +3 cunning (the forged seal's tell is now
       # in your head — you can name it precisely under pressure). One-shot: gated on
@@ -309,42 +278,33 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: falcon_recovery, stage: forgery_found }
           - add_journal: >
-              The bill is forged — the guild seal applied to dry wax, the impression
-              spread wrong. Aldric paid for a clean document but it will not hold under
-              a slow look from anyone who knows the guild standard. (+3 cunning, +10)
+              The bill of sale is forged. Its guild seal was pressed too deep into
+              dry wax after the document was made. (+3 cunning, +10)
           - narrate: >
-              The seal is pressed too deep, the wax spread at the wrong angle — the tell
-              of a seal applied to a document already dried, not to fresh wax in the moment
-              of signing. Someone made this for Aldric, or he bought it off a scrivener who
-              does not scruple over guild impressions. It will pass a quick glance; it will
-              not pass a deliberate one. If you can get him talking fast enough in front of
-              the gate-keeper, he will not have time to decide which look he is getting.
+              You identify the seal as a forgery made after the document dried.
+              The gate log can add evidence if it is still unread. If the ownership
+              dispute is unresolved, PRESENT bill of sale against falcon's jesses.
 
   - id: gate_log
     name: "gate log"
     aliases: [log, record, porter log, gate record, porter record, arrival log, entry log, gate book, arrivals, equipment record, arrivals record]
     description: >
-      The porter's log for the current month: every guest, every horse, every piece of
-      equipment brought through the manor gate, in the porter's careful hand. Aldric's
-      entry, three days ago, lists his horse, personal luggage, and a hawk-bag — but
-      no cadge, no perch, no falcon gauntlet, no feeding equipment. He brought a
-      carrying case for a bird he did not yet own.
+      The gate log records every guest and item brought through the manor gate.
+      Aldric's entry may test his story. If you are not holding the log, TAKE gate
+      log. READ gate log for +3 cunning.
     # Reactive: once read, the log reads as already studied.
     variants:
       - when: [{ has_flag: log_read }]
         text: >
-          The gate log, already read — Aldric's entry shows a hawk-bag on arrival but
-          no mews equipment. He had nowhere to house a falcon for three days and nothing
-          to feed one with. The 'strayed bird' story requires a mews this record does not
-          record him having.
+          You read the gate log. Aldric arrived with an empty hawk-bag but no cadge,
+          perch, gauntlet, hood, or feed. He could not have kept a stray falcon for
+          three days.
     takeable: true
     read_text: >
-      Three days past: horse (grey), personal luggage (two bags), hawk-bag (empty,
-      as entered). No cadge, no perch, no gauntlet, no hood, no food-bags. The
-      hawk-bag is a carrying case for transport — it means he planned to leave with a
-      bird he did not arrive with. A man claiming to have nursed a strayed falcon for
-      three days has no equipment to nurse one with. The 'strayed into my mews' account
-      is impossible on its face.
+      Aldric arrived three days ago with a horse, two bags, and an empty hawk-bag.
+      He brought no cadge, perch, gauntlet, hood, or feed. He lacked the equipment
+      needed to keep a stray falcon for three days and planned to transport a bird
+      he did not bring.
     interactions:
       # Close reading of the gate record: +10 score and +3 cunning (you now have the
       # precise column entry to quote under pressure). One-shot: gated on has_item AND
@@ -358,42 +318,35 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: falcon_recovery, stage: record_checked }
           - add_journal: >
-              The gate log: Aldric arrived with a hawk-bag but no mews equipment. He
-              planned to leave with a bird he could not have housed for three days. The
-              'strayed falcon' story cannot be true. (+3 cunning, +10)
+              The gate log shows that Aldric arrived with an empty hawk-bag but no
+              equipment to house or feed a falcon. His stray-falcon story is false.
+              (+3 cunning, +10)
           - narrate: >
-              The entry is three days old, in the porter's unhurried hand: horse, luggage,
-              hawk-bag. No cadge, no perch, no gauntlet, no food-bags. He brought a
-              carrying case for a bird he did not have, on a visit that began the day you
-              set out on the hunt that pulled you away from the mews. The 'strayed falcon'
-              story requires a mews that this record does not show him having. That makes
-              the forged bill not just a forgery but a plan — the kind that was ready
-              before the bird was taken, not assembled in a hurry afterwards.
+              You confirm that Aldric brought an empty hawk-bag but no equipment to
+              care for a falcon. His arrival was planned around taking a bird. If the
+              ownership dispute is unresolved, in the Hawk-Yard, PRESENT bill of sale
+              AGAINST falcon's jesses.
 
 npcs:
   - id: aldric
     name: "Aldric"
     description: >
-      Aldric of Haverstock: a lean man in good riding clothes, with the measured calm
-      of someone who is running a calculation at all times and is rarely behind it.
-      He is pleasant in manner, watchful in the eyes, and has done this before.
+      A well-dressed guest who claimed your tiercel and asked for a recovery payment.
+      He based that claim on a bill of sale and a prepared story.
     room: hawk_yard
     dialogue:
       root: aldric_root
       nodes:
         - id: aldric_root
           npc_text: >
-            Your bird flew into my mews three days past while you were out on the
-            hunt — I found him tangled in the news-netting and brought him in for
-            safekeeping. I have been feeding and tending him at my own expense.
-            I am sure we can settle on a fair recovery arrangement.
+            Your tiercel entered my mews three days ago. I kept and fed him while
+            you were away. Pay a fair recovery fee and I will return him.
           # Return variants (bug_0322/0325 pattern): short acknowledgment on re-entry
           # so the full opening speech does not re-fire on every visit.
           variants:
             - when: [{ has_flag: aldric_shamed }]
               text: >
-                Aldric does not look up from the middle distance. He has nothing
-                further to arrange in the yard today.
+                I released the tiercel. We have nothing more to discuss.
             - when: [{ has_flag: confrontation_attempted }]
               text: >
                 I believe I have said everything I have to say on this matter.
@@ -403,19 +356,18 @@ npcs:
                     - { has_flag: asked_jesses }
                     - { has_flag: asked_mews }
               text: >
-                I have told you what I know. I suggest you consider the arrangements
-                I described.
+                I have explained my claim. Consider the recovery payment.
           topics:
             - id: ask_bill
-              prompt: "Ask Aldric for proof of ownership."
+              prompt: "Ask about the bill he had offered as proof."
               conditions: [{ not_flag: asked_bill }]
               goto: aldric_bill
             - id: ask_jesses
-              prompt: "Point out that the jesses bear your mark."
+              prompt: "Ask about his earlier dismissal of your registered jesses."
               conditions: [{ not_flag: asked_jesses }]
               goto: aldric_jesses
             - id: ask_mews
-              prompt: "Ask where his mews is."
+              prompt: "Ask about his earlier travelling-mews claim."
               conditions: [{ not_flag: asked_mews }]
               goto: aldric_mews
             - id: leave_aldric
@@ -423,50 +375,45 @@ npcs:
               end: true
         - id: aldric_bill
           npc_text: >
-            I have a bill of sale from a licensed falconer of your guild — a grey
-            tiercel, trained, purchased six weeks past. The description matches this
-            bird in every particular. I would be happy to produce it if the situation
-            calls for a formal arrangement.
+            My claim had rested on a bill of sale saying I bought a trained grey tiercel
+            from a licensed Carlisle falconer six weeks earlier. That was the document I
+            said matched this bird; the completed resolution remains valid.
           effects:
             - set_flag: asked_bill
             - add_journal: >
-                Aldric claims a guild bill of sale, six weeks old. He is waiting to see
-                if the formality is enough to make you accept his terms and pay.
+                Aldric's ownership claim had rested on a six-week-old guild bill of sale
+                kept in the Guest Chambers. Completed reading and resolution remain valid.
           topics:
             - id: bill_back
-              prompt: "Say nothing and walk away."
+              prompt: "Return to Aldric's questions."
               goto: aldric_root
         - id: aldric_jesses
           npc_text: >
-            Markings can fade. Markings can be reproduced. I am sure your guild mark
-            is distinctive, but without any other documentation, I think a properly
-            witnessed bill of sale from a licensed guild member is the relevant
-            instrument here. The law is quite clear on what constitutes evidence of
-            ownership.
+            I argued that marks can fade or be copied, and that without other evidence
+            my witnessed bill of sale was the stronger ownership record.
           effects:
             - set_flag: asked_jesses
             - add_journal: >
-                Aldric dismissed the jesses — says markings can be copied. He is
-                steering hard toward the bill of sale as the only legitimate instrument.
-                The bill is the trap and he wants you to walk into it.
+                Aldric had dismissed your registered mark and relied on his bill of sale.
+                The bill in the Guest Chambers was the supporting evidence; completed
+                reading and resolution remain valid.
           topics:
             - id: jesses_back
-              prompt: "Walk away."
+              prompt: "Return to Aldric's questions."
               goto: aldric_root
         - id: aldric_mews
           npc_text: >
-            I keep a travelling cadge and the necessaries in my saddlebag — a man
-            who rides much in hunting country learns to carry what he needs. Your bird
-            was well looked after, I assure you.
+            I claimed I carried a travelling cadge and falcon supplies in my saddlebag,
+            with everything needed to care for the bird.
           effects:
             - set_flag: asked_mews
             - add_journal: >
-                Aldric claims a travelling cadge and necessaries in his saddlebag.
-                It would be worth checking the gate record to see what he actually
-                brought through the gate.
+                Aldric had claimed he arrived with a travelling cadge and falcon supplies.
+                The Gate Lodge log was the supporting evidence; completed reading and
+                resolution remain valid.
           topics:
             - id: mews_back
-              prompt: "Nod and step away."
+              prompt: "Return to Aldric's questions."
               goto: aldric_root
 
 enemies:
@@ -486,9 +433,8 @@ enemies:
   - id: thorn
     name: "Thorn"
     description: >
-      Aldric's hired man — a broad-shouldered fellow with the economy of movement
-      of someone who used to work for his living in a harder trade. He will not move
-      without a word from Aldric and he will not be moved by argument.
+      Aldric's armed guard blocks the main gate. A successful evidence confrontation
+      makes Aldric call him off. Fighting Thorn risks death and gives no score.
     room: stable_yard
     conditions: [{ not_flag: aldric_shamed }]
     hp: 12
@@ -499,8 +445,8 @@ enemies:
     on_defeat:
       - set_quest_stage: { quest: falcon_recovery, stage: thorn_down }
       - add_journal: >
-          Thorn is down in the gate passage. The road north is open. The falcon is
-          yours but the manner of leaving will be in the gate record.
+          You defeated Thorn, and the Manor Road is open north. The fight is now
+          part of the gate record and gave no score.
 
 win_conditions:
   # Locomotion win: reaching manor_road — accessible via the cunning path (aldric_shamed
@@ -520,26 +466,17 @@ endings:
     variants:
       - when: [{ has_flag: aldric_shamed }]
         text: >
-          The manor road runs north into open country, your tiercel steady on your
-          wrist. Behind you Aldric is explaining something to the gate-keeper in a tone
-          that is running out of plausibility — the arrival log is still open on the
-          counter, and the gate-keeper has had three days to form his own opinion of
-          the guest in the east wing. Aldric will find another manor, another strayed
-          bird, another falconer who does not check the gate record first. It will not
-          be yours. *** You have won. ***
+          You defeated Aldric's ownership claim in public. He released your tiercel,
+          Thorn no longer blocks the gate, and you leave by the Manor Road. *** You have won. ***
     text: >
-      The manor road runs north into open country, your tiercel steady on your wrist.
-      You did not leave the manor quietly, and Thorn will be on his feet before dark.
-      But the road is open and the bird is yours, and the difference between a scene
-      and a case is that someone has to press the case — and Aldric is not having a
-      good morning. *** You have won. ***
+      You defeated Thorn, recovered your tiercel, and reached the Manor Road. The
+      fight is in the gate record, and you missed the evidence-path score.
+      *** You have won. ***
 
   - id: ending_held
-    title: "The Gate Passage"
+    title: "Killed in the Gate Passage"
     text: >
-      Thorn gets his weight into you before you clear the gate passage, and after that
-      the choice is no longer yours. Aldric steps into the stable yard with a look of
-      measured regret and explains to the manor steward that there was a dispute over a
-      bird and a man who would not be reasoned with. The tiercel stays on the block.
+      Thorn kills you in the gate passage. Aldric tells the steward that you started
+      the dispute, and your tiercel remains on the block.
       *** You have fallen. ***
     death: true

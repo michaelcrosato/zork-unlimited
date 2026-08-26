@@ -79,29 +79,29 @@ export function JourneyStoryChoiceScreen({
         })).filter((group) => group.options.length > 0)
       : null;
   const currentObjectiveGuidance = registrationGroups
-    ? "Choose a background. Next, choose a ready-made promise/report pair or customize it."
+    ? "Choose a background. You will choose a promise and report next."
     : requiresOutcomeComparison
-      ? "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a Wolf-Winter promise or ready-made dispatch."
+      ? "Compare the possible outcomes. This does not choose a plan for you."
       : hasRoleShortcut
-        ? "The ready-made dispatch pairs one Wolf-Winter promise with one report; the promise comparison is read-only."
+        ? "A ready-made plan pairs one promise with one report. You may compare promises instead."
         : isRegistration
-          ? "Your background persists into the journey; choose the experience and return promise you will carry."
+          ? "Your background stays with this character. Choose the experience you want to carry."
           : isLeadSource
-            ? "Your report changes the approaches you can carry forward; it does not replace this objective."
+            ? "Your report changes later quest approaches. Your current goal stays the same."
             : isPreparation
-              ? "Your field kit changes later actions and the service Albany can release on your return; it does not replace this objective."
+              ? "Your field kit changes later actions and the service available when you return."
               : isAlly
-                ? "Compare what the second rider can do, their binding condition, and actual cost; this does not replace your objective."
+                ? "Compare each rider's help, condition, and cost. You may ride alone."
                 : isReliefAllocation
-                  ? "Albany's relief wagon can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
+                  ? "The wagon can cover one need. Each choice shows what it protects and what stays exposed."
                   : isReliefOath
-                    ? "Compare each promise's access, actual cost, field consequence, and return terms. This binds the dispatch without replacing your current objective."
+                    ? "Compare each promise's access, cost, field effect, and return terms."
                     : usesRoleplayReceipts
-                      ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
-                      : "Choose the consequence that sets your next objective.";
+                      ? "Choose a promise or priority. Each card shows its cost and what you give up."
+                      : "Choose the result that sets your next goal.";
   const roleplaySummaryLabel = (optionId: string): string =>
     progressiveDisclosure?.initialOptionIds.includes(optionId)
-      ? "Ready-made dispatch:"
+      ? "Ready-made plan:"
       : isRegistration
         ? "Background:"
         : isReliefOath
@@ -137,7 +137,7 @@ export function JourneyStoryChoiceScreen({
                   ? roleplaySummaryLabel(option.id)
                   : usesTriggerCategory
                     ? "Purpose:"
-                    : "Commitment:"}
+                    : "Choice:"}
               </b>{" "}
               {conciseSummary.commitment}
             </span>
@@ -148,10 +148,10 @@ export function JourneyStoryChoiceScreen({
             <small className="journey-choice-trigger">
               <b>
                 {usesTriggerCategory
-                  ? "Trigger category:"
+                  ? "Applies to:"
                   : usesStarterPackage
-                    ? "Starter package / field edge:"
-                    : "First field trigger / tradeoff:"}
+                    ? "Starting gear and advantage:"
+                    : "Applies when:"}
               </b>{" "}
               {conciseSummary.fieldTrigger}
             </small>
@@ -163,12 +163,17 @@ export function JourneyStoryChoiceScreen({
           ))}
           {isPreparation && conciseSummary?.checkFit && (
             <small className="journey-choice-highlight">
-              <b>Governing skill:</b> {conciseSummary.checkFit}
+              <b>Skill used:</b> {conciseSummary.checkFit}
             </small>
           )}
           {conciseSummary && usesRoleplayReceipt && !usesAdventureSetupCard && (
             <small className="journey-choice-cost">
-              <b>Cost / give up:</b> {conciseSummary.immediateCost}; {conciseSummary.tradeoff}
+              <b>Cost:</b> {conciseSummary.immediateCost}
+            </small>
+          )}
+          {conciseSummary && usesRoleplayReceipt && !usesAdventureSetupCard && (
+            <small className="journey-choice-tradeoff">
+              <b>Give up:</b> {conciseSummary.tradeoff}
             </small>
           )}
           {conciseSummary && usesAdventureSetupCard && (
@@ -183,7 +188,7 @@ export function JourneyStoryChoiceScreen({
           )}
           {conciseSummary && !usesRoleplayReceipt && (
             <small className="journey-choice-cost">
-              <b>Immediate cost:</b> {conciseSummary.immediateCost}
+              <b>Cost:</b> {conciseSummary.immediateCost}
             </small>
           )}
           {conciseSummary && !usesRoleplayReceipt && (
@@ -196,12 +201,12 @@ export function JourneyStoryChoiceScreen({
           <details className="journey-choice-details">
             <summary>
               {usesRoleplayReceipt
-                ? `Inspect exact receipt for ${option.label}`
-                : `Full terms and consequence for ${option.label}`}
+                ? `Show full terms for ${option.label}`
+                : `Show all costs and results for ${option.label}`}
             </summary>
             {conciseSummary.checkFit && !isPreparation && (
               <p className="journey-choice-check-fit">
-                <b>Check fit:</b> {conciseSummary.checkFit}
+                <b>Skill check:</b> {conciseSummary.checkFit}
               </p>
             )}
             {option.dispatchImpact && (
@@ -239,7 +244,7 @@ export function JourneyStoryChoiceScreen({
                     ? "Optional relief wagon"
                     : isReliefOath
                       ? "Wolf-Winter promise"
-                      : "Journey consequence"}
+                      : "Journey choice"}
         </p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
           {isRegistration
@@ -256,9 +261,9 @@ export function JourneyStoryChoiceScreen({
                     ? "Choose where Albany's relief wagon goes"
                     : isReliefOath
                       ? requiresOutcomeComparison
-                        ? "Compare what must stand at dawn"
+                        ? "Compare possible outcomes"
                         : hasRoleShortcut
-                          ? "Choose a ready-made dispatch or compare promises"
+                          ? "Choose a ready-made plan or compare promises"
                           : "Choose one Wolf-Winter promise"
                       : "Choose what follows"}
         </h1>
@@ -272,7 +277,7 @@ export function JourneyStoryChoiceScreen({
           <small>
             {keepsCurrentObjective
               ? currentObjectiveGuidance
-              : "Choose the consequence that sets your next objective."}
+              : "Choose the result that sets your next goal."}
           </small>
         </div>
 

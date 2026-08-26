@@ -52,8 +52,8 @@ describe("printers_night rooms react to taken tools and papers", () => {
 
     expect(s.inventory).toContain("dark_lantern");
     expect(s.flags["dark_lantern_taken"]).toBe(true);
-    expect(desc(s)).toContain("counter near the door is bare where the dark lantern sat");
-    expect(desc(s)).not.toContain("A dark lantern sits on the counter");
+    expect(desc(s)).toContain("You took the dark lantern. Retrieve it if needed");
+    expect(desc(s)).not.toContain("TAKE the dark lantern from the counter");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -62,8 +62,8 @@ describe("printers_night rooms react to taken tools and papers", () => {
 
     expect(s.inventory).not.toContain("dark_lantern");
     expect(s.flags["dark_lantern_taken"]).toBe(true);
-    expect(desc(s)).toContain("counter near the door is bare where the dark lantern sat");
-    expect(desc(s)).not.toContain("A dark lantern sits on the counter");
+    expect(desc(s)).toContain("You took the dark lantern. Retrieve it if needed");
+    expect(desc(s)).not.toContain("TAKE the dark lantern from the counter");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -76,7 +76,7 @@ describe("printers_night rooms react to taken tools and papers", () => {
 
     expect(s.inventory).toContain("proof_schedule");
     expect(s.flags["proof_schedule_taken"]).toBe(true);
-    expect(desc(s)).toContain("board above it is bare where Fen's schedule was pinned");
+    expect(desc(s)).toContain("Fen's schedule is no longer on the board");
     expect(desc(s)).not.toContain("Pinned to the board above the bench");
     expect(lookNarration(s)).toBe(desc(s));
   });
@@ -91,7 +91,7 @@ describe("printers_night rooms react to taken tools and papers", () => {
 
     expect(s.inventory).not.toContain("proof_schedule");
     expect(s.flags["proof_schedule_taken"]).toBe(true);
-    expect(desc(s)).toContain("board above it is bare where Fen's schedule was pinned");
+    expect(desc(s)).toContain("Fen's schedule is no longer on the board");
     expect(desc(s)).not.toContain("Pinned to the board above the bench");
     expect(lookNarration(s)).toBe(desc(s));
   });
@@ -110,7 +110,9 @@ describe("printers_night rooms react to taken tools and papers", () => {
 
     expect(s.current).toBe("back_court");
     expect(s.flags["slip_past"]).toBe(true);
-    expect(obs.description).toContain("Edgar Tew's lantern moves away");
+    expect(obs.description).toContain(
+      "The back-door route is quiet now, and Edgar Tew no longer blocks east",
+    );
     expect(obs.enemies_present).toEqual([]);
     expect(obs.available_actions.map((a) => a.id)).not.toContain("attack_edgar_tew");
     expect(obs.available_actions.map((a) => a.id)).toContain("go_east");

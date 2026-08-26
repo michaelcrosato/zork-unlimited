@@ -3,6 +3,7 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { OVERWORLD_CONTACT_PROSE_PREDECESSOR_WORLD_HASH } from "../../src/world/contact_journal_prose_migration.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import {
   overworldAreasAt,
@@ -613,6 +614,42 @@ describe("overworld snapshot restore integrity", () => {
     expect(
       legacyExport.snapshot.journalEntries.find((candidate) => candidate.id === entry.id)?.text,
     ).toBe(legacyText);
+  });
+
+  it("upgrades exact predecessor contact copy and survives re-export plus a second restore", () => {
+    const { a, snapshot, entry } = exportedSnapshotWithBaseHaydenConversation();
+    const predecessorText =
+      "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews. Hayden matches every hill dispatch to Rowan's controlling source certification; settled packets carry route timing to Old Cade's steading and the other winter stops.";
+    const predecessorEntries = snapshot.journalEntries.map((candidate) =>
+      candidate === entry ? { ...entry, text: predecessorText } : candidate,
+    );
+
+    expect(() =>
+      a.restore_overworld_session({
+        snapshot: { ...snapshot, journalEntries: predecessorEntries },
+      }),
+    ).toThrow(/does not match its authored copy/);
+
+    const restored = a.restore_overworld_session({
+      snapshot: {
+        ...snapshot,
+        journalEntries: predecessorEntries,
+        worldHash: OVERWORLD_CONTACT_PROSE_PREDECESSOR_WORLD_HASH,
+      },
+    });
+    const migrated = a.export_overworld_session({ session_id: restored.session_id });
+    expect(migrated.ok).toBe(true);
+    if (!migrated.ok) throw new Error("expected migrated predecessor contact export");
+    expect(migrated.snapshot.worldHash).toBe(snapshot.worldHash);
+    expect(
+      migrated.snapshot.journalEntries.find((candidate) => candidate.id === entry.id)?.text,
+    ).toBe(entry.text);
+
+    const restoredAgain = a.restore_overworld_session({ snapshot: migrated.snapshot });
+    const exportedAgain = a.export_overworld_session({ session_id: restoredAgain.session_id });
+    expect(exportedAgain.ok).toBe(true);
+    if (!exportedAgain.ok) throw new Error("expected twice-restored predecessor contact export");
+    expect(exportedAgain.snapshot).toEqual(migrated.snapshot);
   });
 
   it.each([

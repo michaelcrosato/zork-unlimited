@@ -40,11 +40,12 @@ export const RPG_COMPACT_EVENT_VERSION = 8 as const;
  * so blind agents receive it once per session.
  */
 export const RPG_COMPACT_EVENT_LEGEND =
-  "step_action events are [tag, ...]: r=rejected[reason], n=narration[text], " +
-  "s=state_change[code, key, value?, extra?] with codes f=set_flag x=clear_flag v=set_var " +
-  "+=inc_var[name,delta,new] -=dec_var[name,delta,new] j=journal l=set_locked p=place_object " +
-  "q=quest_stage, o=open_object[id], c=close_object[id], " +
-  "m=move[from,to], t=take[item], d=drop[item], q=dialogue[npc_id,node_id], e=ending[ending_id]";
+  "step_action events use [tag, ...]. Tags: r rejected[reason]; n narration[text]; " +
+  "s state_change[code,key,value?,extra?]. State codes: f set_flag; x clear_flag; " +
+  "v set_var; + inc_var[name,delta,new]; - dec_var[name,delta,new]; j journal; " +
+  "l set_locked; p place_object; q quest_stage. Other tags: o open_object[id]; " +
+  "c close_object[id]; m move[from,to]; t take[item]; d drop[item]; " +
+  "q dialogue[npc_id,node_id]; e ending[ending_id]";
 
 type RpgStateChangeEvent = Extract<GameEvent, { type: "state_change" }>;
 

@@ -133,7 +133,9 @@ describe("SessionStore", () => {
     } as unknown as SessionInit);
     expect(forged.id).toBe("r3");
     expect(store.get("r3")).toBe(forged);
-    expect(() => store.get("forged_session")).toThrow('Unknown RPG session "forged_session".');
+    expect(() => store.get("forged_session")).toThrow(
+      'RPG session "forged_session" was not found. Pass the child session_id returned by the RPG start, or its embedded rpg_session_id. Do not pass an overworld session id.',
+    );
   });
 
   it("keeps session ids monotonic past the safe integer boundary", () => {
@@ -152,9 +154,11 @@ describe("SessionStore", () => {
   it("rejects unknown sessions with the id in the error message", () => {
     const store = new SessionStore();
 
-    expect(() => store.get("missing-session")).toThrow('Unknown RPG session "missing-session".');
+    expect(() => store.get("missing-session")).toThrow(
+      'RPG session "missing-session" was not found. Pass the child session_id returned by the RPG start, or its embedded rpg_session_id. Do not pass an overworld session id.',
+    );
     expect(() => store.update("missing-session", state("next"))).toThrow(
-      'Unknown RPG session "missing-session".',
+      'RPG session "missing-session" was not found. Pass the child session_id returned by the RPG start, or its embedded rpg_session_id. Do not pass an overworld session id.',
     );
   });
 
@@ -184,7 +188,9 @@ describe("SessionStore", () => {
 
     expect(validWorld.id).toBe("r1");
     expect(validGenerated.id).toBe("r2");
-    expect(() => store.get("r3")).toThrow('Unknown RPG session "r3".');
+    expect(() => store.get("r3")).toThrow(
+      'RPG session "r3" was not found. Pass the child session_id returned by the RPG start, or its embedded rpg_session_id. Do not pass an overworld session id.',
+    );
   });
 
   it("bounds stored sessions and keeps recently accessed sessions", () => {
@@ -198,7 +204,9 @@ describe("SessionStore", () => {
 
     expect(store.get(first.id)).toBe(first);
     expect(store.get(third.id)).toBe(third);
-    expect(() => store.get(second.id)).toThrow('Unknown RPG session "r2".');
+    expect(() => store.get(second.id)).toThrow(
+      'RPG session "r2" was not found. Pass the child session_id returned by the RPG start, or its embedded rpg_session_id. Do not pass an overworld session id.',
+    );
   });
 
   it("updates only the addressed session while preserving session metadata", () => {

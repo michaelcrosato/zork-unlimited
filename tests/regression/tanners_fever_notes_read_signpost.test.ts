@@ -61,12 +61,14 @@ describe("bug_0404 — tanners_fever signposts reading Godwin's notes", () => {
     expect(examined.state.vars.physick).toBe(3);
 
     const taken = play(examined.state, "take_godwin_notes");
-    expect(narration(taken.events)).toMatch(/read the notes closely/i);
+    expect(narration(taken.events)).toMatch(/READ Godwin's case notes while held/i);
     expect(taken.state.flags.godwin_notes_taken).toBe(true);
 
     const examinedInHand = play(taken.state, "examine_godwin_notes");
     const inHandText = narration(examinedInHand.events);
-    expect(inHandText).toMatch(/reading them carefully/i);
+    expect(inHandText).toMatch(
+      /retrieve the notes where dropped and READ Godwin's case notes if that evidence remains open/i,
+    );
     expect(inHandText).not.toMatch(/three parts extract to one part water/i);
     expect(inHandText).not.toMatch(/three to one/i);
   });
@@ -78,8 +80,8 @@ describe("bug_0404 — tanners_fever signposts reading Godwin's notes", () => {
 
     const read = play(s, "read_godwin_notes");
     const readText = narration(read.events);
-    expect(readText).toMatch(/three parts extract to one part water/i);
-    expect(readText).toMatch(/three to one against the reference standard of one to one/i);
+    expect(readText).toMatch(/three parts wormwood extract to one part water/i);
+    expect(readText).toMatch(/three-to-one wormwood dose with the one-to-one standard/i);
     expect(read.state.flags.notes_read).toBe(true);
     expect(read.state.vars.physick).toBe(6);
     expect(read.state.vars.score).toBe(10);

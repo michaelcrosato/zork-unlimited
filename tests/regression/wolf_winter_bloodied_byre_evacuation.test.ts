@@ -54,7 +54,7 @@ describe("Bloodied Byre evacuation", () => {
 
     const object = pack.objects.find((candidate) => candidate.id === "bloodied_byre_evacuation");
     expect(object?.description).toMatch(
-      /people escape.*old grey.*remains.*two cattle.*go missing.*outer line.*byre.*abandoned/is,
+      /save Cade and every rider.*grey leader remains.*two cattle are lost.*byre and outer defense are abandoned/is,
     );
   });
 
@@ -84,7 +84,7 @@ describe("Bloodied Byre evacuation", () => {
 
     const ending = pack.endings.find((candidate) => candidate.id === result.state.endingId);
     expect(ending?.text).toMatch(
-      /Cade and every rider escape.*old grey remains.*Two cattle are missing.*outer defense line and the byre are abandoned/is,
+      /Cade and every rider escape.*grey leader keeps the byre.*two cattle are missing.*byre and outer defense are abandoned/is,
     );
   });
 

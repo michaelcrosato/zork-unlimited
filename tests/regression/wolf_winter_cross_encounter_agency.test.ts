@@ -117,8 +117,12 @@ describe("bug_0501 — Wolf-Winter cross-encounter tactical agency", () => {
       buildRpgObservation(index, state).available_actions.find((option) => option.id === stakeId)
         ?.resources,
     ).toEqual({ gains: ["saved_brace_stake"], costs: [] });
-    expect(buildRpgObservation(index, state).description).toContain("decisive stroke");
-    expect(buildRpgObservation(index, state).description).toContain("portable cross-piece");
+    expect(buildRpgObservation(index, state).description).toContain(
+      "PIN the flank-wolf against the braced rail for the stronger attack",
+    );
+    expect(buildRpgObservation(index, state).description).toContain(
+      "WRENCH the paling's brace-stake free behind the spear guard",
+    );
 
     const committed = act(state, stakeId, 1, 6);
     expect(committed.flags.flank_brace_stake_saved).toBe(true);
@@ -158,7 +162,7 @@ describe("bug_0501 — Wolf-Winter cross-encounter tactical agency", () => {
         "maneuver_grey_leader_close_on_feint",
       ]),
     );
-    expect(buildRpgObservation(index, state).description).toContain("saved paling-stake");
+    expect(buildRpgObservation(index, state).description).toContain("SET the saved brace-stake");
 
     state = act(state, rootId, 1, 6);
     const childId = "maneuver_grey_leader_turn_over_crossbrace";
@@ -177,8 +181,8 @@ describe("bug_0501 — Wolf-Winter cross-encounter tactical agency", () => {
     state = act(state, "go_north");
     const ending = buildRpgObservation(index, state);
     expect(ending.ending_id).toBe("ending_held");
-    expect(ending.ending?.text).toContain("traded the quick pin");
-    expect(ending.ending?.text).toContain("spent");
+    expect(ending.ending?.text).toContain("took the brace-stake at the Byre Door");
+    expect(ending.ending?.text).toContain("The stake is consumed");
     expect(ending.ending?.text).toContain("*** You have won. ***");
     expect(ending.score).toBe(55);
   });

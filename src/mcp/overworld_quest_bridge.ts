@@ -159,13 +159,13 @@ export function overworldQuestCompletionFromRpgSession(
   overworldSessionId: string,
 ): OverworldQuestCompletionSync {
   if (!rpgSession.worldQuestId) {
-    throw new Error("Only shipped world quest RPG sessions can complete overworld quests.");
+    throw new Error("Only an RPG session started from a shipped overworld quest can complete it.");
   }
   if (rpgSession.overworldSessionId !== overworldSessionId) {
-    throw new Error("RPG quest session was not started from this overworld session.");
+    throw new Error("This RPG quest did not start from the supplied overworld session.");
   }
   if (!rpgSession.state.ended || !rpgSession.state.endingId) {
-    throw new Error("RPG quest session has not ended yet.");
+    throw new Error("This RPG quest is still active. Reach an ending before completing it.");
   }
   const ending = rpgSession.index.pack.endings.find(
     (candidate) => candidate.id === rpgSession.state.endingId,

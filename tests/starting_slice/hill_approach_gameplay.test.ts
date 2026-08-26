@@ -44,7 +44,7 @@ const step = makeStep(buildRpgRules(index));
 const routeSpecs = {
   ridge: {
     optionId: "albany:wolf_approach_exposed_ridge",
-    title: "Take the Exposed Ridge Road",
+    title: "Take the Exposed Ridge",
     knowledge: "albany:knowledge_wolf_exposed_ridge",
     memory: "albany:memory_hayden_dispatched_exposed_ridge",
     flag: "approach_exposed_ridge",
@@ -245,8 +245,8 @@ describe("SS-F07 — Wolf-Winter hill-approach gameplay", () => {
       expect(arrival.description).toMatch(/June Pike/i);
       expect(arrival.description).toMatch(
         route === "ridge"
-          ? /exposed ridge[^]*plume[^]*crosswind/i
-          : /sheltered stockway[^]*conceals/i,
+          ? /exposed ridge[^]*smoke[^]*wolf breath[^]*crosswind/i
+          : /sheltered stockway[^]*hedges keep the herd calm[^]*hide the smoke and crosswind/i,
       );
       expect(arrival.available_actions.map((candidate) => candidate.id)).toContain(spec.action);
 
@@ -292,7 +292,7 @@ describe("SS-F07 — Wolf-Winter hill-approach gameplay", () => {
       flags: { lure_trail_fouled: true },
       vars: { cattle_alarm: 3 }, // ridge arrival 1 + failed cast 2
     });
-    expect(failed.journal.join("\n")).toMatch(/no retry; alarm rises by 2/i);
+    expect(failed.journal.join("\n")).toMatch(/cannot be retried[^]*cattle alarm rises by 2/i);
     expect(actionIds(failed)).not.toContain("use_winter_feed_sack_on_downwind_feed_line");
     expect(actionIds(failed)).toContain("wedge_paling_rail");
   });
@@ -314,8 +314,10 @@ describe("SS-F07 — Wolf-Winter hill-approach gameplay", () => {
     expect(ridge.flags.lure_trail_fouled).not.toBe(true);
     expect(stockway.flags.lure_trail_fouled).not.toBe(true);
     const ridgeEnding = buildRpgObservation(index, ridge).ending?.text ?? "";
-    expect(ridgeEnding).toMatch(/accumulated[^]*alarm[^]*two animals are missing/i);
+    expect(ridgeEnding).toMatch(/cattle alarm reached Breaking[^]*two cattle are missing/i);
     expect(ridgeEnding).not.toMatch(/fouled first cast/i);
-    expect(buildRpgObservation(index, stockway).ending?.text).toMatch(/cattle whole/i);
+    expect(buildRpgObservation(index, stockway).ending?.text).toMatch(
+      /whole herd survives[^]*all three wolves leave for the high wood/i,
+    );
   });
 });

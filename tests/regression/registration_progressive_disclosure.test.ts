@@ -20,19 +20,19 @@ const REGISTRATION =
 const EXPECTED = {
   "albany:road_warden": {
     starter: "Fieldcraft 4; weatherproof field kit",
-    obligation: "Return Hayden's winter packet with an honest account",
+    obligation: "Return Hayden's winter packet with an honest report",
   },
   "albany:ledger_advocate": {
     starter: "Mediation 4; sealed evidence folio",
-    obligation: "Return a truthful relief account to Rowan",
+    obligation: "Give Rowan a truthful relief report",
   },
   "albany:ironhands_repairer": {
     starter: "Repair 4; insulated repair roll",
-    obligation: "Return Reese's borrowed diagnostic tools intact",
+    obligation: "Return Reese's borrowed tools intact",
   },
   "albany:unaffiliated_courier": {
     starter: "Streetwise 4; unmarked courier satchel",
-    obligation: "Return or publicly void the emergency tag; no unchanged refusal retry",
+    obligation: "Return or publicly cancel the emergency tag",
   },
 } as const;
 
@@ -83,7 +83,7 @@ describe("Albany registration progressive disclosure", () => {
     expect(terminal).toContain("Starts with: Fieldcraft 4; weatherproof field kit");
     expect(terminal).toContain("Cost: no fee or delay; start with $12");
     expect(terminal).toContain(
-      "Return obligation: Return Hayden's winter packet with an honest account",
+      "Return obligation: Return Hayden's winter packet with an honest report",
     );
     expect(terminal).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
   });
@@ -97,7 +97,7 @@ describe("Albany registration progressive disclosure", () => {
     const detail = compactJourneyStoryChoiceComparison(canonical, selected.id);
 
     expect(detail.inspectedOption.consequence).toBe(
-      `${selected.summary} ${selected.preview} Field trigger: ${selected.trigger_category} ${selected.consequence}`,
+      `${selected.preview} Best for: ${selected.trigger_category} ${selected.consequence}`,
     );
     const detailJson = JSON.stringify(detail);
     for (const sibling of REGISTRATION.profiles.filter((profile) => profile.id !== selected.id)) {
@@ -129,7 +129,7 @@ describe("Albany registration progressive disclosure", () => {
       option_id: selected.id,
     });
     expect(exact.story.inspectedOption?.consequence).toBe(
-      `${selected.summary} ${selected.preview} Field trigger: ${selected.trigger_category} ${selected.consequence}`,
+      `${selected.preview} Best for: ${selected.trigger_category} ${selected.consequence}`,
     );
     expect(api.export_overworld_session({ session_id: inspected.session_id })).toEqual(
       beforeInspection,

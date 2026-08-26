@@ -34,19 +34,18 @@ const ORDINARY_LURE_SEED = seedForSeededOpeningFlag(
   ORDINARY_LURE_FLAG,
 );
 const NORTH_PENDING_GUIDANCE =
-  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+  "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
 const PALING_NORTH_GUIDANCE =
-  "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
-const YEARLING_DEFEAT_JOURNAL =
-  "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
+  "North is blocked. Complete the currently listed yearling or outer-seal action. During LURE, go south, west, and up, then CAST Cade's winter-feed sack THROUGH low wolf-hatch.";
+const YEARLING_DEFEAT_JOURNAL = "The yearling wolf is dead at the Broken Paling.";
 const COMMITTED_LURE_YARD_GUIDANCE =
-  "LURE is committed; HUNT, DRIVE, and FORTIFY are closed. Go north to continue the one-sack feed line or its current recovery step.";
+  "Go north to continue LURE or its shown recovery. HUNT, DRIVE, and FORTIFY are closed.";
 const LURE_FEED_PICKUP_GUIDANCE =
-  "Cade has now released his last feed sack in the open store-shed west. Go west, take the winter-feed sack, return east, then go north for the first cast. The sack was not available before you committed; the yard's north gate is not the feed pickup.";
+  "Go west and TAKE Cade's winter-feed sack. Go east, then go north and LAY downwind feed line WITH Cade's winter-feed sack. The sack became available only after you chose LURE.";
 const LURE_PROTOCOL_GUIDANCE =
-  "The rail recovery sent the yearling alive into the high wood, but the cattle still hammer the slats. Cade holds Jamie's sealed docket beside the herd tally. Call its named sequence here before carrying the feed west through the store and up to the loft; it is one-use.";
+  "CALL Jamie's sealed relief protocol. It can be used once here. Then carry the feed west through the Store-Shed and up to the Fodder-Loft. The yearling is alive in the high wood, but the cattle are still pressing the slats.";
 const LURE_FIRST_BEAT_SETTLED_GUIDANCE =
-  "The first lure beat is settled. Cade points west through the store, then up to the loft for the second cast. The yard's north gate is not the feed line.";
+  "Go west through the Store-Shed and up to the Fodder-Loft for the second feed cast. The north exit does not lead to that cast.";
 
 function fixedRng(face: "best" | "worst"): Rng {
   return {
@@ -195,7 +194,7 @@ function lureRoute(
     (option) => option.id === "ask_commit_lure",
   );
   expect(commitment?.command).toMatch(
-    /FINAL COMMITMENT[^]*LURE[^]*spend Cade's finite feed[^]*three casts[^]*leave paling broken[^]*close HUNT[/]DRIVE[/]FORTIFY[^]*Irreversible/i,
+    /CHOOSE LURE[^]*Consume Cade's only feed sack in three actions[^]*leave the paling broken[^]*permanently close HUNT, DRIVE, and FORTIFY/i,
   );
   act("ask_commit_lure");
   expect(state.flags.strategy_lure_committed).toBe(true);
@@ -261,7 +260,9 @@ function lureRoute(
   ).toBe(true);
   expect(buildRpgObservation(index, state).enemies_present).toEqual([]);
   const breach = buildRpgObservation(index, state);
-  expect(breach.description).toMatch(/ground[^]*north[^]*south[^]*west[^]*up[^]*loft/i);
+  expect(breach.description).toMatch(
+    /Go south[^]*west[^]*up to the Fodder-Loft[^]*(?:second feed cast|cast the remaining feed)/i,
+  );
   expect(breach.description).not.toMatch(/route north is clear|byre runs north|byre north/i);
   assertLurePalingNorthBlocked(
     state,
@@ -307,12 +308,14 @@ function lureRoute(
   });
   expect(compactYard.actions).toContain("go_west");
   expect(compactYard.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
-  expect(NORTH_PENDING_GUIDANCE).toMatch(/LURE:[^]*go west\/up for the second cast/i);
+  expect(NORTH_PENDING_GUIDANCE).toMatch(
+    /Before HUNT[^]*TALK TO Road Warden June Pike[^]*During LURE[^]*shown CALL or feed action[^]*feed is west[^]*hatch is west then up[^]*During DRIVE or FORTIFY[^]*shown gear action/i,
+  );
   act("go_west");
   act("go_up");
   const loft = buildRpgObservation(index, state);
   expect(loft.description).toMatch(
-    /Cade's local feed-plan instruction[^]*feed-hauler's crawlboard/i,
+    /CAST Cade's winter-feed sack THROUGH low wolf-hatch[^]*flank-wolf circles below[^]*feed-hauler's crawlboard with Cade's winter-feed sack/i,
   );
   expect(loft.description).not.toMatch(/Jamie|packet/i);
   act("use_winter_feed_sack_on_loft_hatch");
@@ -364,7 +367,9 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
 
     const ending = buildRpgObservation(index, route.state);
     expect(ending.ending).toMatchObject({ title: "The Pack Diverted Alive" });
-    expect(ending.ending?.text).toMatch(/cattle whole[^]*all three wolves alive/i);
+    expect(ending.ending?.text).toMatch(
+      /whole herd survives[^]*all three wolves leave for the high wood/i,
+    );
   });
 
   it("explains the precise 55/60 missing-counsel gap without changing nonlethal scoring", () => {
@@ -379,7 +384,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
     expect(missingCounsel.state.flags.heard_counsel).not.toBe(true);
     const missingCounselEnding = buildRpgObservation(index, missingCounsel.state);
     expect(missingCounselEnding.ending?.text).toMatch(
-      /wore the byre-jerkin[^]*quick wolf lesson unheard[^]*five-point gap/i,
+      /wore the padded byre-jerkin[^]*skipped Cade's quick spear lesson[^]*reducing the outcome score by 5/i,
     );
     expect(missingCounselEnding.description).toContain("Final score: 55 of 60.");
 
@@ -392,7 +397,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
     };
     const juneMissingCounselEnding = buildRpgObservation(index, juneMissingCounselState);
     expect(juneMissingCounselEnding.ending?.text).toMatch(
-      /June Pike[^]*wore the byre-jerkin[^]*quick wolf lesson unheard[^]*five-point gap/i,
+      /June Pike refused to help with the wolves[^]*wore the padded byre-jerkin[^]*skipped Cade's quick spear lesson[^]*reducing the outcome score by 5/i,
     );
     expect(juneMissingCounselEnding.description).toContain("Final score: 55 of 60.");
 
@@ -421,7 +426,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
     ).toBe(false);
     expect(fouled.state.inventory).not.toContain("split_rail_guard");
     expect(buildRpgObservation(index, fouled.state).ending?.text).toMatch(
-      /every wolf alive[^]*two animals are missing/i,
+      /All three wolves survive[^]*Two cattle are missing/i,
     );
 
     expect(clean.state.vars.score).toBe(fouled.state.vars.score);
@@ -508,7 +513,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
     expect(hybrid.actions.some((id) => id.startsWith("attack_"))).toBe(true);
     expect(hybrid.actions).toContain("use_winter_feed_sack_on_loft_hatch");
     expect(buildRpgObservation(index, hybrid.state).ending?.text).toMatch(
-      /yearling dead[^]*flank-wolf and grey leader alive[^]*two animals are still missing/i,
+      /yearling wolf is dead[^]*flank-wolf and grey leader remain alive[^]*Two cattle are missing/i,
     );
     expect(buildRpgObservation(index, hybrid.state).ending?.text).not.toMatch(
       /all three wolves alive/i,
@@ -534,7 +539,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
     const openActionIds = openFull.available_actions.map((action) => action.id);
     const openCompact = compactRpgObservation(openFull, openActionIds, { includeActions: true });
     expect(openFull.description).toMatch(
-      /cross north uncommitted[^]*Talk to Cade here to compare HUNT, LURE, DRIVE, and FORTIFY/i,
+      /READ day-book and TALK TO old Cade the houndsman before going north[^]*Going north now chooses HUNT[^]*permanently closes LURE, DRIVE, and FORTIFY/i,
     );
     expect(openFull.description.trimEnd()).not.toBe(COMMITTED_LURE_YARD_GUIDANCE);
     expect(openCompact.text).toBe(openFull.description.trimEnd());
@@ -577,7 +582,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
         band: {
           min: 2,
           label: "Restless",
-          description: "The herd is strained but remains below the loss threshold.",
+          description: "The herd is restless, but no cattle are missing.",
         },
         next: { min: 4, label: "Breaking: cattle missing" },
       },
@@ -589,7 +594,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
         band: {
           min: 0,
           label: "Unraised",
-          description: "No signal drive is moving the wolves; signal pressure has not been raised.",
+          description: "No DRIVE signal has moved the wolves.",
         },
         next: { min: 1, label: "Moving" },
       },
@@ -602,7 +607,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
           min: 0,
           label: "Unsealed",
           description:
-            "No fortification line is holding; the pack and weather still have the open byre.",
+            "No FORTIFY seal was raised around the byre. This band does not describe the wolves' current state.",
         },
         next: { min: 1, label: "Testing" },
       },

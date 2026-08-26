@@ -35,19 +35,19 @@ export function JourneyStatus({
   return (
     <section className="journey-status" aria-labelledby="journey-goal-title">
       <div className="journey-goal-copy">
-        <p className="kicker">Current goal · v{journey.goal.version}</p>
+        <p className="kicker">Current goal</p>
         <h2 id="journey-goal-title">{journey.goal.text}</h2>
         <p>{goalProgress}</p>
         {journey.goalGuidance && <p aria-label="Objective guidance">{journey.goalGuidance}</p>}
       </div>
-      <dl className="journey-rhythm" aria-label="Journey rhythm">
+      <dl className="journey-rhythm" aria-label="Journey decisions">
         <div>
-          <dt>Meaningful decisions</dt>
+          <dt>Decisions made</dt>
           <dd aria-live="polite">{journey.acceptedDecisions}</dd>
         </div>
         <div>
-          <dt>Rhythm</dt>
-          <dd>{journey.baselineDecisions}</dd>
+          <dt>Pause interval</dt>
+          <dd>Every {journey.baselineDecisions} decisions</dd>
         </div>
         <div>
           <dt>Next pause</dt>
@@ -68,16 +68,16 @@ export function JourneyStatus({
           aria-labelledby={`journey-passage-title-${journey.goalPassage.id}`}
         >
           <div className="journey-passage-copy">
-            <p className="kicker">Goal passage · road forecast</p>
+            <p className="kicker">Route to goal</p>
             <h3 id={`journey-passage-title-${journey.goalPassage.id}`}>
               {journey.goalPassage.destination}
             </h3>
             <p className="journey-passage-consequence">{journey.goalPassage.consequence}</p>
             <p className="journey-passage-stop">
-              <strong>Where the passage stops:</strong> {journey.goalPassage.stopRule}
+              <strong>Stops when:</strong> {journey.goalPassage.stopRule}
             </p>
           </div>
-          <dl className="journey-passage-facts" aria-label="Goal passage forecast">
+          <dl className="journey-passage-facts" aria-label="Route costs and arrival">
             <div>
               <dt>Roads</dt>
               <dd>
@@ -88,8 +88,8 @@ export function JourneyStatus({
             <div>
               <dt>Time</dt>
               <dd>
-                {journey.goalPassage.baseMinutes} road min · {journey.goalPassage.estimatedMinutes}{" "}
-                estimated
+                {journey.goalPassage.baseMinutes} min without delays ·{" "}
+                {journey.goalPassage.estimatedMinutes} min estimated
               </dd>
             </div>
             <div>

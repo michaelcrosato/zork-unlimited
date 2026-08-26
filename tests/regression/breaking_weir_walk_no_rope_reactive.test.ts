@@ -36,7 +36,7 @@ function onWalk(flags: Record<string, boolean>, inv: string[] = []): GameState {
 describe("bug_0321 — breaking_weir storm-walk shows no-rope text when life-line not held", () => {
   it("no rope → no-rope variant fires (describes missing rope)", () => {
     const desc = roomDescription(room, onWalk({}));
-    expect(desc.toLowerCase()).toContain("no life-line");
+    expect(desc).toContain("You cannot cross without the life-line");
   });
 
   it("no rope → 'clip on' absent from room description", () => {
@@ -51,15 +51,15 @@ describe("bug_0321 — breaking_weir storm-walk shows no-rope text when life-lin
 
   it("has rope + not heard_walk → gamble cue present (not_item variant does not fire)", () => {
     const desc = roomDescription(room, onWalk({}, ["life_line"]));
-    expect(desc).toMatch(/raw nerve/i);
+    expect(desc).toMatch(/nerve check[^]*failure ends the game/i);
   });
 
   it("walk_crossed → crossed variant wins regardless of rope state", () => {
     const noRopeCrossed = roomDescription(room, onWalk({ walk_crossed: true }));
     const ropeAndCrossed = roomDescription(room, onWalk({ walk_crossed: true }, ["life_line"]));
-    expect(noRopeCrossed.toLowerCase()).toContain("crossed now");
-    expect(ropeAndCrossed.toLowerCase()).toContain("crossed now");
-    expect(noRopeCrossed.toLowerCase()).not.toContain("no life-line");
-    expect(ropeAndCrossed.toLowerCase()).not.toContain("no life-line");
+    expect(noRopeCrossed).toContain("You crossed the storm-walk");
+    expect(ropeAndCrossed).toContain("You crossed the storm-walk");
+    expect(noRopeCrossed).not.toContain("cannot cross without the life-line");
+    expect(ropeAndCrossed).not.toContain("cannot cross without the life-line");
   });
 });

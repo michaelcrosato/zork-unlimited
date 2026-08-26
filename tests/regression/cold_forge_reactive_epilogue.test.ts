@@ -122,10 +122,10 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
 
     const obs = buildRpgObservation(index, s);
     expect(obs.ending!.id).toBe("ending_victory");
-    expect(obs.ending!.text).toContain("the old forge is breathing again");
+    expect(obs.ending!.text).toContain("carry the old forge's final living coal to the surface");
     expect(obs.ending!.text.toLowerCase()).not.toContain("last master");
     expect(obs.ending!.text).not.toContain("Final score"); // structured text stays pure
-    expect(obs.description).toContain("the old forge is breathing again");
+    expect(obs.description).toContain("carry the old forge's final living coal to the surface");
     expect(obs.description).toContain("Final score: 50 of 50."); // closure rides description
   });
 
@@ -145,8 +145,8 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
     const obs = buildRpgObservation(index, s);
     expect(obs.ending!.id).toBe("ending_victory");
     expect(obs.ending!.text.toLowerCase()).toContain("last master");
-    expect(obs.ending!.text).toContain("you are the hand that kept it so");
-    expect(obs.description).toContain("you are the hand that kept it so");
+    expect(obs.ending!.text).toContain("His work survives.");
+    expect(obs.description).toContain("His work survives.");
   });
 
   it("WIN via the heard_founder leg (asked the spirit, never entered the cell) → reframed too", () => {
@@ -176,9 +176,13 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
     expect(s.endingId).toBe("ending_fallen");
 
     const obs = buildRpgObservation(index, s);
-    expect(obs.ending!.text).toContain("grave chill closes over you");
+    expect(obs.ending!.text).toContain(
+      "The slag sentinel kills you before you reach the Ember-Heart",
+    );
     expect(obs.ending!.text.toLowerCase()).not.toContain("last master");
-    expect(obs.description).toContain("grave chill closes over you");
+    expect(obs.description).toContain(
+      "The slag sentinel kills you before you reach the Ember-Heart",
+    );
   });
 
   it("DEATH after visiting the founder's cell → the reframed death epilogue", () => {
@@ -197,9 +201,9 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
     expect(s.visited["founder_cell"]).toBe(true);
 
     const obs = buildRpgObservation(index, s);
-    expect(obs.ending!.text).toContain("keep him company");
-    expect(obs.ending!.text).toContain("one more set of bones");
-    expect(obs.description).toContain("keep him company");
+    expect(obs.ending!.text).toContain("The last master's body remains in his cell");
+    expect(obs.ending!.text).toContain("yours now remains in the same cold forge");
+    expect(obs.description).toContain("The last master's body remains in his cell");
   });
 
   // ── NEGATIVE CONTROL: the new validator code bites on dead ending variants ──────────

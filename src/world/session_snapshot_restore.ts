@@ -3,7 +3,8 @@
  *
  * Save compatibility is governed by the snapshot/world schema version parsed in
  * session_snapshot.ts. The world content hash remains useful provenance, but a
- * content-only mismatch is not a migration trigger and never rewrites history.
+ * Content-only mismatches preserve history except for exact, code-owned
+ * predecessor prose that has an explicit fail-closed migration.
  */
 import { hashState } from "../core/hash.js";
 import {
@@ -19,11 +20,14 @@ import {
 } from "./campaign_consequences.js";
 import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
+import { overworldContactJournalIsExactPredecessorCopy } from "./contact_journal_prose_migration.js";
 import {
   assertJourneyCampaignGoalCompletionProof,
   assertJourneyCampaignJournalProof,
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalDefinition,
+  journeyCampaignGoalJournalCopy,
+  journeyCampaignGoalJournalIsExactPredecessorCopy,
   journeyCampaignSelectedStoryChoiceRefs,
   journeyCampaignStoryChoiceRefForGoal,
 } from "./journey_campaign.js";
@@ -40,6 +44,7 @@ import {
 import {
   assertSnapshotTimeline,
   overworldJournalEntryPrecedes,
+  resolveOverworldContactJournalPresentation,
 } from "./session_journal_timeline.js";
 import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import {
@@ -56,6 +61,7 @@ import {
   localJobSceneRequirementsMet,
   resolveLocalJobSceneOption,
 } from "./local_job_scene.js";
+import { describeOverworldContactAction } from "./local_actions.js";
 import {
   localEventSceneOptionRequirementsMet,
   localEventSceneRequirementsMet,
@@ -145,7 +151,7 @@ import { questCampaignExportForEnding } from "./session_quests.js";
 import type { JourneyDecisionProofLast } from "./journey_contract.js";
 
 export const OVERWORLD_CONTENT_HASH_MISMATCH_WARNING =
-  "This save was created from different authored world content; its prior journal is preserved, and current authored content governs future play.";
+  "This save uses a different version of the world. Progress is kept; recognized system-written journal text may be updated, and future play uses current content.";
 
 function proveOpeningDecisionTrail(args: {
   leadSourceProof: OpeningLeadSourceJournalProof;
@@ -1635,6 +1641,79 @@ function normalizeOpeningAllyTimingDisclosurePredecessorJournal(args: {
   return changed ? journalEntries : args.journalEntries;
 }
 
+/**
+ * Upgrade only exact contact copy from the immediately preceding world prose.
+ * The canonical id is included in the digest; repeat-talk time suffixes remain
+ * intact, and the normal restore proof still verifies that the presentation was
+ * active at its recorded campaign boundary.
+ */
+function normalizeOverworldContactPredecessorJournal(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: OverworldSessionSnapshot["journalEntries"];
+}): OverworldSessionSnapshot["journalEntries"] {
+  let changed = false;
+  const journalEntries = args.journalEntries.map((entry) => {
+    if (entry.kind !== "contact") return entry;
+    const resolved = resolveOverworldContactJournalPresentation(entry, args.indexes);
+    if (
+      !resolved ||
+      !overworldContactJournalIsExactPredecessorCopy({
+        canonicalJournalId: resolved.canonicalJournalId,
+        title: entry.title,
+        text: entry.text,
+      })
+    ) {
+      return entry;
+    }
+    const current = describeOverworldContactAction(
+      resolved.presentation.contact,
+      resolved.presentation.presentationId,
+    );
+    if (entry.title === current.title && entry.text === current.text) return entry;
+    changed = true;
+    return Object.freeze({ ...entry, title: current.title, text: current.text });
+  });
+  return changed ? journalEntries : args.journalEntries;
+}
+
+/**
+ * Upgrade only exact campaign-journal copy from the immediately preceding
+ * authored prose. Goal ids, quest outcomes, chronology, counts, and every
+ * other proof still come from the snapshot and are validated normally.
+ */
+function normalizeJourneyCampaignPredecessorJournal(args: {
+  journalEntries: OverworldSessionSnapshot["journalEntries"];
+  journey: OverworldSessionSnapshot["journey"];
+  questOutcomeIds: ReadonlyMap<string, string>;
+}): OverworldSessionSnapshot["journalEntries"] {
+  const definitionsByEntryId = new Map<
+    string,
+    NonNullable<ReturnType<typeof journeyCampaignGoalDefinition>>
+  >();
+  for (const goal of [...args.journey.goalHistory, args.journey.goal]) {
+    if (goal.version <= 1) continue;
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (!definition) continue;
+    definitionsByEntryId.set(`campaign_goal:${String(goal.version)}:${goal.id}`, definition);
+  }
+
+  let changed = false;
+  const journalEntries = args.journalEntries.map((entry) => {
+    const definition = definitionsByEntryId.get(entry.id);
+    if (
+      entry.kind !== "campaign" ||
+      !definition ||
+      !journeyCampaignGoalJournalIsExactPredecessorCopy(definition, entry, args.questOutcomeIds)
+    ) {
+      return entry;
+    }
+    const current = journeyCampaignGoalJournalCopy(definition, args.questOutcomeIds);
+    changed = true;
+    return Object.freeze({ ...entry, title: current.title, text: current.text });
+  });
+  return changed ? journalEntries : args.journalEntries;
+}
+
 export function planOverworldSessionSnapshotRestore(args: {
   indexes: OverworldSnapshotManifestIndex;
   snapshot: OverworldSessionSnapshot;
@@ -1643,13 +1722,20 @@ export function planOverworldSessionSnapshotRestore(args: {
   worldId: string;
 }): OverworldSessionSnapshotRestorePlan {
   const { indexes, snapshot: sourceSnapshot, startTownId, worldHash, worldId } = args;
-  const normalizedJournalEntries = indexes.openingAlly
-    ? normalizeOpeningAllyTimingDisclosurePredecessorJournal({
-        scene: indexes.openingAlly,
-        journalEntries: sourceSnapshot.journalEntries,
-      })
-    : sourceSnapshot.journalEntries;
-  const snapshot =
+  let normalizedJournalEntries =
+    sourceSnapshot.worldHash === worldHash
+      ? sourceSnapshot.journalEntries
+      : normalizeOverworldContactPredecessorJournal({
+          indexes,
+          journalEntries: sourceSnapshot.journalEntries,
+        });
+  if (indexes.openingAlly) {
+    normalizedJournalEntries = normalizeOpeningAllyTimingDisclosurePredecessorJournal({
+      scene: indexes.openingAlly,
+      journalEntries: normalizedJournalEntries,
+    });
+  }
+  let snapshot =
     normalizedJournalEntries === sourceSnapshot.journalEntries
       ? sourceSnapshot
       : Object.freeze({ ...sourceSnapshot, journalEntries: normalizedJournalEntries });
@@ -1737,6 +1823,19 @@ export function planOverworldSessionSnapshotRestore(args: {
   for (const questId of completedQuestIds) {
     if (!questOutcomeIds.has(questId)) {
       throw new Error(`Overworld session snapshot completed quest "${questId}" has no outcome.`);
+    }
+  }
+  if (snapshot.worldHash !== worldHash) {
+    const normalizedCampaignJournalEntries = normalizeJourneyCampaignPredecessorJournal({
+      journalEntries: snapshot.journalEntries,
+      journey: snapshot.journey,
+      questOutcomeIds,
+    });
+    if (normalizedCampaignJournalEntries !== snapshot.journalEntries) {
+      snapshot = Object.freeze({
+        ...snapshot,
+        journalEntries: normalizedCampaignJournalEntries,
+      });
     }
   }
   assertJourneyCampaignGoalCompletionProof({

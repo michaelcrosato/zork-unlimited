@@ -84,24 +84,24 @@ describe("bug_0530 — Gallowmere tracking failure becomes finite fail-forward",
     if (!failed.ok) throw new Error("unreachable");
     state = failed.state;
 
-    expect(narration(failed.events)).toContain("will not be guessing at the same spoor again");
+    expect(narration(failed.events)).toContain(
+      "TRACK kill-site ground from a lower stance WITH hunting-knife",
+    );
     expect(state.flags).toEqual({ kill_site_attempted: true });
     expect(state.vars.attack).toBe(4);
     expect(state.vars.score ?? 0).toBe(0);
     expect(state.questStage).toEqual({});
     expect(state.journal).toEqual([
-      "The first reading blurred in the overlaid hoofprints, but Cradoc's last stance and the deepest heel-mark will settle the charge-line. The kill-site can be read once more without trusting another lucky guess.\n",
+      "Your first TRACK attempt failed. TRACK kill-site ground from a lower stance WITH hunting-knife for a guaranteed retry.\n",
     ]);
     expect(
       actionIds(state).filter((id) => id === "use_hunting_knife_on_spoor_ground"),
     ).toHaveLength(1);
     expect(buildRpgObservation(index, state).description).toMatch(
-      /after your first reading[^]*Cradoc's last stance[^]*deepest heel-mark/i,
+      /first TRACK attempt failed[^]*TRACK kill-site ground from a lower stance WITH hunting-knife[^]*retry is guaranteed/i,
     );
     const recovery = action(state, "use_hunting_knife_on_spoor_ground");
-    expect(recovery.command).toBe(
-      "track kill-site ground against Cradoc's stance with hunting-knife",
-    );
+    expect(recovery.command).toBe("track kill-site ground from a lower stance with hunting-knife");
     expect(parseCommand(index, state, recovery.command)).toEqual({
       ok: true,
       action: recovery.action,
@@ -119,8 +119,8 @@ describe("bug_0530 — Gallowmere tracking failure becomes finite fail-forward",
     expect(state.vars.score).toBe(10);
     expect(state.questStage).toEqual({ gallowmere_hunt: "kill_read" });
     expect(state.journal).toEqual([
-      "The first reading blurred in the overlaid hoofprints, but Cradoc's last stance and the deepest heel-mark will settle the charge-line. The kill-site can be read once more without trusting another lucky guess.\n",
-      "Kill-site read: the sow pivots right on the charge, rolling the left tusk up. You know exactly which angle to take her from — the attack opens up from her blind side. (+2 attack)\n",
+      "Your first TRACK attempt failed. TRACK kill-site ground from a lower stance WITH hunting-knife for a guaranteed retry.\n",
+      "You TRACKED the kill-site ground. The spoor shows that the Gallowmere sow pivoted right and raised her left tusk when charging. (+2 attack)\n",
     ]);
     expect(
       actionIds(state).filter((id) => id === "use_hunting_knife_on_spoor_ground"),

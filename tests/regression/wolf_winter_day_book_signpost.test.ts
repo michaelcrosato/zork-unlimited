@@ -63,10 +63,9 @@ describe("bug_0399 — wolf_winter signposts the score-bearing day-book", () => 
     s = act(s, move("north"));
 
     const text = desc(s).toLowerCase();
-    expect(text).toContain("lantern");
-    expect(text).toContain("day-book");
-    expect(text).toContain("worth reading");
-    expect(text).toContain("before you leave the yard");
+    expect(text).toContain("read day-book and talk to old cade the houndsman before going north");
+    expect(text).toContain("going north now chooses hunt");
+    expect(text).toContain("permanently closes lure, drive, and fortify");
     expect(options(s).map((o) => o.id)).toContain("read_day_book");
   });
 
@@ -76,8 +75,13 @@ describe("bug_0399 — wolf_winter signposts the score-bearing day-book", () => 
     s = act(s, read("day_book"));
 
     const text = desc(s).toLowerCase();
-    expect(text).toContain("you checked its last wolf-count");
-    expect(text).not.toContain("worth reading before you leave the yard");
+    expect(text).toContain("you read the wolf count");
+    expect(text).toContain(
+      "talk to old cade the houndsman to compare hunt, lure, drive, and fortify",
+    );
+    expect(text).not.toContain(
+      "read day-book and talk to old cade the houndsman before going north",
+    );
     expect(s.flags.read_tally).toBe(true);
   });
 

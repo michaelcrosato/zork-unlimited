@@ -76,9 +76,9 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
     let state = initStateForRpgPack(index, 31);
     const opening = buildRpgObservation(index, state);
 
-    expect(opening.description).toMatch(/dose ledger.*west/i);
-    expect(opening.description).toMatch(/remedies.*east/i);
-    expect(opening.description).toMatch(/Edric's bedside/i);
+    expect(opening.description).toMatch(/room west[^]*READ Godwin's case notes/i);
+    expect(opening.description).toMatch(/room east[^]*TAKE meadowsweet/i);
+    expect(opening.description).toMatch(/Back in the Sickroom[^]*TREAT Edric WITH meadowsweet/i);
     expect(actionIds(state)).toContain("examine_sick_edric");
     expect(actionIds(state)).not.toContain("read_sick_edric");
 
@@ -87,7 +87,7 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
     expect(state.flags.edric_examined).toBe(true);
     expect(state.vars.physick).toBe(6);
     expect(state.vars.score).toBe(5);
-    expect(narration(examined.events)).toMatch(/dosage formula.*case notes/i);
+    expect(narration(examined.events)).toMatch(/high wormwood dose.*read Godwin's case notes/is);
 
     state = act(state, "examine_sick_edric").state;
     expect(state.vars.physick).toBe(6);
@@ -120,30 +120,28 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
       "look_around",
       "inventory",
     ]);
-    expect(narration(diagnosed.events)).toMatch(/autumn fever.*clinical judgment/is);
+    expect(narration(diagnosed.events)).toMatch(/autumn fever.*wormwood.*five days/is);
 
     // A same-room look preserves the exchange and its evidence-grounded root
     // cue without either a filler navigation turn or a second TALK opener.
     state = act(state, "look_around").state;
     const rootText = buildRpgObservation(index, state).dialogue?.npc_text ?? "";
 
-    expect(rootText).toMatch(/questions alone will not change a treatment/i);
-    expect(rootText).toMatch(/grounded in the boy/i);
-    expect(rootText).toMatch(/written dose/i);
-    expect(rootText).toMatch(/safer correction/i);
-    expect(rootText).toMatch(/bedside/i);
-    expect(rootText).not.toMatch(/meadowsweet|go east|go west/i);
+    expect(rootText).toMatch(/questions will not change the treatment/i);
+    expect(rootText).toMatch(/build the case from Edric/i);
+    expect(rootText).toMatch(/my case notes/i);
+    expect(rootText).toMatch(/and the meadowsweet/i);
+    expect(rootText).toMatch(/then TREAT Edric WITH meadowsweet/i);
 
     // Moving north is itself the intent to stop talking and leave the sickroom.
     state = act(state, "go_north").state;
     const corridor = buildRpgObservation(index, state);
     const north = corridor.blocked_exits.find((exit) => exit.direction === "north");
-    expect(north?.message).toMatch(/nonviolent case is back south/i);
-    expect(north?.message).toMatch(/Edric's condition/i);
-    expect(north?.message).toMatch(/written dose/i);
-    expect(north?.message).toMatch(/settles the stomach/i);
-    expect(north?.message).toMatch(/at the bedside/i);
-    expect(north?.message).not.toMatch(/examine Edric|go east|go west/i);
+    expect(north?.message).toMatch(/North opens after Edric is treated/i);
+    expect(north?.message).toMatch(
+      /after Holt is defeated while you carry meadowsweet that you have INSPECTED/i,
+    );
+    expect(north?.message).toMatch(/Complete only the prerequisite still missing/i);
     expect(actionIds(state)).toContain("go_south");
     expect(actionIds(state)).toContain("attack_holt");
   });
@@ -185,7 +183,9 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
     expect(ending.ending_id).toBe("ending_recovered");
     expect(ending.score).toBe(pack.meta.max_score);
     expect(ending.inventory).not.toContain("meadowsweet");
-    expect(ending.ending?.text).toMatch(/Edric has the meadowsweet in him/i);
+    expect(ending.ending?.text).toMatch(
+      /treated Edric with meadowsweet[^]*Godwin stopped the wormwood tonic/i,
+    );
     expect(validateRpg(pack).findings).toHaveLength(0);
   });
 
@@ -220,7 +220,7 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
     expect(state.flags.holt_defeated).toBe(true);
     expect(actionIds(state)).not.toContain("go_north");
     expect(buildRpgObservation(index, state).blocked_exits[0]?.message).toMatch(
-      /identified remedy/i,
+      /Holt is defeated while you carry meadowsweet that you have INSPECTED/i,
     );
 
     state = play(state, [
@@ -238,7 +238,7 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
     expect(ending.ended).toBe(true);
     expect(ending.score).toBe(25);
     expect(ending.inventory).not.toContain("meadowsweet");
-    expect(ending.ending?.text).toMatch(/left the meadowsweet with the factor's boy/i);
+    expect(ending.ending?.text).toMatch(/left the identified meadowsweet with the factor's boy/i);
     expect(ending.ending?.text).not.toMatch(/Edric has the meadowsweet in him/i);
   });
 });

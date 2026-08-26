@@ -111,9 +111,9 @@ describe("bug_0276 — The Sunken Barrow's doom epilogue reframes on whether the
 
     const obs = buildRpgObservation(index, s);
     expect(obs.ending!.id).toBe("ending_woken");
-    expect(obs.ending!.text).toContain("the shade's last counsel rings true after all");
-    expect(obs.ending!.text).not.toContain("some instinct older than reason");
-    expect(obs.description).toContain("the shade's last counsel rings true after all");
+    expect(obs.ending!.text).toContain("ignored the reaver's shade's warning");
+    expect(obs.ending!.text).toContain("The Barrow-Lord wakes, kills you");
+    expect(obs.description).toContain("ignored the reaver's shade's warning");
   });
 
   it("DOOM without founder knowledge (shade skipped) → the base epilogue, no shade callback", () => {
@@ -127,9 +127,9 @@ describe("bug_0276 — The Sunken Barrow's doom epilogue reframes on whether the
     const obs = buildRpgObservation(index, s);
     expect(obs.ending!.id).toBe("ending_woken");
     // The non-sequitur the playtester flagged must be GONE on the uninformed path.
-    expect(obs.ending!.text).not.toContain("the shade's last counsel");
-    expect(obs.ending!.text).toContain("some instinct older than reason");
-    expect(obs.description).toContain("some instinct older than reason");
+    expect(obs.ending!.text).not.toContain("reaver's shade");
+    expect(obs.ending!.text).toContain("woke the Barrow-Lord");
+    expect(obs.description).toContain("He kills you");
   });
 
   it("the doom fork is a death ending that tops out at 25/50 on both paths (bug_0107)", () => {

@@ -28,7 +28,8 @@ describe("bug_0315 — The Breaking Weir: pell_weir cross-references the flood-b
     expect(pell).toBeDefined();
     const node = pell.dialogue.nodes.find((n) => n.id === "pell_weir")!;
     expect(node).toBeDefined();
-    expect(node.npc_text).toMatch(/flood-book/i);
+    expect(node.npc_text).toMatch(/FREE jammed head-rack with weir-iron/i);
+    expect(node.npc_text).toMatch(/choose SET stone-race course pin or SET field-wash course pin/i);
   });
 
   it("the flood-book cross-reference in pell_weir is framed as a written record", () => {
@@ -37,7 +38,8 @@ describe("bug_0315 — The Breaking Weir: pell_weir cross-references the flood-b
       .dialogue.nodes.find((n) => n.id === "pell_weir")!;
     // The fix uses "written…in my own hand" — distinguishes a genuine cross-ref from
     // incidental mention.
-    expect(node.npc_text).toMatch(/written|writ|hand/i);
+    expect(node.npc_text).toMatch(/The recorded order is/i);
+    expect(node.npc_text).toMatch(/rack and winch checks are safe to retry/i);
   });
 
   it("the flood-book read_text still directs players to consult Pell about the walk", () => {

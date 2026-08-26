@@ -18,8 +18,7 @@ const WORLD = loadOverworldManifest(process.cwd());
 const EVENT_ID = "albany_city__civic_core__event";
 const EVENT_PAUSED_MESSAGE = "No authored choice is currently available in this journey state.";
 const EVENT_INVESTIGATE_MESSAGE = "Required first: investigate this event.";
-const STORY_ACTION_BLOCKED_MESSAGE =
-  "Choose the presented story consequence, background, Wolf-Winter promise, report, field kit, relief wagon, or second rider before taking another action.";
+const STORY_ACTION_BLOCKED_MESSAGE = "Choose the open story option before taking another action.";
 
 function expectEventLeadParity(session: OverworldSession, message: string): void {
   const compact = session.compactView();
@@ -81,7 +80,7 @@ describe("progressive authored-event disclosure", () => {
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.events).toContainEqual([EVENT_ID, event.title]);
     expect(compact.event_leads).toEqual([
-      [EVENT_ID, event.summary, "Required first: scout Albany Civic Center Notice Hall."],
+      [EVENT_ID, event.summary, "Required first: scout Albany Civic Center Notice Board."],
     ]);
     expect(compact.event_scenes).toBeUndefined();
     expect(JSON.stringify(compact)).not.toContain(event.authored_scene.prompt);
@@ -121,7 +120,7 @@ describe("progressive authored-event disclosure", () => {
 
   it("advertises only executable event prerequisites through every Albany opening choice", () => {
     const session = new OverworldSession(WORLD);
-    expectEventLeadParity(session, "Required first: scout Albany Civic Center Notice Hall.");
+    expectEventLeadParity(session, "Required first: scout Albany Civic Center Notice Board.");
 
     const beforeScout = session.snapshotHash();
     session.scoutPoi("albany_city__civic_core__poi");

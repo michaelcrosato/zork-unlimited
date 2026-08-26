@@ -77,16 +77,16 @@ describe("bug_0069 — the slab's base examine is honest about the single-heave 
     expect(d).not.toContain("again and again");
     expect(d).not.toContain("heroic effort");
     // It must still concede the slab CAN give on the first attempt (the ~60% path).
-    expect(d).toMatch(/first heave|on the first|may give/);
+    expect(d).toMatch(/can be retried until the check succeeds/);
   });
 
   it("still carries bug_0027's persistence cue and never implies a strength wall", () => {
     const d = slabDescription.toLowerCase();
     // persistence (a failing player must still read "keep going") …
-    expect(d).toMatch(/again and again|persist|stubborn|keep|or take/);
+    expect(d).toMatch(/failure consumes no item or hp|can be retried/);
     // … but NOT as a fixed strength threshold / missing-item dead end.
     expect(d).not.toMatch(/real might|not strong enough|need more/);
-    expect(d).toContain("leverage");
+    expect(d).toContain("iron bar");
   });
 
   it("the success mechanic is unchanged — seed 1 levers on the first heave and wins 50/50", () => {
@@ -113,7 +113,7 @@ describe("bug_0069 — the slab's base examine is honest about the single-heave 
     expect(res).not.toBeNull();
     const ns = narrations(res!.effects).join(" ").toLowerCase();
     expect(ns).toContain("failure");
-    expect(ns).toMatch(/heave again|keep at it/); // bug_0027 retry guidance still shown
+    expect(ns).toMatch(/lever it with the iron bar again|retries are unlimited/); // bug_0027 retry guidance still shown
     const r = step(s, LEVER);
     expect(r.ok).toBe(true);
     expect(r.state.questStage["barrow"]).not.toBe("slab_moved");

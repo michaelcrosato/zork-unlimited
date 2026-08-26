@@ -168,15 +168,19 @@ describe("bug_0076 — The Cold Forge's Founder's Cell + cold-iron plate (option
 
   it("(6) reactive prose: the founder loses his plate, the plate reads worn once donned", () => {
     let s = enterCell();
-    expect(narration(s, lookAt("founder")).toLowerCase()).toContain("in cold-iron plate");
+    expect(narration(s, lookAt("founder")).toLowerCase()).toContain(
+      "this is where his cold-iron plate was found",
+    );
 
     s = act(s, (a) => a.type === "TAKE" && (a as { item?: string }).item === "cold_iron_plate");
     const founderNow = narration(s, lookAt("founder")).toLowerCase();
-    expect(founderNow).toContain("bare"); // no longer "armoured still"
-    expect(founderNow).not.toContain("in cold-iron plate");
+    expect(founderNow).toContain("you took the dead master's cold-iron plate");
+    expect(founderNow).not.toContain("this is where his cold-iron plate was found");
 
     s = act(s, isUse); // don it
-    expect(narration(s, lookAt("cold_iron_plate")).toLowerCase()).toContain("buckled on");
+    expect(narration(s, lookAt("cold_iron_plate")).toLowerCase()).toContain(
+      "you completed the cold-iron plate's first don",
+    );
   });
 
   it("(7) the beat is optional: the canonical buffed route ignores the cell and still wins 50/50 at base defense", () => {

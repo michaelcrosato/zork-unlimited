@@ -97,12 +97,16 @@ describe("bug_0125 — The Cold Forge death ending renders cleanly to the player
     expect(obs.ending!.id).toBe("ending_fallen");
     expect(obs.ending!.death).toBe(true);
     expect(obs.ending!.title).toBe("Cold on the Cinders");
-    expect(obs.ending!.text.toLowerCase()).toContain("grave chill closes over you");
+    expect(obs.ending!.text).toContain(
+      "The slag sentinel kills you before you reach the Ember-Heart",
+    );
 
     // the rendered, player-visible fields: at death the player sees the ending's
     // TITLE (not the room name), and its TEXT (not the room description)
     expect(obs.title).toBe("Cold on the Cinders");
-    expect(obs.description.toLowerCase()).toContain("the sentinel's last blow drops you");
+    expect(obs.description).toContain(
+      "The slag sentinel kills you before you reach the Ember-Heart",
+    );
   });
 
   it("the dying player still gets honest score closure — 'Final score: 0 of 50.' appended", () => {

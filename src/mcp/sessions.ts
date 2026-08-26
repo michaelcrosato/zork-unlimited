@@ -406,7 +406,7 @@ export class SessionStore {
     const session = refreshSessionEntry(this.sessions, id);
     if (!session) {
       throw new Error(
-        `Unknown RPG session "${id}". Use the child session_id returned by an RPG start or the embedded rpg_session_id, not an overworld session id.`,
+        `RPG session "${id}" was not found. Pass the child session_id returned by the RPG start, or its embedded rpg_session_id. Do not pass an overworld session id.`,
       );
     }
     return session;

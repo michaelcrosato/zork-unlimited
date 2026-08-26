@@ -34,7 +34,7 @@ function authorTannersCampaignExports(world: OverworldManifest): void {
     },
     {
       ending_id: "ending_expelled",
-      ending_title: "The Corridor",
+      ending_title: "Killed in the Corridor",
       effects: [{ type: "set_world_fact", fact_id: TANNERS_EXPELLED_FACT }],
     },
   ];
@@ -140,7 +140,9 @@ describe("Albany Campus Archive Query", () => {
       [JOB, WARNING],
       [JOB, ARCHIVE],
     ]);
-    expect(() => session.workLocalJob(JOB)).toThrow(/Choose one authored option/i);
+    expect(() => session.workLocalJob(JOB)).toThrow(
+      /Choose one option for Albany Campus Row: Archive Query/i,
+    );
     expect(() => session.workLocalJob(JOB, "archive")).toThrow(/Unknown local-job scene option/i);
   });
 
@@ -160,14 +162,14 @@ describe("Albany Campus Archive Query", () => {
     expect(warning.compactView().service_offers).toContainEqual([
       WARNING_SERVICE,
       "rest",
-      "Take Blair's Dispatch-Room Recovery Cot",
+      "Rest After Filing the Road Warning",
       expect.any(String),
       15,
     ]);
     expect(archive.compactView().service_offers).toContainEqual([
       ARCHIVE_SERVICE,
       "resupply",
-      "Claim Blair's Traceable Field Cache",
+      "Collect Archive Supplies",
       expect.any(String),
       15,
     ]);

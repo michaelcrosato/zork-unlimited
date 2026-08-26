@@ -51,8 +51,8 @@ buildRpgRules(index); // parity with the engine wiring the runtime uses
 
 const desc = (s: GameState): string => buildRpgObservation(index, s).description;
 
-const CALMED = "voice outside has changed";
-const TOO_HIGH = "too high, too fast";
+const CALMED = "stopped the water from rising";
+const TOO_HIGH = "Floodwater pounds the walls";
 
 describe("bug_0250 — keeper's lodge calmed-water variant survives the quest-stage regression", () => {
   it("(1) un-opened: the lodge shows the base 'too high, too fast' text, not the calmed variant", () => {

@@ -50,11 +50,12 @@ export type OverworldServiceState = {
   fatigue: number;
 };
 
-export const OVERWORLD_REST_UNAVAILABLE_MESSAGE = "There is no inn or healer here to rest safely.";
+export const OVERWORLD_REST_UNAVAILABLE_MESSAGE =
+  "Rest is unavailable here. This town has no inn or healer.";
 export const OVERWORLD_RESUPPLY_UNAVAILABLE_MESSAGE =
-  "There is no market, inn, or stable here to resupply.";
+  "Resupply is unavailable here. This town has no market, inn, or stable.";
 export const OVERWORLD_CARE_UNAVAILABLE_MESSAGE =
-  "There is no active campaign wound-care offer here.";
+  "Wound care is unavailable here. No active care offer matches your condition.";
 
 function campaignServiceRule(
   state: OverworldServiceState,
@@ -91,9 +92,9 @@ export function campaignServiceJournalCopy(
 ): CampaignServiceJournalCopy {
   const consequence =
     rule.action === "rest"
-      ? `The service takes ${rule.minutes} minutes; fatigue falls from ${resources.fatigue} to 0.`
+      ? `Time: ${rule.minutes} minutes. Fatigue: ${resources.fatigue} → 0.`
       : rule.action === "resupply"
-        ? `The service takes ${rule.minutes} minutes; supplies rise from ${resources.supplies} to ${MAX_SUPPLIES}.`
+        ? `Time: ${rule.minutes} minutes. Supplies: ${resources.supplies} → ${MAX_SUPPLIES}.`
         : (() => {
             if (!character || !rule.effects) {
               throw new Error(
@@ -106,12 +107,9 @@ export function campaignServiceJournalCopy(
             }).characterAfter;
             const treatment = (rule.effects as CampaignConsequenceEffects)
               .filter((effect) => effect.type === "treat_wound")
-              .map(
-                (effect) =>
-                  `the witnessed wound advances from ${effect.from_treatment} to ${effect.to_treatment}`,
-              )
+              .map((effect) => `wound treatment: ${effect.from_treatment} → ${effect.to_treatment}`)
               .join("; ");
-            return `The service takes ${rule.minutes} minutes; ${treatment}, and health rises from ${character.health.current} to ${after.health.current}.`;
+            return `Time: ${rule.minutes} minutes. ${treatment}. Health: ${character.health.current} → ${after.health.current}.`;
           })();
   return {
     title: rule.title,
@@ -173,7 +171,7 @@ export function planOverworldTownRest(state: OverworldServiceState): OverworldSe
   }
 
   const minutes = rule?.minutes ?? Math.max(180, Math.ceil(state.fatigue / 20) * 60);
-  const ordinaryText = `You spend ${minutes} minutes recovering at a safe local service. Fatigue falls from ${state.fatigue} to 0.`;
+  const ordinaryText = `You rest safely. Time: ${minutes} minutes. Fatigue: ${state.fatigue} → 0.`;
   const authoredCopy = rule ? campaignServiceJournalCopy(rule, state) : null;
   const text = authoredCopy?.text ?? ordinaryText;
   return {
@@ -216,7 +214,7 @@ export function planOverworldTownResupply(state: OverworldServiceState): Overwor
   }
 
   const minutes = rule?.minutes ?? 45;
-  const ordinaryText = `You spend ${minutes} minutes buying food, lamp oil, and road gear. Supplies rise from ${state.supplies} to ${MAX_SUPPLIES}.`;
+  const ordinaryText = `You buy food, lamp oil, and road gear. Time: ${minutes} minutes. Supplies: ${state.supplies} → ${MAX_SUPPLIES}.`;
   const authoredCopy = rule ? campaignServiceJournalCopy(rule, state) : null;
   const text = authoredCopy?.text ?? ordinaryText;
   return {

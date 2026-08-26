@@ -134,17 +134,17 @@ describe("terminal registration story-choice groups", () => {
       `Customize: \`customize\` — ${OPENING_RELIEF_OATH_CUSTOMIZE_LABEL}. ${OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION}`,
     );
     expect(initial).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
-    expect(initial).toContain("1. Ready-made dispatch — Aid-Only promise + Hayden's frost report");
+    expect(initial).toContain("1. Ready-made setup — Aid-Only + Hayden's report");
     expect(initial).toContain(
-      "Ready-made dispatch: Carry winter-road judgment and flexible, life-first aid to Cade's steading.",
+      "Ready-made plan: Start with Defense 4, the clean-feed LURE benefit, and Hayden's conditional HUNT brace.",
     );
     expect(initial).toContain("Cost: 10 minutes and $0");
     expect(initial).toContain("Give up: Other promise/report pairs close.");
     expect(initial).not.toMatch(/\b(?:DEF|DC|import|fieldTrigger)\b/i);
     expect(initial).not.toContain("Wolf-Winter promise:");
-    expect(initial).not.toContain("Take Full Compact Duty");
-    expect(initial).not.toContain("Negotiate Aid-Only Duty\n");
-    expect(initial).not.toContain("Remain an Unaffiliated Helper");
+    expect(initial).not.toContain("Accept Full Compact Authority");
+    expect(initial).not.toContain("Accept Aid-Only Terms\n");
+    expect(initial).not.toContain("Use a Personal Bond");
 
     const revealSession = new OverworldSession(WORLD);
     revealSession.scoutPoi(revealSession.view().pois[0]!.id);
@@ -156,15 +156,15 @@ describe("terminal registration story-choice groups", () => {
     );
     const revealed = renderTerminalStoryChoiceComparison(revealedPrompt);
     expect(revealed).toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
-    expect(revealed).toContain("1. Ready-made dispatch — Aid-Only promise + Hayden's frost report");
-    expect(revealed).toContain("2. Take Full Compact Promise");
-    expect(revealed).toContain("3. Negotiate Aid-Only Promise");
-    expect(revealed).toContain("4. Remain an Unaffiliated Helper");
+    expect(revealed).toContain("1. Ready-made setup — Aid-Only + Hayden's report");
+    expect(revealed).toContain("2. Accept Full Compact Authority");
+    expect(revealed).toContain("3. Accept Aid-Only Terms");
+    expect(revealed).toContain("4. Use a Personal Bond");
     expect(revealed).toContain("Wolf-Winter promise:");
     expect(revealed).not.toContain("Customize: `customize`");
     expect(revealed.match(/^ {4}\d+\. /gm)).toHaveLength(4);
-    expect(revealed.indexOf("Ready-made dispatch —")).toBeLessThan(
-      revealed.indexOf("Take Full Compact Promise"),
+    expect(revealed.indexOf("Ready-made setup —")).toBeLessThan(
+      revealed.indexOf("Accept Full Compact Authority"),
     );
 
     const selected: string[] = [];
@@ -181,7 +181,7 @@ describe("terminal registration story-choice groups", () => {
     expect(rejected).toEqual([]);
     expect(written).toEqual([
       initial,
-      "This story choice is mandatory. Inspect an exact option or choose one; back/cancel cannot dismiss it.",
+      "You must choose. Inspect an option or choose one; `back` and `cancel` cannot close this choice.",
     ]);
     expect(result).toMatchObject({
       kind: "chosen",
@@ -211,8 +211,8 @@ describe("terminal registration story-choice groups", () => {
       reveal: () => revealedPrompt,
     });
     expect(customizedRejected).toEqual([
-      "Use `customize` to reveal the individual promises before choosing that card.",
-      "Choose an exact option id, full option label, or number from the comparison.",
+      "Type `customize` to show the individual promises before choosing one.",
+      "Choose using a number, exact option id, or full label shown above.",
     ]);
     expect(customizedWritten).toEqual([initial, revealed]);
     expect(customizedResult).toMatchObject({
@@ -311,12 +311,12 @@ describe("terminal registration story-choice groups", () => {
     });
 
     expect(rejected).toEqual([
-      "Use `customize` to reveal the individual promises before choosing that card.",
+      "Type `customize` to show the individual promises before choosing one.",
     ]);
     expect(written).toHaveLength(3);
     expect(written[0]).toBe(initial);
     expect(written[1]).toBe(revealed);
-    expect(written[2]).toContain("Story choice detail — Full duty");
+    expect(written[2]).toContain("Choice details — Full duty");
     expect(result).toMatchObject({ kind: "chosen", option: { id: "custom-full" } });
     expect(selected).toEqual(["custom-full"]);
   });

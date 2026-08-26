@@ -34,22 +34,20 @@ rooms:
   - id: barrow_mouth
     name: "Barrow Mouth"
     description: >
-      A low arch of turf-bound stone opens into the hillside — the Sunken Barrow,
-      where the old songs lay the Barrow-Lord to rest with his pale circlet still
-      on his brow. That crown is what you came down out of the daylight to take.
-      Cold air sighs up from the dark, and the only way to it is down.
+      Go down into the Sunken Barrow to find the Barrow-Lord's circlet. The low
+      stone entrance opens beneath the hillside.
     exits:
       - { direction: down, to: entry_hall }
 
   - id: entry_hall
     name: "Entry Hall"
     description: >
-      A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and a
-      passage runs north into a deeper cold, the kind an unwarned blade should
-      not meet naked. A low breach gapes west into a cramped side cell, and from
-      its dark a cold breath drifts, prickling the neck. The presence there waits
-      rather than lunges; old counsel, not an ambush, seems to breathe from the
-      cell. Steps climb back up to the light.
+      The rubble is where the iron bar was found. TAKE iron bar if it is here, or retrieve
+      the iron bar if a tool action remains. It is the tool for any unfinished LEVER stone
+      slab action; an opened slab stays open. It can also PRISE sealed sarcophagus WITH iron bar, fatally.
+      Go west to TALK TO reaver's shade; its +3 defense ward helps only if the
+      barrow-wight still stands. Go north through the Guard Crypt. A completed fight
+      stays complete. Go up to leave the barrow.
     # bug_0170: the west breach now telegraphs the shade IN SCENE ("a cold breath
     # ... something lingers in there, watchful"). This is the Entry Hall fork — west
     # to the optional shade, north into the lethal wight — and a fresh blind
@@ -85,29 +83,23 @@ rooms:
               - { has_flag: heard_warding }
               - { has_flag: heard_lord_lore }
         text: >
-          A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
-          bar lay until you took it up. The northern passage waits with the
-          grave-cold the shade named for you. The west breach is no longer a
-          nameless threat: the reaver's shade keeps its bone-cold vigil there,
-          counsel given and no malice in it. Steps climb back up to the light.
+          You have the iron bar and heard the reaver's shade. Go north through the
+          Guard Crypt; if the barrow-wight still stands, ATTACK barrow-wight. Go west, then
+          TALK TO reaver's shade. Or go up to leave the barrow.
       - when:
           - any_of:
               - { has_flag: heard_warding }
               - { has_flag: heard_lord_lore }
         text: >
-          A hall of fitted slabs. A rusted iron bar lies among fallen rubble, and
-          the northern passage waits with the grave-cold the shade named for you.
-          The west breach is no longer a nameless threat: the reaver's shade keeps
-          its bone-cold vigil there, counsel given and no malice in it. Steps
-          climb back up to the light.
+          You heard the reaver's shade. Retrieve the iron bar only if LEVER stone slab
+          WITH iron bar is still unfinished. If the barrow-wight still stands, ATTACK
+          barrow-wight. Completed fights and an opened slab stay complete. Go west to
+          TALK TO reaver's shade. Or go up to leave the barrow.
       - when: [ { has_item: iron_bar } ]
         text: >
-          A hall of fitted slabs. The rubble is scuffed bare where the rusted iron
-          bar lay until you took it up. A passage runs north into a deeper cold,
-          the kind an unwarned blade should not meet naked. A low breach gapes west
-          into a cramped side cell from which a cold breath drifts, prickling the
-          neck. The presence there waits rather than lunges; old counsel, not an
-          ambush, seems to breathe from the cell. Steps climb back up to the light.
+          You have the iron bar. If the barrow-wight still stands, the reaver's shade
+          west can grant a +3 defense ward before the lethal fight north. Otherwise,
+          the completed fight stays complete. Go up to leave the barrow.
     objects: [iron_bar]
     exits:
       - { direction: up, to: barrow_mouth }
@@ -128,60 +120,54 @@ rooms:
   - id: reaver_rest
     name: "The Reaver's Rest"
     description: >
-      A cramped side cell, little more than a fault in the rock. Propped against the
-      far wall are the bones of some long-dead grave-robber who came down for the
-      same cold crown you seek and never climbed back to the light. A thin grey shade
-      still clings to them — watchful, with no warmth left in it, and no malice either.
+      TALK TO reaver's shade. Select the displayed "Ask how the barrow-wight bested
+      him." topic for a one-time +3 defense ward, or the displayed "Ask about the
+      Barrow-Lord and his crown." topic for a warning. The ward helps only if the
+      wight still stands. Go east to the Entry Hall.
     exits:
       - { direction: east, to: entry_hall }
 
   - id: guard_crypt
     name: "Guard Crypt"
     description: >
-      Niches line the walls, each holding the dust of a forgotten guard. One
-      niche is empty — and something has climbed out of it. An archway east is
-      choked with the cold the thing gives off. That cold feels like more than an
-      unwarned blade should meet; if you came straight here, the watchful side
-      cell off the entry still promises counsel before blood.
+      ATTACK barrow-wight to unlock the east exit. This fight can kill you.
+      Go south to the Entry Hall and west from there to gain the reaver's shade's
+      +3 defense ward before fighting. One burial niche stands empty.
     variants:
       - when: [ { has_flag: wight_slain } ]
         text: >
-          Niches line the walls, each holding the dust of a forgotten guard. One
-          niche stands empty, its risen tenant crumbled to grave-dust across the
-          floor. The cold has lifted from the archway east, and the dark beyond
-          it lies open.
+          You defeated the barrow-wight. Go east to the Slab Passage, or south to
+          the Entry Hall. Grave-dust covers the floor.
       - when: [ { has_flag: heard_warding } ]
         text: >
-          Niches line the walls, each holding the dust of a forgotten guard. One
-          niche is empty — and something has climbed out of it. An archway east is
-          choked with the cold the thing gives off. The warding trick the shade
-          taught you settles into your guard; this is still a true fight, but not
-          an unwarned one.
+          You have the reaver's shade's +3 defense ward. ATTACK barrow-wight to
+          unlock the east exit; the ward improves your odds but this fight can still
+          kill you. Go south to retreat to the Entry Hall.
     exits:
       - { direction: south, to: entry_hall }
       - direction: east
         to: slab_passage
         conditions: [ { has_flag: wight_slain } ]
-        locked_msg: "The barrow-wight bars the way; you cannot pass while it stands."
+        locked_msg: "The east exit is locked while the barrow-wight lives. ATTACK barrow-wight and defeat it to pass."
 
   - id: slab_passage
     name: "Slab Passage"
     description: >
-      The passage ends at a great stone slab set flush with the floor, its edge
-      gripped by a worn iron lip — made to be levered, by someone strong enough.
+      LEVER stone slab WITH iron bar to open the stair down. A failed check
+      consumes no item or HP and can be retried until it succeeds. Go west to the
+      Guard Crypt.
     variants:
       - when: [ { quest_stage: { quest: barrow, stage: slab_moved } } ]
         text: >
-          The passage ends where the great stone slab once lay flush with the
-          floor. Levered aside now, it has bared a stair that drops down into the
-          dark of the earth.
+          You moved the stone slab. Go down to the Relic Chamber, or west to the
+          Guard Crypt.
     objects: [stone_slab]
     exits:
       - { direction: west, to: guard_crypt }
       - direction: down
         to: relic_chamber
         conditions: [ { quest_stage: { quest: barrow, stage: slab_moved } } ]
-        locked_msg: "The slab is shut fast. It must be levered aside first."
+        locked_msg: "The down exit is locked. LEVER stone slab WITH iron bar; failure consumes no item or HP and can be retried."
 
   - id: relic_chamber
     name: "Relic Chamber"
@@ -196,13 +182,10 @@ rooms:
     # safe, obvious act — take the crown and climb out — is still front and centre
     # (bug_0083).
     description: >
-      Below the slab, a small vaulted chamber. A great sarcophagus of black stone
-      stands sealed at its heart — the Barrow-Lord himself, laid to his long rest
-      within. Before it, on a low plinth, rests his pale circlet, lifted from his
-      brow and set out at the burying; it glows faintly with its own cold light. The
-      crown is yours for the taking, and the stair climbs back to the light behind
-      you. The sealed lid is another matter: the air over it lies heavy and wrong,
-      and every instinct you own says to let what sleeps beneath it sleep on.
+      At the plinth, TAKE Barrow-Lord's circlet to gain +25 score and win.
+      Do not PRISE sealed sarcophagus WITH iron bar: that action immediately
+      wakes the Barrow-Lord, ends the game, and cannot be undone. Go up to the Slab
+      Passage. The circlet gives off a pale light.
     objects: [circlet, sarcophagus]
     # bug_0107: the +25 final-beat award no longer rides this on_enter. A blind
     # playtester (seed 23/7, ai-runs/2026-06-02T08-19-08-656Z/playtest.md §4/§5) flagged
@@ -215,7 +198,7 @@ rooms:
     # journal stays — reaching the chamber is still a logged beat — but it no longer
     # carries points.
     on_enter:
-      - add_journal: "You have reached the relic chamber."
+      - add_journal: "You reached the Relic Chamber. TAKE Barrow-Lord's circlet to win; PRISE sealed sarcophagus WITH iron bar to trigger a fatal ending."
     exits:
       - { direction: up, to: slab_passage }
 
@@ -223,7 +206,7 @@ objects:
   - id: iron_bar
     name: "iron bar"
     aliases: [bar, lever, iron]
-    description: "A rusted but sound iron bar, the length of your arm. A patient lever for old stone, not a verdict on heroic strength."
+    description: "The iron bar is the tool for any unfinished LEVER stone slab action; an opened slab stays open. It can also PRISE sealed sarcophagus WITH iron bar, but that action immediately triggers a fatal ending."
     takeable: true
 
   - id: stone_slab
@@ -238,7 +221,7 @@ objects:
     # true on BOTH paths — it may give on the first heave or take several — while
     # keeping bug_0027's load-bearing signal that PERSISTENCE (not more muscle or a
     # missing tool) is the path, so a player who DOES fail still reads "keep at it".
-    description: "A great floor slab with an iron-gripped lip. Wedge the bar beneath the lip and set your stubborn weight to it: it may give on the first heave or take several, but leverage — not raw strength — is what works the old stone loose."
+    description: "LEVER stone slab WITH iron bar to open the stair down. Failure consumes no item or HP and can be retried until the check succeeds."
     # Reactive examine (bug_0023/0039/0044 shape): once the slab is levered aside the
     # examine must stop telling the player to wedge the bar and heave — that contradicts
     # the room, which already flips to "Levered aside now ... a stair" on slab_moved. A
@@ -250,7 +233,7 @@ objects:
     # one-shot retire (bug_0015), and the win remain untouched.
     variants:
       - when: [ { quest_stage: { quest: barrow, stage: slab_moved } } ]
-        text: "The great slab is levered aside now, dragged half off the bed where it lay flush with the floor; its iron-gripped lip juts at an angle and a stair drops away beneath it into the dark of the earth."
+        text: "You already LEVERED the stone slab aside. The stair down to the Relic Chamber is open."
     takeable: false
     interactions:
       - verb: USE
@@ -276,7 +259,7 @@ objects:
           on_success:
             - set_quest_stage: { quest: barrow, stage: slab_moved }
             - inc_var: { name: score, by: 15 }
-            - narrate: "Tendons cracking, you heave — and the slab grinds aside, baring a stair down."
+            - narrate: "You LEVER the stone slab aside with the iron bar. The stair down opens, and you gain +15 score."
           on_failure:
             # bug_0027: the failure feedback must read as REPEATABLE PROGRESS, not a
             # fixed strength threshold — a blind playtester (seed 88) failed twice,
@@ -286,12 +269,12 @@ objects:
             # penalty-free, infinitely-retryable d20+might vs 12 (~60%/try). So the
             # narration now signals the slab IS shifting and that persistence — not
             # more muscle or a hidden tool — is the path.
-            - narrate: "The bar bites and the slab grinds a hand's breadth — then grates back into its bed. It IS shifting; you simply haven't caught it at the right moment yet. No greater strength or hidden tool is wanting here — only leverage and a stubborn back. Reset your feet on the iron lip and heave again; keep at it and the stone will come."
+            - narrate: "The LEVER check failed, and the stone slab returned to its original position. You lost no item or HP. Retry with LEVER stone slab WITH iron bar; retries are unlimited."
 
   - id: circlet
     name: "Barrow-Lord's circlet"
     aliases: [circlet, relic, crown]
-    description: "A circlet of pale metal, cold and faintly luminous."
+    description: "TAKE Barrow-Lord's circlet to gain +25 score and win. The pale metal is cold and faintly luminous."
     takeable: true
     # The final +25 beat (bug_0107): awarded on the deliberate CLAIM, not on chamber
     # entry. take_effects fire right after the pickup and one-shot intrinsically (once
@@ -330,7 +313,7 @@ objects:
   - id: sarcophagus
     name: "sealed sarcophagus"
     aliases: [sarcophagus, coffin, lid, casket, sepulchre]
-    description: "A great lidded coffin of black stone, its seams run with lead and old wax. The Barrow-Lord lies within, and the shade's warning — if you stopped to hear it — was plain: do not think to wake what sleeps here. The iron bar would set to the leaded seams readily enough — but this is no patient slab to be worked loose by degrees: one wrench of the lid and the deed is done, past all undoing. Far better to take the cold crown from its plinth and climb back to the light."
+    description: "Do not PRISE sealed sarcophagus WITH iron bar. That action immediately wakes the Barrow-Lord, triggers a fatal ending, and cannot be retried or undone. Instead, TAKE Barrow-Lord's circlet to win."
     takeable: false
     interactions:
       # The warned-against act. Terminal (end_game), so it can fire only once and
@@ -345,7 +328,7 @@ objects:
         command_verb: prise
         command_template: "prise {target} with {item}"
         effects:
-          - add_journal: "You set the iron bar to the leaded seams and, against every warning, prise the Barrow-Lord from his rest."
+          - add_journal: "You PRISED the sealed sarcophagus with the iron bar. The Barrow-Lord woke, and the fatal ending began immediately."
           - end_game: ending_woken
 
 npcs:
@@ -431,16 +414,18 @@ npcs:
   # state-based expected_final_hash is unchanged because no STATE changed, only spoken text.
   - id: reaver_shade
     name: "reaver's shade"
-    description: "The thin grey shade of a grave-robber who came down for the crown and stayed — tired past fear and past malice, with nothing left but memory."
+    description: >
+      The reaver's shade can grant a one-time +3 defense ward and warn about the
+      Barrow-Lord. The ward helps against the barrow-wight only while it still stands.
     room: reaver_rest
     dialogue:
       root: shade_root
       nodes:
         - id: shade_root
           npc_text: >
-            Another one, come down for the cold crown. I came for it too, once, and
-            got no farther than the wight's hall. Ask, if you will — I have had long
-            years down here with nothing to do but remember.
+            Ask me about the barrow-wight or the Barrow-Lord. My ward helps only if
+            the wight still stands; a completed fight stays complete. I died here
+            while seeking the same circlet.
           # bug_0325: on every return from a topic the full first-meeting greeting
           # re-fired ("Another one, come down for the cold crown..."), making the
           # shade feel mechanical after the first exchange. This variant fires when
@@ -486,37 +471,27 @@ npcs:
         # expected_final_hash is unchanged because no STATE changed, only spoken text.
         - id: shade_wight
           npc_text: >
-            The wight is slow, and you are quick; you can best it where I could
-            not. Mind its hands: the grave-cold bites deep, blow on blow, and
-            that is the wight's way of wearing a man down. Keep your guard close
-            and let the chill slide off the iron, not into you. It will not
-            swing your blade, but the cold will bite the less. Do not break off
-            to hunt for more: there is no balm in the barrow, no second blade,
-            no charm laid by. This ward is the whole of the help. Warded and
-            willing, you have the better chance, not a sure one; the dead have
-            lucky nights, and I will not swear you safe. Even so, your best
-            chance is here, feet set and guard up: keep striking. Seek aid that
-            is not here and you only come again to the same fight, no fresher.
+            My ward grants +3 defense against the barrow-wight's cold blows. If the
+            wight still lives, the ward gives you a much better chance but does not
+            guarantee survival. There is no healing item, combat weapon, or second
+            ward elsewhere. Retreating does not restore health; once you choose to
+            fight, continue ATTACKING until one of you falls.
           effects:
             - set_flag: heard_warding
             - inc_var: { name: defense, by: 3 }
-            - add_journal: "The reaver's shade teaches you to turn the wight's chill on your guard — its cold blows will bite the less now (+3 defense)."
+            - add_journal: "The reaver's shade granted +3 defense against the barrow-wight. The ward improves your odds but does not guarantee survival."
           topics:
             - id: wight_back
               prompt: "Nod, and ask something else."
               goto: shade_root
         - id: shade_lord
           npc_text: >
-            The Barrow-Lord? A king of these hills before ever the songs were written,
-            laid down here with his pale circlet so the land above would keep its luck.
-            The crown is no cursed thing — only old, and cold, and his. The wight in the
-            empty niche was his sworn guard in life, set to bar the way to him, and it
-            keeps that watch still, long after it has forgotten why. Take the crown, if
-            that is what you came for. Only do not think to wake what sleeps beneath the
-            slab; the Lord is long past waking, and the land is the better for it.
+            TAKE Barrow-Lord's circlet; it is not cursed. Do not PRISE sealed sarcophagus
+            WITH iron bar, because waking him will kill you and threaten
+            the land above. The barrow-wight was his sworn guard in life.
           effects:
             - set_flag: heard_lord_lore
-            - add_journal: "The shade names the circlet the Barrow-Lord's own — old and cold, not cursed; the niche-wight was his sworn guard, keeping its watch long after forgetting why."
+            - add_journal: "The shade said the Barrow-Lord's circlet is not cursed. TAKE Barrow-Lord's circlet, but do not PRISE sealed sarcophagus WITH iron bar."
           topics:
             - id: lord_back
               prompt: "Thank the shade, and ask something else."
@@ -554,7 +529,7 @@ enemies:
   # ward has rounds to matter; prose/flags/score/endings/exits untouched.
   - id: barrow_wight
     name: "barrow-wight"
-    description: "A grave-cold figure of dried sinew and malice, risen from an empty niche."
+    description: "ATTACK barrow-wight to unlock the east exit. Its cold blows can kill you; the reaver's shade in the west side cell can grant +3 defense first."
     room: guard_crypt
     hp: 22
     attack: 5
@@ -562,7 +537,7 @@ enemies:
     defeat_flag: wight_slain
     death_ending: ending_fallen
     on_defeat:
-      - add_journal: "The barrow-wight crumbles; the cold lifts from the east arch."
+      - add_journal: "You defeated the barrow-wight and unlocked the east exit to the Slab Passage."
       - inc_var: { name: score, by: 10 }
 
 win_conditions:
@@ -590,11 +565,11 @@ endings:
     # plinth — it carries the consequence of the claim the player just made.
   - id: ending_victory
     title: "Lord of the Barrow"
-    text: "The cold crown is yours, its pale light steady in your hands. The barrow yields its lord, and the light comes up the stair with you."
+    text: "You TOOK the Barrow-Lord's circlet and left the sealed sarcophagus closed. You have the relic and can climb out of the Sunken Barrow. *** You have won. ***"
     death: false
   - id: ending_fallen
     title: "Another Niche Filled"
-    text: "The cold closes over you. In time, something else will climb from the niche where you fell."
+    text: "The barrow-wight killed you in the Guard Crypt. Your journey ends beside the empty burial niche. *** You have fallen. ***"
     death: true
     # The doom fork (bug_0083): reached by prising the Barrow-Lord's sealed
     # sarcophagus — the act the shade warns against. Distinct in cause from
@@ -625,6 +600,6 @@ endings:
     title: "What Sleeps Beneath"
     variants:
       - when: [ { has_flag: heard_lord_lore } ]
-        text: "The lead seams split and the great lid grinds back, and the cold that breathes up out of the dark is older than the wight's, older than the songs — older than the hills that hide this barrow. The Barrow-Lord opens his eyes. You came down for a crown and woke its keeper, and the shade's last counsel rings true after all: the land was the better for his sleeping. There is no climbing back to the light now. Whatever rises from this coffin, the country above will learn its name again before the season turns."
-    text: "The lead seams split and the great lid grinds back, and the cold that breathes up out of the dark is older than the wight's, older than the songs — older than the hills that hide this barrow. The Barrow-Lord opens his eyes. You came down for a crown and woke its keeper, and some instinct older than reason tells you the land was the better for his sleeping. There is no climbing back to the light now. Whatever rises from this coffin, the country above will learn its name again before the season turns."
+        text: "You ignored the reaver's shade's warning and PRISED the sealed sarcophagus. The Barrow-Lord wakes, kills you, and will threaten the country above. The action cannot be undone. *** You have fallen. ***"
+    text: "You PRISED the sealed sarcophagus and woke the Barrow-Lord. He kills you and will threaten the country above. The action cannot be undone. *** You have fallen. ***"
     death: true

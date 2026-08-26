@@ -35,21 +35,21 @@ const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
 const WOLF_CRISIS_PREVIEW =
-  "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather.";
+  "Old Cade needs help protecting his household and cattle from a wolf pack.";
 const REGISTRATION_MESSAGE =
-  "The Wolf-Winter: A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather; you must choose one permanent background, then take a ready-made promise/report pair or customize it; every approach stays open.";
+  "The Wolf-Winter: Old Cade needs help protecting his household and cattle from a wolf pack. Choose one permanent background. Then use a ready-made setup or choose the promise and report separately. Every field plan stays open.";
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open.";
+  "The Wolf-Winter: use a ready-made promise and report or choose them separately. Every approach stays open.";
 const PREPARATION_MESSAGE =
-  "Albany Station: ready to depart now, or choose one field kit; relief-wagon and riding choices are separate.";
+  "You can leave Albany Station now or choose one field kit. The relief wagon and June are separate choices.";
 const CUSTOM_DUTY_MESSAGE =
-  "The Wolf-Winter: choose one promise; your report comes next, and every approach stays open.";
+  "The Wolf-Winter: choose one promise. Your report comes next. Every field plan stays open.";
 const SOURCE_MESSAGE =
-  "The Wolf-Winter: choose one report; Albany Station comes next, and every approach stays open.";
+  "The Wolf-Winter: choose one report. Albany Station comes next. Every field plan stays open.";
 const RELIEF_ALLOCATION_MESSAGE =
-  "Albany Station: ready to depart now, or choose the relief wagon's job; field-kit and riding choices are separate.";
+  "You can leave Albany Station now or assign the relief wagon. The field kit and June are separate choices.";
 const ALLY_MESSAGE =
-  "Albany Station: ready to depart now alone, or ask June Pike to ride; field kit and relief wagon choices are separate.";
+  "You can leave Albany Station alone or ask June Pike to join. The field kit and relief wagon are separate choices.";
 const STALE_DEFAULT_CIVIC_FRAMING = /\b(?:1\/3|2\/3|Civic order)\b|role\s*→\s*duty\s*→\s*evidence/i;
 const DEFERRED_STATION_SUPPORT_DETAILS =
   /Hayden|field kit|last relief wagon|June|second field seat|second rider|cattle-first/i;
@@ -103,25 +103,19 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
     }
     expect(option.summary).not.toHaveProperty("fieldTrigger");
     if (storyChoice.kind === "registration") {
-      expect(option.consequence).toContain("Field trigger:");
+      expect(option.consequence).toContain("Best for:");
       if (option.id === "albany:road_warden") {
-        expect(option.consequence).toContain(
-          "your Fieldcraft 4 sets its defense at 4 instead of 3",
-        );
+        expect(option.consequence).toContain("In Wolf-Winter, Defense starts at 4 instead of 3");
         expect(option.consequence).not.toMatch(/\bDEF\b|imported starting/iu);
       } else {
-        expect(option.consequence).toMatch(/\b(?:DEF|import)\b/i);
+        expect(option.consequence).toMatch(/Fieldcraft Defense bonus/i);
       }
       expect(JSON.stringify(option.summary)).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
       continue;
     }
     expect(option.consequence).toContain("Benefit:");
     expect(option.consequence).toContain(`Cost: ${option.summary!.immediateCost}.`);
-    const isReadyMadeDispatch =
-      REGISTRATION.doctrines?.some((doctrine) => doctrine.id === option.id) === true;
-    expect(option.consequence).toContain(
-      `Boundary: ${isReadyMadeDispatch ? "Other duty/evidence pairs close." : option.summary!.tradeoff}`,
-    );
+    expect(option.consequence).toContain(`Tradeoff: ${option.summary!.tradeoff}`);
   }
 }
 
@@ -136,7 +130,7 @@ const RESULT_PREFIX: Readonly<Record<JourneyStoryChoicePresentationKind, string>
 
 const RESULT_PLAIN_OUTCOME: Readonly<Record<string, string>> = {
   "albany:ally_june_cattle_first": "June joined you as the second rider.",
-  "albany:ally_june_relay_only": "June declined the subordinate relay and remained at the Station.",
+  "albany:ally_june_relay_only": "June would not accept your orders and stayed at the Station.",
   "albany:ally_travel_solo": "June remained at the Station; you will ride alone.",
 };
 
@@ -195,7 +189,7 @@ function expectProgressivePreparationOptions(storyChoice: JourneyStoryChoiceProm
     });
     expect(option?.summary?.commitment.split(/\s+/).length).toBeLessThanOrEqual(16);
     expect(option?.consequence).toContain(`Benefit: ${profile.trigger_category}`);
-    expect(option?.consequence).toContain(`Boundary: ${profile.tradeoff}`);
+    expect(option?.consequence).toContain(`Tradeoff: ${profile.tradeoff}`);
     expect(option?.consequence).not.toContain(profile.preview);
     expect(option?.consequence).not.toContain(profile.consequence);
   }
@@ -208,7 +202,7 @@ function expectProgressivePreparationComparison(
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
-      highlights: [{ label: "Governing skill", value: expectedPreparationCheckFit(profile) }],
+      highlights: [{ label: "Check skill", value: expectedPreparationCheckFit(profile) }],
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
     });
@@ -226,7 +220,7 @@ function expectProgressiveReliefAllocationOptions(storyChoice: JourneyStoryChoic
       tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
     });
     expect(option?.consequence).toContain(`Benefit: ${allocationOption.trigger_category}`);
-    expect(option?.consequence).toContain(`Boundary: Leaves exposed:`);
+    expect(option?.consequence).toContain(`Tradeoff: Leaves exposed:`);
     expect(option?.consequence).not.toContain(allocationOption.preview);
     expect(option?.consequence).not.toContain(allocationOption.consequence);
   }
@@ -318,9 +312,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(registration.message).toContain(`${WOLF.title}:`);
     expect(registration.message).not.toContain(REGISTRATION.message);
     expect(registration.message).toContain(WOLF_CRISIS_PREVIEW.replace(/\.$/u, ""));
-    expect(registration.message).toContain("choose one permanent background");
-    expect(registration.message).toContain("ready-made promise/report pair or customize it");
-    expect(registration.message).toContain("every approach stays open");
+    expect(registration.message).toContain("Choose one permanent background");
+    expect(registration.message).toContain(
+      "use a ready-made setup or choose the promise and report separately",
+    );
+    expect(registration.message).toContain("Every field plan stays open");
     expect(registration.message).not.toContain(WOLF.discovery);
     expect(registration.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(registration.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
@@ -328,7 +324,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       REGISTRATION.profiles.map((profile) => profile.id),
     );
     expect(registration.options.every((option) => option.group === undefined)).toBe(true);
-    expect(registration.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(registration.message.match(/[.!?]/gu)).toHaveLength(4);
     expect(wordCount(registration.message)).toBeLessThanOrEqual(52);
     expectSummaryFirstOptions(registration);
     expect(registration.options.every((option) => option.summary?.immediateCost)).toBe(true);
@@ -353,7 +349,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       result: registrationResult,
     });
     expect(registrationResult.consequence).toContain(
-      "When Wolf-Winter starts from this journey, your Fieldcraft 4 sets its defense at 4 instead of 3.",
+      "In Wolf-Winter, Defense starts at 4 instead of 3.",
     );
     expect(registrationResult.consequence).not.toMatch(
       /\b(?:DEF|LURE|HUNT)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation/gu,
@@ -366,29 +362,27 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const standardPacket = REGISTRATION.doctrines!.find(
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
-    expect(oath.message).toContain("every approach stays open.");
+    expect(oath.message).toContain("Every approach stays open.");
     expect(oath.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(oath.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
     expect(oath.options.map((option) => option.id)).toEqual([
       standardPacket.id,
       ...RELIEF_OATH.options.map((option) => option.id),
     ]);
-    expect(oath.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(oath.message.match(/[.!?]/gu)).toHaveLength(2);
     expect(wordCount(oath.message)).toBeLessThanOrEqual(16);
     expect(wordCount(registration.message) + wordCount(oath.message)).toBeLessThanOrEqual(65);
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     const roadWardenPacket = oath.options.find((option) => option.id === standardPacket.id)!;
-    expect(roadWardenPacket.label).toBe(
-      "Ready-made dispatch — Aid-Only promise + Hayden's frost report",
-    );
+    expect(roadWardenPacket.label).toBe("Ready-made setup — Aid-Only + Hayden's report");
     expect(roadWardenPacket.summary?.commitment).toBe(
-      "Carry winter-road judgment and flexible, life-first aid to Cade's steading.",
+      "Start with Defense 4, the clean-feed LURE benefit, and Hayden's conditional HUNT brace.",
     );
     expect(roadWardenPacket.summary?.tradeoff).toBe("Other promise/report pairs close.");
-    expect(roadWardenPacket.consequence).toContain("Boundary: Other duty/evidence pairs close.");
+    expect(roadWardenPacket.consequence).toContain("Tradeoff: Other promise/report pairs close.");
     expect(roadWardenPacket.consequence).toContain(
-      "Benefit: Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
+      "Benefit: Defense starts at 4. A clean first LURE feed prevents the final +1 cattle alarm. A split rail can help HUNT.",
     );
     expect(JSON.stringify(roadWardenPacket.summary)).not.toMatch(
       /\b(?:DEF|DC|import|fieldTrigger)\b/i,
@@ -440,7 +434,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       originalMessage: RELIEF_OATH.message,
       expectedMessage: CUSTOM_DUTY_MESSAGE,
     });
-    expect(ledgerOath.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(ledgerOath.message.match(/[.!?]/gu)).toHaveLength(3);
     expect(wordCount(ledgerOath.message)).toBeLessThanOrEqual(16);
     expect(ledgerOath.options.map((option) => option.id)).toEqual(
       RELIEF_OATH.options.map((option) => option.id),
@@ -458,7 +452,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       originalMessage: LEAD_SOURCE.message,
       expectedMessage: SOURCE_MESSAGE,
     });
-    expect(ledgerSource.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(ledgerSource.message.match(/[.!?]/gu)).toHaveLength(3);
     expect(wordCount(ledgerSource.message)).toBeLessThanOrEqual(15);
     expect(
       wordCount(registration.message) +
@@ -475,21 +469,25 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       `${oath.message} ${OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS}`,
     );
     const oathCompass = OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS;
-    expect(oathCompass).toMatch(/HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die/i);
-    expect(oathCompass).toMatch(
-      /LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed/i,
+    expect(oathCompass).toContain(
+      "HUNT — Fight the wolves to protect the farm, herd, and supplies.",
     );
-    expect(oathCompass).toMatch(
-      /DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading/i,
+    expect(oathCompass).toContain("Wolves may die; failure can cost cattle or damage the fence.");
+    expect(oathCompass).toContain("Bloodshed changes later Greenway work.");
+    expect(oathCompass).toContain(
+      "LURE — Use Cade's last feed to lead the wolves away and keep the herd.",
     );
-    expect(oathCompass).toMatch(
-      /FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals/i,
+    expect(oathCompass).toContain("The fence breaks, and a failed first feed can cost two cattle.");
+    expect(oathCompass).toContain(
+      "DRIVE — Move the people and herd out, forcing the living pack away.",
     );
-    expect(oathCompass).toMatch(/No plan is recommended or committed/i);
-    expect(oathCompass).toContain("Review recorded; no choice or decision accepted");
-    expect(oathCompass.match(/Outcome:/g)).toHaveLength(4);
-    expect(oathCompass.match(/Cost or risk:/g)).toHaveLength(4);
-    expect(oathCompass.match(/Later:/g)).toHaveLength(4);
+    expect(oathCompass).toContain(
+      "The farm is abandoned, and the crisis costs a wound, two cattle, or the rig.",
+    );
+    expect(oathCompass).toContain(
+      "FORTIFY — Keep the household, herd, and wolves apart until dawn. You cannot retreat; choose between exposing property with Cade's help or spending public seals without it.",
+    );
+    expect(oathCompass).toContain("Review only: no plan is selected.");
     expect(wordCount(oathCompass)).toBeLessThanOrEqual(145);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
       revealedOath,
@@ -511,7 +509,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
     expect(source.message).toContain("Albany Station comes next");
     expect(source.message).not.toContain(LEAD_SOURCE.message);
-    expect(source.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(source.message.match(/[.!?]/gu)).toHaveLength(3);
     expect(wordCount(source.message)).toBeLessThanOrEqual(15);
     expectSummaryFirstOptions(source);
     expect(source.options.every((option) => option.summary?.immediateCost)).toBe(true);
@@ -546,11 +544,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const preparation = session.inspectJourneyStory(PREPARATION.id);
     expect(preparation).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
     expect(preparation.message).toBe(PREPARATION_MESSAGE);
-    expect(preparation.message).toContain("ready to depart now");
+    expect(preparation.message).toContain("leave Albany Station now");
     expect(preparation.message).toContain("choose one field kit");
     expect(preparation.message).not.toContain(PREPARATION.message);
-    expect(preparation.message).toContain("relief-wagon and riding choices are separate");
-    expect(preparation.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(preparation.message).toContain("The relief wagon and June are separate choices.");
+    expect(preparation.message.match(/[.!?]/gu)).toHaveLength(2);
     expect(wordCount(preparation.message)).toBeLessThanOrEqual(20);
     expectSummaryFirstOptions(preparation);
     expectProgressivePreparationOptions(preparation);
@@ -558,7 +556,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(preparation.options.every((option) => option.dispatchForecast)).toBe(true);
     expect(
       preparation.options.every((option) =>
-        option.dispatchForecast?.line.startsWith("Dispatch forecast if chosen:"),
+        option.dispatchForecast?.line.startsWith("If chosen, dispatch totals"),
       ),
     ).toBe(true);
     expect(
@@ -591,11 +589,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       kind: "relief_allocation",
     });
     expect(allocation.message).toBe(RELIEF_ALLOCATION_MESSAGE);
-    expect(allocation.message).toContain("ready to depart now");
-    expect(allocation.message).toContain("choose the relief wagon's job");
+    expect(allocation.message).toContain("leave Albany Station now");
+    expect(allocation.message).toContain("assign the relief wagon");
     expect(allocation.message).not.toContain(RELIEF_ALLOCATION.message);
-    expect(allocation.message).toContain("field-kit and riding choices are separate");
-    expect(allocation.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(allocation.message).toContain("The field kit and June are separate choices.");
+    expect(allocation.message.match(/[.!?]/gu)).toHaveLength(2);
     expect(wordCount(allocation.message)).toBeLessThanOrEqual(21);
     expectSummaryFirstOptions(allocation);
     expectProgressiveReliefAllocationOptions(allocation);
@@ -624,10 +622,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const ally = currentStoryChoice(session);
     expect(ally).toMatchObject({ id: ALLY.id, kind: "ally" });
     expect(ally.message).toBe(ALLY_MESSAGE);
-    expect(ally.message).toContain("ready to depart now alone");
-    expect(ally.message).toContain("field kit and relief wagon choices are separate");
+    expect(ally.message).toContain("leave Albany Station alone");
+    expect(ally.message).toContain("The field kit and relief wagon are separate choices.");
     expect(ally.message).not.toContain(ALLY.message);
-    expect(ally.message.match(/[.!?]/gu)).toHaveLength(1);
+    expect(ally.message.match(/[.!?]/gu)).toHaveLength(2);
     expect(wordCount(ally.message)).toBeLessThanOrEqual(24);
     expectSummaryFirstOptions(ally);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(ally);
@@ -877,7 +875,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(mcpStation.context.station_dispatch_board?.[4]).toHaveLength(3);
     expect(mcpStation.context.station_dispatch_board?.[5]).toEqual([
       "station_dispatch:review_optional_support",
-      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+      "Optional: a field kit using Repair, Streetwise, or Mediation; plus Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
     ]);
     expect(mcpStation.context).not.toHaveProperty("departure_recap");
     expect(mcpStation.context).not.toHaveProperty("departure_interactions");

@@ -36,7 +36,7 @@ const DEFAULT_OATH = "albany:oath_full_compact_duty";
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const FULL = { compact_context: false, compact_result: false } as const;
 const JUNE_CATTLE_TERMS_RESPONSE =
-  "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle LURE relocation, DRIVE evacuation, or FORTIFY until dawn with him. Until one is committed, north remains closed.";
+  "My cattle-first terms already apply. This chooses nothing. Select BACK to return to Cade and review LURE, DRIVE, or FORTIFY. North remains blocked until you choose a plan or select my displayed HUNT option.";
 
 function moveToArea(session: OverworldSession, targetAreaId: string): void {
   const currentAreaId = session.view().currentArea?.id;
@@ -166,11 +166,11 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
               "tradeoff",
             ]);
             expect(acceptOption.consequence).toBe(
-              `Benefit: Independent cattle-pressure ally Cost: ${acceptCost}. Boundary: ${acceptSource.tradeoff}`,
+              `Benefit: June joins and controls cattle safety Cost: ${acceptCost}. Tradeoff: ${acceptSource.tradeoff}`,
             );
             expect(
               prompt.options.every((option) =>
-                /^Benefit: .+ Cost: .+\. Boundary: .+$/.test(option.consequence),
+                /^Benefit: .+ Cost: .+\. Tradeoff: .+$/.test(option.consequence),
               ),
             ).toBe(true);
             expect(acceptOption.consequence).not.toContain(acceptSource.preview);
@@ -201,7 +201,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     const direct = reachAlly();
     // Rebuild without talking to June: start now is the explicitly disclosed solo default.
     const pending = direct.snapshot();
-    expect(() => direct.startQuest(WOLF.id, SHELTERED)).toThrow(/second rider/i);
+    expect(() => direct.startQuest(WOLF.id, SHELTERED)).toThrow(/open story option/i);
 
     const solo = OverworldSession.restore(WORLD, pending);
     solo.chooseJourneyStory(SOLO);
@@ -258,10 +258,10 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     moveToArea(session, ALLY.area);
     const paidLead = session.view().departureContactLeads[0];
     expect(paidLead?.guidance).toContain(
-      "The 15-minute conversation is already recorded; reviewing it now adds no time.",
+      "The 15-minute conversation is already recorded. Reviewing it adds 0 minutes.",
     );
     expect(paidLead?.guidance).toContain(
-      "Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total",
+      "Let June Control Cattle Safety: 15 minutes additional, 30 minutes total",
     );
     expect(
       OverworldSession.restore(WORLD, session.snapshot()).view().departureContactLeads,
@@ -330,7 +330,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect("service_actions" in cooperative.compactView()).toBe(false);
     expect(
       cooperative.view().characters.find((character) => character.id === ALLY.contact)?.summary,
-    ).toMatch(/matching account|returned beside/i);
+    ).toMatch(/held the cattle line[^]*living pack left the barn/i);
     const cooperativeSnapshot = cooperative.snapshot();
     expect(OverworldSession.restore(WORLD, cooperativeSnapshot).snapshot()).toEqual(
       cooperativeSnapshot,
@@ -368,7 +368,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       15,
       [beforeClaim.supplies, beforeClaim.maxSupplies],
       [beforeClaim.fatigue, beforeClaim.fatigue],
-      expect.stringContaining("second-seat stores"),
+      expect.stringContaining("June keeps her cattle-safety promise"),
       null,
     ]);
     const preClaimSnapshot = claimant.snapshot();
@@ -382,7 +382,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       minutes: 15,
       suppliesBefore: beforeClaim.supplies,
       suppliesAfter: beforeClaim.maxSupplies,
-      message: expect.stringContaining("second-seat stores"),
+      message: expect.stringContaining("June keeps her cattle-safety promise"),
     });
     expect(claimed).toMatchObject({
       action: claimPreview!.action,
@@ -431,7 +431,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(lost.view().serviceOffers).toEqual([]);
     expect(
       lost.view().characters.find((character) => character.id === ALLY.contact)?.summary,
-    ).toMatch(/field seat is empty[^]*first wolf death[^]*ended the cattle-first field agreement/i);
+    ).toMatch(/June left after the first wolf died[^]*ending the cattle-safety agreement/i);
     expect(OverworldSession.restore(WORLD, lost.snapshot()).snapshot()).toEqual(lost.snapshot());
   });
 
@@ -502,7 +502,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       hide_graph: true,
     });
     expect(boundary.observation.description).toMatch(
-      /spear funnel[^]*not a living turn[^]*committed first feed cast fouls[^]*brace[^]*pen the yearling alive[^]*any wolf death ends/i,
+      /Going north without Cade's feed sack, drive rig, or seals chooses HUNT[^]*any wolf death ends June's agreement[^]*fallen paling-rail[^]*combat[^]*failed first LAY action/i,
     );
     expect(boundary.observation.available_actions.map((action) => action.id)).toContain(
       "talk_june_pike",
@@ -511,7 +511,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       "go_north",
     );
     expect(browser.view().text).toMatch(
-      /spear funnel[^]*committed first feed cast fouls[^]*pen the yearling alive[^]*any wolf death ends/i,
+      /Going north without Cade's feed sack, drive rig, or seals chooses HUNT[^]*any wolf death ends June's agreement[^]*fallen paling-rail[^]*combat[^]*failed first LAY action/i,
     );
     expect(browser.view().choices.map((choice) => choice.id)).not.toContain("go_north");
 
@@ -533,7 +533,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       hide_graph: true,
     });
     expect(boundaryCompact.context.text).toMatch(
-      /spear funnel[^]*committed first feed cast fouls[^]*pen the yearling alive[^]*any wolf death ends/i,
+      /Going north without Cade's feed sack, drive rig, or seals chooses HUNT[^]*any wolf death ends June's agreement[^]*fallen paling-rail[^]*combat[^]*failed first LAY action/i,
     );
 
     step("talk_june_pike");
@@ -543,7 +543,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       hide_graph: true,
     });
     expect(dialogueCompact.context.dialogue?.[1]).toMatch(
-      /Choose by outcome[^]*Cade's four cards are comparisons[^]*support cards do not commit[^]*LURE, DRIVE, or FORTIFY final before the breach[^]*HUNT is separate[^]*release me now[^]*HUNT commits immediately[^]*preserving our agreement[^]*losing my field aid[^]*keep me on cattle[^]*HUNT stays uncommitted until you cross north/i,
+      /Choose by outcome[^]*Cade's reviews and support do not choose a plan[^]*Choose LURE, DRIVE, or FORTIFY with Cade before going north[^]*For HUNT, choose now: RELEASE JUNE[^]*preserves our agreement[^]*loses all my help[^]*keep me with the cattle[^]*first wolf death[^]*end our agreement/i,
     );
     expect(dialogueCompact.context.dialogue?.[1]).not.toMatch(/living plan|living turn/i);
     const beforeTerms = api.get_state({ session_id: rpgSessionId, include_state: true });

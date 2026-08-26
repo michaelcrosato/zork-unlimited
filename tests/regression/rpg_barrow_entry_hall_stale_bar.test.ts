@@ -58,7 +58,9 @@ describe("bug_0028 — Entry Hall stops narrating the iron bar once it is taken"
     let s = initStateForRpgPack(index, 1);
     s = act(s, { type: "MOVE", direction: "down" }); // entry_hall
     expect(s.current).toBe("entry_hall");
-    expect(desc(s)).toContain("A rusted iron bar lies among fallen rubble");
+    expect(desc(s)).toContain(
+      "The rubble is where the iron bar was found. TAKE iron bar if it is here, or retrieve the iron bar if a tool action remains",
+    );
   });
 
   it("once the bar is in hand, the variant replaces the stale prose", () => {
@@ -68,8 +70,8 @@ describe("bug_0028 — Entry Hall stops narrating the iron bar once it is taken"
     expect(s.current).toBe("entry_hall");
     expect(s.inventory).toContain("iron_bar");
     // The contradiction is gone: the bar is no longer described as lying in the rubble.
-    expect(desc(s)).not.toContain("lies among fallen rubble");
-    expect(desc(s)).toContain("scuffed bare");
+    expect(desc(s)).not.toContain("The rubble is where the iron bar was found");
+    expect(desc(s)).toContain("You have the iron bar");
   });
 
   it("dropping the bar back in the Entry Hall restores the base text (present again)", () => {
@@ -80,7 +82,9 @@ describe("bug_0028 — Entry Hall stops narrating the iron bar once it is taken"
     expect(s.current).toBe("entry_hall");
     expect(s.inventory).not.toContain("iron_bar");
     // The bar is in the room again, so the base text is true again — prose tracks state.
-    expect(desc(s)).toContain("A rusted iron bar lies among fallen rubble");
+    expect(desc(s)).toContain(
+      "The rubble is where the iron bar was found. TAKE iron bar if it is here, or retrieve the iron bar if a tool action remains",
+    );
   });
 
   it("the variant is text-only — taking the bar changes no game state (no effects)", () => {

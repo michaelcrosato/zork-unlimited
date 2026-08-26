@@ -672,7 +672,7 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
         const rejectionReason =
           before.journey.pendingChoice?.message ??
           before.journey.storyChoice?.message ??
-          "This journey has ended and no longer accepts gameplay decisions.";
+          "This journey has ended. No more gameplay actions are available.";
         const blockedResponse = {
           ok: false,
           rejection_reason: rejectionReason,

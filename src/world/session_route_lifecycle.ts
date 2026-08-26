@@ -26,7 +26,9 @@ export function planOverworldSessionRoadRoute(
 ): OverworldSessionRoutePlan {
   if (state.destinationId === state.currentId) throw new Error("You are already there.");
   if (!state.discoveredIds.has(state.destinationId)) {
-    throw new Error("That destination is not discovered yet.");
+    throw new Error(
+      "That destination is not discovered. Visit nearby towns or reveal more roads first.",
+    );
   }
   const plan = indexedOverworldRoute(
     state.routePlannerIndex,
@@ -34,7 +36,7 @@ export function planOverworldSessionRoadRoute(
     state.destinationId,
     state.discoveredIds,
   );
-  if (!plan) throw new Error("No discovered route reaches that destination yet.");
+  if (!plan) throw new Error("No discovered roads reach that destination.");
   return withOverworldSessionRouteEstimate(
     state.roadEventState ? withOverworldSessionRoadEvents(plan, state.roadEventState) : plan,
     state.resources,

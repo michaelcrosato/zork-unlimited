@@ -95,7 +95,7 @@ describe("bug_0512 — interruptible, auto-resuming RPG dialogue", () => {
         )
         .map((event) => event.text)
         .join(" "),
-    ).toMatch(/comes from upwind/i);
+    ).toMatch(/attack from upwind/i);
     expect(activeDialogue(game.index, state)?.node.id).toBe("hedrick_root");
     expect(state.flags.heard_lore_counsel).toBe(true);
 

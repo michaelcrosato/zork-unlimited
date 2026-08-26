@@ -147,8 +147,8 @@ export function describeOverworldEventResolution(
       ? `Resolved ${event.title}: ${sceneOption.title}`
       : `Resolved ${event.title}`,
     text: sceneOption
-      ? `${sceneOption.consequence} The decision costs ${minutes} minutes and earns ${renown} ${region} renown.`
-      : `${townName} stabilizes around ${event.title}. Your work reduces ${event.pressure} pressure and earns ${event.intensity} ${region} renown.`,
+      ? `${sceneOption.consequence} Time: ${minutes} minutes. Renown: +${renown} ${region}.`
+      : `You stabilize ${townName} by resolving ${event.title}. Pressure reduced: ${event.pressure}. Renown: +${event.intensity} ${region}.`,
   };
 }
 
@@ -203,7 +203,7 @@ export function assertOverworldEventResolutionReady(
   const readiness = overworldEventResolutionReadiness(sources);
   if (readiness.missing.length === 0) return;
   throw new Error(
-    `Before resolving this event, ${missingOverworldEventResolutionStepLabels(readiness.missing).join(", ")}.`,
+    `To resolve this event, first ${missingOverworldEventResolutionStepLabels(readiness.missing).join(", ")}.`,
   );
 }
 
@@ -231,12 +231,10 @@ export function planOverworldEventResolution(
     const existing = state.journalEntries.get(entryId);
     if (existing) {
       if (scene && !sceneOption) {
-        throw new Error(`Choose one authored option for ${event.title}.`);
+        throw new Error(`Choose one option for ${event.title}.`);
       }
       if (scene && existing.localSceneProof?.optionId !== sceneOption?.id) {
-        throw new Error(
-          `Local event ${event.title} was resolved with a different authored option.`,
-        );
+        throw new Error(`This event was already resolved with a different option: ${event.title}.`);
       }
       return {
         alreadyKnown: true,
@@ -256,11 +254,11 @@ export function planOverworldEventResolution(
 
   if (scene && !localEventSceneRequirementsMet(scene, state)) {
     throw new Error(
-      `${event.title}: ${localEventSceneRequirementError(scene, state) ?? "Its authored requirements are not met."}`,
+      `${event.title}: ${localEventSceneRequirementError(scene, state) ?? "Its requirements are not met."}`,
     );
   }
   if (scene && !sceneOption) {
-    throw new Error(`Choose one authored option for ${event.title}.`);
+    throw new Error(`Choose one option for ${event.title}.`);
   }
   if (
     sceneOption &&
@@ -268,7 +266,7 @@ export function planOverworldEventResolution(
       worldFactIds: state.campaignWorldFactIds,
     })
   ) {
-    throw new Error(`That authored option for ${event.title} is not available in this journey.`);
+    throw new Error(`That option for ${event.title} is unavailable in this journey.`);
   }
 
   const action = describeOverworldEventResolution(

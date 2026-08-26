@@ -152,15 +152,15 @@ describe("Wolf-Winter loft route and split-guard resource choice", () => {
     const before = act(fullyPrepared(), "go_west");
     expect(before.current).toBe("store");
     expect(optionIds(before)).not.toContain("go_up");
-    expect(buildRpgObservation(index, before).description).toContain("ladder");
+    expect(buildRpgObservation(index, before).description).toContain("The Fodder-Loft is up");
     const blockedLoft = buildRpgObservation(index, before).blocked_exits.find(
       (exit) => exit.direction === "up",
     );
     expect(blockedLoft).toBeDefined();
     expect(blockedLoft?.message).toMatch(
-      /before the flank-wolf falls[^]*settle the yearling[^]*crawlboard named by certified testimony or Cade's committed plan[^]*or bind a split rail[^]*sound rail set/i,
+      /Complete the currently listed yearling action[^]*split-rail guard[^]*Jamie's certified crawlboard route[^]*Cade's LURE route[^]*sound braced rail cannot be carried/i,
     );
-    expect(blockedLoft?.message).not.toMatch(/in your packet|Jamie|Hayden/i);
+    expect(blockedLoft?.message).not.toMatch(/in your packet|Hayden/i);
     expect(blockedLoft?.message).not.toMatch(/brace-stake|saved stake/i);
 
     const jamieBefore = structuredClone(before);
@@ -169,7 +169,7 @@ describe("Wolf-Winter loft route and split-guard resource choice", () => {
       (exit) => exit.direction === "up",
     );
     expect(jamieBlockedLoft?.message).toMatch(
-      /crawlboard named by certified testimony or Cade's committed plan[^]*or bind/i,
+      /Complete the currently listed yearling action[^]*split-rail guard[^]*Jamie's certified crawlboard route[^]*Cade's LURE route/i,
     );
     expect(jamieBlockedLoft?.message).not.toMatch(/in your packet/i);
     expect(jamieBlockedLoft?.message).not.toMatch(/must bind|needs? a bound rail/i);

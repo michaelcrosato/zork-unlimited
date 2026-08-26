@@ -56,7 +56,7 @@ const ACTION_PREFIX: Partial<Record<ViewChoice["kind"], RegExp>> = {
 };
 
 const AUTHORED_DECISION_STAGE =
-  /^(?:COMPARE|PREPARE(?: SUPPORT)?|REVIEW SUPPORT|FINAL COMMITMENT|BACK|LEAVE)\b/i;
+  /^(?:CHOOSE|COMPARE|PREPARE(?: SUPPORT)?|REVIEW SUPPORT|FINAL COMMITMENT|BACK|LEAVE)\b/i;
 
 /** Player copy only: choice id and engine command remain untouched. */
 export function playerActionLabel(choice: Pick<ViewChoice, "kind" | "title">): string {
@@ -148,10 +148,10 @@ function PressureTrack({
       </div>
       <small>
         {track.band.description ??
-          (track.next ? `Next: ${track.next.label} at ${track.next.min}` : "Highest authored band")}
+          (track.next ? `Next: ${track.next.label} at ${track.next.min}` : "At maximum")}
       </small>
       <span className="nw-pressure-next">
-        {track.next ? `Next ${track.next.label} at ${track.next.min}` : "Highest authored band"}
+        {track.next ? `Next ${track.next.label} at ${track.next.min}` : "At maximum"}
       </span>
     </div>
   );
@@ -179,9 +179,9 @@ function QuestUtility({
     <section className="nw-utility" aria-label={`${panel} panel`}>
       <header>
         <div>
-          <p className="nw-kicker">Field reference</p>
+          <p className="nw-kicker">Quest reference</p>
           <h2 ref={headingRef} tabIndex={-1}>
-            {panel === "terms" ? "Exact terms" : panel}
+            {panel === "terms" ? "All actions and costs" : panel}
           </h2>
         </div>
         <button className="nw-text-button" type="button" onClick={onClose}>
@@ -200,11 +200,11 @@ function QuestUtility({
 
       {panel === "atlas" && (
         <div className="nw-reference-card">
-          <p className="nw-kicker">Quest-local position</p>
+          <p className="nw-kicker">Quest location</p>
           <h3>{view.title}</h3>
           <p>
-            The campaign is paused at {world.current.name} while you complete {quest.title}. Road
-            travel resumes when you return.
+            You remain in {world.current.name} while playing {quest.title}. Return to resume road
+            travel.
           </p>
           <dl className="nw-reference-list">
             <div>
@@ -212,7 +212,7 @@ function QuestUtility({
               <dd>{view.location}</dd>
             </div>
             <div>
-              <dt>Campaign location</dt>
+              <dt>Journey location</dt>
               <dd>{world.current.name}</dd>
             </div>
             <div>
@@ -249,7 +249,7 @@ function QuestUtility({
       {panel === "terms" && (
         <div className="nw-terms-grid">
           <article className="nw-reference-card">
-            <p className="nw-kicker">Quest-local state</p>
+            <p className="nw-kicker">Quest stats</p>
             <dl className="nw-reference-list">
               <div>
                 <dt>Health</dt>
@@ -268,13 +268,13 @@ function QuestUtility({
                 </dd>
               </div>
               <div>
-                <dt>State receipt</dt>
+                <dt>State ID</dt>
                 <dd>{view.stateHash.slice(0, 12)}</dd>
               </div>
             </dl>
           </article>
           <article className="nw-reference-card">
-            <p className="nw-kicker">Legal action terms</p>
+            <p className="nw-kicker">Available actions</p>
             <ul className="nw-reference-lines">
               {view.choices.map((choice) => (
                 <li key={choice.id}>
@@ -368,17 +368,17 @@ function QuestUtility({
                 >
                   Return to {world.current.name}
                 </button>
-                {!canLeave && <p>Campaign foldback must succeed before returning to the road.</p>}
+                {!canLeave && <p>The quest result must be saved before you can return.</p>}
               </>
             ) : (
               <>
                 <p>
-                  This quest is active. Return to the scene and reach an engine-projected ending or
-                  journey pause before going back to the road.
+                  This quest is active. Return to the scene and reach an ending or journey pause
+                  before going back to the road.
                 </p>
                 <p>
                   {saveStatus === "saved"
-                    ? "Quest progress is saved in this browser and will be verified when you return."
+                    ? "Quest progress is saved in this browser."
                     : saveStatus === "pending"
                       ? "Quest progress is being saved in this browser."
                       : "Browser saving is unavailable. Keep this tab open to preserve current quest progress."}
@@ -389,9 +389,8 @@ function QuestUtility({
           <article className="nw-reference-card">
             <p className="nw-kicker">How this screen works</p>
             <p>
-              The scene is stable. Choose only from the engine-projected action cards below it; the
-              latest consequence updates after each action. Exact terms exposes checks, costs,
-              blocked actions, and the deterministic state receipt.
+              Choose an action card below the scene. The latest result changes after each action.
+              Actions & costs shows checks, costs, blocked actions, and the state ID.
             </p>
           </article>
         </div>
@@ -520,7 +519,7 @@ export function QuestPlayScreen({
                 <p>{quest.discovery}</p>
 
                 <div className="nw-campaign-goal">
-                  <strong>Campaign goal</strong>
+                  <strong>Journey goal</strong>
                   <span>{journey.goal.text}</span>
                 </div>
 
@@ -550,7 +549,7 @@ export function QuestPlayScreen({
 
             <section className="nw-consequence" aria-live="polite">
               <Info aria-hidden="true" />
-              <strong>Latest consequence</strong>
+              <strong>Latest result</strong>
               <span>{error ? `Could not continue: ${error}` : latestConsequence}</span>
             </section>
 
@@ -572,8 +571,8 @@ export function QuestPlayScreen({
                   {view.ending?.text ??
                     `Ending ${view.endingId ?? "recorded"} · score ${view.score}/${view.maxScore}.`}{" "}
                   {canLeave
-                    ? "The campaign record has been updated."
-                    : "Campaign foldback is incomplete; resolve the error before returning."}
+                    ? "The journey record has been updated."
+                    : "The quest result was not saved. Resolve the error before returning."}
                 </p>
                 <button type="button" disabled={!canLeave} onClick={canLeave ? onLeave : undefined}>
                   Return to {world.current.name} <ArrowRight aria-hidden="true" />
@@ -599,7 +598,7 @@ export function QuestPlayScreen({
                       <h2>{label}</h2>
                       <div className={`nw-action-terms${terms.length === 0 ? " is-default" : ""}`}>
                         <strong>{terms.length > 0 ? "Terms" : "Available now"}</strong>
-                        <p>{terms.join(" · ") || "Projected legal by the game engine."}</p>
+                        <p>{terms.join(" · ") || "You can do this now."}</p>
                       </div>
                       <button
                         type="button"
@@ -622,7 +621,7 @@ export function QuestPlayScreen({
                     </p>
                     <h2>{choice.label}</h2>
                     <div className="nw-action-terms">
-                      <strong>Blocked by the game</strong>
+                      <strong>Why it is blocked</strong>
                       <p>{choice.reason}</p>
                     </div>
                     <button type="button" disabled>

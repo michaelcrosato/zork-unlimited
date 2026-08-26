@@ -36,7 +36,8 @@ const rloaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
 if (!rloaded.ok) throw new Error("sunken_barrow must compile");
 const rindex = indexRpgPack(rloaded.compiled.pack);
 const rstep = makeStep(buildRpgRules(rindex));
-const WIGHT_MSG = "The barrow-wight bars the way; you cannot pass while it stands.";
+const WIGHT_MSG =
+  "The east exit is locked while the barrow-wight lives. ATTACK barrow-wight and defeat it to pass.";
 
 function rmove(s: GameState, RpgAction: RpgAction): GameState {
   const r = rstep(s, RpgAction);

@@ -86,10 +86,10 @@ describe("journey contract v3 goals", () => {
     const view = journeyPresentation(state);
 
     expect(INITIAL_JOURNEY_GOAL_GUIDANCE).toBe(
-      "Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves. Wolf-Winter is a complete opening chapter. End closes the journey there; Continue carries its consequences into the optional Gallowmere chapter.",
+      "Complete Wolf-Winter. Jobs, events, and sites can help you find it, but they do not complete this goal. Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter.",
     );
     expect(OPENING_CHAPTER_HORIZON).toBe(
-      "Wolf-Winter is a complete opening chapter. End closes the journey there; Continue carries its consequences into the optional Gallowmere chapter.",
+      "Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter.",
     );
     expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
     expect(view).toMatchObject({
@@ -155,12 +155,12 @@ describe("journey contract v3 goals", () => {
           checkpoint,
           goalVersion: null,
           goalId: null,
-          message: `You reached safe journey break ${String(checkpoint)}. Any active quest is paused exactly where it stands. Continue resumes this exact state; End closes the journey here. If you continue, the next choice appears when the current goal completes or the first safe journey break at or after decision ${String(checkpoint + 40)}, whichever comes first.`,
+          message: `You reached safe break ${String(checkpoint)}. Any active quest is paused with its progress saved. Continue from here, or end and keep a read-only record. The next Continue/End choice appears when you complete the current goal or reach the first safe break on or after decision ${String(checkpoint + 40)}.`,
           options: [
             {
               id: "continue",
-              label: "Continue from this exact state",
-              consequence: `Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision ${String(checkpoint + 40)}, whichever comes first.`,
+              label: "Continue from here",
+              consequence: `Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision ${String(checkpoint + 40)}.`,
             },
             { id: "end" },
           ],
@@ -203,9 +203,9 @@ describe("journey contract v3 goals", () => {
       options: [
         {
           id: "continue",
-          label: "Continue from this exact state",
+          label: "Continue from here",
           consequence:
-            "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
+            "Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision 40.",
         },
         { id: "end" },
       ],
@@ -264,13 +264,13 @@ describe("journey contract v3 goals", () => {
     });
     expect(journeyPresentation(completed).pendingChoice).toMatchObject({
       message:
-        "You completed your current goal after decision 41. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when another goal completes or the first safe journey break at or after decision 80, whichever comes first.",
+        "You completed the current goal after decision 41. Continue keeps all progress. End makes this journey read-only. If you continue, the next Continue/End choice appears when you complete another goal or reach the first safe break on or after decision 80.",
       options: [
         {
           id: "continue",
-          label: "Continue from this exact state",
+          label: "Continue from here",
           consequence:
-            "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 80, whichever comes first.",
+            "Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision 80.",
         },
         { id: "end" },
       ],
@@ -405,13 +405,13 @@ describe("journey contract v3 goals", () => {
     });
     expect(journeyPresentation(state).pendingChoice).toMatchObject({
       message:
-        "You completed your current goal at safe journey break 80. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when another goal completes or the first safe journey break at or after decision 120, whichever comes first.",
+        "You completed the current goal at safe break 80. Continue keeps all progress. End makes this journey read-only. If you continue, the next Continue/End choice appears when you complete another goal or reach the first safe break on or after decision 120.",
       options: [
         {
           id: "continue",
-          label: "Continue from this exact state",
+          label: "Continue from here",
           consequence:
-            "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 120, whichever comes first.",
+            "Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision 120.",
         },
         { id: "end" },
       ],
@@ -536,11 +536,11 @@ describe("journey contract v3 goals", () => {
     });
     const presented = journeyPresentation(surfaced).pendingChoice;
     expect(presented?.message).toBe(
-      "At the first safe journey break after decision 40, now at decision 45, this journey choice is ready. Any active quest is paused exactly where it stands. Continue resumes this exact state; End closes the journey here. If you continue, the next choice appears when the current goal completes or the first safe journey break at or after decision 80, whichever comes first.",
+      "You reached the first safe break after decision 40, now at decision 45. Any active quest is paused with its progress saved. Continue from here, or end and keep a read-only record. The next Continue/End choice appears when you complete the current goal or reach the first safe break on or after decision 80.",
     );
     expect(presented?.options[0]).toMatchObject({
       id: "continue",
-      label: "Continue from this exact state",
+      label: "Continue from here",
     });
     expect(JourneyContractSnapshotSchema.parse(surfaced)).toEqual(surfaced);
     expect(chooseJourney(surfaced, "continue").state).toMatchObject({
@@ -577,7 +577,7 @@ describe("journey contract v3 goals", () => {
     expect(continued.nextCheckpoint).toBe(120);
     expect(JourneyContractSnapshotSchema.parse(continued)).toEqual(continued);
     expect(journeyPresentation(surfaced).pendingChoice?.options[0]?.label).toBe(
-      "Continue from this exact state",
+      "Continue from here",
     );
   });
 
@@ -616,7 +616,7 @@ describe("journey contract v3 goals", () => {
         id: "end",
         label: "End this journey",
         consequence:
-          "The journey becomes read-only; its receipt preserves the unfinished goal and completed history.",
+          "End now. You cannot continue after death. The unfinished goal and completed history remain available for review.",
       },
     ]);
     expect(() => chooseJourney(died, "continue")).toThrow(/character died/i);
@@ -809,7 +809,7 @@ describe("journey contract presentation context", () => {
     );
     expect(view.pendingChoice?.options[0].label).toBe("Continue to decide the dawn wagon");
     expect(view.pendingChoice?.options[0].consequence).toBe(
-      "Continue to allocate the wagon. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first. Your choice will shape the next lead.",
+      "Continue to allocate the wagon. Keep all progress and continue. The next Continue/End choice appears when you complete a goal or reach the first safe break on or after decision 40. Your choice will shape the next lead.",
     );
     expect(view.storyChoice).toEqual(storyChoice);
     expect(Object.keys(view.storyChoice!).sort()).toEqual(["id", "message", "options"]);

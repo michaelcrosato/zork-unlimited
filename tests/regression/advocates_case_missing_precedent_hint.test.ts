@@ -58,9 +58,11 @@ describe("bug_0460 - Advocate's Case antechamber points to missing precedent", (
 
     const earlyObs = buildRpgObservation(index, early);
     expect(earlyObs.room).toBe("aldermans_antechamber");
-    expect(earlyObs.description).toContain("the legal sequence is not complete yet");
-    expect(earlyObs.description).toContain("the guild's own precedent");
-    expect(earlyObs.description).toContain("guild records room is west from Marta's stall");
+    expect(earlyObs.description).toContain(
+      "TAKE certified precedent packet and READ certified precedent packet",
+    );
+    expect(earlyObs.description).toContain("It proves that Oswin lost two matching cases");
+    expect(earlyObs.description).toContain("Guild Records Room west of Marta's Stall");
     expect(actionIds(early)).toContain("go_south");
     expect(actionIds(early)).not.toContain("use_prior_convictions_on_case_record");
 

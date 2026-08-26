@@ -90,24 +90,25 @@ describe("bug_0256 — The Wolf-Winter: the braced breach has a legible, stat-ne
     const both = roomDescription(room, stateWithFlags(pack, ["yearling_down", "breach_braced"]));
 
     // (4) neither flag → base description: the live wolf, the loose rail in the snow.
-    expect(base).toContain("hungry young wolf");
-    expect(base).toContain("combat funnel");
+    expect(base).toContain("SET the Albany relief spear against the yearling's rush");
+    expect(base).toContain("Then use the exact follow-up shown");
     expect(base).not.toContain("wedged");
     expect(base).not.toContain("set hard");
 
     // (3) braced before the kill → the wolf still holds the gap, but the rail is set.
-    expect(bracedOnly).toContain("set hard across it");
+    expect(bracedOnly).toContain("braced fallen paling-rail slows its attack");
     expect(bracedOnly).not.toContain("wedged");
-    expect(bracedOnly).toContain("still holds"); // wolf alive
+    expect(bracedOnly).toContain("yearling's rush"); // wolf alive
     expect(bracedOnly).not.toContain("dead in the snow");
 
     // (2) killed without bracing → the existing dead-wolf text, no set rail mentioned.
-    expect(deadOnly).toContain("dead in the snow");
+    expect(deadOnly).toContain("yearling wolf is dead");
     expect(deadOnly).not.toContain("set hard");
 
     // (1) both → the most-specific variant wins (ordered first): dead wolf AND set rail.
-    expect(both).toContain("dead in the snow");
-    expect(both).toContain("set hard across the breach");
+    expect(both).toContain("yearling wolf is dead");
+    expect(both).toContain("fallen paling-rail remains braced");
+    expect(both).toContain("affects the flank-wolf only if that fight still stands");
     expect(both).not.toContain("wedged");
 
     // All four render DISTINCT text — no variant shadows another (liveness, bug_0147).
@@ -120,7 +121,7 @@ describe("bug_0256 — The Wolf-Winter: the braced breach has a legible, stat-ne
     const loose = objectDescription(rail, stateWithFlags(pack, []));
     const braced = objectDescription(rail, stateWithFlags(pack, ["breach_braced"]));
     expect(loose).not.toContain("set hard");
-    expect(braced).toContain("set hard across the breach");
+    expect(braced).toContain("provides a combat funnel");
     expect(braced).not.toContain("wedged");
     expect(loose).not.toBe(braced);
   });
@@ -140,7 +141,7 @@ describe("bug_0256 — The Wolf-Winter: the braced breach has a legible, stat-ne
     expect(keys).not.toContain("inc_var");
     // And the prose the win unlocks is genuinely reachable as displayed text.
     const bracedRoom = roomDescription(palingGap(pack), stateWithFlags(pack, ["breach_braced"]));
-    expect(bracedRoom).toContain("set hard across it");
+    expect(bracedRoom).toContain("braced fallen paling-rail slows its attack");
     expect(bracedRoom).not.toContain("wedged");
   });
 });

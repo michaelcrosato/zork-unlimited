@@ -64,7 +64,9 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     ]);
 
     let state = initStateForRpgPack(index, 497);
-    expect(buildRpgObservation(index, state).description).toContain("killing winter night");
+    expect(buildRpgObservation(index, state).description).toContain(
+      "protect the cattle until dawn",
+    );
     state = act(state, "go_north");
     expect(state.visited.byre_yard).toBe(true);
     expect(state.flags.watch_started).toBeUndefined();
@@ -79,8 +81,8 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     state = act(state, "go_south");
     expect(state.questStage.the_watch).toBe("breach_held");
     let hub = buildRpgObservation(index, state).description;
-    expect(hub).toContain("yearling lies dead");
-    expect(hub).toContain("flank-wolf holds the byre door");
+    expect(hub).toContain("yearling wolf is dead");
+    expect(hub).toContain("face the flank-wolf at the Byre Door");
     expect(hub).not.toContain("first of the wolves is already through");
 
     state = act(state, "go_north");
@@ -91,8 +93,8 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     state = act(state, "go_south");
     expect(state.questStage.the_watch).toBe("threshold_held");
     hub = buildRpgObservation(index, state).description;
-    expect(hub).toContain("flank-wolf across the byre threshold");
-    expect(hub).toContain("grey leader still waits deeper in");
+    expect(hub).toContain("yearling wolf and flank-wolf are dead");
+    expect(hub).toContain("Go north to face the grey leader");
     expect(hub).not.toContain("first of the wolves is already through");
 
     state = act(state, "go_north");
@@ -105,26 +107,32 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     state = act(state, "go_south");
     expect(state.questStage.the_watch).toBe("byre_held");
     hub = buildRpgObservation(index, state).description;
-    expect(hub).toContain("all three wolves lie dead");
-    expect(hub).toContain("cattle stand whole");
+    expect(hub).toContain("All three wolves are dead");
+    expect(hub).toContain("the herd is whole");
     expect(hub).not.toContain("first of the wolves is already through");
 
     state = act(state, "go_south");
     const yard = buildRpgObservation(index, state).description;
-    expect(yard).toContain("whatever remains of the night");
+    expect(yard).toContain("Go north through the gate to the byre-yard and continue the watch");
+    expect(yard).toContain("Albany route tag and relief spear");
     expect(yard).not.toContain("the wolves are in it");
   });
 
-  it("keeps the proven guarantee in Cade's counsel while the day-book gives evidence", () => {
+  it("keeps the preparation evidence in the day-book and the safety guidance in Cade's counsel", () => {
     const book = pack.objects.find((object) => object.id === "day_book");
-    expect(book?.read_text).toMatch(/kept one watchman standing/i);
-    expect(book?.read_text).toMatch(/another trusted spear[^]*bled/i);
+    expect(book?.read_text).toMatch(/three wolves[^]*yearling wolf[^]*flank-wolf[^]*grey leader/i);
+    expect(book?.read_text).toMatch(
+      /TALK TO old Cade the houndsman[^]*PREPARE SUPPORT for \+2 attack[^]*DON padded byre-jerkin for \+2 defense/i,
+    );
+    expect(book?.read_text).toMatch(/bonuses affect fights still ahead/i);
     expect(book?.read_text).not.toMatch(/NO WOLF[^]*PULL YOU DOWN/i);
 
     const counsel = pack.npcs
       .find((npc) => npc.id === "houndsman")
       ?.dialogue.nodes.find((node) => node.id === "cade_wolves");
-    expect(counsel?.npc_text).toMatch(/both[^]*no wolf[^]*pull you down/i);
+    expect(counsel?.npc_text).toMatch(/\+2 attack, \+5 score/i);
+    expect(counsel?.npc_text).toMatch(/DON padded byre-jerkin[^]*\+2 defense/i);
+    expect(counsel?.npc_text).toMatch(/Both make worst-roll HUNT safe/i);
     expect(counsel?.npc_text).not.toMatch(/NO WOLF WILL TOUCH YOU/i);
   });
 
@@ -133,7 +141,7 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     expect(pack.enemies.every((enemy) => enemy.death_ending === death?.id)).toBe(true);
     expect(death).toMatchObject({ title: "Pulled Down", death: true });
     expect(death?.text).not.toMatch(/snow|door|straw/i);
-    expect(death?.text).toContain("The wolf's weight bears you down");
-    expect(death?.text).toContain("the byre goes to them");
+    expect(death?.text).toContain("You are killed");
+    expect(death?.text).toContain("The surviving wolf or wolves take the byre and cattle");
   });
 });

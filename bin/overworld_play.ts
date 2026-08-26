@@ -101,11 +101,11 @@ export function render(view: OverworldView): string {
   const lines = [
     `\n=== ${view.world} — ${view.current.name} (${view.current.region}) — ${view.timeLabel} ===`,
     view.current.description,
-    `Supplies ${view.supplies}/${view.maxSupplies} · Fatigue ${view.fatigue} · Condition: ${view.travelCondition} · Towns ${view.visitedCount}/${view.totalTowns}`,
+    `Supplies ${view.supplies}/${view.maxSupplies} · Fatigue ${view.fatigue} · Condition ${view.travelCondition} · Towns visited ${view.visitedCount}/${view.totalTowns}`,
   ];
   if (view.exits.length) {
     lines.push("Roads:");
-    lines.push("  Type `go <road number>` to travel (e.g. `go 1`).");
+    lines.push("  Travel with `go <road number>` (for example, `go 1`).");
     view.exits.forEach((exit, i) => {
       lines.push(
         `  ${i + 1}. ${exit.destination.name} — ${exit.route}, ${exit.distance_mi.toFixed(1)} mi, ${exit.travel_minutes} min`,
@@ -122,7 +122,7 @@ export function render(view: OverworldView): string {
     lines.push(
       `Areas: ${view.areas.map((a) => a.name).join(" · ") || "—"}${more(view.hiddenAreaCount)}`,
     );
-  if (view.pois.length) lines.push(`Scoutable: ${view.pois.map((p) => p.title).join(" · ")}`);
+  if (view.pois.length) lines.push(`Places to scout: ${view.pois.map((p) => p.title).join(" · ")}`);
   if (view.characters.length)
     lines.push(`Contacts: ${view.characters.map((c) => `${c.name} (${c.role})`).join(" · ")}`);
   const departureQuestId = view.departureRecap?.questId;
@@ -139,9 +139,7 @@ export function render(view: OverworldView): string {
   }
   if (departureQuest) {
     lines.push("Depart now:");
-    lines.push(
-      "  Start the mission now; choosing an available road is the next step, and planning is optional.",
-    );
+    lines.push("  Start now by choosing an available road. Planning is optional.");
     lines.push(`  ${questLine(view, departureQuest)}`);
     if (departureQuest.launch) {
       lines.push(
@@ -160,26 +158,26 @@ export function render(view: OverworldView): string {
     departureQuest &&
     (view.departureRecap || view.departureInteractions.length || view.departureContactLeads.length)
   ) {
-    lines.push("Plan the dispatch (optional):");
+    lines.push("Optional departure planning:");
   }
   if (!view.stationDispatchBoard && view.departureRecap) {
     lines.push(...renderDepartureRecap(view.departureRecap));
   }
   if (!view.stationDispatchBoard && view.departureInteractions.length) {
-    lines.push("Optional departure decisions:");
+    lines.push("Optional departure choices:");
     for (const interaction of view.departureInteractions) {
       lines.push(`  ${interaction.kind === "preparation" ? "Field kit" : "Relief wagon"}`);
       lines.push(`    Compare: \`inspect ${interaction.id}\``);
     }
   }
   if (!view.stationDispatchBoard && view.departureContactLeads.length) {
-    lines.push("Optional before departure:");
+    lines.push("Optional second rider:");
     for (const lead of view.departureContactLeads) {
       lines.push(`  Second rider — ${lead.guidance}`);
       if (lead.action) {
         lines.push(`    Command: talk ${lead.contactName}`);
       } else {
-        lines.push("    Available after choosing a Station field kit.");
+        lines.push("    Choose a field kit first.");
       }
     }
   }
@@ -254,8 +252,8 @@ export function renderStationDispatchBoard(view: OverworldView): string[] {
   );
   const lines =
     openSupport.length > 0
-      ? [`Optional dispatch support — ${formatStationSupportLabels(openSupport)}:`]
-      : ["No optional dispatch support remains."];
+      ? [`Optional support — ${formatStationSupportLabels(openSupport)}:`]
+      : ["No optional support remains."];
   for (const support of openSupport) {
     lines.push(`  ${support.label} — ${stationDispatchStatus(support)}.`);
     lines.push(`    ${support.purpose}`);
@@ -270,7 +268,7 @@ export function renderStationDispatchBoard(view: OverworldView): string[] {
       );
     }
   }
-  lines.push("  Already set: `review dispatch`.");
+  lines.push("  Review your current plan: `review dispatch`.");
   return lines;
 }
 
@@ -291,7 +289,7 @@ export function renderStationSupportAffordance(view: OverworldView): string[] {
   return [
     ...(open.length > 0
       ? [
-          "Optional support (independent; `review support` for detail):",
+          "Optional support (`review support` for details):",
           ...open.map((support) => {
             const action = support.action!;
             const command =
@@ -302,7 +300,7 @@ export function renderStationSupportAffordance(view: OverworldView): string[] {
           }),
         ]
       : []),
-    "  Already set: `review dispatch`.",
+    "  Current plan: `review dispatch`.",
   ];
 }
 
@@ -311,7 +309,7 @@ function printStationDispatchSupport(session: OverworldSession): void {
   console.log(
     board
       ? renderStationDispatchBoard(session.view()).join("\n")
-      : "No optional Station support is available to review.",
+      : "No optional support is available.",
   );
 }
 
@@ -331,16 +329,16 @@ function departureRecapValue(
 export function renderDepartureRecap(
   recap: NonNullable<OverworldView["departureRecap"]>,
 ): string[] {
-  const lines = [`${recap.questTitle} dispatch recap:`];
+  const lines = [`${recap.questTitle} departure plan:`];
   if (recap.dispatch) {
     const dispatch = recap.dispatch;
     if (dispatch.state === "sealed") {
       const timing = dispatch.timing === "on_time" ? "on time" : "delayed";
-      lines.push(`  Dispatch sealed: ${String(dispatch.minutes)}m — ${timing}.`);
+      lines.push(`  Departure plan complete: ${String(dispatch.minutes)} min — ${timing}.`);
     } else if (dispatch.state === "direct_launch") {
       const timing = dispatch.timing === "on_time" ? "on time" : "delayed";
       lines.push(
-        `  Direct launch now: ${String(dispatch.minutes)}m — ${timing}. A second rider remains optional.`,
+        `  Leave now: ${String(dispatch.minutes)} min — ${timing}. You may still add a second rider.`,
       );
     } else {
       const remainingLabels = dispatch.remainingOptional.map((slot) =>
@@ -354,9 +352,7 @@ export function renderDepartureRecap(
         remainingLabels.length > 2
           ? `${remainingLabels.slice(0, -1).join(", ")}, and ${remainingLabels.at(-1)!}`
           : remainingLabels.join(" and ");
-      lines.push(
-        `  Dispatch committed: ${String(dispatch.minutes)}m; ${remaining} ${remainingLabels.length === 1 ? "remains" : "remain"} optional.`,
-      );
+      lines.push(`  Departure ready: ${String(dispatch.minutes)} min. Optional: ${remaining}.`);
     }
   }
   if (recap.dispatch?.state === "committed") {
@@ -364,16 +360,16 @@ export function renderDepartureRecap(
       .filter((entry) => entry.title !== null)
       .map((entry) => `${entry.label}: ${entry.title!}`);
     if (selected.length > 0) lines.push(`  Selected plan: ${selected.join(" · ")}.`);
-    lines.push("  Plan slots and exact selected terms: `review dispatch`.");
+    lines.push("  Review all choices and costs: `review dispatch`.");
     return lines;
   }
   for (const entry of recap.entries) {
     lines.push(
-      `  ${entry.label}: ${departureRecapValue(entry)}${entry.status === "solo_default" ? " (direct-launch default; a second rider remains optional)" : ""}`,
+      `  ${entry.label}: ${departureRecapValue(entry)}${entry.status === "solo_default" ? " (leaving alone; you may still add a second rider)" : ""}`,
     );
   }
   if (recap.entries.some((entry) => entry.activeFieldTerm)) {
-    lines.push("  Exact selected terms: `review dispatch`.");
+    lines.push("  Review selected costs and effects: `review dispatch`.");
   }
   return lines;
 }
@@ -383,10 +379,10 @@ export function renderDepartureRecapTerms(
   recap: NonNullable<OverworldView["departureRecap"]>,
 ): string[] {
   return [
-    `${recap.questTitle} exact active terms and plan slots:`,
+    `${recap.questTitle} choices, costs, and effects:`,
     ...recap.entries.flatMap((entry) => [
       `  ${entry.label}: ${departureRecapValue(entry)}`,
-      ...(entry.activeFieldTerm ? [`    Active term: ${entry.activeFieldTerm}`] : []),
+      ...(entry.activeFieldTerm ? [`    Effect: ${entry.activeFieldTerm}`] : []),
     ]),
   ];
 }
@@ -394,9 +390,7 @@ export function renderDepartureRecapTerms(
 function printDepartureRecapTerms(session: OverworldSession): void {
   const recap = session.view().departureRecap;
   console.log(
-    recap
-      ? renderDepartureRecapTerms(recap).join("\n")
-      : "No Station departure plan is available to review.",
+    recap ? renderDepartureRecapTerms(recap).join("\n") : "No departure plan is available.",
   );
 }
 
@@ -423,8 +417,8 @@ export function renderQuestLaunch(
     `\n${quest.launch.prompt}`,
     EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
     selectionActive
-      ? "Choose with `choose <number|name>`; a legacy bare number also works."
-      : `Start with \`start ${quest.title}\`; route selection follows before commitment.`,
+      ? "Choose with `choose <number|name>`. You can also type the number alone."
+      : `Start with \`start ${quest.title}\`, then choose a route.`,
   ];
   quest.launch.options.forEach((option, index) => {
     const projection = option.projection;
@@ -433,20 +427,20 @@ export function renderQuestLaunch(
     lines.push(
       `  ${selectionActive ? `choose ${String(index + 1)}` : `${String(index + 1)}.`} — ${option.title} — ${option.summary}${availability}`,
     );
-    lines.push(`     What you expect: ${option.preview}`);
+    lines.push(`     Expected result: ${option.preview}`);
     if (option.tradeoffSummary) {
-      lines.push(`     Route tradeoff: ${option.tradeoffSummary}`);
+      lines.push(`     Tradeoff: ${option.tradeoffSummary}`);
     }
-    lines.push(`     Commitment: ${option.consequence}`);
+    lines.push(`     If chosen: ${option.consequence}`);
     lines.push(
-      `     Actual cost: ${String(option.terms.minutes)} min, ${String(option.terms.supplies)} ${option.terms.supplies === 1 ? "supply" : "supplies"}, fatigue +${String(option.terms.fatigue)}.`,
+      `     Cost: ${String(option.terms.minutes)} min, ${String(option.terms.supplies)} ${option.terms.supplies === 1 ? "supply" : "supplies"}, fatigue +${String(option.terms.fatigue)}.`,
     );
     if (projection?.available) {
       lines.push(
-        `     Projected arrival: ${timeLabel(projection.minutesAfter)}; ${String(projection.suppliesAfter)} ${projection.suppliesAfter === 1 ? "supply" : "supplies"} remaining; fatigue ${String(projection.fatigueAfter)}; condition ${projection.travelConditionAfter}.`,
+        `     Arrival: ${timeLabel(projection.minutesAfter)}; ${String(projection.suppliesAfter)} ${projection.suppliesAfter === 1 ? "supply" : "supplies"} left; fatigue ${String(projection.fatigueAfter)}; condition ${projection.travelConditionAfter}.`,
       );
     } else if (projection) {
-      lines.push(`     Projected time: ${timeLabel(projection.minutesAfter)}.`);
+      lines.push(`     Arrival time: ${timeLabel(projection.minutesAfter)}.`);
     }
   });
   return lines.join("\n");
@@ -477,7 +471,7 @@ export function resolveQuestLaunchChoice(
   if (!selector) {
     return {
       kind: "unmatched",
-      reason: "Choose an approach with `choose <number|name>`, or type `cancel`.",
+      reason: "Choose with `choose <number|name>`, or type `cancel`.",
     };
   }
 
@@ -488,7 +482,7 @@ export function resolveQuestLaunchChoice(
       ? { kind: "resolved", option }
       : {
           kind: "unmatched",
-          reason: `There is no approach ${selector}. Use an exact command from the launch card.`,
+          reason: `There is no option ${selector}. Use a command shown above.`,
         };
   }
 
@@ -501,12 +495,12 @@ export function resolveQuestLaunchChoice(
   if (matches.length > 1) {
     return {
       kind: "ambiguous",
-      reason: `"${selector}" names more than one approach. Use \`choose <number>\` or an exact id.`,
+      reason: `More than one option matches "${selector}". Use \`choose <number>\` or an exact id.`,
     };
   }
   return {
     kind: "unmatched",
-    reason: `No approach exactly matches "${selector}". Use \`choose <number|name>\`.`,
+    reason: `No option matches "${selector}". Use \`choose <number|name>\`.`,
   };
 }
 
@@ -540,13 +534,13 @@ export function renderJourneyGate(journey: JourneyPresentation): string {
   const lines = [`\n! ${kind}`, `  ${gate.message}`];
   if (journey.pendingChoice?.continuationPreview) {
     const preview = journey.pendingChoice.continuationPreview;
-    lines.push("  Next decision preview — locked until you Continue:");
+    lines.push("  If you continue, this choice comes next:");
     lines.push(`    ${preview.message}`);
     preview.options.forEach((option) => {
       lines.push(`    [locked] ${option.label}`);
-      lines.push(`             Consequence: ${option.consequence}`);
+      lines.push(`             Result: ${option.consequence}`);
     });
-    lines.push("  These are not selectable yet; choose Continue or End below.");
+    lines.push("  You cannot choose these yet. Choose Continue or End first.");
   }
   lines.push("  Choose with `choose <number|label>`:");
   gate.options.forEach((option, index) => {
@@ -561,20 +555,19 @@ export function renderJourneyGate(journey: JourneyPresentation): string {
               true,
           )}: ${summary.commitment}`,
         );
-        lines.push(`       Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`);
+        lines.push(`       Cost: ${summary.immediateCost}`);
+        lines.push(`       Give up: ${summary.tradeoff}`);
       } else {
         const usesTriggerCategory = summary.fieldTriggerScope === "category";
+        lines.push(`       ${usesTriggerCategory ? "Purpose" : "Choice"}: ${summary.commitment}`);
         lines.push(
-          `       ${usesTriggerCategory ? "Purpose" : "Commitment"}: ${summary.commitment}`,
+          `       ${usesTriggerCategory ? "Applies to" : "Applies when"}: ${summary.fieldTrigger}`,
         );
-        lines.push(
-          `       ${usesTriggerCategory ? "Trigger category" : "Field trigger"}: ${summary.fieldTrigger}`,
-        );
-        if (summary.immediateCost) lines.push(`       Immediate cost: ${summary.immediateCost}`);
+        if (summary.immediateCost) lines.push(`       Cost: ${summary.immediateCost}`);
         lines.push(`       Tradeoff: ${summary.tradeoff}`);
       }
     }
-    lines.push(`       Consequence: ${option.consequence}`);
+    lines.push(`       Result: ${option.consequence}`);
   });
   return lines.join("\n");
 }
@@ -585,19 +578,19 @@ export function renderJourneyStatus(journey: JourneyPresentation): string {
   if (journey.goalGuidance) lines.push(`Guidance: ${journey.goalGuidance}`);
   const passage = journey.goalPassage;
   if (passage) {
-    lines.push(`Goal passage: ${passage.label}`);
+    lines.push(`Route to goal: ${passage.label}`);
     lines.push(
-      `  Forecast: ${String(passage.roadCount)} ${passage.roadCount === 1 ? "road" : "roads"}; ${String(passage.baseMinutes)} road min; ${String(passage.estimatedMinutes)} min estimated.`,
+      `  Route: ${String(passage.roadCount)} ${passage.roadCount === 1 ? "road" : "roads"}; ${String(passage.baseMinutes)} min without delays; ${String(passage.estimatedMinutes)} min estimated.`,
     );
     lines.push(
-      `  Supplies: ${String(passage.suppliesNeeded)} needed; ${String(passage.supplyDeficit)} short; ${String(passage.suppliesAfter)} left.`,
+      `  Supplies: ${String(passage.suppliesNeeded)} needed; ${String(passage.supplyDeficit)} short; ${String(passage.suppliesAfter)} left after travel.`,
     );
     lines.push(
       `  Arrival: fatigue ${String(passage.fatigueAfter)}; condition ${passage.travelConditionAfter}.`,
     );
-    lines.push(`  Consequence: ${passage.consequence}`);
-    lines.push(`  Stop rule: ${passage.stopRule}`);
-    lines.push("  Action: `follow goal`");
+    lines.push(`  Result: ${passage.consequence}`);
+    lines.push(`  Stops when: ${passage.stopRule}`);
+    lines.push("  Travel: `follow goal`");
   }
   return lines.join("\n");
 }
@@ -608,14 +601,14 @@ export function renderEndedJourney(
   receipt: JourneyExitReceipt,
 ): string {
   if (journey.status !== "ended") {
-    throw new Error("Only an ended journey has a terminal receipt surface.");
+    throw new Error("Only an ended journey has an exit record.");
   }
   return [
-    "\n! Journey ended — this journey is read-only.",
+    "\n! Journey ended. This record is read-only.",
     `  Goal: ${journey.goal.text} [${journey.goal.status}]`,
-    `  Accepted decisions: ${String(journey.acceptedDecisions)}.`,
-    `  Exit receipt: ${receipt.exitReason}; reasons: ${receipt.exitReasons.join(", ")}; receipt ${receipt.receiptHash}.`,
-    "  Its truthful exit receipt is preserved for review.",
+    `  Decisions made: ${String(journey.acceptedDecisions)}.`,
+    `  Exit: ${receipt.exitReason}. Reasons: ${receipt.exitReasons.join(", ")}. Receipt: ${receipt.receiptHash}.`,
+    "  The exit record is saved for review.",
   ].join("\n");
 }
 
@@ -644,7 +637,7 @@ function chooseJourneyGate(
     consequence: string;
   }>(gate.options, raw);
   if (!option) {
-    throw new Error("Choose one of the numbered options or enter a full option label shown above.");
+    throw new Error("Choose a number or type a full option label shown above.");
   }
   if (pending) {
     session.chooseJourney(option.id as JourneyChoiceOption["id"]);
@@ -671,28 +664,29 @@ function strategyForCommand(raw: string): OverworldRoadEncounterStrategy | null 
 }
 
 const HELP = `Commands:
-  look                     full status of the current town and area
-  review support           optional Station support comparisons and actions
-  review dispatch          exact selected Station plan terms
-  choose <number|label|id> answer the active journey or story choice
-  inspect <id>             compare an optional story choice or expand one structured card
-  follow goal              take a road passage, or restate local goal guidance
-  go <town|road #>         travel one road leg (multi-leg journeys go leg by leg)
-  routes                   estimates for every discovered destination
-  assist | scout | press   resolve a pending road encounter
-  care · rest · resupply   active campaign care · inn/healer · market services
-  enter <area>             walk a local route to another area of this town
-  explore [<area|site>]    explore the current/named area or a discovered site
-  scout <poi>              scout a point of interest
-  talk <contact>           talk to a local contact
-  investigate <event> · resolve <event>
-  work <job>               work a discovered local job
-  start <quest>            start or resume a discovered quest lead
-  abandon                  suspend the active quest without repaying its start
-  journal · log            recent journal entries · travel log
-  save [name] · load [name]  snapshot the parent and embedded quest together
-  hash                     deterministic snapshot hash
-  actions · help · quit`;
+  look                     show this town, area, and available work
+  review support           compare optional departure support
+  review dispatch          show your departure choices, costs, and effects
+  choose <number|label|id> answer the current choice
+  inspect <id>             compare an optional choice
+  follow goal              travel toward the current goal
+  go <town|road #>         travel one road (long trips continue one road at a time)
+  routes                   show travel estimates to known towns
+  assist | scout | press   handle a road encounter
+  care | rest | resupply   use a town service
+  enter <area>             walk to another area in this town
+  explore [<area|site>]    explore an area or known site
+  scout <poi>              scout a place
+  talk <contact>           talk to a contact
+  investigate <event>      investigate an event
+  resolve <event>          resolve an event
+  work <job>               do a known local job
+  start <quest>            start or resume a known quest
+  abandon                  pause the active quest and return to the road
+  journal | log            show recent journal entries or travel
+  save [name] | load [name] save or load this journey and active quest
+  hash                     show the save-state hash
+  actions | help | quit`;
 
 function matchingEntities<T extends { id: string }>(
   items: readonly T[],
@@ -728,7 +722,7 @@ function printActionResult(result: OverworldActionResult, view: OverworldView): 
   const actionableJobIds = new Set([...view.jobs, ...view.rememberedJobs].map((job) => job.id));
   for (const job of result.discoveredJobs ?? []) {
     if (job.authored_scene && !actionableJobIds.has(job.id)) {
-      console.log(`  ↳ future job (currently unavailable): ${job.title}`);
+      console.log(`  ↳ new job (not available yet): ${job.title}`);
     } else {
       console.log(`  ↳ new job: ${job.title}`);
     }
@@ -756,7 +750,13 @@ function printTravelEntry(entry: TravelLogEntry): void {
 function printGoalPassageResult(result: OverworldJourneyGoalPassageResult): void {
   console.log(`Followed the current goal toward ${result.destination}:`);
   for (const leg of result.legs) printTravelEntry(leg);
-  console.log(`Goal passage stop: ${result.stopReason} at ${result.stoppedAt}.`);
+  const reason =
+    result.stopReason === "objective"
+      ? "Reached the goal town."
+      : result.stopReason === "road_encounter"
+        ? "A road encounter needs your response."
+        : "Stopped before another road would cause a supply shortage or worsen your condition.";
+  console.log(`Stopped at ${result.stoppedAt}. ${reason}`);
 }
 
 function printJournal(view: OverworldView): void {
@@ -811,11 +811,11 @@ async function controlTerminalStoryChoice(args: {
     if (chosenResult?.displaySummary) {
       console.log(chosenResult.displaySummary);
     } else {
-      console.log(`Consequence: ${result.option.consequence}`);
+      console.log(`Result: ${result.option.consequence}`);
     }
     console.log(renderJourneyStatus(args.session.journey()));
   } else if (result.kind === "cancelled") {
-    console.log("Story comparison closed without changing the journey.");
+    console.log("Closed without making a choice.");
   }
   return result.kind;
 }
@@ -856,7 +856,7 @@ async function main(): Promise<void> {
   } else {
     cli = CliJourneySession.fresh(process.cwd(), manifest);
     console.log(
-      `You begin in ${cli.overworld().view().current.name}. Roads leave town, but the work is local until you find it.`,
+      `You begin in ${cli.overworld().view().current.name}. Scout or talk to find local work, or take a known road.`,
     );
   }
   let session = cli.overworld();
@@ -886,7 +886,7 @@ async function main(): Promise<void> {
       const journey = cli.journey();
       if (journey.status === "ended") {
         const receipt = session.journeyExitReceipt();
-        if (!receipt) throw new Error("An ended journey is missing its truthful exit receipt.");
+        if (!receipt) throw new Error("An ended journey is missing its exit record.");
         console.log(renderEndedJourney(journey, receipt));
         break;
       }
@@ -985,7 +985,7 @@ async function main(): Promise<void> {
             console.log(renderQuestCompletion(result.questCompletion));
           } else if (result.terminalDeath) {
             console.log(
-              "That ending does not complete the quest — the lead stays open in your journal, and this journey cannot restart it.",
+              "Your character died before completing the quest. The lead remains open, but this journey cannot restart it.",
             );
           }
         } catch (error) {
@@ -1130,18 +1130,17 @@ async function main(): Promise<void> {
             const chosen = chooseJourneyGate(session, line.slice(verb.length).trim());
             cli.afterParentChoice();
             console.log(`Chosen: ${chosen.label}.`);
-            console.log(`Consequence: ${chosen.consequence}`);
+            console.log(`Result: ${chosen.consequence}`);
             if (session.journey().status === "ended") {
               const receipt = session.journeyExitReceipt();
-              if (!receipt)
-                throw new Error("An ended journey is missing its truthful exit receipt.");
+              if (!receipt) throw new Error("An ended journey is missing its exit record.");
               console.log(renderEndedJourney(session.journey(), receipt));
               break running;
             }
             console.log(renderJourneyStatus(session.journey()));
           } else {
             fail(
-              "Choose the active journey prompt first with `choose <number|label>`; `look`, `review support`, `review dispatch`, `help`, `journal`, `log`, `save`, `load`, `hash`, and `quit` remain available.",
+              "Answer the current choice with `choose <number|label>`. You may also use `look`, `review support`, `review dispatch`, `help`, `journal`, `log`, `save`, `load`, `hash`, or `quit`.",
             );
           }
           continue;
@@ -1185,14 +1184,15 @@ async function main(): Promise<void> {
           case "destinations": {
             const options = session.view().routeOptions;
             if (!options.length) {
-              console.log("No discovered destinations yet — travel a road to learn the map.");
+              console.log("No destinations are known yet. Take a road to learn the map.");
               break;
             }
             for (const plan of options) {
               const deficit =
                 plan.estimate.supplyDeficit > 0 ? ` (${plan.estimate.supplyDeficit} short!)` : "";
+              const supplyUnit = plan.estimate.suppliesNeeded === 1 ? "supply" : "supplies";
               console.log(
-                `${plan.destination.name} — ${plan.totalDistanceMi.toFixed(1)} mi, ~${plan.estimate.elapsedMinutes} min over ${plan.steps.length} leg(s), supplies ${plan.estimate.suppliesNeeded}${deficit}, fatigue +${plan.estimate.fatigueGained}`,
+                `${plan.destination.name} — ${plan.totalDistanceMi.toFixed(1)} mi, about ${plan.estimate.elapsedMinutes} min on ${plan.steps.length} ${plan.steps.length === 1 ? "road" : "roads"}, needs ${plan.estimate.suppliesNeeded} ${supplyUnit}${deficit}, fatigue +${plan.estimate.fatigueGained}`,
               );
             }
             break;
@@ -1207,7 +1207,7 @@ async function main(): Promise<void> {
               break;
             }
             fail(
-              "Review what? Use `review support` for optional Station comparisons or `review dispatch` for exact selected plan terms.",
+              "Use `review support` for optional choices or `review dispatch` for your current plan.",
             );
             break;
           case "go":
@@ -1221,14 +1221,14 @@ async function main(): Promise<void> {
           }
           case "follow": {
             if (rest !== "goal") {
-              fail("Follow what? Use `follow goal` for the visible current-goal passage.");
+              fail("Use `follow goal` to travel toward the current goal.");
               break;
             }
             const journey = session.journey();
             if (!journey.goalPassage) {
               console.log(renderJourneyStatus(journey));
               console.log(
-                "No road passage is available from here. Follow the visible local guidance above.",
+                "You cannot travel toward this goal from here. Follow the local goal guidance above.",
               );
               break;
             }
@@ -1310,18 +1310,18 @@ async function main(): Promise<void> {
             if (!interaction) {
               if (session.isDepartureStoryChoiceResolved(rest)) {
                 fail(
-                  `Optional story choice "${rest}" has already been resolved. Use \`look\` to see what is available now.`,
+                  `You already made the optional choice "${rest}". Use \`look\` to see what remains.`,
                 );
                 break;
               }
               fail(
-                `No optional story choice exactly matches "${rest}". Use the \`inspect <id>\` command shown by \`look\`.`,
+                `No optional choice matches "${rest}". Use an \`inspect <id>\` command shown by \`look\`.`,
               );
               break;
             }
             const prompt = session.inspectJourneyStory(interaction.id);
             if (!isStructuredTerminalStoryChoice(prompt)) {
-              fail(`Optional story choice "${interaction.id}" has no structured comparison.`);
+              fail(`The optional choice "${interaction.id}" has no comparison to show.`);
               break;
             }
             const departureRecap = session.view().departureRecap;
@@ -1402,11 +1402,11 @@ async function main(): Promise<void> {
                   break;
                 }
                 fail(
-                  `${unavailable.title} is discovered future work but currently unavailable; its remaining conditions are hidden or unmet. Continue the journey and check again later.`,
+                  `${unavailable.title} is known but not available yet. Continue the journey and check again later.`,
                 );
                 break;
               }
-              fail(`No discovered job matches "${rest}". Scouting and exploring reveal jobs.`);
+              fail(`No known job matches "${rest}". Scout or explore to find jobs.`);
               break;
             }
             printActionResult(session.workLocalJob(job.id), session.view());
@@ -1436,7 +1436,7 @@ async function main(): Promise<void> {
               break;
             }
             if (!quest) {
-              fail(`No discovered quest lead matches "${rest}". Scouting reveals more.`);
+              fail(`No known quest matches "${rest}". Scout to find more leads.`);
               break;
             }
             const approach = await chooseQuestApproach(quest, reader, () => {
@@ -1525,7 +1525,7 @@ function travelToward(session: OverworldSession, target: string): TravelLogEntry
   const plan = session.planRoute(town.id);
   const first = plan.steps[0];
   if (!first) throw new Error("You are already there.");
-  console.log(`Heading toward ${plan.destination.name} — leg 1 of ${plan.steps.length}.`);
+  console.log(`Heading to ${plan.destination.name}: road 1 of ${plan.steps.length}.`);
   return session.travel(first.edge.id);
 }
 
@@ -1685,7 +1685,7 @@ export async function runQuestSession(
       console.log(renderQuestCompletion(result));
     } else {
       console.log(
-        `That ending does not complete the quest — the lead stays open in your journal, and this journey cannot restart it.`,
+        "Your character died before completing the quest. The lead remains open, but this journey cannot restart it.",
       );
     }
   } else if (!quitting) {

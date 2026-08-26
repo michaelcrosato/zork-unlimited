@@ -190,7 +190,7 @@ export function loadInitialWorldSession(): InitialWorldSession {
     return {
       session: new OverworldSession(OVERWORLD),
       origin: "new",
-      notice: "Browser saving is unavailable. Keep this tab open to preserve this journey.",
+      notice: "Browser saving is unavailable. Keep this tab open to avoid losing progress.",
       questSession: null,
       activeQuest: null,
       activeQuestSave: null,
@@ -208,7 +208,7 @@ export function loadInitialWorldSession(): InitialWorldSession {
     return {
       session: new OverworldSession(OVERWORLD),
       origin: "new",
-      notice: "Browser saving is unavailable. Keep this tab open to preserve this journey.",
+      notice: "Browser saving is unavailable. Keep this tab open to avoid losing progress.",
       questSession: null,
       activeQuest: null,
       activeQuestSave: null,
@@ -255,7 +255,7 @@ export function loadInitialWorldSession(): InitialWorldSession {
         );
         const activeQuest = session.commitQuestStart(plan);
         const launchCharacter = session.questLaunchCharacterState(saved.questId);
-        if (!launchCharacter) throw new Error("Saved quest has no verified campaign launch.");
+        if (!launchCharacter) throw new Error("This quest save is missing its starting character.");
         const restored = GameSession.restoreEmbedded(
           pack.source,
           saved.questId,
@@ -273,7 +273,7 @@ export function loadInitialWorldSession(): InitialWorldSession {
           }
           const decision = restored.decisions[decisionIndex++];
           if (!decision || decision.actionId !== entry.actionId) {
-            throw new Error("Saved quest action trail is internally inconsistent.");
+            throw new Error("The saved quest's recorded actions do not agree.");
           }
           session.recordQuestDecision(
             decision.actionId,
@@ -282,10 +282,10 @@ export function loadInitialWorldSession(): InitialWorldSession {
           );
         }
         if (decisionIndex !== restored.decisions.length) {
-          throw new Error("Saved quest action trail did not consume every replayed decision.");
+          throw new Error("The saved quest has extra recorded actions.");
         }
         if (session.snapshotHash() !== saved.worldSnapshotHash) {
-          throw new Error("Saved campaign record does not match the quest action trail.");
+          throw new Error("The saved journey does not match the quest's recorded actions.");
         }
         const restoredEnding = restored.session.ending();
         if (restoredEnding) {
@@ -294,8 +294,8 @@ export function loadInitialWorldSession(): InitialWorldSession {
             session,
             origin: "resume",
             notice: restoredEnding.death
-              ? `Recovered ${activeQuest.title}'s final scene and its character-death boundary.`
-              : `Recovered and completed ${activeQuest.title}. Its campaign consequences were verified.`,
+              ? `Recovered ${activeQuest.title}'s final scene. Your character died there.`
+              : `Recovered and completed ${activeQuest.title}. Its journey results were verified.`,
             questSession: null,
             activeQuest: null,
             activeQuestSave: null,
@@ -306,7 +306,7 @@ export function loadInitialWorldSession(): InitialWorldSession {
         return {
           session,
           origin: "resume",
-          notice: `Resumed ${activeQuest.title} at ${restored.session.view().title}. Quest progress and campaign decisions were verified.`,
+          notice: `Resumed ${activeQuest.title} at ${restored.session.view().title}. The saved quest and journey record were verified.`,
           questSession: restored.session,
           activeQuest,
           activeQuestSave: {
@@ -355,7 +355,7 @@ export function loadInitialWorldSession(): InitialWorldSession {
       questSession: null,
       activeQuest: null,
       activeQuestSave: null,
-      recoveryError: `Saved journey could not be verified: ${(e as Error).message}`,
+      recoveryError: `This save could not be verified: ${(e as Error).message}`,
       storageAvailable: true,
     };
   }
@@ -429,8 +429,8 @@ export function ServiceOfferTerms({
   return (
     <small className="service-offer-terms" id={id}>
       <strong>{offer.title}</strong>
-      {offer.providerName ? ` — Available from ${offer.providerName}.` : " —"} {offer.summary} (
-      {offer.minutes} min, one time)
+      {offer.providerName ? ` — From ${offer.providerName}.` : " —"} {offer.summary} (
+      {offer.minutes} min, one use)
     </small>
   );
 }
@@ -525,7 +525,7 @@ export function QuestNotice({
           <small>{quest.discovery}</small>
           <small>
             Posted in {areaName}
-            {!isCurrentArea ? " - move there to start" : ""}
+            {!isCurrentArea ? " — move there to start" : ""}
           </small>
         </button>
       </li>
@@ -539,7 +539,7 @@ export function QuestNotice({
         <p>{quest.discovery}</p>
         <small>
           Posted in {areaName}
-          {!isCurrentArea ? " - move there to start" : ""}
+          {!isCurrentArea ? " — move there to start" : ""}
         </small>
       </div>
       <fieldset className="quest-launch-fieldset">
@@ -557,29 +557,29 @@ export function QuestNotice({
                   <strong>{option.title}</strong>
                   <span>{option.summary}</span>
                   <small>
-                    <b>What you expect:</b> {option.preview}
+                    <b>Expected result:</b> {option.preview}
                   </small>
                   {option.tradeoffSummary ? (
                     <small className="quest-launch-projection">
-                      <b>Route tradeoff:</b> {option.tradeoffSummary}
+                      <b>Tradeoff:</b> {option.tradeoffSummary}
                     </small>
                   ) : null}
                   <small>
-                    <b>Commitment:</b> {option.consequence}
+                    <b>If chosen:</b> {option.consequence}
                   </small>
                   <small className="quest-launch-cost">
-                    Actual cost: {option.terms.minutes} min, {suppliesLabel(option.terms.supplies)},
+                    Cost: {option.terms.minutes} min, {suppliesLabel(option.terms.supplies)},
                     fatigue +{option.terms.fatigue}.
                   </small>
                   {projection?.available ? (
                     <small className="quest-launch-projection">
-                      Projected arrival: {timeLabel(projection.minutesAfter)};{" "}
+                      Arrival: {timeLabel(projection.minutesAfter)};{" "}
                       {suppliesLabel(projection.suppliesAfter!)} remaining; fatigue{" "}
                       {projection.fatigueAfter}; condition {projection.travelConditionAfter}.
                     </small>
                   ) : projection ? (
                     <small className="quest-launch-projection">
-                      Projected time: {timeLabel(projection.minutesAfter)}.
+                      Arrival time: {timeLabel(projection.minutesAfter)}.
                     </small>
                   ) : null}
                   {(blockedReason || areaReason) && (
@@ -628,7 +628,7 @@ export function DepartureLaunchPanel({
   return (
     <div className="departure-launch">
       <h3>Depart now</h3>
-      <p>Choose an available road to depart now; planning is optional.</p>
+      <p>Choose an available road to leave now. Planning is optional.</p>
       <ul className="quest-list">
         <QuestNotice quest={quest} areaName={areaName} isCurrentArea={true} onStart={onStart} />
       </ul>
@@ -725,7 +725,7 @@ export function StationDispatchBoard({
       {children}
       {openSupport.length > 0 && (
         <details className="station-dispatch-support-details">
-          <summary>Review optional support — {formatStationSupportLabels(openSupport)}</summary>
+          <summary>Optional support — {formatStationSupportLabels(openSupport)}</summary>
           <div className="station-dispatch-support">
             {openSupport.map((support) => {
               const action = support.action;
@@ -763,7 +763,7 @@ export function StationDispatchBoard({
       )}
       {recap && (
         <details className="station-dispatch-recap">
-          <summary>What is already set</summary>
+          <summary>Current departure plan</summary>
           <DepartureRecap recap={recap} entryScope="already_set" />
         </details>
       )}
@@ -793,7 +793,7 @@ export function journeyStoryChoiceLogEntries(
               ? "Relief wagon choice made"
               : kind === "relief_oath"
                 ? "Wolf-Winter promise chosen"
-                : "Story consequence";
+                : "Choice made";
   return [
     `${prefix}: ${result.consequence}`,
     `${kind === undefined ? "New" : "Current"} goal: ${result.goal.text}`,
@@ -827,7 +827,7 @@ export default function App(): JSX.Element {
     const opener =
       worldState.origin === "resume"
         ? (worldState.notice ?? `Resumed in ${worldView.current.name}.`)
-        : `You begin in ${worldView.current.name}. Roads leave town, but the work is local until you find it.`;
+        : `You begin in ${worldView.current.name}. Scout or talk to find local work, or take a known road.`;
     return worldState.notice && worldState.notice !== opener
       ? [worldState.notice, opener]
       : [opener];
@@ -893,14 +893,14 @@ export default function App(): JSX.Element {
       const entry = worldSession.travel(edgeId);
       const next = worldSession.view();
       const roadEvent = entry.roadEvent
-        ? ` Route report: ${entry.roadEvent.title} - ${entry.roadEvent.summary}`
+        ? ` Road encounter: ${entry.roadEvent.title} — ${entry.roadEvent.summary}`
         : "";
       setWorldView(next);
       setQuestSession(null);
       setQuestView(null);
       setActiveQuest(null);
       setLog((prev) => [
-        `Traveled ${entry.distanceMi.toFixed(1)} mi on ${entry.route} to ${entry.to} (${entry.baseMinutes} min road${entry.delayMinutes > 0 ? `, +${entry.delayMinutes} min delay` : ""}). Supplies -${entry.suppliesUsed}, fatigue +${entry.fatigueGained}.${roadEvent}`,
+        `Traveled ${entry.distanceMi.toFixed(1)} mi on ${entry.route} to ${entry.to}. Time ${entry.baseMinutes} min${entry.delayMinutes > 0 ? ` + ${entry.delayMinutes} min delay` : ""}. Supplies -${entry.suppliesUsed}; fatigue +${entry.fatigueGained}.${roadEvent}`,
         ...prev,
       ]);
       setError(null);
@@ -966,7 +966,7 @@ export default function App(): JSX.Element {
       setNightWatchPanel("scene");
       setWorldView(worldSession.view());
       setLog((prev) => [
-        `Started local quest: ${localQuest.title}${selectedApproach ? ` via ${selectedApproach.title}` : ""} (${worldView.current.name}, ${questAreaName(localQuest)}).`,
+        `Started ${localQuest.title}${selectedApproach ? ` using ${selectedApproach.title}` : ""} in ${questAreaName(localQuest)}, ${worldView.current.name}.`,
         ...prev,
       ]);
       setError(null);
@@ -1022,7 +1022,7 @@ export default function App(): JSX.Element {
       const result = action();
       setWorldView(worldSession.view());
       setLog((prev) => [
-        `Handled road encounter: ${result.entry.title}. ${result.entry.text} Time +${result.minutes} min, supplies -${result.suppliesUsed}, fatigue +${result.fatigueGained}${result.renownGained > 0 ? `, renown +${result.renownGained}` : ""}.`,
+        `Road encounter resolved: ${result.entry.title}. ${result.entry.text} Time +${result.minutes} min; supplies -${result.suppliesUsed}; fatigue +${result.fatigueGained}${result.renownGained > 0 ? `; renown +${result.renownGained}` : ""}.`,
         ...prev,
       ]);
       setError(null);
@@ -1036,7 +1036,7 @@ export default function App(): JSX.Element {
       const result: OverworldAreaTravelResult = worldSession.moveArea(areaRouteId);
       setWorldView(worldSession.view());
       setLog((prev) => [
-        `Moved inside ${worldView.current.name}: ${result.route} to ${result.to.name} (${result.minutes} min).`,
+        `Walked ${result.route} to ${result.to.name} in ${worldView.current.name}. Time ${result.minutes} min.`,
         ...prev,
       ]);
       setError(null);
@@ -1117,7 +1117,7 @@ export default function App(): JSX.Element {
           setActiveQuestSave(null);
           setWorldView(worldSession.view());
           lines.unshift(
-            `${activeQuest.title} ends in death — this journey must now be ended with its unfinished goal preserved.`,
+            `Your character died in ${activeQuest.title}. End this journey; its unfinished goal will remain in the record.`,
           );
         }
       }
@@ -1133,7 +1133,7 @@ export default function App(): JSX.Element {
       !worldView.completedQuestIds.includes(activeQuest.id) &&
       journey.pendingChoice?.reasons.includes("character_died") !== true
     ) {
-      setError("Campaign foldback has not been recorded; the quest must remain open.");
+      setError("The quest result was not saved to the journey. The quest must remain open.");
       return;
     }
     setQuestSession(null);
@@ -1171,7 +1171,7 @@ export default function App(): JSX.Element {
     setNightWatchPanel("scene");
     setSaveStatus(worldState.storageAvailable ? "pending" : "unavailable");
     setLog([
-      `Started a new journey in ${session.view().current.name}. Roads leave town, but the work is local until you find it.`,
+      `Started a new journey in ${session.view().current.name}. Scout or talk to find local work, or take a known road.`,
     ]);
     setError(null);
     setTutorialOpen(true);
@@ -1261,12 +1261,12 @@ export default function App(): JSX.Element {
     return (
       <main className="save-recovery-page">
         <section className="save-recovery-card" aria-labelledby="save-recovery-title">
-          <p className="nw-kicker">Save recovery stopped</p>
-          <h1 id="save-recovery-title">Your saved journey was not rolled back</h1>
+          <p className="nw-kicker">Save could not load</p>
+          <h1 id="save-recovery-title">Your saved journey was not changed</h1>
           <p>{worldState.recoveryError}</p>
           <p>
-            AdventureForge did not load an earlier road checkpoint. This protects active quest and
-            campaign decisions when saved data, content, or replay evidence no longer agree.
+            AdventureForge did not replace this save with an older checkpoint. The saved data no
+            longer matches the current game or its action record.
           </p>
           <button type="button" onClick={startNewJourney}>
             Discard this save and begin a new journey
@@ -1359,7 +1359,7 @@ export default function App(): JSX.Element {
             buttonLabel: "Begin",
             tone: "ember" as const,
             ...(!projected
-              ? { disabledReason: inArea ? "Not currently projected." : `Move to ${areaName}.` }
+              ? { disabledReason: inArea ? "You cannot start this now." : `Move to ${areaName}.` }
               : {}),
             onChoose: () => startQuest(quest),
           },
@@ -1381,7 +1381,7 @@ export default function App(): JSX.Element {
           consequence: option.tradeoffSummary ?? option.consequence,
           buttonLabel: `Depart for ${quest.title}`,
           tone: "ember" as const,
-          ...(!projected ? { disabledReason: blocked ?? "Not currently projected." } : {}),
+          ...(!projected ? { disabledReason: blocked ?? "You cannot start this now." } : {}),
           onChoose: () => startQuest(quest, option.id),
         };
       });
@@ -1401,7 +1401,7 @@ export default function App(): JSX.Element {
         title: option.label,
         summary: worldView.pendingRoadEncounter!.event.summary,
         terms: `${option.minutes} min · supplies -${option.suppliesCost} · fatigue +${option.fatigueGained} · renown +${option.renownGained}`,
-        consequence: `Resolve the interruption on ${worldView.pendingRoadEncounter!.route}.`,
+        consequence: `This clears the encounter on ${worldView.pendingRoadEncounter!.route}.`,
         buttonLabel: "Choose response",
         tone:
           option.strategy === "press_on"
@@ -1417,6 +1417,8 @@ export default function App(): JSX.Element {
 
   if (journey.goalPassage) {
     const passage = journey.goalPassage;
+    const roadUnit = passage.roadCount === 1 ? "road" : "roads";
+    const supplyUnit = passage.suppliesNeeded === 1 ? "supply" : "supplies";
     worldActionSections.push({
       id: "goal",
       title: "Follow the current goal",
@@ -1427,7 +1429,7 @@ export default function App(): JSX.Element {
           group: "Goal passage",
           title: passage.label,
           summary: passage.consequence,
-          terms: `To ${passage.destination} · ${passage.roadCount} roads · ${passage.baseMinutes} base / ${passage.estimatedMinutes} estimated min · ${passage.suppliesNeeded} supplies needed${passage.supplyDeficit > 0 ? ` · ${passage.supplyDeficit} short` : ""} · ${passage.suppliesAfter} left · fatigue ${passage.fatigueAfter} · ${passage.travelConditionAfter}`,
+          terms: `To ${passage.destination} · ${passage.roadCount} ${roadUnit} · ${passage.baseMinutes} min without delays / ${passage.estimatedMinutes} min estimated · needs ${passage.suppliesNeeded} ${supplyUnit}${passage.supplyDeficit > 0 ? ` · short ${passage.supplyDeficit}` : ""} · ${passage.suppliesAfter} left · arrival fatigue ${passage.fatigueAfter} · ${passage.travelConditionAfter}`,
           consequence: passage.stopRule,
           buttonLabel: "Follow goal",
           tone: "ice",
@@ -1450,8 +1452,8 @@ export default function App(): JSX.Element {
       title: stationSupportActionTitle(interaction.kind),
       summary:
         support?.summary ??
-        `Review the ${interaction.kind === "preparation" ? "field kit" : "relief wagon"} before departure.`,
-      terms: support?.terms ?? "Inspect before committing",
+        `Compare the ${interaction.kind === "preparation" ? "field kit" : "relief wagon"} options before departure.`,
+      terms: support?.terms ?? "Review before choosing",
       buttonLabel: "Review support",
       tone: "ice",
       optionalSupport: true,
@@ -1491,7 +1493,7 @@ export default function App(): JSX.Element {
       title: departureQuest ? `${departureQuest.title} field briefing` : "Before you depart",
       description:
         worldView.stationDispatchBoard?.guidance ??
-        "Choose a projected route now or inspect one optional support commitment.",
+        "Choose a route now, or review optional support first.",
       actions: dispatchActions,
     });
   }
@@ -1546,7 +1548,7 @@ export default function App(): JSX.Element {
     group: "Scout",
     title: poi.title,
     summary: poi.summary,
-    terms: "Local investigation",
+    terms: "Scout nearby",
     buttonLabel: "Scout",
     tone: "lichen",
     onChoose: () => runWorldAction(() => worldSession.scoutPoi(poi.id)),
@@ -1697,8 +1699,8 @@ export default function App(): JSX.Element {
     title: "Notice board",
     description:
       noticeBoardQuests.length > 0
-        ? "Discovered work anchored in this town."
-        : "Scout, talk, or investigate to surface local leads.",
+        ? "Known work in this town."
+        : "Scout, talk, or investigate to find local work.",
     actions: questActionCards(noticeBoardQuests, "Notice board"),
   });
 
@@ -1708,8 +1710,8 @@ export default function App(): JSX.Element {
     id: "roads",
     title: "Roads from here",
     description: worldView.pendingRoadEncounter
-      ? "Resolve the road encounter before travelling again."
-      : `${worldView.exits.length} direct roads are known from ${worldView.current.name}.`,
+      ? "Resolve the road encounter before you travel again."
+      : `${worldView.exits.length} direct roads leave ${worldView.current.name}.`,
     actions: worldView.exits.map((exit) => ({
       id: `road:${exit.id}`,
       group: "Road",

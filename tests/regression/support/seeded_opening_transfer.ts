@@ -106,8 +106,8 @@ const WOLF_WINTER_CERTIFICATE: TransferCertificate = {
     "objects[1].variants[2].when[0].has_flag=opening_condition_open_ash_lane",
     "objects[1].variants[3].when[0].has_flag=opening_condition_sound_lower_frame",
     "objects[6].variants[0].when[0].has_flag=opening_condition_open_ash_lane",
-    "objects[18].variants[0].when[0].has_flag=opening_condition_sound_lower_frame",
-    "objects[25].variants[0].when[0].has_flag=opening_condition_steady_scent_channel",
+    "objects[18].variants[2].when[0].has_flag=opening_condition_sound_lower_frame",
+    "objects[25].variants[1].when[0].has_flag=opening_condition_steady_scent_channel",
     "objects[35].variants[0].when[0].has_flag=opening_condition_firm_frozen_rail",
     "npcs[0].dialogue.nodes[0].variants[2].when[1].has_flag=opening_condition_open_ash_lane",
     "npcs[0].dialogue.nodes[0].variants[6].when[1].has_flag=opening_condition_sound_lower_frame",
@@ -199,9 +199,9 @@ const WOLF_WINTER_CERTIFICATE: TransferCertificate = {
  * consequence of editing Wolf-Winter or the deterministic relabel oracle.
  */
 const CERTIFIED_WOLF_WINTER_PACK_HASH =
-  "08ddb7ce41d319fa34db896ba032cbf69edcf0b0d2a5fd413c457b28091be777";
+  "8e950b43ce3da425397192365aec6f6ea29ab78b41f572a136154fdb07c80fbc";
 const CERTIFIED_WOLF_WINTER_RELABELED_PACK_HASH =
-  "fe16b3687c8d10037073515a7073661ef4b1adf52152140fad18959642d7813e";
+  "13a73f029d14c9b870e2f12d7065af1fe5f18ef3bad574f6ac5f4cbb9dd4be5a";
 
 const pathText = (path: readonly PathPart[]): string =>
   path

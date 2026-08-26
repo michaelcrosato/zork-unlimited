@@ -39,7 +39,7 @@ export function deferJourneyOpportunityDetails(
   const deferredLeadCount = opportunities.leads.length;
   const subject = deferredLeadCount === 1 ? "lead remains" : "leads remain";
   return Object.freeze({
-    guidance: `Choose the shown journey option first. ${String(deferredLeadCount)} optional aftermath ${subject}; if another choice follows, finish it too. District details return when play resumes.`,
+    guidance: `Choose the current journey option first. ${String(deferredLeadCount)} optional follow-up ${subject}. Complete any other required choice. The leads return when play resumes.`,
     leads: Object.freeze([]),
     deferredLeadCount,
   });

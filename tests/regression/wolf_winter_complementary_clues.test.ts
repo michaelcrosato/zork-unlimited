@@ -27,14 +27,14 @@ const step = makeStep(buildRpgRules(index));
 const cade = pack.npcs.find((npc) => npc.id === "houndsman");
 const node = (id: string) => cade?.dialogue.nodes.find((entry) => entry.id === id);
 const CADE_ROOT_PLAIN_LANGUAGE =
-  "Albany sent you. Ask about any plan; asking does not choose it. Cross north or RELEASE JUNE, if offered, to choose HUNT. Other plans begin only when you choose them. Choosing one closes the rest. Preparation helps without choosing.";
+  "Reviews choose nothing. Choose LURE, DRIVE, or FORTIFY in review. Choose HUNT with GO north or RELEASE JUNE. One choice permanently closes the rest. PREPARE SUPPORT chooses nothing.";
 const CADE_PEER_PLAN_LABELS = {
-  hunt: "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.",
-  lure: "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details.",
+  hunt: "HUNT — Protect home and herd. Wolves may die; failure risks cattle. Cade's tactics and padded byre-jerkin help. Review. Go north or RELEASE JUNE to choose.",
+  lure: "LURE — Move the wolves alive and protect the herd. Costs Cade's last feed; the fence stays broken. First-action failure adds 2 cattle alarm. Review only.",
   drive:
-    "DRIVE — Goal: evacuate people/herd; wolves live. Cost: no retreat; outer defense + wound/two cattle/rig. Help: Fieldcraft. Ask only; choose after details.",
+    "DRIVE — Evacuate people and cattle; wolves live. Lose retreat and outer defense. Crisis costs 6 HP, two cattle, or the rig. Review only.",
   fortify:
-    "FORTIFY — Goal: keep home/herd; wolves live. Cost: no retreat; expose property for Cade aid or spend seals. Help: Repair. Ask only; choose inside.",
+    "FORTIFY — Protect home and herd until dawn; wolves live. Lose retreat. Use Cade's shutters and expose his property, or spend Albany's seals. Review only.",
 } as const;
 
 function takeAction(state: GameState, id: string) {
@@ -81,11 +81,11 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
   it("uses the day-book for reconnaissance and prep evidence, not combat commands", () => {
     const book = pack.objects.find((object) => object.id === "day_book")?.read_text ?? "";
 
-    expect(book).toMatch(/THREE AT THE PALING[^]*OLD GREY LEADS/i);
-    expect(book).toMatch(/spear ALREADY/i);
-    expect(book).toMatch(/Cade's knack[^]*byre-JERKIN[^]*watchman standing/i);
-    expect(book).toMatch(/trusted spear alone[^]*bled/i);
-    expect(book).toMatch(/Heed Cade[^]*don the JERKIN[^]*both[^]*less[^]*gamble/i);
+    expect(book).toMatch(/Three wolves[^]*yearling wolf[^]*flank-wolf[^]*grey leader/i);
+    expect(book).toMatch(/TALK TO old Cade the houndsman[^]*PREPARE SUPPORT/i);
+    expect(book).toMatch(/PREPARE SUPPORT for \+2 attack[^]*DON padded byre-jerkin/i);
+    expect(book).toMatch(/\+2 attack[^]*\+2 defense/i);
+    expect(book).toMatch(/bonuses affect fights still ahead[^]*do not reopen completed work/i);
     expect(book).not.toMatch(/old eyes/i);
     expect(book).not.toMatch(/no wolf[^]*pull you down/i);
     expect(book).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
@@ -132,11 +132,11 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     ].join("\n");
 
     expect(root?.npc_text.trimEnd()).toBe(CADE_ROOT_PLAIN_LANGUAGE);
-    expect(root?.npc_text.trimEnd().length).toBe(231);
-    expect(Buffer.byteLength(root?.npc_text.trimEnd() ?? "", "utf8")).toBe(231);
+    expect(root?.npc_text.trimEnd().length).toBe(181);
+    expect(Buffer.byteLength(root?.npc_text.trimEnd() ?? "", "utf8")).toBe(181);
     expect(root?.npc_text.trimEnd().length).toBeLessThanOrEqual(360);
     expect(root?.npc_text).toMatch(
-      /Albany sent you[^]*Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Other plans begin only when you choose them[^]*Choosing one closes the rest[^]*Preparation helps without choosing/i,
+      /Reviews choose nothing[^]*Choose LURE, DRIVE, or FORTIFY in review[^]*Choose HUNT with GO north or RELEASE JUNE[^]*permanently closes the rest[^]*PREPARE SUPPORT chooses nothing/i,
     );
     expect(root?.topics.slice(0, 4).map((topic) => topic.id)).toEqual([
       "hunt",
@@ -145,16 +145,16 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       "fortify",
     ]);
     expect(rootPrompt("hunt")).toMatch(
-      /^HUNT — Goal: hold home\/herd\/stores[^]*Cost: wolves may die; cattle\/outer defense at risk[^]*Help: Cade lessons \+ jerkin[^]*Ask only; choose north\/RELEASE JUNE/i,
+      /^HUNT — Protect home and herd[^]*Wolves may die[^]*failure risks cattle[^]*Cade's tactics[^]*padded byre-jerkin[^]*Review[^]*Go north or RELEASE JUNE to choose/i,
     );
     expect(rootPrompt("lure")).toMatch(
-      /^LURE — Goal: move wolves alive; keep herd[^]*Cost: last feed \+ fence; first foul risks two cattle[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
+      /^LURE — Move the wolves alive and protect the herd[^]*Costs Cade's last feed[^]*fence stays broken[^]*First-action failure adds 2 cattle alarm[^]*Review only/i,
     );
     expect(rootPrompt("drive")).toMatch(
-      /^DRIVE — Goal: evacuate people\/herd; wolves live[^]*Cost: no retreat; outer defense \+ wound\/two cattle\/rig[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
+      /^DRIVE — Evacuate people and cattle; wolves live[^]*Lose retreat and outer defense[^]*Crisis costs 6 HP, two cattle, or the rig[^]*Review only/i,
     );
     expect(rootPrompt("fortify")).toMatch(
-      /^FORTIFY — Goal: keep home\/herd; wolves live[^]*Cost: no retreat; expose property for Cade aid or spend seals[^]*Help: Repair[^]*Ask only; choose inside/i,
+      /^FORTIFY — Protect home and herd until dawn; wolves live[^]*Lose retreat[^]*Cade's shutters and expose his property[^]*spend Albany's seals[^]*Review only/i,
     );
     expect(rootPrompt("hunt")).toBe(CADE_PEER_PLAN_LABELS.hunt);
     for (const nodeId of ["cade_root", "cade_wolves", "cade_byre"] as const) {
@@ -187,15 +187,15 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
           `ask: ${prompt}`.length,
         ]),
       ),
-    ).toEqual({ hunt: 158, lure: 151, drive: 159, fortify: 151 });
+    ).toEqual({ hunt: 160, lure: 158, drive: 141, fortify: 158 });
     for (const prompt of Object.values(CADE_PEER_PLAN_LABELS)) {
       expect(`ask: ${prompt}`.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
     }
     expect(rootPrompt("wolves")).toMatch(
-      /^PREPARE SUPPORT[^]*HUNT quick line[^]*\+2 attack\/\+5 tally[^]*tactics only[^]*no plan commitment/i,
+      /^PREPARE SUPPORT[^]*quick HUNT tactic[^]*\+2 attack[^]*\+5 score[^]*does not choose HUNT/i,
     );
     expect(rootPrompt("byre")).toMatch(
-      /PREPARE SUPPORT[^]*HUNT guarded\/patient[^]*grants the safer combat tactic[^]*no plan commitment/i,
+      /PREPARE SUPPORT[^]*guarded HUNT tactic[^]*does not choose HUNT/i,
     );
     expect(rootSurface).not.toMatch(
       /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b/i,
@@ -205,31 +205,33 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     );
     expect(root?.npc_text).not.toMatch(/two roads/i);
 
-    expect(quick).toMatch(/Quick lines[^]*set[^]*drive[^]*wheel[^]*turn/i);
-    expect(quick).toMatch(/close[^]*fast[^]*guard opens[^]*drive/i);
-    expect(quick).toMatch(/jerkin[^]*both[^]*no wolf[^]*pull you down/i);
+    expect(quick).toMatch(
+      /SET the Albany relief spear[^]*yearling's rush[^]*shown DRIVE[^]*WHEEL[^]*flank-wolf[^]*TURN/i,
+    );
+    expect(quick).toMatch(/CLOSE[^]*grey leader[^]*feint[^]*DRIVE again/i);
+    expect(quick).toMatch(/jerkin[^]*Both make worst-roll HUNT safe/i);
     expect(quick).not.toMatch(/wait[^]*true rush|wedge[^]*rail/i);
 
     expect(guarded).toMatch(
-      /Guarded spear line[^]*rail[^]*combat funnel[^]*ordinary ground[^]*wedge[^]*(?:splits[^]*bind|bind[^]*split)/i,
+      /Guarded HUNT[^]*shown BRACE, WEDGE, SET, SPLICE, or BIND rail action/i,
     );
-    expect(guarded).toMatch(/firm frozen rail[^]*braces directly/i);
-    expect(guarded).toMatch(/wait[^]*true rush[^]*patient alternative[^]*closing early/i);
+    expect(guarded).toMatch(/rail aids combat[^]*cannot redirect a wolf alive/i);
+    expect(guarded).toMatch(/HOLD[^]*feint[^]*TAKE[^]*true rush/i);
     expect(guarded).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
 
     expect(fortify).toMatch(
-      /fortify keeps household\/herd\/pack apart through dawn[^]*no retreat\/switch[^]*household terms[^]*property risk[^]*seals saved[^]*Cade aid[^]*Albany[^]*property safe[^]*seals spent[^]*no Cade aid[^]*Works eases a roll-required first DC[^]*sound lower frame seats it without a roll[^]*mobile stabilizes a recovered miss[^]*dawn/i,
+      /FORTIFY protects home and herd until dawn[^]*all wolves alive[^]*retreat and other plans close[^]*Cade's shutters[^]*expose his property[^]*preserve Albany's seals[^]*gain his help after one failed outer seal[^]*Albany's seals[^]*protect his property[^]*spend public stock[^]*gain no help[^]*unstabilized failed seal can cost 2 HP at dawn[^]*June[^]*mobile relief crew/i,
     );
     expect(fortify).not.toMatch(/Albany Repair[^]*2 easier/i);
-    expect(fullDutyFortify).toMatch(/a roll-required first Albany Repair is 2 easier/i);
+    expect(fullDutyFortify).toMatch(/Full Compact lowers the first Repair DC by 2/i);
     expect(limitedDutyLure).toHaveLength(2);
     for (const disclosure of limitedDutyLure) {
       expect(disclosure).toMatch(
-        /AID-ONLY LURE BENEFIT[^]*first cast stays clean[^]*skips[^]*final ordinary \+1 alarm[^]*fouled opening keeps it/i,
+        /Aid-Only oath prevents LURE's final \+1 cattle alarm only if the first LAY action succeeds/i,
       );
     }
     expect(limitedDutyFortify).toMatch(
-      /AID-ONLY CADE-TERMS FORTIFY FIT[^]*HOUSEHOLD fits duty[^]*gains Cade aid[^]*ALBANY exceeds duty[^]*no Cade aid/i,
+      /Cade's shutters follow the Aid-Only oath[^]*Albany's relief seals exceed the oath[^]*no Cade help/i,
     );
 
     const publicSealChecks =
@@ -265,21 +267,21 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     const scatteredEnding = pack.endings.find(
       (ending) => ending.id === "ending_pack_diverted_cattle_scattered",
     );
-    expect(scatteredEnding?.text).toMatch(/accumulated[^]*alarm/i);
+    expect(scatteredEnding?.text).toMatch(/cattle alarm[^]*reached Breaking/i);
     expect(scatteredEnding?.text).not.toMatch(/fouled first cast/i);
     const fouledVariant = scatteredEnding?.variants?.find((variant) =>
       variant.when.some(
         (condition) => "has_flag" in condition && condition.has_flag === "lure_trail_fouled",
       ),
     );
-    expect(fouledVariant?.text).toMatch(/fouled first cast/i);
+    expect(fouledVariant?.text).toMatch(/failed first LAY attempt/i);
   });
 
   it("keeps root copy and legal lesson actions aligned when quick is heard first", () => {
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Other plans begin only when you choose them[^]*Choosing one closes the rest/i,
+      /Reviews choose nothing[^]*Choose HUNT with GO north or RELEASE JUNE[^]*permanently closes the rest/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_hunt",
@@ -317,11 +319,13 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
 
     const quick = takeAction(state, "ask_wolves");
     state = quick.state;
-    expect(narration(quick.events)).toMatch(/Quick lines/i);
+    expect(narration(quick.events)).toMatch(
+      /SET the Albany relief spear against the yearling's rush[^]*shown DRIVE[^]*\+2 attack[^]*\+5 score/i,
+    );
     expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
     observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /quick spear-hand[^]*guarded spear-fighting plan is still yours to learn[^]*Ask for it/i,
+      /You know the quick HUNT tactic[^]*still learn the guarded tactic[^]*Going north[^]*chooses HUNT/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_hunt",
@@ -331,15 +335,17 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       "ask_byre",
       "ask_leave",
     ]);
-    expect(state.journal.some((entry) => /quick\/open line/i.test(entry))).toBe(true);
+    expect(state.journal.some((entry) => /quick HUNT tactic[^]*SET\/DRIVE/i.test(entry))).toBe(
+      true,
+    );
 
     const guarded = takeAction(state, "ask_byre");
     state = guarded.state;
-    expect(narration(guarded.events)).toMatch(/Guarded spear line[^]*patient alternative/i);
+    expect(narration(guarded.events)).toMatch(/Guarded HUNT[^]*BRACE[^]*WEDGE[^]*HOLD[^]*TAKE/i);
     expect(activeDialogue(index, state)?.node.id).toBe("cade_byre");
     observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /Guarded spear line[^]*combat funnel[^]*ordinary ground[^]*wedge[^]*patient alternative/i,
+      /Guarded HUNT[^]*BRACE[^]*WEDGE[^]*BIND[^]*HOLD[^]*TAKE/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_lure",
@@ -353,7 +359,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
     observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /Both lessons are yours[^]*do not choose a road here[^]*commit[^]*later[^]*at the wolves/i,
+      /You know both HUNT tactics[^]*does not choose HUNT[^]*go north to choose HUNT/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_hunt",
@@ -362,7 +368,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       "ask_fortify",
       "ask_leave",
     ]);
-    expect(state.journal.some((entry) => /guarded\/patient/i.test(entry))).toBe(true);
+    expect(state.journal.some((entry) => /guarded HUNT tactic/i.test(entry))).toBe(true);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
     expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
   });
@@ -375,7 +381,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     let observation = buildRpgObservation(index, state);
     expect(activeDialogue(index, state)?.node.id).toBe("cade_byre");
     expect(observation.dialogue?.npc_text).toMatch(
-      /Guarded spear line[^]*combat funnel[^]*ordinary ground[^]*wedge[^]*patient alternative/i,
+      /Guarded HUNT[^]*BRACE[^]*WEDGE[^]*BIND[^]*HOLD[^]*TAKE/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",
@@ -390,7 +396,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
     observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /guarded spear-fighting plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
+      /You know the guarded HUNT tactic[^]*still learn the quick tactic[^]*yearling's set-and-drive sequence[^]*flank-wolf's off-side wheel-and-turn sequence[^]*grey leader's close-and-drive sequence/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_hunt",
@@ -405,7 +411,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     state = quick.state;
     observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /Both lessons are yours[^]*commit[^]*later[^]*at the wolves/i,
+      /You know both HUNT tactics[^]*does not choose HUNT[^]*go north to choose HUNT/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_hunt",
@@ -425,18 +431,24 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
 
     expect(wait).toMatchObject({ attack_bonus: 0, defense_bonus: 3 });
     expect(close).toMatchObject({ attack_bonus: 4, defense_bonus: -3 });
-    expect(node("cade_byre")?.npc_text).toMatch(/guarded[^]*patient/i);
-    expect(node("cade_wolves")?.npc_text).toMatch(/quick[^]*fast[^]*guard opens/i);
+    expect(node("cade_byre")?.npc_text).toMatch(
+      /Guarded HUNT[^]*HOLD the spear point[^]*wait out the grey leader's feint[^]*TAKE the grey leader's true rush/i,
+    );
+    expect(node("cade_wolves")?.npc_text).toMatch(/CLOSE[^]*feint[^]*DRIVE again/i);
   });
 
-  it("names the opening threat as a young wolf before 'yearling' can read as cattle", () => {
+  it("names the opening threat as a yearling wolf before using its possessive follow-up", () => {
     const yard = pack.rooms.find((room) => room.id === "byre_yard");
-    const readTally = yard?.variants?.find((variant) => /last wolf-count/i.test(variant.text));
+    const readTally = yard?.variants?.find((variant) =>
+      /You read the wolf count/i.test(variant.text),
+    );
     const gap = pack.rooms.find((room) => room.id === "paling_gap");
 
-    for (const text of [yard?.description, readTally?.text, gap?.description]) {
-      expect(text).toMatch(/young wolf/i);
-      expect(text).not.toMatch(/\byearling\b/i);
+    for (const text of [yard?.description, readTally?.text]) {
+      expect(text).toMatch(/yearling wolf/i);
+      expect(text).not.toMatch(/\byearling\b(?!\s+wolf)/i);
     }
+    expect(gap?.description).toMatch(/yearling wolf/i);
+    expect(gap?.description).toMatch(/yearling's rush/i);
   });
 });

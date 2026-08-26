@@ -15,7 +15,7 @@ const APPROACHES = [
     terms: { minutes: 30, supplies: 1, fatigue: 25 },
     knowledge: "albany:knowledge_wolf_exposed_ridge",
     memory: "albany:memory_hayden_dispatched_exposed_ridge",
-    returnSummary: /reached Cade by the exposed ridge/i,
+    returnSummary: /reached Cade quickly by the exposed ridge/i,
   },
   {
     id: "albany:wolf_approach_sheltered_stockway",

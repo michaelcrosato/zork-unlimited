@@ -41,22 +41,18 @@ rooms:
   - id: forge_steps
     name: "The Forge Steps"
     description: >
-      A stair of soot-black stone drops into the mountain's root, toward a cold
-      red glow that is not quite firelight. You came down here for one thing: the
-      Ember-Heart, the last living coal of the old forge, said to lie at its
-      deepest hearth. The only way to it is down.
+      The Ember-Heart is in the deepest chamber of the old forge. Go down to the
+      Outer Forge. A faint red glow rises from below.
     exits:
       - { direction: down, to: outer_forge }
 
   - id: outer_forge
     name: "The Outer Forge"
     description: >
-      A vaulted hall of dead anvils and silent bellows, the air gone to a grave
-      chill. A wrought inscription is set into one wall. By a cold trough lies a
-      stout iron pry-bar, and in a niche a single lantern still burns with a thin
-      blue flame that watches you. A low cell stands half-walled to the west, a
-      passage runs north into deeper dark, and the steps climb back toward the
-      surface.
+      READ wrought inscription. The trough is where the iron pry-bar was kept;
+      TAKE iron pry-bar if it is here, or retrieve the iron pry-bar if needed. TALK TO lantern-spirit
+      for forge history and, if the sentinel still stands, combat help. Go west to
+      the Founder's Cell, north to the Bellows Walk, or up to the Forge Steps.
     # Reactive room text (bug_0023): once the pry-bar has been lifted the hall no
     # longer reads "By a cold trough lies a stout iron pry-bar" — it is gone from
     # visible_objects, so the static line would otherwise contradict the empty trough
@@ -73,12 +69,9 @@ rooms:
     variants:
       - when: [ { has_item: pry_bar } ]
         text: >
-          A vaulted hall of dead anvils and silent bellows, the air gone to a grave
-          chill. A wrought inscription is set into one wall. The cold trough stands
-          bare now — the stout iron pry-bar that lay beside it is in your own hands.
-          In a niche a single lantern still burns with a thin blue flame that watches
-          you. A low cell stands half-walled to the west, a passage runs north into
-          deeper dark, and the steps climb back toward the surface.
+          You have the iron pry-bar. READ wrought inscription and TALK TO
+          lantern-spirit for forge history and, if the sentinel still stands, combat
+          help. Go west to the Founder's Cell, north to the Bellows Walk, or up.
     objects: [inscription, pry_bar]
     exits:
       - { direction: up, to: forge_steps }
@@ -106,20 +99,18 @@ rooms:
   - id: founder_cell
     name: "The Founder's Cell"
     description: >
-      A narrow cell walled off the outer hall, its doorway half-choked with
-      tumbled stone. Here the forge's last master sits against the cold wall where
-      he chose to die — armoured still in a suit of cold-iron plate, a smith's
-      hammer across his knees, a line of letters cut into the stone above his
-      head. The cold kept him whole, as it kept everything down here.
+      The dead master once wore cold-iron plate. TAKE cold-iron plate if it is here. Its first DON
+      grants lasting +2 defense against any combat still ahead; completed donning and
+      fights stay complete. His smith's hammer and cut letters remain. Go east.
     variants:
       # Reactive room text (bug_0023): once you have lifted the plate the master no
       # longer sits "armoured still" — examining the cell would otherwise contradict
       # the missing plate on his bones and the iron now on your own back.
       - when: [ { has_item: cold_iron_plate } ]
         text: >
-          The narrow cell where the forge's last master sits against the cold
-          wall, his bones bare now of the plate you carry off, his hammer still
-          across his knees and his name still cut in the stone above his head.
+          You hold the dead master's cold-iron plate. DON cold-iron plate only if that action is
+          still offered; its completed +2 defense bonus persists. His smith's hammer
+          and cut letters remain here. Go east to the Outer Forge.
     objects: [founder, epitaph, cold_iron_plate, hammer]
     exits:
       - { direction: east, to: outer_forge }
@@ -127,20 +118,15 @@ rooms:
   - id: bellows_walk
     name: "The Bellows Walk"
     description: >
-      A long gallery of slack leather bellows and quenched tuyeres. Across the
-      only way east stands a man-high figure of fused slag and cinder — a forge
-      sentinel. The dead hall holds no fire to rouse it; the deep cold keeps it
-      slow and stiff, stirred only enough to stand and bar the passage deeper in.
-      It will be no swifter than it is now. Slow is not the same as soft, though:
-      it is a man-high weight of fused slag, and the blows it does land fall like
-      a dropped anvil. Better not to meet it under-armed — face it with every
-      edge you can bring to bear.
+      The slag sentinel blocks east and can kill an unprepared fighter. Before
+      ATTACK slag sentinel, complete any unfinished lantern-spirit +2 attack counsel
+      or first DON of the cold-iron plate for +2 defense. Completed bonuses persist.
+      Waiting does not strengthen the sentinel. The Outer Forge is south.
     variants:
       - when: [ { has_flag: sentinel_stilled } ]
         text: >
-          A long gallery of slack leather bellows and quenched tuyeres. The slag
-          sentinel lies broken across the floor, its cinders dark and cooling, and
-          the passage east into the deep forge stands open.
+          The slag sentinel is destroyed, and east is open to the Forge Heart.
+          Go south to the Outer Forge.
       # bug_0118: carried-but-unworn plate is legible at the moment of choice. A
       # blind playtester noted the take-then-don two-step is easy to miss — a hasty
       # player can walk into the fight with the cold-iron plate slung loose at +0
@@ -152,36 +138,29 @@ rooms:
           - { has_item: cold_iron_plate }
           - { none_of: [ { has_flag: plate_donned } ] }
         text: >
-          A long gallery of slack leather bellows and quenched tuyeres. Across the
-          only way east stands a man-high figure of fused slag and cinder — a forge
-          sentinel. The dead hall holds no fire to rouse it; the deep cold keeps it
-          slow and stiff, stirred only enough to stand and bar the passage deeper
-          in. It will be no swifter than it is now. Slow is not the same as soft,
-          though: it is a man-high weight of fused slag, and the blows it does land
-          fall like a dropped anvil. The dead master's cold-iron plate still hangs
-          loose and unbuckled at your side — better to don it now than to meet that
-          anvil-weight under-armed; face the sentinel with every edge you can bring
-          to bear.
+          The slag sentinel blocks east and can kill an unprepared fighter. You
+          carry the cold-iron plate but are not wearing it. Now, DON cold-iron plate
+          for +2 defense. TALK TO lantern-spirit, then select the displayed "Ask how to beat
+          the slag sentinel." topic for
+          +2 attack. Waiting does not strengthen it. The Outer Forge is south.
     exits:
       - { direction: south, to: outer_forge }
       - direction: east
         to: forge_heart
         conditions: [ { has_flag: sentinel_stilled } ]
-        locked_msg: "The slag sentinel grinds across the passage; you cannot pass while it stands."
+        locked_msg: "The slag sentinel blocks east. Complete only unfinished lantern-spirit counsel or cold-iron plate DON, then ATTACK slag sentinel. Completed bonuses persist; fighting without them risks death."
 
   - id: forge_heart
     name: "The Forge Heart"
     description: >
-      The deep hearth, vast as a chapel and just as cold. Its mouth is a great
-      grate of slag-choked iron, sealed by the cooling of ages — but its edge
-      carries a worn lip, made to be levered by bar and brawn. Beyond it, you can
-      feel the Ember-Heart's faint warmth.
+      The slag grate blocks the way down to the Ember-Heart. LEVER slag grate with
+      iron pry-bar. A failed might check is safe and can be retried. The
+      Bellows Walk is west.
     variants:
       - when: [ { quest_stage: { quest: forge, stage: grate_open } } ]
         text: >
-          The deep hearth, vast as a chapel. The great slag grate has been levered
-          up off its lip and stands open, baring a low way down into the warmth at
-          the forge's very root.
+          The slag grate is open. Go down to the Ember Chamber or west to the
+          Bellows Walk.
       # bug_0259: arrive-without-the-bar legibility. A fresh source-blind MCP
       # playtester (seed 11, ai-runs/2026-06-04T23-33-49-294Z/playtest.md §4) flagged
       # the one remaining friction in this otherwise blind-clean pack — a player can
@@ -196,29 +175,25 @@ rooms:
       # Content-only: no object/exit/flag/quest/score/ending change.
       - when: [ { none_of: [ { has_item: pry_bar } ] } ]
         text: >
-          The deep hearth, vast as a chapel and just as cold. Its mouth is a great
-          grate of slag-choked iron, sealed by the cooling of ages — its edge carries
-          a worn lip made to be levered, but you carry nothing strong enough to set
-          against it. There was a stout iron pry-bar by the cold trough back in the
-          outer forge. Beyond the sealed grate you can feel the Ember-Heart's faint
-          warmth.
+          You cannot open the slag grate without the iron pry-bar. Beside the trough
+          in the Outer Forge, TAKE iron pry-bar. Then LEVER slag grate with iron pry-bar.
+          A failed attempt is safe and can be retried. The Bellows Walk is west.
     objects: [stone_grate]
     exits:
       - { direction: west, to: bellows_walk }
       - direction: down
         to: ember_chamber
         conditions: [ { quest_stage: { quest: forge, stage: grate_open } } ]
-        locked_msg: "The slag grate is sealed fast. It must be levered aside first."
+        locked_msg: "The slag grate blocks down. Beside the trough in the Outer Forge, TAKE iron pry-bar. Then LEVER slag grate with iron pry-bar. Failed attempts can be retried without penalty."
 
   - id: ember_chamber
     name: "The Ember Chamber"
     description: >
-      Below the grate, a small round chamber that breathes warmth at last. On a
-      plinth of unburnt white stone rests the Ember-Heart: a single coal that
-      glows as if newly drawn from the fire, and never dims.
+      You reached the Ember-Heart on its white stone plinth. The slag grate is up.
+      The single coal gives steady warmth.
     objects: [ember_heart]
     on_enter:
-      - add_journal: "You have reached the Ember-Heart."
+      - add_journal: "You reached the Ember-Heart and completed the descent."
       - inc_var: { name: score, by: 20 }
     exits:
       - { direction: up, to: forge_heart }
@@ -227,30 +202,30 @@ objects:
   - id: inscription
     name: "wrought inscription"
     aliases: [inscription, wall, words, runes]
-    description: "Letters of inlaid brass, cold to the touch."
+    description: "Inlaid brass letters explain the slag sentinel and slag grate. READ wrought inscription."
     takeable: false
     read_text: >
-      THE SENTINEL WAKES TO HEAT AND SLEEPS IN COLD; AND THIS FORGE-FIRE IS LONG
-      DEAD AND WILL NOT KINDLE. SO IT SLEEPS, AND STRUCK TRUE IN THE CHILL IT WILL
-      NOT RISE AGAIN. THE HEART LIES BEHIND THE SLAG, AND ONLY IRON AND A STRONG
-      ARM WILL OPEN THE WAY.
+      The cold keeps the slag sentinel slow, and waiting will not strengthen it. If the
+      sentinel still stands, ATTACK slag sentinel. If the slag grate is still closed,
+      retrieve the iron pry-bar and LEVER slag grate WITH iron pry-bar; failed attempts
+      can be retried. Completed fights and an opened grate stay complete. The forge cannot be relit.
 
   - id: pry_bar
     name: "iron pry-bar"
     aliases: [bar, pry-bar, prybar, lever, iron]
-    description: "A stout iron bar the length of your arm, cold but sound — a lever, for an arm strong enough."
+    description: "A sturdy iron pry-bar for opening the slag grate. If LEVER slag grate WITH iron pry-bar is still offered and you are not holding the bar, TAKE iron pry-bar. A completed grate opening stays open."
     takeable: true
 
   - id: stone_grate
     name: "slag grate"
     aliases: [grate, slag]
-    description: "A great hearth-grate welded shut by cooled slag, with a worn lip at its edge made for a lever."
+    description: "Cooled slag seals the grate. LEVER slag grate with iron pry-bar. Failed attempts are safe and can be retried."
     # Reactive examine text (bug_0023): once the grate is levered open the slab no
     # longer reads "welded shut" — examining it would otherwise contradict both the
     # room's own reactive prose ("stands open") and the player's levering action.
     variants:
       - when: [ { quest_stage: { quest: forge, stage: grate_open } } ]
-        text: "The great hearth-grate, levered up off its lip and standing open on its worn edge; below it a low way drops down into the warmth."
+        text: "The slag grate is open, and the way down to the Ember Chamber is clear."
     takeable: false
     interactions:
       - verb: USE
@@ -279,27 +254,27 @@ objects:
             # yet levering it open wrote nothing to the player's log — the lone silent
             # progress beat (blind-playtest finding, bug_0048). The check retires after
             # success (gated none_of grate_open), so this entry fires exactly once.
-            - add_journal: "You lever the slag grate up off its lip; the way down into the forge's root stands open."
+            - add_journal: "You opened the slag grate with the iron pry-bar. The Ember Chamber is open below."
             - inc_var: { name: score, by: 15 }
-            - narrate: "You set the bar to the lip and throw your whole weight on it — slag cracks, iron screams, and the grate heaves up off its seat. The way down is open."
+            - narrate: "The iron pry-bar breaks the cooled slag and lifts the grate. The way down is open."
           on_failure:
-            - narrate: "The bar bites under the lip and your shoulders strain, but the slag holds and the grate will not lift. Set your feet and try again."
+            - narrate: "The slag grate does not open, but the iron pry-bar remains in place. Retry with LEVER slag grate WITH iron pry-bar; there is no penalty or lockout."
 
   - id: ember_heart
     name: "Ember-Heart"
     aliases: [ember, heart, coal, relic]
-    description: "A single coal that glows with its own unfailing warmth."
+    description: "The last living coal of the old forge gives steady warmth."
     takeable: true
 
   - id: founder
     name: "dead master"
     aliases: [master, founder, smith, corpse, body, bones]
-    description: "An age-dead man in cold-iron plate, sat upright against the wall as though he had only just closed his eyes. The deep cold kept him; the deep cold kept everything."
+    description: "The forge's last master sits dead against the wall. This is where his cold-iron plate was found. The cold preserved his body."
     # Reactive examine (bug_0023): once his plate is taken he is no longer "in
     # cold-iron plate" — the description must follow the world it describes.
     variants:
       - when: [ { has_item: cold_iron_plate } ]
-        text: "The age-dead master, sat bare against the wall now that his plate is on your back, his hammer fallen across his knees and the cold still keeping his bones whole."
+        text: "You took the dead master's cold-iron plate. His preserved body and smith's hammer remain against the wall."
     takeable: false
 
   # The master's forge-hammer. Named twice in the cell's prose (the room
@@ -320,38 +295,36 @@ objects:
     name: "smith's hammer"
     aliases: [hammer, maul, mallet, smithing-hammer, forge-hammer]
     description: >
-      The dead master's own forge-hammer, its hickory haft worn smooth to the
-      shape of a grip and its face battered bright by a working lifetime against
-      the anvil. It is a tool for shaping iron, not for breaking heads, and it
-      lies where it should — across the knees of the last hand that ever swung
-      it. Leave it to him.
+      The dead master's smith's hammer is worn from years of forge work. It is not
+      a weapon and cannot be taken.
     takeable: false
 
   - id: epitaph
     name: "cut letters"
     aliases: [letters, epitaph, name, stone, carving]
-    description: "A line of letters cut deep into the stone above the dead master, by his own hand or a mourner's."
+    description: "Cut letters above the dead master record his final work. READ cut letters."
     takeable: false
     read_text: >
-      HERE SITS THE LAST MASTER OF THE COLD FORGE, WHO WHEN THE GREAT FIRE FAILED
-      WOULD NOT LET IT DIE ENTIRE. HE BANKED ITS LAST LIVE COAL INTO ONE
-      EVERLASTING EMBER, SET THE SLAG SENTINEL TO KEEP IT, AND SEALED HIMSELF IN
-      THE COLD THAT HOLDS THE SENTINEL SLEEPING. CARRY THE HEART OUT, AND THE FORGE
-      IS NOT WHOLLY DEAD.
+      The last master preserved the forge's final coal as the Ember-Heart. He set
+      the slag sentinel to guard it and used the cold to keep the sentinel slow.
+      Carry the Ember-Heart out of the forge to preserve his work.
 
   - id: cold_iron_plate
     name: "cold-iron plate"
     aliases: [plate, armour, armor, cold-iron, mail, suit]
-    description: "A suit of dark cold-iron plate, dead-cold to the touch and heavier than warm steel, but whole and unrusted — iron the slag sentinel's blows would ring off rather than break."
+    description: >
+      Whole, heavy cold-iron plate. TAKE cold-iron plate if needed. Its first DON teaches a lasting
+      braced stance and grants +2 defense against combat still ahead. Before that first
+      DON, carrying it alone gives no bonus; afterward, the bonus persists even if dropped.
     # Reactive examine: once buckled on, it is no longer a loose suit to consider but
     # gear you wear (its self-USE "don" interaction has retired behind plate_donned).
     variants:
       - when: [ { has_flag: plate_donned } ]
-        text: "The dead master's cold-iron plate, buckled on now over your own gear; its dead weight sits between you and the next blow."
+        text: "You completed the cold-iron plate's first DON. Its learned +2 defense remains even if the plate is later dropped."
     takeable: true
     take_effects:
-      - add_journal: "The cold-iron plate is only weight in your hands until it is buckled on; don it before you face the sentinel."
-      - narrate: "The plate is in your hands, but not yet on your body. Don it before the sentinel's anvil-blows find you."
+      - add_journal: "You took the cold-iron plate. Its first DON teaches a lasting braced stance and grants +2 defense against combat still ahead. Before that first DON, carrying it gives no protection."
+      - narrate: "You carry the cold-iron plate. DON cold-iron plate only if that action is still offered; the first DON teaches a lasting +2 defense stance."
     interactions:
       # Self-USE = "wear this thing". command_verb: don (bug_0074) makes the offered
       # and typed verb match the prose that primes it — you "don" plate, you do not
@@ -369,13 +342,15 @@ objects:
         effects:
           - set_flag: plate_donned
           - inc_var: { name: defense, by: 2 }
-          - add_journal: "You buckle the dead master's cold-iron plate over your own gear; it will turn the worst of the sentinel's blows (+2 defense)."
-          - narrate: "You strip the plate from the old master with a murmured word and buckle it on. It is dead-cold and heavier than steel, but it sits between you and the next blow — it will not swing your blade for you, but it will keep you standing to swing it yourself."
+          - add_journal: "The cold-iron plate's first DON teaches a lasting braced stance and grants +2 defense against combat still ahead; the bonus persists even if the plate is later dropped."
+          - narrate: "You buckle on the cold-iron plate, learn its braced weight, and gain lasting +2 defense. The bonus persists even if you later drop the armor."
 
 npcs:
   - id: lantern_spirit
     name: "lantern-spirit"
-    description: "A thin blue flame in an old lantern, with the watchful patience of something very old and very tired."
+    description: >
+      An old lantern holds a blue flame that explains the forge and grants +2 attack
+      once. The bonus helps against the slag sentinel only while it still stands.
     room: outer_forge
     # Every `npc_text` is PURE SPOKEN words — the engine renders dialogue as
     # `lantern-spirit: "<npc_text>"` (parser legal_actions), so the node must not
@@ -391,8 +366,8 @@ npcs:
       nodes:
         - id: spirit_root
           npc_text: >
-            A warm thing, come down into the cold. Few do. Ask, if you would —
-            I have watched this forge die by inches, and I remember everything.
+            I remember how this forge failed. Ask about the slag sentinel, the
+            Ember-Heart, the dead forge, or the last master.
           # bug_0322: on every return from a topic the full first-meeting greeting
           # re-fired ("A warm thing, come down into the cold..."), making the
           # dialogue menu feel mechanical after the first exchange. This variant
@@ -437,7 +412,7 @@ npcs:
             # the +2 defense is EARNED by going there and donning the plate, not by
             # the asking (unlike ask_sentinel, which grants its buff on the telling).
             - id: ask_founder
-              prompt: "Ask who else ever came down into the cold."
+              prompt: "Ask about the forge's last master."
               conditions: [ { not_flag: heard_founder } ]
               goto: spirit_founder
             - id: leave_spirit
@@ -445,52 +420,44 @@ npcs:
               end: true
         - id: spirit_sentinel
           npc_text: >
-            The sentinel? It is forge-born — it wakes to heat and sleeps in the
-            cold, and this hall has been bitter cold for an age and will never be
-            warm again. Do not fear that waiting makes it worse: it is as slow now
-            as it will ever be. Strike it hard and it will not rise twice. Here —
-            take what warmth I can spare; let it ride your arm.
+            The cold keeps the slag sentinel slow, and waiting will not strengthen
+            it. My remaining warmth grants +2 attack. It helps against the sentinel
+            if it still stands; if defeated, that fight stays complete.
           effects:
             - set_flag: heard_sentinel
             - inc_var: { name: attack, by: 2 }
-            - add_journal: "The lantern-spirit's warmth settles into your arm — you feel you could strike harder now (+2 attack)."
+            - add_journal: "The lantern-spirit gave you lasting +2 attack; it helps against the slag sentinel only while it still stands."
           topics:
             - id: sentinel_back
-              prompt: "Nod, and ask something else."
+              prompt: "Ask the lantern-spirit about something else."
               goto: spirit_root
         - id: spirit_heart
           npc_text: >
-            The Heart? Past the sentinel, in the deep hearth, sealed behind the
-            old slag grate. No flame will melt that grate cold — but its edge has a
-            lip, and a strong arm with a good iron bar will lever it up. There is
-            such a bar by the trough, if no thief has had it.
+            The Ember-Heart is past the slag sentinel and below the slag grate.
+            If the grate is still closed, carry or retrieve the iron pry-bar and LEVER
+            slag grate with iron pry-bar. Failed attempts are safe and can be retried.
           effects:
             - set_flag: heard_heart
-            - add_journal: "The spirit says the Ember-Heart lies past the sentinel, behind a slag grate that must be levered open with an iron bar and main strength."
+            - add_journal: "The lantern-spirit said the Ember-Heart is past the slag sentinel and below the slag grate. The iron pry-bar opens the grate through retryable LEVER attempts."
           topics:
             - id: heart_back
-              prompt: "Thank it, and ask something else."
+              prompt: "Ask the lantern-spirit about something else."
               goto: spirit_root
         - id: spirit_forge
           npc_text: >
-            Lit again? No — never. The great fire went out an age ago, and there
-            is no bellows, no kindling, no craft of mine that will wake it; that
-            cold is why the sentinel sleeps, and why a warm thing like you may walk
-            these halls at all. Do not spend your strength hunting a flame to
-            relight — there is none to find, and none to be made. One living warmth
-            is left in all this cold, and you came down for it already: the
-            Ember-Heart. Lift it and carry it out into the world above. That is the
-            only fire that leaves this place — let the dead forge keep its long dark.
+            The dead forge cannot be relit. There is no usable bellows, kindling,
+            or replacement flame, and the cold keeps the slag sentinel slow. Do not
+            search for a relighting action. Reach the Ember-Heart and carry it out.
           # One-shot like the other two counsels (gated on heard_forge), and it loops
           # back to spirit_root whose ungated `leave_spirit` keeps the node terminating
           # (a gated-only escape would trip DIALOGUE_NONTERMINATING, bug_0014). No
           # stat/effect/flag-gate beyond its own retire flag, so balance is untouched.
           effects:
             - set_flag: heard_forge
-            - add_journal: "The spirit is plain: the dead forge cannot be relit — the Ember-Heart is the one warmth left to carry out, not a fire to rekindle."
+            - add_journal: "The dead forge cannot be relit, and there is no relighting action. Reach the Ember-Heart and carry it out."
           topics:
             - id: forge_back
-              prompt: "Nod, and ask something else."
+              prompt: "Ask the lantern-spirit about something else."
               goto: spirit_root
         - id: spirit_founder
           # Pure spoken words, quote-free and no third-person gesture (bug_0071) —
@@ -499,21 +466,17 @@ npcs:
           # keeps the node terminating (a gated-only escape would trip
           # DIALOGUE_NONTERMINATING, bug_0014).
           npc_text: >
-            One came before you, an age ago, and he never climbed back out — the
-            last master of this forge. When the great fire failed he would not let
-            it die whole; he banked its last live coal into the Ember-Heart, set
-            the slag sentinel to keep it, and walled himself into the side-cell
-            west of here with the cold that holds the sentinel sleeping. His
-            cold-iron plate is on him yet, whole and unrusted. He has no use for it
-            now, and the sentinel's blows fall like dropped anvils. Take it, if
-            your conscience lets you — better his iron on a living back than
-            guarding old bones.
+            The last master made the Ember-Heart and set the slag sentinel to guard
+            it. His cold-iron plate was found beside his body in the Founder's Cell
+            west of here. Before any remaining combat, DON cold-iron plate if that
+            action is still offered for +2 defense. Taking it without donning gives
+            no protection; a completed donning or fight stays complete.
           effects:
             - set_flag: heard_founder
-            - add_journal: "The spirit speaks of the forge's last master, walled into the side-cell west of the outer hall, dead in cold-iron plate that might yet turn the sentinel's blows."
+            - add_journal: "The forge's last master's cold-iron plate was found in the Founder's Cell west of the Outer Forge. Its first DON teaches a lasting +2 defense stance that persists even if the plate is later dropped."
           topics:
             - id: founder_back
-              prompt: "Nod, and ask something else."
+              prompt: "Ask the lantern-spirit about something else."
               goto: spirit_root
 
 enemies:
@@ -551,7 +514,7 @@ enemies:
   # save-recoverable (§8.7); the death ending (ending_fallen) is unchanged.
   - id: slag_sentinel
     name: "slag sentinel"
-    description: "A man-high figure of fused slag and dead cinder, holding a slow, cold half-life to bar the deep forge — the chill keeps it as stiff and clumsy as it will ever be."
+    description: "A man-high guard of fused slag blocks the deep forge. It can kill an unprepared fighter. The cold keeps it slow, so waiting does not make it stronger."
     room: bellows_walk
     hp: 18
     attack: 7
@@ -559,7 +522,7 @@ enemies:
     defeat_flag: sentinel_stilled
     death_ending: ending_fallen
     on_defeat:
-      - add_journal: "The slag sentinel comes apart in cinders; the way east lies open."
+      - add_journal: "You defeated the slag sentinel. The Forge Heart is open to the east."
       - inc_var: { name: score, by: 15 }
 
 win_conditions:
@@ -594,16 +557,12 @@ endings:
               - { visited: founder_cell }
               - { has_flag: heard_founder }
         text: >
-          You lift the Ember-Heart from its plinth and the cold of the dead forge
-          breaks before it. You know now whose fire this was — the last master's,
-          banked into one everlasting coal and left under guard against exactly this
-          hour. Warmth climbs the stair ahead of you, anvil by anvil, and you carry
-          his Heart up into the world above: the forge is not wholly dead, and you are
-          the hand that kept it so.
+          You recover the Ember-Heart and carry it to the surface. The last master's
+          body remains in his cell, but the forge's final coal leaves with you. His
+          work survives.
     text: >
-      You lift the Ember-Heart from its plinth and the cold of the dead forge
-      breaks before it. Warmth climbs the stair ahead of you, anvil by anvil, and
-      by the time you reach the surface the old forge is breathing again.
+      You recover the Ember-Heart and carry the old forge's final living coal to
+      the surface.
     death: false
   - id: ending_fallen
     title: "Cold on the Cinders"
@@ -613,16 +572,11 @@ endings:
               - { visited: founder_cell }
               - { has_flag: heard_founder }
         text: >
-          The sentinel's last blow drops you among the dead anvils, and the grave
-          chill closes over you. You came to know the last master's story before the
-          end — how he too came down into this cold and never climbed back out — and
-          now you keep him company in it. The forge keeps its cold, and its Heart, and
-          one more set of bones the deep chill will hold whole, a while longer.
+          The slag sentinel kills you before you reach the Ember-Heart. The last
+          master's body remains in his cell, and yours now remains in the same cold
+          forge. The Ember-Heart stays below.
     text: >
-      The sentinel's last blow drops you among the dead anvils, and the grave
-      chill closes over you. Only as the cold takes hold do the forge's warnings
-      finish their work: the spirit's borrowed warmth and the dead master's
-      cold-iron plate were not ornaments to the tale, but the edges that might
-      have kept you standing. The forge keeps its Heart, and waits for a warmer
-      hand that comes down armed with every lesson it can find.
+      The slag sentinel kills you before you reach the Ember-Heart. The
+      lantern-spirit's +2 attack and the cold-iron plate's first-DON +2 defense improve
+      survival odds. The Ember-Heart stays below.
     death: true

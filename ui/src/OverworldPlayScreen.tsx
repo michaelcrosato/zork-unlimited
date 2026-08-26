@@ -107,7 +107,7 @@ function ActionCard({ action }: { action: WorldActionCard }): JSX.Element {
       <p className="nw-world-action-summary">{action.summary}</p>
       <div className="nw-action-terms">
         <strong>{disabled ? "Unavailable" : action.terms ? "Terms" : "Available now"}</strong>
-        <p>{action.disabledReason ?? action.terms ?? "Projected legal by the game engine."}</p>
+        <p>{action.disabledReason ?? action.terms ?? "You can do this now."}</p>
         {action.consequence && <p className="nw-world-consequence">{action.consequence}</p>}
       </div>
       <button type="button" disabled={disabled} onClick={disabled ? undefined : action.onChoose}>
@@ -149,9 +149,9 @@ function WorldUtility({
     <section className="nw-utility" aria-label={`${panel} panel`}>
       <header>
         <div>
-          <p className="nw-kicker">Campaign reference</p>
+          <p className="nw-kicker">Journey reference</p>
           <h2 ref={headingRef} tabIndex={-1}>
-            {panel === "terms" ? "Exact terms" : panel}
+            {panel === "terms" ? "All actions and costs" : panel}
           </h2>
         </div>
         <button className="nw-text-button" type="button" onClick={onClose}>
@@ -168,7 +168,7 @@ function WorldUtility({
             <h3>{world.current.name}</h3>
             <p>
               {world.visitedCount} visited · {world.discovered.length} discovered ·{" "}
-              {world.totalTowns} towns in the state graph
+              {world.totalTowns} towns total
             </p>
             <div className="nw-place-cloud">
               {world.discovered.map((place) => (
@@ -194,9 +194,7 @@ function WorldUtility({
           <article className="nw-reference-card">
             <p className="nw-kicker">Current goal</p>
             <h3>{journey.goal.text}</h3>
-            <p>
-              {journey.goalGuidance ?? "Follow the evidence and choose what your character keeps."}
-            </p>
+            <p>{journey.goalGuidance ?? "Choose a local action that advances this goal."}</p>
             <ul className="nw-reference-lines">
               {world.journal.map((entry) => (
                 <li key={entry.id}>
@@ -209,7 +207,7 @@ function WorldUtility({
             </ul>
           </article>
           <article className="nw-reference-card">
-            <p className="nw-kicker">Consequence feed</p>
+            <p className="nw-kicker">Recent results</p>
             <ol className="nw-reference-lines">
               {log.slice(0, 18).map((entry, index) => (
                 <li key={`${index}:${entry.slice(0, 30)}`}>{entry}</li>
@@ -223,7 +221,7 @@ function WorldUtility({
                 <li key={arc.id}>
                   <strong>{arc.title}</strong>
                   <span>
-                    {arc.resolvedInRegion}/{arc.requiredResolutions} anchors · {arc.region}
+                    {arc.resolvedInRegion}/{arc.requiredResolutions} completed · {arc.region}
                   </span>
                 </li>
               ))}
@@ -239,7 +237,7 @@ function WorldUtility({
             <section className="nw-exact-section" key={section.id}>
               <header>
                 <div>
-                  <p className="nw-kicker">Engine-projected actions</p>
+                  <p className="nw-kicker">Available and blocked actions</p>
                   <h3>{section.title}</h3>
                 </div>
                 {section.description && <p>{section.description}</p>}
@@ -251,7 +249,7 @@ function WorldUtility({
                   ))}
                 </div>
               ) : (
-                <p className="nw-empty-state">Nothing is currently projected in this category.</p>
+                <p className="nw-empty-state">No actions are available in this category.</p>
               )}
             </section>
           ))}
@@ -265,11 +263,11 @@ function WorldUtility({
             <h3>Browser autosave</h3>
             <p>
               {saveStatus === "saved"
-                ? "Campaign state is saved in this browser. Active quest progress is saved and verified too."
+                ? "This journey and its active quest are saved in this browser."
                 : saveStatus === "pending"
-                  ? "The latest campaign state is being saved in this browser."
-                  : "Browser saving is unavailable. Keep this tab open or begin again after storage is restored."}{" "}
-              A new journey clears any usable record and begins again in the authored starting town.
+                  ? "Saving this journey in your browser."
+                  : "Browser saving is unavailable. Keep this tab open to avoid losing progress."}{" "}
+              Starting a new journey erases this save and returns to the starting town.
             </p>
             <button className="nw-danger-button" type="button" onClick={onNewJourney}>
               Begin a new journey
@@ -277,11 +275,10 @@ function WorldUtility({
           </article>
           <article className="nw-reference-card">
             <p className="nw-kicker">Field manual</p>
-            <h3>One scene at a time</h3>
+            <h3>Use the current scene</h3>
             <p>
-              The main screen holds the current place, objective, consequence, and most relevant
-              legal actions. Atlas, Journal, and Exact terms keep the wider campaign available
-              without competing with play.
+              The main screen shows your location, goal, latest result, and useful actions. Use
+              Atlas for roads, Journal for history, and All actions and costs for full details.
             </p>
             <button className="nw-text-button" type="button" onClick={onOpenTutorial}>
               Reopen field manual
@@ -328,9 +325,9 @@ export function OverworldPlayScreen({
         time={world.timeLabel}
         sessionStatus={
           saveStatus === "saved"
-            ? "Campaign progress saved"
+            ? "Journey progress saved"
             : saveStatus === "pending"
-              ? "Saving campaign progress…"
+              ? "Saving journey progress…"
               : "Save unavailable · keep this tab open"
         }
         health={`${world.character.health.current}/${world.character.health.max}`}
@@ -379,9 +376,7 @@ export function OverworldPlayScreen({
               <aside className="nw-objective">
                 <p className="nw-kicker">Current goal</p>
                 <h2>{journey.goal.text}</h2>
-                <p>
-                  {journey.goalGuidance ?? "Find the next local consequence that moves the work."}
-                </p>
+                <p>{journey.goalGuidance ?? "Choose a local action that advances this goal."}</p>
 
                 <dl className="nw-world-vitals">
                   <div>
@@ -393,8 +388,8 @@ export function OverworldPlayScreen({
                     <dd>{world.currentArea?.name ?? "Town center"}</dd>
                   </div>
                   <div>
-                    <dt>Journey rhythm</dt>
-                    <dd>{journey.acceptedDecisions} meaningful decisions</dd>
+                    <dt>Decisions made</dt>
+                    <dd>{journey.acceptedDecisions}</dd>
                   </div>
                   <div>
                     <dt>Known world</dt>
@@ -419,7 +414,7 @@ export function OverworldPlayScreen({
 
             <section className="nw-consequence" aria-live="polite">
               <Info aria-hidden="true" />
-              <strong>Latest consequence</strong>
+              <strong>Latest result</strong>
               <span>{error ? `Could not continue: ${error}` : latestConsequence}</span>
             </section>
 
@@ -447,17 +442,14 @@ export function OverworldPlayScreen({
               <section className="nw-empty-deck">
                 <Signpost aria-hidden="true" />
                 <h2>No immediate local action</h2>
-                <p>Open the Atlas for roads or Exact terms for every projected action.</p>
+                <p>Open Atlas for roads or All actions and costs for every available option.</p>
               </section>
             ) : null}
 
             {optionalSupportActions.length > 0 && (
               <details className="nw-optional-support" ref={optionalSupportRef}>
                 <summary>Review optional support ({optionalSupportActions.length})</summary>
-                <p>
-                  Open only if you want to compare these optional commitments before choosing a
-                  projected departure.
-                </p>
+                <p>Compare these optional choices before you depart. You may skip them.</p>
                 <div className="nw-optional-support-grid">
                   {optionalSupportActions.map((action) => (
                     <ActionCard action={action} key={action.id} />

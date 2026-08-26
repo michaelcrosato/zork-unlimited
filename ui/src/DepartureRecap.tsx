@@ -63,7 +63,7 @@ export function DepartureRecap({
               <>
                 <br />
                 <small className="departure-recap-field-term">
-                  Direct-launch default; a second rider remains optional.
+                  Leaving alone; you may still add a second rider.
                 </small>
               </>
             )}
@@ -73,24 +73,24 @@ export function DepartureRecap({
     </dl>
   );
   return (
-    <section aria-label={`${recap.questTitle} dispatch recap`}>
-      <Heading>{recap.questTitle} dispatch recap</Heading>
+    <section aria-label={`${recap.questTitle} departure plan`}>
+      <Heading>{recap.questTitle} departure plan</Heading>
       {recap.dispatch && entryScope === "all" && (
         <p className="departure-recap-dispatch">
           {recap.dispatch.state === "sealed" ? (
             <>
-              Dispatch sealed: {recap.dispatch.minutes}m —{" "}
+              Departure plan complete: {recap.dispatch.minutes} min —{" "}
               {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}.
             </>
           ) : recap.dispatch.state === "direct_launch" ? (
             <>
-              Direct launch now: {recap.dispatch.minutes}m —{" "}
-              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}. A second rider remains
-              optional.
+              Leave now: {recap.dispatch.minutes} min —{" "}
+              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}. You may still add a
+              second rider.
             </>
           ) : (
             <>
-              Dispatch committed: {recap.dispatch.minutes}m
+              Departure ready: {recap.dispatch.minutes} min
               {recap.dispatch.remainingOptional.length > 0
                 ? `; ${formatOptionalSlots(recap.dispatch.remainingOptional)} ${recap.dispatch.remainingOptional.length === 1 ? "remains" : "remain"} optional`
                 : ""}
@@ -116,7 +116,7 @@ export function DepartureRecap({
       )}
       {selectedTerms.length > 0 && (
         <details className="departure-recap-terms">
-          <summary>Review exact active terms</summary>
+          <summary>Review selected costs and effects</summary>
           <dl>
             {selectedTerms.map((entry) => (
               <div key={entry.slot}>

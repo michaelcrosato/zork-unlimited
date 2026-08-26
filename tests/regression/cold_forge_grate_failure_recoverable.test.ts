@@ -152,7 +152,7 @@ describe("bug_0242 — a FAILED Cold Forge grate check stays recoverable (no sof
     // The d20 breakdown reads as a failure...
     expect(narr.some((n) => /d20 .*vs 12 — failure/.test(n))).toBe(true);
     // ...and the prose tells the player they may heave again (recoverability, signposted).
-    expect(narr.some((n) => /try again/i.test(n))).toBe(true);
+    expect(narr.some((n) => /Retry with LEVER slag grate WITH iron pry-bar/i.test(n))).toBe(true);
     // The failure branch writes no quest-stage / score effect — it changes nothing.
     expect(res!.effects.some((e) => "set_quest_stage" in e || "inc_var" in e)).toBe(false);
   });

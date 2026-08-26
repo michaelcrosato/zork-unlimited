@@ -106,8 +106,8 @@ describe("campaign service regional-renown predicate", () => {
     ).toEqual([
       expect.objectContaining({
         id: rule.id,
-        title: "Take the Civic Standing Recovery Cot",
-        summary: expect.stringContaining("13-point Capital / Mohawk standing"),
+        title: "Rest at the Civic Counter",
+        summary: expect.stringContaining("13 Capital / Mohawk renown"),
       }),
     ]);
   });

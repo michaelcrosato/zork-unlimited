@@ -95,18 +95,18 @@ describe("bug_0119 — the shade's ward counsel says it's the only aid; press on
 
     // Positive: it must say the ward is the whole of the aid, that the scare is the
     // wight's wearing-down (not the true odds), and to keep striking.
-    expect(spoken).toMatch(/no balm|no second blade|no charm|whole of the help/);
+    expect(spoken).toContain("no healing item, combat weapon, or second ward");
     // bug_0132 retired the flat "not the truth of the odds" guarantee; the
     // wearing-down framing it leant on stays (see rpg_barrow_ward_honest_odds.test.ts
     // for the honest-hedge lock that replaced the over-promise).
-    expect(spoken).toMatch(/wearing a man down/);
-    expect(spoken).toMatch(/keep striking|set your feet/);
+    expect(spoken).toContain("cold blows");
+    expect(spoken).toContain("continue attacking until one of you falls");
     // Negative: it must NOT leave open the idea that more preparation is out there to
     // find, nor that breaking off to search is the path — the readings that drove the
     // blind tester to retreat from a winnable fight.
-    expect(spoken).toMatch(/seek aid that is not here|no fresher/);
+    expect(spoken).toContain("retreating does not restore health");
     // And it must still carry the original ward instruction (turn the chill on the iron).
-    expect(spoken).toMatch(/guard close|chill slide off the iron|bite the less/);
+    expect(spoken).toContain("grants +3 defense");
   });
 
   it("the ward MECHANIC is untouched by the added counsel: defense 2->5, one-shot, journalled", () => {

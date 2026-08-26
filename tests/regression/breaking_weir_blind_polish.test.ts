@@ -120,8 +120,10 @@ describe("bug_0225 — The Breaking Weir storm-walk blocked-north hint names its
     // behind, which is why the precondition must be legible from the hint alone.
     const hint = NORTH_HINT(inRoom("weir_walk", { rack_freed: true }));
     expect(hint).toBeDefined(); // the gated exit IS surfaced as a hint (bug_0201)
-    expect(hint).toMatch(/life-line/i); // names the missing precondition…
-    expect(hint).toMatch(/run-wire/i); // …and where it clips
+    expect(hint).toMatch(/In the Keeper's Lodge, TAKE life-line/i);
+    expect(hint).toMatch(/TALK TO old Pell the weir-keeper/i);
+    expect(hint).toMatch(/Ask how to cross the storm-walk safely/i);
+    expect(hint).toMatch(/RIG storm-walk with life-line/i);
   });
 
   it("the hint is no longer the generic precondition-less string and spoils no command verb", () => {
@@ -130,8 +132,7 @@ describe("bug_0225 — The Breaking Weir storm-walk blocked-north hint names its
     expect(hint).not.toBe(
       "The spillway-walk is still ahead of you, awash and uncrossed; the race-house lies beyond it.",
     );
-    // WHY-not-HOW (bug_0201): names the precondition but not the crossing command (`rig`).
-    expect(hint).not.toMatch(/\brig\b/i);
+    expect(hint).toMatch(/Crossing without Pell's instructions can kill you/i);
   });
 
   it("once the walk is crossed the north hint retires (the way is open)", () => {

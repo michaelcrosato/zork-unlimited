@@ -11,6 +11,7 @@ export function JourneyEndedScreen({
 }: JourneyEndedScreenProps): JSX.Element {
   const endedByCharacterDeath =
     journey.retentionHistory.at(-1)?.reasons.includes("character_died") === true;
+  const decisionUnit = journey.acceptedDecisions === 1 ? "decision" : "decisions";
 
   return (
     <main className="journey-ended-page">
@@ -19,8 +20,8 @@ export function JourneyEndedScreen({
         <h1 id="journey-ended-title">This journey has ended</h1>
         <p>
           {endedByCharacterDeath
-            ? `Your character died after ${String(journey.acceptedDecisions)} meaningful gameplay decisions. The unfinished goal and completed history stay here for review.`
-            : `You chose to end after ${String(journey.acceptedDecisions)} meaningful gameplay decisions. The record stays here for review.`}
+            ? `Your character died after ${String(journey.acceptedDecisions)} ${decisionUnit}. The unfinished goal and journey history remain below.`
+            : `You ended this journey after ${String(journey.acceptedDecisions)} ${decisionUnit}. Its record remains below.`}
         </p>
         <dl>
           <div>
@@ -32,7 +33,7 @@ export function JourneyEndedScreen({
             <dd>{journey.goal.status === "completed" ? "Completed" : "In progress"}</dd>
           </div>
           <div>
-            <dt>{endedByCharacterDeath ? "Journey decisions" : "Continuation choices"}</dt>
+            <dt>Continue/end choices</dt>
             <dd>{journey.retentionHistory.length}</dd>
           </div>
         </dl>

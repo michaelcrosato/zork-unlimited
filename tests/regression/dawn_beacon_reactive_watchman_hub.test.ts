@@ -54,7 +54,8 @@ const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-const FULL_OPENING = /You came up the yard/;
+const FULL_OPENING =
+  /I cannot fight or climb[^]*Ask me about the raider fighting method[^]*beacon sequence/;
 const TERSE_RETURN = /what else/i;
 
 /** The narration text emitted by a step (the NPC line we render). */
@@ -88,7 +89,7 @@ describe("bug_0264 — reactive NPC hub line on The Dawn Beacon's watchman", () 
 
     // The reply auto-resumes the reactive root in this same decision.
     const asked = run(talk.state, { type: "ASK", npc: "watchman", topic: "ask_fight" });
-    expect(asked.text).toMatch(/drillmaster's word/); // the counsel node fired
+    expect(asked.text).toMatch(/This grants \+2 attack/); // the counsel node fired
     expect(asked.state.flags["heard_counsel"]).toBeTruthy();
     const obs = buildRpgObservation(index, asked.state);
     expect(obs.dialogue?.npc_text).toMatch(TERSE_RETURN);

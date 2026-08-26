@@ -75,7 +75,7 @@ export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
 // exact, durable read-only reveal while keeping legal Wolf-Winter roads first.
 // v49: Station board V6 makes that reveal relevance-first by naming only the
 // still-open kit, wagon, and rider categories before any support comparison.
-export const OVERWORLD_COMPACT_VIEW_VERSION = 49 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 50 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -455,38 +455,38 @@ export type OverworldCompactView = {
 export const OVERWORLD_COMPACT_LEGEND = {
   v: "compact context schema version",
   character:
-    "[background, [health_current, health_max], money, [[skill_id, rank]], [[value_id, strength]], [[wound_id, severity, treatment]], [[equipment_id, item_id, quantity, condition_0to100, equipped]], [ability_id], [knowledge_id], [[promise_id, recipient_id, status]], [companion_npc_id], [[crime_id, jurisdiction_id, severity, status]], [[npc_id, trust_tier, regard_tier, owes_player, player_owes, known_memory_count, [known_memory]]], [[faction_id, standing_tier]], [skills_count, values_count, wounds_count, equipment_count, abilities_count, knowledge_count, promises_count, companions_count, crimes_count, relationships_count, faction_standing_count], [truncated_category]?] persistent player character; lists cap at 8 and visible relationship memories at 4, counts are uncapped totals, optional truncation categories identify omitted entries, and tiers hide numeric disposition",
+    "[background,[health_current,health_max],money,[[skill_id,rank]],[[value_id,strength]],[[wound_id,severity,treatment]],[[equipment_id,item_id,quantity,condition_0to100,equipped]],[ability_id],[knowledge_id],[[promise_id,recipient_id,status]],[companion_npc_id],[[crime_id,jurisdiction_id,severity,status]],[[npc_id,trust_tier,regard_tier,owes_player,player_owes,known_memory_count,[known_memory]]],[[faction_id,standing_tier]],[skills_count,values_count,wounds_count,equipment_count,abilities_count,knowledge_count,promises_count,companions_count,crimes_count,relationships_count,faction_standing_count],[truncated_category]?] persistent character; lists cap at 8 and relationship memories at 4; counts are uncapped totals; truncation categories name omitted entries. Tiers hide exact disposition.",
   world: "world name (include_world_name only)",
   time: "in-game clock 'Day N, HH:MM'",
   here: "[town_id, town_name, region_name, area_id|null, area_name|null] current location; when pending_road exists this is the on-route id/name instead of a town",
   vitals: "[supplies, max_supplies, fatigue_0to100, condition_label] travel readiness",
   service_offers:
-    "[[offer_id, action, title, terms_summary, minutes], ...] current one-time service terms; these terms are informational and deferred while service_actions is absent. Accept an offer with its matching care, rest, or resupply tool only when its service_actions entry is present and available",
+    "[[offer_id,action,title,terms_summary,minutes],...] one-time services. Terms are informational and deferred while service_actions is absent. Use the matching care, rest, or resupply tool only when that action is present and available.",
   service_actions:
-    "[[action, source, offer_id|null, available, changed, minutes, [supplies_before, supplies_after], [fatigue_before, fatigue_after], message, blocked_reason|null], ...] current town service choices; use care_overworld_session for care, resupply_overworld_session for resupply, and rest_overworld_session for rest. campaign_override with a non-null offer_id means matching service_offers terms replace ordinary timing for this action, unavailable ordinary choices are still listed, and the field is omitted while gameplay actions are paused",
+    "[[action,source,offer_id|null,available,changed,minutes,[supplies_before,supplies_after],[fatigue_before,fatigue_after],message,blocked_reason|null],...] current services. Call care_overworld_session, rest_overworld_session, or resupply_overworld_session only when available=true. campaign_override uses the matching one-time offer instead of normal terms. This field is absent while actions are paused.",
   departure_interactions:
-    "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id) for a versioned short comparison, unchanged receipt, and the same bounded authenticated departure_recap when available, then optionally inspect one story.options[*].id as option_id for only that option's new detail. Field-kit (preparation), relief-wagon (relief_allocation), and second-rider (ally/field_team) option detail also returns authenticated selected terms; other option detail adds no exact terms or world context beyond that recap. Choose with choose_overworld_session_story(choice); include story_choice_id only to disambiguate overlapping option ids, or depart without choosing",
+    "[[story_choice_id,kind,title],...] optional Station choices. Inspect one story_choice_id, then optionally inspect one visible option_id. Field-kit (preparation), relief-wagon (relief_allocation), and second-rider (ally/field_team) details include exact selected terms. Choose with choose_overworld_session_story; include story_choice_id only when option ids overlap. You may depart without support.",
   departure_contact_leads:
-    "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station second-rider leads; ready may be pursued with talk_overworld_session_contact(character_id: contact_id) before or after field kit (preparation) or relief wagon (relief_allocation), while legacy requires_preparation has no available action; either status leaves quest_id launch legal as the explicitly disclosed solo default",
+    "[[lead_id,'ally',title,status,contact_id,contact_name,quest_id,quest_title,guidance],...] optional second-rider leads. When status=ready, talk to contact_id before or after field kit (preparation) or relief wagon (relief_allocation); legacy requires_preparation has no available action. The quest can always start solo.",
   departure_recap:
-    "[version, quest_id, quest_title, [[slot, status, selected_title|null], ...], dispatch|null]. Slots: role=background; duty=Wolf-Winter promise; evidence=report; preparation=field kit; relief_allocation=relief wagon; field_team=second rider. dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. committed omits redundant open_optional rows; remaining_optional lists them. The last three slots are independent optional choices, in any order or skipped at launch. sealed is final; direct_launch and available_after_preparation remain legacy sequential values. Selected terms: departure_recap_terms.",
+    "[version,quest_id,quest_title,[[slot,status,selected_title|null],...],dispatch|null]. role=background; duty=Wolf-Winter promise; evidence=report; preparation=field kit; relief_allocation=relief wagon; field_team=second rider. dispatch=[state,minutes,timing|null,[remaining_optional_slot,...]]. The last three are independent optional choices, allowed in any order or skipped at launch. committed omits redundant open_optional rows; remaining_optional lists them. sealed is final. direct_launch and available_after_preparation remain legacy sequential values. Exact terms are in departure_recap_terms.",
   departure_recap_terms:
-    "[version,quest_id,[[slot,active_field_term],...]] exact selected Station terms. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Via include_departure_recap_terms or support-option detail; no alternatives/outcomes/actions.",
+    "[version,quest_id,[[slot,active_field_term],...]] exact selected Station terms only. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider.",
   station_dispatch_board:
-    "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null];dispatch=[state,minutes,timing|null,remaining_optional_count];row=[slot,status,selected_title|null,purpose|null,action|null]. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Pre-review hides open_optional;overview=[id,label] names only open kit/wagon/rider categories and kit skills Repair/Streetwise/Mediation. Call get-context(reveal_station_dispatch_support=exact id);read-only receipt survives refresh/export/restore. Then overview=null;rows restore purpose/action:['inspect',story_choice_id]|['talk',character_id,contact_name]. Support optional;strategy unchanged. Terms=departure_recap_terms;roads=quests+quest_starts.",
+    "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null]; dispatch=[state,minutes,timing|null,remaining_optional_count]; row=[slot,status,selected_title|null,purpose|null,action|null]. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Before review, overview lists open kit, wagon, and rider categories. Call get-context with reveal_station_dispatch_support set to its exact id. Returned rows give inspect or talk actions. Support is optional and chooses no strategy.",
   station_dispatch_support:
-    "[[support_slot, purpose, action|null], ...] explicit read-only Station support detail; preparation=field kit, relief_allocation=relief wagon, field_team=second rider. Returned only by get_overworld_session_context(include_station_dispatch_support:true). action is ['inspect', story_choice_id] for inspect_overworld_session_story or ['talk', character_id, contact_name] for talk_overworld_session_contact; inspect reveals legal story.options[*].id choices. Support remains optional and changes dispatch cost and aftermath, not which Wolf-Winter strategy is offered.",
+    "[[support_slot,purpose,action|null],...] optional Station support. preparation=field kit, relief_allocation=relief wagon, field_team=second rider. action is ['inspect',story_choice_id] or ['talk',character_id,contact_name]. Support changes dispatch cost or aftermath, not the available Wolf-Winter strategies.",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
-    "[[kind, root_id, title, district, access], ...] optional authored aftermath; access is here|mapped|route_unmapped, leads do not create, replace, or activate a journey objective, and no choices, rewards, or outcomes are disclosed",
+    "[[kind,root_id,title,district,access],...] optional aftermath leads. access=here|mapped|route_unmapped. Leads do not create, replace, or activate a journey objective, and no choices, rewards, or outcomes are disclosed.",
   opportunity_leads_deferred:
     "positive count of optional aftermath leads whose details return after the current journey decision; opportunity_leads is omitted while deferred",
   opportunity_leads_truncated: "true when more optional aftermath leads exist than listed",
   hidden:
-    "[areas, jobs, sites, quests] counts not currently listed at this town; jobs include undiscovered jobs plus discovered, incomplete authored job scenes with no legal options currently available. Scout, talk, or explore can reveal more.",
+    "[areas,jobs,sites,quests] counts not currently listed here. Jobs include undiscovered jobs plus discovered, incomplete authored job scenes with no legal options currently available. Scout, talk, or explore to reveal more.",
   roads:
-    "[[dest_town_id, est_minutes_incl_delays, supplies_needed, fatigue_0to100_on_arrival], ...] direct roads from here; each cost is that one road's own, which travel_overworld_session charges. A multi-leg detour in route_options can be cheaper.",
+    "[[dest_town_id,minutes_with_delays,supplies_needed,arrival_fatigue_0to100],...] direct roads. travel_overworld_session charges this one-road cost. A route_options detour may be cheaper.",
   roads_truncated: "true when more roads exist than listed",
   area_routes:
     "[[area_route_id, dest_area_id, minutes], ...] walking routes for move_overworld_session_area",
@@ -500,29 +500,29 @@ export const OVERWORLD_COMPACT_LEGEND = {
   contacts: "[[character_id, name], ...] people here (talk_overworld_session_contact)",
   events: "[[event_id, title], ...] local events (investigate/resolve_overworld_session_event)",
   event_leads:
-    "[[event_id, summary, next_prerequisite], ...] blocked authored local events; events supplies each title. Read the concise summary and take the named prerequisite before detailed scene terms and choices appear",
+    "[[event_id,summary,next_prerequisite],...] authored events that are not ready. Complete next_prerequisite to reveal the scene and choices.",
   event_scenes:
-    "[[event_id, scene_id, prompt, required_poi_id, required_contact_id, [required_quest_ids], [forbidden_quest_ids], [[option_id, title, minutes, renown, preview, consequence]]], ...] authored event scenes; complete the named setup and requirements, then investigate before choosing",
+    "[[event_id,scene_id,prompt,required_poi_id,required_contact_id,[required_quest_ids],[forbidden_quest_ids],[[option_id,title,minutes,renown,preview,consequence]]],...] authored event scenes. Complete the listed setup, investigate, then choose a legal option.",
   event_choices:
     "[[event_id, option_id], ...] currently legal authored event choices; call resolve_overworld_session_event with these exact ids",
   local_refs_truncated:
     "keys among areas/poi/contacts/events/jobs/sites/quests whose lists were capped",
   jobs: "[[job_id, title], ...] discovered jobs (work_overworld_session_job)",
   job_scenes:
-    "[[job_id, scene_id, prompt, required_poi_id, required_contact_id, [required_quest_id], [[option_id, title, minutes, renown, preview, consequence]]], ...] authored job scenes; complete the named setup before choosing",
+    "[[job_id,scene_id,prompt,required_poi_id,required_contact_id,[required_quest_id],[[option_id,title,minutes,renown,preview,consequence]]],...] authored jobs. Complete the listed setup before choosing.",
   job_choices:
     "[[job_id, option_id], ...] currently legal authored job choices; call work_overworld_session_job with these exact ids",
   remembered_jobs:
     "[[job_id, title, area_id], ...] discovered unfinished jobs in other known areas; walk to area_id via area_routes before work_overworld_session_job",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
   quests:
-    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview|null, consequence|null, strategic_comparison|null]], selected_approach_id|null]?], ...] discovered quest leads. Started quest rows omit launch because starting them again is illegal and the accepted start receipt plus persistent journal own the selected terms. When quest_id is currently named by quest_starts and an option has a dedicated strategic comparison, preview and consequence are null to remove duplicate launch prose while strategic_comparison keeps its decision-complete route tradeoff; options without that dedicated comparison retain full preview and consequence. Exact cost, availability, and projected arrival remain in every unstarted row, and full launch prose returns in the accepted action receipt. Choose one available approach, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
+    "[[quest_id,title,anchor_area_id,[launch_id,prompt,[[approach_id,title,minutes,supplies_cost,fatigue_gained,available|null,minutes_after|null,supplies_after|null,fatigue_after|null,condition_after|null,blocked_reason|null,preview|null,consequence|null,strategic_comparison|null]],selected_approach_id|null]?],...] discovered quests. Started quest rows omit launch because starting them again is illegal; the accepted result and journal keep the selected terms. To start a quest, choose an available approach and move to anchor_area_id, which must equal here[3]. Use area_routes, then call start_overworld_session_quest with a row from quest_starts. When strategic_comparison is present, it replaces duplicate preview text. Other options keep preview and consequence. Exact costs and arrival remain.",
   quest_start_locations:
-    "[[quest_id, anchor_area_name], ...] location requirement for visible unstarted quests anchored outside here[3]; advisory only, not a legal launch menu. Move there via area_routes, then use quest_starts when present",
+    "[[quest_id,anchor_area_name],...] location requirement for visible quests in another area. Move there with area_routes. This is advisory only, not a legal start list; use quest_starts.",
   quest_starts:
     "[[quest_id, approach_id|null], ...] currently legal quest launches; call start_overworld_session_quest with these exact quest_id and approach_id values (omit approach_id when null)",
   pending_road:
-    "{id, edge: road_id, route: route_name, where: [from_town, to_town, at_time], event: [road_event_id, risk_text, title, summary], options: [[strategy, label, minutes, supplies_cost, fatigue_gained, renown_gained], ...], next_action: {tool, argument, values_from}} unresolved on-route scene; call next_action.tool with next_action.argument set from next_action.values_from, then resolve it before town actions or more travel",
+    "{id,edge:road_id,route:route_name,where:[from_town,to_town,at_time],event:[road_event_id,risk_text,title,summary],options:[[strategy,label,minutes,supplies_cost,fatigue_gained,renown_gained],...],next_action:{tool,argument,values_from}} unresolved road scene. Call next_action.tool with its argument set to one values_from entry. Resolve it before any town action or more travel.",
   journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
   travel_log:
     "[[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null], ...] recent trips; the immediate travel result extends that tuple with [road_event_risk|null, road_event_title|null, road_event_summary|null]",

@@ -31,7 +31,7 @@ const QUIET_DEEP = "trace_winter_wildlife_corridor_with_witness_points";
 const CUSTODY_FAST = "secure_minimum_bloodshed_custody_marks";
 const CUSTODY_DEEP = "trace_bloodshed_chain_of_custody_with_witness_points";
 const OUTCOME_NEUTRAL_EVENT_PROMPT =
-  "Emery offers two lawful permanent records for the damaged crossing. Choose one irreversible record; the later corridor survey must match the access promise and account entered here.";
+  "Choose one permanent crossing policy. Your later corridor-survey choices must follow it. A bloodshed evidence option appears only after a Wolf-Winter result with wolf deaths.";
 const CIVIC_RECOVERY = "albany:works_public_shift_civic_rest";
 const FULL = { compact_context: false, compact_result: false } as const;
 
@@ -241,8 +241,8 @@ describe("Albany Greenway trail policy and corridor survey", () => {
       .journalEntries.find((entry) => entry.id.startsWith("talk:albany_city__greenway__contact@"));
 
     expect(contact?.id).toBe("talk:albany_city__greenway__contact@wolf_full_combat_bloodshed");
-    expect(contact?.text).toMatch(/full combat count/i);
-    expect(contact?.text).toMatch(/chain-of-custody survey/i);
+    expect(contact?.text).toMatch(/cattle survived[^]*all three wolves died/i);
+    expect(contact?.text).toMatch(/bloodshed[^]*evidence survey/i);
     expect(contact?.text).not.toMatch(/pre-feed can absorb/i);
   });
 
@@ -267,8 +267,8 @@ describe("Albany Greenway trail policy and corridor survey", () => {
       expect(contact?.id).toBe(
         "talk:albany_city__greenway__contact@wolf_pack_diverted_after_blood",
       );
-      expect(contact?.text).toMatch(/exact mixed-line tally/i);
-      expect(contact?.text).toMatch(/accountable custody survey/i);
+      expect(contact?.text).toMatch(/one dead wolf[^]*two living wolves[^]*two missing cattle/i);
+      expect(contact?.text).toMatch(/bloodshed[^]*evidence survey/i);
       expect(contact?.text).not.toMatch(shadowedCopy);
     },
   );
@@ -282,7 +282,9 @@ describe("Albany Greenway trail policy and corridor survey", () => {
     ]);
     expect(session.compactView().event_choices).toEqual(session.view().eventChoices);
     expect(session.compactView().event_scenes?.[0]?.slice(0, 2)).toEqual([EVENT, EVENT_SCENE]);
-    expect(() => session.resolveEvent(EVENT)).toThrow(/Choose one authored option/i);
+    expect(() => session.resolveEvent(EVENT)).toThrow(
+      /Choose one option for Albany Greenway: trail sign damage/i,
+    );
 
     const api = createToolApi({ root: process.cwd() });
     const full = api.restore_overworld_session({ ...FULL, snapshot: session.snapshot() });
@@ -309,7 +311,9 @@ describe("Albany Greenway trail policy and corridor survey", () => {
     ]);
 
     session.resolveEvent(EVENT, PUBLIC);
-    expect(() => session.resolveEvent(EVENT, QUIET)).toThrow(/different authored option/i);
+    expect(() => session.resolveEvent(EVENT, QUIET)).toThrow(
+      /already resolved with a different option/i,
+    );
     expect(session.view().jobChoices).toEqual([
       [JOB, PUBLIC_FAST],
       [JOB, PUBLIC_DEEP],
@@ -573,7 +577,7 @@ describe("Albany Greenway trail policy and corridor survey", () => {
       const deepSession = authorPolicy(policy, WORLD, route.endingId, route.endingTitle);
       expect(fastSession.view().jobChoices).toEqual(legal.map((option) => [JOB, option]));
       for (const option of forbidden) {
-        expect(() => fastSession.workLocalJob(JOB, option)).toThrow(/not available/i);
+        expect(() => fastSession.workLocalJob(JOB, option)).toThrow(/unavailable/i);
       }
 
       const fastRenown = fastSession.view().regionRenown[REGION] ?? 0;

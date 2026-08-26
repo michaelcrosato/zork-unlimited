@@ -24,7 +24,7 @@ const WOLF = WORLD.quests.find((quest) => quest.id === LEAD.target_quest)!;
 const APPROACH = WOLF.launch!.options[0]!.id;
 const FULL = { compact_context: false, compact_result: false } as const;
 const JUNE_TIMING =
-  "Talking takes 15 minutes. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.";
+  "Talking takes 15 minutes. Let June Control Cattle Safety: 15 minutes additional, 30 minutes total; Ask June to Follow Your Orders: 5 minutes additional, 20 minutes total; Travel Alone: no added time, 15 minutes total.";
 
 function moveToStation(session: OverworldSession): void {
   if (session.view().currentArea?.id === PREPARATION.area) return;
@@ -60,7 +60,7 @@ function chooseSupportSpoke(session: OverworldSession, spoke: SupportSpoke): voi
   }
   session.talkToCharacter(ALLY.contact);
   expect(session.journey().storyChoice).toMatchObject({ id: ALLY.id, kind: "ally" });
-  expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/second rider/i);
+  expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/open story option/i);
   session.chooseJourneyStory(ALLY.options[0]!.id);
 }
 
@@ -175,7 +175,7 @@ describe("optional Station departure interactions", () => {
     );
     expect(compact.station_dispatch_board?.[5]).toEqual([
       "station_dispatch:review_optional_support",
-      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+      "Optional: a field kit using Repair, Streetwise, or Mediation; plus Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
     ]);
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toEqual(
       expect.arrayContaining([
@@ -191,32 +191,26 @@ describe("optional Station departure interactions", () => {
         ),
     ).toEqual(["Field kit", "Relief wagon"]);
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "inspect_overworld_session_story(story_choice_id)",
-    );
-    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain("versioned short comparison");
-    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain("option_id");
-    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "only that option's new detail",
+      "Inspect one story_choice_id",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "same bounded authenticated departure_recap",
+      "optionally inspect one visible option_id",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "option detail also returns authenticated selected terms",
+      "Field-kit (preparation), relief-wagon (relief_allocation), and second-rider (ally/field_team)",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "other option detail adds no exact terms",
+      "details include exact selected terms",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "or world context beyond that recap",
+      "Choose with choose_overworld_session_story",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "choose_overworld_session_story(choice)",
+      "include story_choice_id only when option ids overlap",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "include story_choice_id only to disambiguate overlapping option ids",
+      "You may depart without support",
     );
-    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain("story.options[*].id");
 
     const detached = session.view().departureInteractions[0]!;
     (detached.inspect.arguments as { story_choice_id: string }).story_choice_id = "forged";
@@ -250,7 +244,7 @@ describe("optional Station departure interactions", () => {
     );
     expect(afterPreparationBoard?.[5]).toEqual([
       "station_dispatch:review_optional_support",
-      "Optional support: Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+      "Optional: Albany's last relief wagon or June as a cattle-safety rider. Review only what interests you.",
     ]);
 
     session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
@@ -276,7 +270,7 @@ describe("optional Station departure interactions", () => {
         questId: WOLF.id,
         questTitle: WOLF.title,
         status: "ready",
-        guidance: `Optional second rider: ${JUNE_TIMING} Ask ${june.name} about cattle-first authority, or leave for ${WOLF.title} alone now.`,
+        guidance: `Optional second rider: ${JUNE_TIMING} Talk to ${june.name} to choose their role, or leave alone for ${WOLF.title}.`,
         action: {
           tool: "talk_overworld_session_contact",
           characterId: june.id,
@@ -295,10 +289,10 @@ describe("optional Station departure interactions", () => {
       session.compactView().station_dispatch_board,
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_contact_leads).toContain(
-      "talk_overworld_session_contact(character_id: contact_id)",
+      "When status=ready, talk to contact_id",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_contact_leads).toContain(
-      "leaves quest_id launch legal",
+      "The quest can always start solo",
     );
     expect(session.snapshot()).toEqual(beforePresentation);
     expect(session.journey().acceptedDecisions).toBe(decisionsBeforePresentation);
@@ -328,7 +322,7 @@ describe("optional Station departure interactions", () => {
     expect(session.view().departureContactLeads).toEqual([]);
     expect(session.compactView().departure_contact_leads).toBeUndefined();
     expect(session.journey().storyChoice).toMatchObject({ id: ALLY.id, kind: "ally" });
-    expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/second rider/i);
+    expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/open story option/i);
   });
 
   it.each(ALLY.options.map((option) => [option.id, option.terms.minutes] as const))(
@@ -392,8 +386,8 @@ describe("optional Station departure interactions", () => {
     });
     expect(inspected.story).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
     expect(inspected.story.message).toBe(
-      "Albany Station: ready to depart now, or choose one field kit; " +
-        "relief-wagon and riding choices are separate.",
+      "You can leave Albany Station now or choose one field kit. " +
+        "The relief wagon and June are separate choices.",
     );
     expect(inspected.story.message).not.toMatch(
       /field packet|inspect a card|exact check|recovery/i,
@@ -456,8 +450,8 @@ describe("optional Station departure interactions", () => {
       ...allocationInteraction.inspect.arguments,
     });
     expect(allocationStory.story.message).toBe(
-      "Albany Station: ready to depart now, or choose the relief wagon's job; " +
-        "field-kit and riding choices are separate.",
+      "You can leave Albany Station now or assign the relief wagon. " +
+        "The field kit and June are separate choices.",
     );
     expect(allocationStory.story.message).not.toMatch(/relief-capacity choice|inspect a card/i);
     expect(allocationStory.story.message).not.toMatch(

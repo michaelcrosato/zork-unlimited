@@ -19,11 +19,11 @@ export type OpeningReliefOathStandardPacketContext = Readonly<{
 }>;
 
 export const OPENING_RELIEF_OATH_CUSTOMIZE_REVEAL_ID = "customize_duty_and_evidence" as const;
-export const OPENING_RELIEF_OATH_CUSTOMIZE_LABEL = "Customize promise and report" as const;
+export const OPENING_RELIEF_OATH_CUSTOMIZE_LABEL = "Choose promise and report separately" as const;
 export const OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION =
-  "Open the four-plan outcome compass; this records only the review, then lets you choose a promise and report separately." as const;
+  "Compare all four field plans before choosing. This review selects nothing. You can then choose a promise and report separately." as const;
 export const OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS =
-  "HUNT — Outcome: hold Cade's ground, herd, relief stores in combat. Cost or risk: wolves may die; failure risks cattle/line. Later: bloodshed alters Greenway work; damage remains. LURE — Outcome: move pack beyond breach; keep herd. Cost or risk: Cade's last feed, broken paling; first-cast foul risks two cattle. Later: broken boundary or scattered cattle alter Station response. DRIVE — Outcome: move people and herd clear; force the living pack away. Cost or risk: abandon the outer steading; crisis costs a wound, two cattle, or the rig. Later: the line and chosen loss remain. FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost or risk: no retreat; expose property for Cade's help or spend public seals without it. Later: terms remain; a no-loss hold opens no Cade repair dispatch. No plan is recommended or committed. Review recorded; no choice or decision accepted." as const;
+  "HUNT — Fight the wolves to protect the farm, herd, and supplies. Wolves may die; failure can cost cattle or damage the fence. Bloodshed changes later Greenway work. LURE — Use Cade's last feed to lead the wolves away and keep the herd. The fence breaks, and a failed first feed can cost two cattle. DRIVE — Move the people and herd out, forcing the living pack away. The farm is abandoned, and the crisis costs a wound, two cattle, or the rig. FORTIFY — Keep the household, herd, and wolves apart until dawn. You cannot retreat; choose between exposing property with Cade's help or spending public seals without it. Review only: no plan is selected." as const;
 
 /**
  * Project the authored four-plan compass only after the session has accepted
@@ -67,35 +67,37 @@ const STANDARD_PACKET_SUPPORT_COPY: Readonly<
   >
 > = Object.freeze({
   "albany:doctrine_fortify_breach": Object.freeze({
-    dispatchLabel: "Ready-made dispatch — Full Compact promise + Rowan's civic report",
+    dispatchLabel: "Ready-made setup — Full Compact + Rowan's report",
     expectedProfileId: "albany:ironhands_repairer",
     expectedReliefOathOptionId: "albany:oath_full_compact_duty",
-    expectedReliefOathTitle: "Take Full Compact Duty",
+    expectedReliefOathTitle: "Accept Full Compact Authority",
     expectedLeadSourceOptionId: "albany:source_rowan_civic_docket",
-    expectedLeadSourceTitle: "Leave on Rowan's Civic Docket",
-    expectedTriggerCategory: "Repair 4; first public-seal fortification check is 2 DC easier.",
-    outcome: "Reinforce Cade's failing boundary under Albany's public promise.",
+    expectedLeadSourceTitle: "Use Rowan's Public Report",
+    expectedTriggerCategory: "Repair 4; first public-seal FORTIFY check is 2 DC easier.",
+    outcome: "Start with public authority and a stronger first FORTIFY Repair check.",
   }),
   "albany:doctrine_road_warden_aid_route": Object.freeze({
-    dispatchLabel: "Ready-made dispatch — Aid-Only promise + Hayden's frost report",
+    dispatchLabel: "Ready-made setup — Aid-Only + Hayden's report",
     expectedProfileId: "albany:road_warden",
     expectedReliefOathOptionId: "albany:oath_limited_aid_only",
-    expectedReliefOathTitle: "Negotiate Aid-Only Duty",
+    expectedReliefOathTitle: "Accept Aid-Only Terms",
     expectedLeadSourceOptionId: "albany:source_hayden_frost_report",
-    expectedLeadSourceTitle: "Take Hayden's Frost-Heave Report",
+    expectedLeadSourceTitle: "Use Hayden's Frost Report",
     expectedTriggerCategory:
-      "Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
-    outcome: "Carry winter-road judgment and flexible, life-first aid to Cade's steading.",
+      "Defense starts at 4. A clean first LURE feed prevents the final +1 cattle alarm. A split rail can help HUNT.",
+    outcome:
+      "Start with Defense 4, the clean-feed LURE benefit, and Hayden's conditional HUNT brace.",
   }),
   "albany:doctrine_independent_drive": Object.freeze({
-    dispatchLabel: "Ready-made dispatch — personal bond + Rowan's civic report",
+    dispatchLabel: "Ready-made setup — Personal Bond + Rowan's report",
     expectedProfileId: "albany:unaffiliated_courier",
     expectedReliefOathOptionId: "albany:oath_unaffiliated_personal_bond",
-    expectedReliefOathTitle: "Remain an Unaffiliated Helper",
+    expectedReliefOathTitle: "Use a Personal Bond",
     expectedLeadSourceOptionId: "albany:source_rowan_civic_docket",
-    expectedLeadSourceTitle: "Leave on Rowan's Civic Docket",
-    expectedTriggerCategory: "Streetwise 4; first shutter-signal check drops from DC 12 to DC 10.",
-    outcome: "Keep the dispatch independent and work through back roads and shutter signals.",
+    expectedLeadSourceTitle: "Use Rowan's Public Report",
+    expectedTriggerCategory:
+      "Streetwise 4; first DRIVE shutter-signal check drops from DC 12 to DC 10.",
+    outcome: "Start independent with an easier first DRIVE shutter-signal check.",
   }),
 });
 
@@ -135,11 +137,11 @@ function startingDoctrineDispatchLabel(
   const matchesKnownCopy = matchesKnownStartingDoctrineMapping(doctrine, oathTitle, sourceTitle);
   return matchesKnownCopy && copy
     ? copy.dispatchLabel
-    : `Ready-made dispatch — ${oathTitle.replace(/\bDuty\b/u, "promise")} + ${sourceTitle}`;
+    : `Ready-made setup — ${oathTitle} + ${sourceTitle}`;
 }
 
 function reliefOathDisplayLabel(title: string): string {
-  return title.replace(/\bDuty\b/gu, "Promise");
+  return title;
 }
 
 /** Project Albany's disclosed access-and-duty terms onto the journey choice surface. */
@@ -179,7 +181,7 @@ export function presentOpeningReliefOath(
           ),
           exactBenefit: doctrine.trigger_category,
           immediateCost: doctrine.immediate_cost,
-          giveUp: "Other duty/evidence pairs close.",
+          giveUp: "Other promise/report pairs close.",
         });
         return Object.freeze({
           ...exactReceipt,
@@ -244,7 +246,7 @@ export function presentOpeningReliefOath(
     id: parsed.id,
     kind: "relief_oath" as const,
     message: standardPacket
-      ? `${parsed.title}. The ready-made dispatch pairs one Wolf-Winter promise with one report; customization lets you mix them. Every field plan stays open. ${parsed.message}`
+      ? `${parsed.title}. Use the ready-made promise and report, or choose them separately. Every field plan stays open. ${parsed.message}`
       : `${parsed.title}. ${parsed.message}`,
     options,
     ...(progressiveDisclosure ? { progressiveDisclosure } : {}),

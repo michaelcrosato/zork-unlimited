@@ -38,27 +38,27 @@ const CONDITIONS: Record<
 > = {
   opening_condition_firm_frozen_rail: {
     plan: "HUNT",
-    objectName: "firm frozen rail — HUNT braces its first rail without a roll",
+    objectName: "firm frozen rail — HUNT brace needs no check",
     ground:
-      "TONIGHT'S GROUND — firm frozen rail. HUNT braces its first rail without a roll; wolves and later combat remain.",
+      "FIELD CONDITION — firm frozen rail. At the opening, BRACE firm-seated paling-rail succeeds without a check. It does not change later fights.",
   },
   opening_condition_steady_scent_channel: {
     plan: "LURE",
-    objectName: "steady scent channel — LURE's first cast runs clean without a roll",
+    objectName: "steady scent channel — first LURE LAY action needs no check",
     ground:
-      "TONIGHT'S GROUND — steady scent channel. LURE's first cast runs clean without a roll; feed and alarm remain.",
+      "FIELD CONDITION — steady scent channel. At the opening, LAY downwind feed line WITH Cade's winter-feed sack succeeds without a check. Later feed and cattle-alarm costs remain.",
   },
   opening_condition_open_ash_lane: {
     plan: "DRIVE",
-    objectName: "open ash lane — DRIVE's first signal runs clean without a roll",
+    objectName: "open ash lane — first DRIVE signal needs no check",
     ground:
-      "TONIGHT'S GROUND — open ash lane. DRIVE's first signal runs clean without a roll; charge two and Crisis remain.",
+      "FIELD CONDITION — open ash lane. At the opening, FIRE drive shutter signal WITH Cade's two-charge signal-and-rope rig succeeds without a check. The second charge and crisis priority remain.",
   },
   opening_condition_sound_lower_frame: {
     plan: "FORTIFY",
-    objectName: "sound lower frame — FORTIFY's first seal seats without a roll",
+    objectName: "sound lower frame — first FORTIFY seal needs no check",
     ground:
-      "TONIGHT'S GROUND — sound lower frame. FORTIFY's first seal seats without a roll; stance and dawn remain.",
+      "FIELD CONDITION — sound lower frame. During FORTIFY, the offered item-on-frame SEAT action succeeds without a check. Material and dawn-watch costs remain.",
   },
 };
 
@@ -287,9 +287,9 @@ describe("Wolf-Winter seeded field conditions", () => {
         includeActions: true,
       });
       expect(full.dialogue?.npc_text).toContain(expected.ground);
-      expect(full.dialogue?.npc_text.length).toBeLessThanOrEqual(360);
+      expect(full.dialogue?.npc_text.length).toBeLessThanOrEqual(385);
       expect(compact.dialogue).toEqual(["houndsman", full.dialogue?.npc_text]);
-      expect(compact.dialogue?.[1]).toContain("TONIGHT'S GROUND —");
+      expect(compact.dialogue?.[1]).toContain("FIELD CONDITION —");
       expect(full.available_actions.map((candidate) => candidate.id).slice(0, 4)).toEqual(PLAN_IDS);
 
       const bytes = save(state, loaded.compiled.contentHash, "rpg", {
@@ -331,7 +331,7 @@ describe("Wolf-Winter seeded field conditions", () => {
 
     let hunt = act(structuredClone(root), "ask_hunt");
     expect(action(hunt, "ask_prepare_hunt").command).toMatch(
-      /^ask: LEAVE REVIEW — HUNT:[^]*no state change[^]*FINAL COMMITMENT[^]*cross north[^]*RELEASE JUNE if offered/i,
+      /^ask: LEAVE REVIEW — Do not choose HUNT[^]*Go north or RELEASE JUNE to choose it[^]*wolves may die and other plans close/i,
     );
     hunt = act(hunt, "ask_prepare_hunt");
     expect(actionIds(hunt)).toContain("go_north");
@@ -340,7 +340,7 @@ describe("Wolf-Winter seeded field conditions", () => {
     expect(hunt.current).toBe("paling_gap");
     hunt = act(hunt, "go_south");
     hunt = act(hunt, "talk_houndsman");
-    expect(buildRpgObservation(index, hunt).dialogue?.npc_text).not.toContain("TONIGHT'S GROUND —");
+    expect(buildRpgObservation(index, hunt).dialogue?.npc_text).not.toContain("FIELD CONDITION —");
     for (const closed of ["ask_lure", "ask_drive", "ask_fortify"]) {
       expect(actionIds(hunt)).not.toContain(closed);
     }
@@ -362,7 +362,7 @@ describe("Wolf-Winter seeded field conditions", () => {
 
     for (const state of [lure, drive, fortify]) {
       expect(buildRpgObservation(index, state).dialogue?.npc_text).not.toContain(
-        "TONIGHT'S GROUND —",
+        "FIELD CONDITION —",
       );
     }
   });
@@ -380,10 +380,14 @@ describe("Wolf-Winter seeded field conditions", () => {
     expect(hunt.flags.rail_split).not.toBe(true);
     const resolvedRail = index.objects.get("paling_rail");
     if (!resolvedRail) throw new Error("Missing paling rail");
-    expect(objectDescription(resolvedRail, hunt)).toMatch(/set hard across the breach/i);
+    expect(objectDescription(resolvedRail, hunt)).toMatch(
+      /braced fallen paling-rail[^]*combat funnel/i,
+    );
     expect(objectDescription(resolvedRail, hunt)).not.toMatch(/wedg/i);
     const postBrace = buildRpgObservation(index, hunt);
-    expect(postBrace.description).toMatch(/set hard across it/i);
+    expect(postBrace.description).toMatch(
+      /braced fallen paling-rail slows its attack[^]*cannot redirect it alive/i,
+    );
     expect(postBrace.description).not.toMatch(/wedg/i);
     expect(postBrace.enemies_present.map((enemy) => enemy.id)).toEqual(["yearling_wolf"]);
 
@@ -418,9 +422,11 @@ describe("Wolf-Winter seeded field conditions", () => {
     expect(ridgeLure.vars.cattle_alarm).toBe(1);
     const ridgeBeat = perform(ridgeLure, "use_winter_feed_sack_on_downwind_feed_line", "worst");
     expect(ridgeBeat.state.vars.cattle_alarm).toBe(2);
-    expect(ridgeBeat.state.journal.at(-1)).toMatch(/cast adds 1[^]*arrival's prior 1[^]*alarm 2/i);
+    expect(ridgeBeat.state.journal.at(-1)).toMatch(
+      /feed action raises cattle alarm by 1[^]*exposed approach's 1/i,
+    );
     expect(narration(ridgeBeat.events)).toMatch(
-      /arrival already stirred the herd once[^]*cast adds its ordinary second alarm beat[^]*alarm is now 2/i,
+      /action raises cattle alarm by 1[^]*bringing it to 2 after the exposed approach/i,
     );
 
     let drive = prepareDrive("opening_condition_open_ash_lane");
@@ -536,7 +542,7 @@ describe("Wolf-Winter seeded field conditions", () => {
     expect(lure.endingId).toBe("ending_pack_diverted");
     expect(lure.inventory).not.toContain("winter_feed_sack");
     expect(lure.vars.cattle_alarm).toBe(3);
-    expect(buildRpgObservation(index, lure).ending?.text).toMatch(/finite winter feed is gone/i);
+    expect(buildRpgObservation(index, lure).ending?.text).toMatch(/Cade's winter feed is gone/i);
     expect(lure.flags.breach_braced).not.toBe(true);
 
     let drive = prepareDrive("opening_condition_open_ash_lane");
@@ -555,7 +561,7 @@ describe("Wolf-Winter seeded field conditions", () => {
     expect(drive.inventory).not.toContain("drive_signal_rope_kit");
     drive = act(drive, "use_reserve_spent_evacuation");
     expect(drive.endingId).toBe("ending_drive_reserve_spent");
-    expect(buildRpgObservation(index, drive).ending?.text).toMatch(/outer steading[^]*abandoned/i);
+    expect(buildRpgObservation(index, drive).ending?.text).toMatch(/outer defense is abandoned/i);
 
     let fortify = prepareFortify("opening_condition_sound_lower_frame");
     fortify = act(fortify, "use_cade_household_shutters_on_fortify_outer_seal", "worst");
@@ -586,7 +592,9 @@ describe("Wolf-Winter seeded field conditions", () => {
         if (!strike) throw new Error(`No legal ${enemy} combat action`);
         if (strike === "maneuver_flank_wolf_funnel_thrust") {
           const funnel = perform(hunt, strike, "best");
-          expect(narration(funnel.events)).toMatch(/braced rail narrows/i);
+          expect(narration(funnel.events)).toMatch(
+            /braced fallen paling-rail's funnel[^]*PIN[^]*WRENCH the paling's brace-stake free[^]*saves the stake/i,
+          );
           expect(narration(funnel.events)).not.toMatch(/wedg/i);
           hunt = funnel.state;
         } else {
@@ -688,12 +696,16 @@ describe("Wolf-Winter seeded field conditions", () => {
         });
         const seal = index.objects.get("fortify_outer_seal");
         if (!seal) throw new Error("Missing fortify outer seal");
-        expect(full.description).toMatch(/sound lower frame[^]*without a Repair roll/i);
+        expect(full.description).toMatch(
+          /without a Repair check[^]*sound lower frame guarantees success/i,
+        );
         expect(full.description).not.toMatch(
           /lower the shown Repair difficulty|a miss cannot retry/i,
         );
         expect(compact.text).toBe(full.description.trimEnd());
-        expect(objectDescription(seal, state)).toMatch(/sound lower frame[^]*without a roll/i);
+        expect(objectDescription(seal, state)).toMatch(
+          /SEAT[^]*without a Repair check[^]*sound lower frame guarantees success/i,
+        );
         expect(objectDescription(seal, state)).not.toMatch(/DC 10|DC 12|DC 14|miss/i);
       }
     }
@@ -712,7 +724,7 @@ describe("Wolf-Winter seeded field conditions", () => {
     support = act(support, "talk_houndsman");
     const supportResult = perform(support, "ask_current_support");
     const text = narration(supportResult.events);
-    expect(text).toMatch(/sound lower frame[^]*without a roll/i);
+    expect(text).toMatch(/sound lower frame[^]*without a check/i);
     expect(text).not.toContain("FORTIFY still rolls Repair");
     expect(text).not.toContain("Full Compact lowers the first Albany-authority FORTIFY seat by 2");
     expect(text).not.toContain("Works makes Cade's first FORTIFY seat DC 12");
@@ -726,7 +738,9 @@ describe("Wolf-Winter seeded field conditions", () => {
     nonFirm = act(nonFirm, "talk_houndsman");
     const nonFirmResult = perform(nonFirm, "ask_current_support");
     const nonFirmText = narration(nonFirmResult.events);
-    expect(nonFirmText).toContain("If tonight's ground is the firm frozen rail");
+    expect(nonFirmText).toContain(
+      "Firm frost makes its shown BRACE action succeed without a check",
+    );
     expect(nonFirmText).not.toContain("Tonight's firm frozen rail");
   });
 
@@ -739,17 +753,19 @@ describe("Wolf-Winter seeded field conditions", () => {
     };
     const scentStart = buildRpgObservation(index, scent);
     expect(scentStart.description).toMatch(
-      /ordinarily easing LURE's first feed cast[^]*tonight-ground fact can supersede/i,
+      /exposed ridge[^]*crosswind visible[^]*help the first LURE LAY check[^]*stronger field condition/i,
     );
     scent = act(scent, "use_exposed_ridge_last_mile");
     scent = act(scent, "talk_houndsman");
     expect(action(scent, "ask_lure").command).toMatch(
-      /Goal: move wolves alive; keep herd[^]*Cost: last feed \+ fence; first foul risks two cattle[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
+      /LURE — Move the wolves alive and protect the herd[^]*Costs Cade's last feed[^]*fence stays broken[^]*First-action failure adds 2 cattle alarm[^]*Review only/i,
     );
     scent = act(scent, "ask_lure");
     const scentPlan = dialogueSurface(scent);
-    expect(scentPlan.text).toMatch(/Tonight's steady scent channel[^]*cannot foul[^]*no roll/i);
-    expect(scentPlan.text).toMatch(/finite feed[^]*alarm[^]*later casts/i);
+    expect(scentPlan.text).toMatch(/steady scent channel[^]*LAY[^]*without a check/i);
+    expect(scentPlan.text).toMatch(
+      /Feed costs[^]*later CAST actions[^]*cattle-alarm changes remain/i,
+    );
     scent = act(scent, "ask_lure_back");
     const scentSupport = perform(scent, "ask_current_support");
     expect(narration(scentSupport.events)).toMatch(
@@ -771,15 +787,17 @@ describe("Wolf-Winter seeded field conditions", () => {
     ash = act(ash, "talk_houndsman");
     ash = act(ash, "ask_drive");
     const ashPlan = dialogueSurface(ash);
-    expect(ashPlan.text).toMatch(/open ash lane[^]*clean no-roll signal/i);
-    expect(ashPlan.text).toMatch(/ordinary first miss[^]*hurdle recovery/i);
-    expect(ashPlan.text).toMatch(/Crisis: wound\/two cattle\/rig/i);
+    expect(ashPlan.text).toMatch(/open ash lane removes that check instead/i);
+    expect(ashPlan.text).toMatch(/Failure cannot be retried[^]*loose drive hurdle/i);
+    expect(ashPlan.text).toMatch(/Crisis still costs[^]*6 HP, two cattle, or the rig/i);
     ash = act(ash, "ask_commit_drive");
     const ashCommitted = dialogueSurface(ash);
     expect(ashCommitted.text).toMatch(
-      /first call clean without a roll[^]*hurdle recovery is not needed/i,
+      /FIRE drive shutter signal WITH Cade's two-charge signal-and-rope rig without a check[^]*CAST byre rope-and-bell line WITH Cade's two-charge signal-and-rope rig/i,
     );
-    expect(ashCommitted.text).toMatch(/rope-bell[^]*unchanged Crisis/i);
+    expect(ashCommitted.text).toMatch(
+      /At Crisis[^]*persistent wound and 6 HP[^]*two lost cattle[^]*rig/i,
+    );
 
     let ashSupport = fresh("opening_condition_open_ash_lane");
     ashSupport = { ...ashSupport, vars: { ...ashSupport.vars, fieldcraft: 4 } };
@@ -809,32 +827,42 @@ describe("Wolf-Winter seeded field conditions", () => {
 
     let cade = act(supportedRoot(), "ask_fortify");
     const cadeInspect = dialogueSurface(cade);
-    expect(cadeInspect.text).toMatch(/SOUND-FRAME FORTIFY[^]*without a roll/i);
+    expect(cadeInspect.text).toMatch(/sound lower frame[^]*SEAT[^]*without a check/i);
     expect(cadeInspect.text).not.toMatch(/first DC|failed seal|recovered miss/i);
-    expect(action(cade, "ask_commit_cade_terms").command).toMatch(/roll-required failed seat/i);
+    expect(action(cade, "ask_commit_cade_terms").command).toMatch(
+      /CHOOSE FORTIFY \/ CADE[^]*Lose retreat[^]*expose Cade's property[^]*preserve Albany's seals[^]*get Cade's help after one failed seal[^]*permanently close other plans/i,
+    );
     cade = act(cade, "ask_commit_cade_terms");
     const cadeCommit = dialogueSurface(cade);
-    expect(cadeCommit.text).toMatch(/sound lower frame[^]*cleanly/i);
+    expect(cadeCommit.text).toMatch(
+      /SEAT Cade's two household shutters ON outer fortification frame without a check[^]*recovery help is not needed/i,
+    );
     expect(cadeCommit.text).not.toMatch(/failed first seat|first-seat|Repair opening|DC \d/i);
     cade = act(cade, "ask_leave");
     cade = act(cade, "talk_houndsman");
     const cadeStatus = dialogueSurface(cade);
-    expect(cadeStatus.text).toMatch(/sound lower frame[^]*seats the first cleanly/i);
+    expect(cadeStatus.text).toMatch(
+      /SEAT Cade's two household shutters ON outer fortification frame without a check[^]*recovery help is not needed/i,
+    );
     expect(cadeStatus.text).not.toMatch(/failed first seat|first seat slips|emergency strip/i);
 
     let albany = act(supportedRoot(), "ask_fortify");
     expect(action(albany, "ask_commit_albany_authority").command).toMatch(
-      /roll-required failed seat/i,
+      /CHOOSE FORTIFY \/ ALBANY[^]*Lose retreat[^]*protect Cade's property[^]*spend Albany's seals[^]*no help after a failed outer seal[^]*close other plans/i,
     );
     albany = act(albany, "ask_commit_albany_authority");
     const albanyCommit = dialogueSurface(albany);
-    expect(albanyCommit.text).toMatch(/sound lower frame[^]*cleanly/i);
-    expect(albanyCommit.text).toMatch(/ordinary lower-peg DC benefit/i);
+    expect(albanyCommit.text).toMatch(
+      /SEAT Albany relief seal roll ON outer fortification frame without a check/i,
+    );
+    expect(albanyCommit.text).toMatch(/Full Compact's normal -2 DC does not add another benefit/i);
     expect(albanyCommit.text).not.toMatch(/failed first seat|first-seat slip|Repair opening by 2/i);
     albany = act(albany, "ask_leave");
     albany = act(albany, "talk_houndsman");
     const albanyStatus = dialogueSurface(albany);
-    expect(albanyStatus.text).toMatch(/sound lower frame[^]*seats the first band cleanly/i);
+    expect(albanyStatus.text).toMatch(
+      /SEAT Albany relief seal roll ON outer fortification frame without a check[^]*Full Compact's normal -2 DC does not add another benefit/i,
+    );
     expect(albanyStatus.text).not.toMatch(/failed first seat|first seat slips/i);
 
     let execution = supportedRoot();
@@ -877,9 +905,13 @@ describe("Wolf-Winter seeded field conditions", () => {
       const yardCompact = compactRpgObservation(yard, yard.available_actions, {
         includeActions: true,
       });
-      expect(yard.description).toMatch(/firm frozen rail[^]*one clean first brace/i);
-      expect(yard.description).toMatch(/Works does not replace or remove it/i);
-      expect(yard.description).toMatch(/Hayden's separate later byre-jamb route/i);
+      expect(yard.description).toMatch(
+        /firm frozen rail[^]*BRACE firm-seated paling-rail without a check/i,
+      );
+      expect(yard.description).toMatch(/Works packet does not change this/i);
+      expect(yard.description).toMatch(
+        /Hayden's later frost-jammed door-brace option will not be available/i,
+      );
       expect(yard.description).not.toMatch(/\bJune\b/i);
       expect(yard.available_actions.map((candidate) => candidate.id)).not.toContain(
         "talk_june_pike",
@@ -901,7 +933,9 @@ describe("Wolf-Winter seeded field conditions", () => {
       const compact = compactRpgObservation(full, full.available_actions, {
         includeActions: true,
       });
-      expect(full.description).toMatch(/firm frozen rail[^]*brace it once/i);
+      expect(full.description).toMatch(
+        /BRACE firm-seated paling-rail without a check[^]*combat funnel[^]*cannot redirect a living wolf/i,
+      );
       expect(compact.actions).toContain("brace_paling_rail");
     }
   });
@@ -917,14 +951,16 @@ describe("Wolf-Winter seeded field conditions", () => {
     const firmCompact = compactRpgObservation(firmObservation, firmObservation.available_actions, {
       includeActions: true,
     });
-    expect(firmObservation.description).toMatch(/firm frozen rail[^]*brace it once/i);
+    expect(firmObservation.description).toMatch(
+      /BRACE firm-seated paling-rail without a check[^]*combat funnel/i,
+    );
     expect(firmObservation.description).not.toMatch(/Wedge it/i);
     expect(firmCompact.text).toBe(firmObservation.description.trimEnd());
     expect(firmCompact.actions).toContain("brace_paling_rail");
     expect(firmCompact.actions).not.toContain("wedge_paling_rail");
     const rail = index.objects.get("paling_rail");
     if (!rail) throw new Error("Missing paling rail");
-    expect(objectDescription(rail, firm)).toMatch(/brace it once/i);
+    expect(objectDescription(rail, firm)).toMatch(/BRACE firm-seated paling-rail without a check/i);
     expect(objectDescription(rail, firm)).not.toMatch(/wedge it/i);
     assertNoFallback(firm);
 
@@ -971,24 +1007,30 @@ describe("Wolf-Winter seeded field conditions", () => {
     const cadeResult = perform(cade, "ask_byre");
     cade = cadeResult.state;
     expect(narration(cadeResult.events)).toMatch(
-      /firm frozen rail braces directly[^]*Neither turns a wolf alive/i,
+      /shown BRACE, WEDGE, SET, SPLICE, or BIND rail action[^]*HOLD the spear point[^]*TAKE the grey leader's true rush[^]*cannot redirect a wolf alive/i,
     );
-    expect(cade.journal.at(-1)).toMatch(/set the rail as tonight's ground allows/i);
+    expect(cade.journal.at(-1)).toMatch(
+      /follow the shown rail action[^]*shown HOLD\/TAKE pair[^]*cannot redirect a wolf alive/i,
+    );
 
     let june = fresh("opening_condition_firm_frozen_rail");
     june = { ...june, flags: { ...june.flags, june_pike_present: true } };
     june = act(june, "go_north");
     const juneYard = buildRpgObservation(index, june);
-    expect(juneYard.description).toMatch(/June holds the north gate/i);
+    expect(juneYard.description).toMatch(
+      /TALK TO Road Warden June Pike, then TALK TO old Cade the houndsman before going north/i,
+    );
     expect(juneYard.available_actions.map((candidate) => candidate.id)).toContain("talk_june_pike");
     june = act(june, "talk_houndsman");
     june = act(june, "ask_leave");
     june = act(june, "talk_june_pike");
     const juneResult = perform(june, "ask_commit_hunt_and_hold");
     expect(narration(juneResult.events)).toMatch(
-      /brace a firm rail[^]*wedge and bind an ordinary split[^]*HUNT still means a wolf can die/i,
+      /During HUNT[^]*exact rail action shown[^]*split-rail recovery[^]*rail only helps combat[^]*our agreement ends/i,
     );
-    expect(juneResult.state.journal.at(-1)).toMatch(/firm-braced[^]*ordinarily wedged and bound/i);
+    expect(juneResult.state.journal.at(-1)).toMatch(
+      /fallen paling-rail only helps combat during HUNT[^]*Going north chooses HUNT[^]*first wolf death ends her agreement/i,
+    );
   });
 
   it("keeps both overworld route previews strategy-neutral while stating their real tradeoffs", () => {
@@ -1001,13 +1043,17 @@ describe("Wolf-Winter seeded field conditions", () => {
     const stockway = launch.options.find(
       (option) => option.id === "albany:wolf_approach_sheltered_stockway",
     );
-    expect(ridge?.preview).toMatch(
-      /chooses no strategy[^]*inspect all four[^]*alarm 1[^]*independent ground fact before commitment[^]*supersede one matching first beat[^]*Other route mechanics are unchanged/i,
+    expect(ridge?.preview).toBe(
+      "Cost: 30 minutes, 1 supply, and 25 fatigue. Cattle alarm starts at 1. You can see the byre and weather clearly. This road does not choose a field plan.",
     );
-    expect(stockway?.preview).toMatch(
-      /chooses no strategy[^]*inspect all four[^]*alarm 0[^]*independent ground fact before commitment[^]*supersede one matching first beat[^]*Other route mechanics are unchanged/i,
+    expect(stockway?.preview).toBe(
+      "Cost: 75 minutes, 2 supplies, and 10 fatigue. Cattle alarm starts at 0. Hedges hide the byre and weather. This road does not choose a field plan.",
     );
-    expect(ridge?.summary).toMatch(/quickly[^]*more tiring[^]*clear sight/i);
-    expect(stockway?.summary).toMatch(/longer[^]*less tired[^]*herd calm/i);
+    expect(ridge?.summary).toBe(
+      "Reach Cade quickly with a clear view, but arrive more tired and alarm the cattle.",
+    );
+    expect(stockway?.summary).toBe(
+      "Keep the cattle calm and arrive less tired, but spend more time and supplies with a limited view.",
+    );
   });
 });

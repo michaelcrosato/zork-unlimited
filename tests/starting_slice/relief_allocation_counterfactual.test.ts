@@ -227,7 +227,7 @@ function finishStabilizedFortify(stance: Stance): GameState {
   });
   expect(state.flags[contract.oppositeStanceFlag]).not.toBe(true);
   expect(state.flags[contract.oppositeRecoveryFlag]).not.toBe(true);
-  expect(state.journal.join("\n")).toMatch(/mobile-stabilized seals hold through dawn/i);
+  expect(state.journal.join("\n")).toMatch(/stabilized seals hold until dawn with no HP loss/i);
   return state;
 }
 
@@ -264,8 +264,8 @@ describe("SS-F06 — finite Albany relief allocation counterfactual", () => {
       endingId: "ending_pack_diverted_cattle_scattered",
       vars: { cattle_alarm: 4 },
     });
-    expect(buildRpgObservation(index, cade).ending?.text).toMatch(/cattle whole/i);
-    expect(buildRpgObservation(index, resident).ending?.text).toMatch(/two animals are missing/i);
+    expect(buildRpgObservation(index, cade).ending?.text).toMatch(/whole herd survives/i);
+    expect(buildRpgObservation(index, resident).ending?.text).toMatch(/two cattle are missing/i);
 
     const failed = act(
       commitRidgeLure("cade", 26),
@@ -275,7 +275,7 @@ describe("SS-F06 — finite Albany relief allocation counterfactual", () => {
     expect(failed.flags).toMatchObject({ lure_trail_fouled: true });
     expect(failed.flags.yearling_redirected).not.toBe(true);
     expect(failed.vars.cattle_alarm).toBe(3); // ridge arrival 1 + full failed-cast 2
-    expect(failed.journal.join("\n")).toMatch(/no retry; alarm \+2/i);
+    expect(failed.journal.join("\n")).toMatch(/cannot be retried[^]*Cattle alarm rises by 2/i);
   });
 
   it.each(["cade", "authority"] as const)(

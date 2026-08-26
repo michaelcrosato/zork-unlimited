@@ -208,7 +208,7 @@ describe("opening relief oath authoring", () => {
       ),
     ).toBe(true);
     expect(categorizedPrompt.options[0]!.consequence).toBe(
-      "Benefit: First use 1. Cost: 10 minutes. Boundary: Public seals bind the fortification duty.",
+      "Benefit: First use 1. Cost: 10 minutes. Tradeoff: Public seals bind the fortification duty.",
     );
     expect(categorizedPrompt.options[0]!.consequence).not.toContain(
       categorized.options[0]!.preview,
@@ -466,11 +466,11 @@ describe("opening relief oath application and presentation", () => {
         tradeoff: scene.options[0]!.tradeoff,
       },
       consequence:
-        "Benefit: Take the Official Relief Oath Cost: 10 minutes. Boundary: Public seals bind the fortification duty.",
+        "Benefit: Take the Official Relief Oath Cost: 10 minutes. Tradeoff: Public seals bind the fortification duty.",
     });
     expect(prompt.options[2]!.consequence).toBe(
       "Benefit: Remain an Unaffiliated Helper Cost: no added time. " +
-        "Boundary: No public warrant or oath-gated requisition is granted.",
+        "Tradeoff: No public warrant or oath-gated requisition is granted.",
     );
     for (const option of prompt.options) {
       expect(Object.keys(option.summary ?? {}).sort()).toEqual([
@@ -478,7 +478,7 @@ describe("opening relief oath application and presentation", () => {
         "immediateCost",
         "tradeoff",
       ]);
-      expect(option.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
+      expect(option.consequence).toMatch(/^Benefit: .+ Cost: .+\. Tradeoff: .+$/);
       expect(openingSelectionReceiptWordCount(option.consequence)).toBeLessThanOrEqual(
         OPENING_SELECTION_RECEIPT_WORD_LIMIT,
       );

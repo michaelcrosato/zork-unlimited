@@ -218,7 +218,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(text).toContain(view.current.name);
     expect(text).toContain(`Supplies ${view.supplies}/${view.maxSupplies}`);
     expect(text).toContain("Roads:");
-    expect(text).toContain("Roads:\n  Type `go <road number>` to travel (e.g. `go 1`).");
+    expect(text).toContain("Roads:\n  Travel with `go <road number>` (for example, `go 1`).");
     expect(text).not.toMatch(/\.ya?ml/i); // public surface: no pack paths
   });
 
@@ -226,7 +226,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const session = new OverworldSession(WORLD);
     const text = render({ ...session.view(), exits: [] });
     expect(text).not.toContain("Roads:");
-    expect(text).not.toContain("Type `go <road number>` to travel (e.g. `go 1`).");
+    expect(text).not.toContain("Travel with `go <road number>` (for example, `go 1`).");
   });
 
   it("renders a certified lead's exact local anchor route without a scout detour", () => {
@@ -270,27 +270,25 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const readyBeforePreparation = render(session.view());
     expect(readyBeforePreparation).toContain("The Wolf-Winter field briefing:");
     expect(readyBeforePreparation).toContain("Depart now:");
+    expect(readyBeforePreparation).toContain("Optional support (`review support` for details):");
     expect(readyBeforePreparation).toContain(
-      "Optional support (independent; `review support` for detail):",
+      `Optionally choose one field kit for a specific danger at Cade's farm. \`inspect ${preparation.id}\``,
     );
     expect(readyBeforePreparation).toContain(
-      `Field kit: optionally choose one specialist kit for a named danger at Cade's steading. \`inspect ${preparation.id}\``,
+      `Optionally assign Albany's last wagon to one of three needs. The other two go without it. \`inspect ${allocation.id}\``,
     );
     expect(readyBeforePreparation).toContain(
-      `Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it. \`inspect ${allocation.id}\``,
-    );
-    expect(readyBeforePreparation).toContain(
-      `Second rider: optionally ask about cattle-first authority, or ride alone. \`talk ${initialFieldTeam.action.contactName}\``,
+      `Optionally ask June to manage cattle safety, or travel alone. \`talk ${initialFieldTeam.action.contactName}\``,
     );
     expect(readyBeforePreparation.indexOf("Depart now:")).toBeLessThan(
-      readyBeforePreparation.indexOf("Optional support (independent"),
+      readyBeforePreparation.indexOf("Optional support (`review support`"),
     );
     expect(readyBeforePreparation).not.toContain("One field kit: Field kit:");
     expect(readyBeforePreparation).not.toContain("relief wagon: Relief wagon:");
     expect(readyBeforePreparation).not.toContain("Second rider: Second rider:");
     const expandedBeforePreparation = renderStationDispatchBoard(session.view()).join("\n");
     expect(expandedBeforePreparation).toContain(
-      "Optional dispatch support — field kit, relief wagon, or second rider:",
+      "Optional support — field kit, relief wagon, or second rider:",
     );
     expect(expandedBeforePreparation).toContain("June Pike, second rider");
     expect(expandedBeforePreparation).toContain(
@@ -316,13 +314,13 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(ready).toContain(`\`inspect ${allocation.id}\``);
     expect(ready).toContain(`\`talk ${readyFieldTeam.action.contactName}\``);
     const preparedBoard = renderStationDispatchBoard(session.view()).join("\n");
-    expect(preparedBoard).toContain("Optional dispatch support — relief wagon or second rider:");
+    expect(preparedBoard).toContain("Optional support — relief wagon or second rider:");
     expect(preparedBoard).not.toContain("One field kit —");
     expect(preparedBoard).toContain(
       `Talk to ${readyFieldTeam.action.contactName}: \`talk ${readyFieldTeam.action.contactName}\``,
     );
     expect(session.view().stationDispatchBoard?.guidance).toBe(
-      "Ready to depart now with background, Wolf-Winter promise, report, and field kit set; one relief wagon or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.",
+      "You can leave now. Set: background, Wolf-Winter promise, report, and field kit. Optional: one relief wagon or second rider. They affect support, costs, or later results, not your field plan.",
     );
     expect(session.snapshot()).toEqual(readySnapshot);
     expect(session.journey().acceptedDecisions).toBe(readyDecisions);
@@ -339,14 +337,14 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(allied).not.toContain(`\`inspect ${preparation.id}\``);
     expect(allied).not.toContain(`\`inspect ${allocation.id}\``);
     expect(allied).not.toContain(`\`talk ${readyFieldTeam.action.contactName}\``);
-    expect(allied).not.toContain("Optional support (independent");
-    expect(allied).toContain("Already set: `review dispatch`.");
+    expect(allied).not.toContain("Optional support (`review support`");
+    expect(allied).toContain("Current plan: `review dispatch`.");
     expect(renderStationDispatchBoard(session.view())).toEqual([
-      "No optional dispatch support remains.",
-      "  Already set: `review dispatch`.",
+      "No optional support remains.",
+      "  Review your current plan: `review dispatch`.",
     ]);
     expect(session.view().stationDispatchBoard?.guidance).toBe(
-      "Ready to depart now with background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice set; no optional support remains.",
+      "You can leave now. Set: background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice. No optional support remains.",
     );
   });
 
@@ -359,15 +357,15 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const rendered = render(session.view());
 
     expect(rendered).toContain("Depart now:");
-    expect(rendered).toContain("Optional support (independent; `review support` for detail):");
-    expect(rendered).toContain("Already set: `review dispatch`.");
+    expect(rendered).toContain("Optional support (`review support` for details):");
+    expect(rendered).toContain("Current plan: `review dispatch`.");
     expect(rendered).not.toContain(bounded);
-    expect(bounded).toContain(`${recap.questTitle} dispatch recap:`);
-    expect(bounded).toContain("Plan slots and exact selected terms: `review dispatch`.");
+    expect(bounded).toContain(`${recap.questTitle} departure plan:`);
+    expect(bounded).toContain("Review all choices and costs: `review dispatch`.");
     for (const entry of recap.entries) {
       if (!entry.activeFieldTerm) continue;
       expect(bounded).not.toContain(entry.activeFieldTerm);
-      expect(terms).toContain(`Active term: ${entry.activeFieldTerm}`);
+      expect(terms).toContain(`Effect: ${entry.activeFieldTerm}`);
     }
     expect(bounded).not.toContain("Roads:");
     expect(bounded).not.toContain("Supplies ");
@@ -480,13 +478,11 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     );
     expect(text).toContain("choose <number|name>");
     expect(text).toContain("choose 1 — Take the ridge");
-    expect(text).toContain("Actual cost: 30 min, 1 supply, fatigue +25.");
-    expect(text).toContain(
-      "Projected arrival: Day 1, 08:30; 5 supplies remaining; fatigue 25; condition tired.",
-    );
-    expect(text).toContain("Commitment: The cattle will see the descent.");
+    expect(text).toContain("Cost: 30 min, 1 supply, fatigue +25.");
+    expect(text).toContain("Arrival: Day 1, 08:30; 5 supplies left; fatigue 25; condition tired.");
+    expect(text).toContain("If chosen: The cattle will see the descent.");
     expect(text).toContain("Requires 2 supplies; you have 1.");
-    expect(text).toContain("Projected time: Day 1, 09:15.");
+    expect(text).toContain("Arrival time: Day 1, 09:15.");
     expect(text).not.toMatch(/knowledge_|memory_|return_summary|import:/i);
 
     const options = quest.launch.options;
@@ -533,7 +529,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(story?.kind).toBe("registration");
 
     const text = renderJourneyGate(journey);
-    expect(text).toContain("! Story choice comparison");
+    expect(text).toContain("! Compare choices");
     for (const option of story!.options) {
       expect(text).toContain(option.label);
       expect(option.summary).toMatchObject({
@@ -573,8 +569,8 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     if (!preview) throw new Error("Expected locked Albany dawn dispatch preview.");
 
     const text = renderJourneyGate(journey);
-    expect(text).toContain("Next decision preview — locked until you Continue:");
-    expect(text).toContain("These are not selectable yet; choose Continue or End below.");
+    expect(text).toContain("If you continue, this choice comes next:");
+    expect(text).toContain("You cannot choose these yet. Choose Continue or End first.");
     for (const option of preview.options) {
       expect(text).toContain(`[locked] ${option.label}`);
       expect(text).toContain(option.consequence);
@@ -607,7 +603,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       expect(option.summary).not.toHaveProperty("fieldTriggerScope");
       expect(text).toContain(`Field kit: ${option.summary!.commitment}`);
       expect(text).not.toContain(`Check fit: ${option.summary!.checkFit}`);
-      expect(text).toContain(`Governing skill: ${option.summary!.checkFit}`);
+      expect(text).toContain(`Check skill: ${option.summary!.checkFit}`);
       expect(text.split(option.summary!.checkFit!)).toHaveLength(2);
       expect(text).toContain(`Cost: ${option.summary!.immediateCost}`);
       expect(text).toContain(`Give up: ${option.summary!.tradeoff}`);
@@ -654,13 +650,13 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const text = renderJourneyStatus(journey);
     expect(text).toContain(`Goal [${journey.goal.status}]: ${journey.goal.text}`);
     expect(text).toContain(`Guidance: ${journey.goalGuidance}`);
-    expect(text).toContain(`Goal passage: ${passage!.label}`);
-    expect(text).toContain(`${String(passage!.roadCount)} roads`);
-    expect(text).toContain(`${String(passage!.baseMinutes)} road min`);
+    expect(text).toContain(`Route to goal: ${passage!.label}`);
+    expect(text).toContain(`Route: ${String(passage!.roadCount)} roads`);
+    expect(text).toContain(`${String(passage!.baseMinutes)} min without delays`);
     expect(text).toContain(`${String(passage!.estimatedMinutes)} min estimated`);
-    expect(text).toContain(`Consequence: ${passage!.consequence}`);
-    expect(text).toContain(`Stop rule: ${passage!.stopRule}`);
-    expect(text).toContain("Action: `follow goal`");
+    expect(text).toContain(`Result: ${passage!.consequence}`);
+    expect(text).toContain(`Stops when: ${passage!.stopRule}`);
+    expect(text).toContain("Travel: `follow goal`");
   });
 });
 
@@ -705,21 +701,19 @@ describe("overworld_play CLI (scripted mode)", () => {
       ]);
       expect(run.status, run.output).toBe(0);
       expect(run.output).toContain("Depart now:");
-      expect(run.output).toContain(
-        "Start with `start The Wolf-Winter`; route selection follows before commitment.",
-      );
-      expect(run.output).toContain("The Wolf-Winter exact active terms and plan slots:");
-      expect(run.output).toContain("Optional support (independent; `review support` for detail):");
+      expect(run.output).toContain("Start with `start The Wolf-Winter`, then choose a route.");
+      expect(run.output).toContain("The Wolf-Winter choices, costs, and effects:");
+      expect(run.output).toContain("Optional support (`review support` for details):");
       expect(run.output).toContain("June Pike, second rider");
       expect(run.output).toContain("Talk to June Pike: `talk June Pike`");
       expect(run.output).toContain(
-        `Active term: ${stationed.view().departureRecap!.entries[0]!.activeFieldTerm!}`,
+        `Effect: ${stationed.view().departureRecap!.entries[0]!.activeFieldTerm!}`,
       );
       expect(run.output.indexOf("Depart now:")).toBeLessThan(
-        run.output.indexOf("Optional dispatch support — field kit, relief wagon, or second rider:"),
+        run.output.indexOf("Optional support — field kit, relief wagon, or second rider:"),
       );
-      expect(run.output).toContain("Already set: `review dispatch`.");
-      expect(run.output).not.toContain("The Wolf-Winter dispatch recap:");
+      expect(run.output).toContain("Current plan: `review dispatch`.");
+      expect(run.output).not.toContain("The Wolf-Winter departure plan:");
       expect(run.output).not.toContain("A scripted command was rejected.");
       expect(outputSnapshotHashes(run.output)).toEqual([baselineHash]);
     } finally {
@@ -764,16 +758,16 @@ describe("overworld_play CLI (scripted mode)", () => {
   it("holds Rowan's mandatory registration cascade until the player chooses each stage", () => {
     const run = runCli([
       "--commands",
-      "talk rowan; choose albany:road_warden; customize; choose albany:oath_limited_aid_only; choose Leave on Rowan's Civic Docket; hash",
+      "talk rowan; choose albany:road_warden; customize; choose albany:oath_limited_aid_only; choose Use Rowan's Public Report; hash",
     ]);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output).toContain("Road-Warden Relief Hand");
-    expect(run.output).toContain("Negotiate Aid-Only Promise");
-    expect(run.output).toContain("Leave on Rowan's Civic Docket");
-    expect(run.output).toContain("Chosen: Road-Warden Relief Hand.");
-    expect(run.output).toContain("Chosen: Negotiate Aid-Only Promise.");
-    expect(run.output).toContain("Chosen: Leave on Rowan's Civic Docket.");
+    expect(run.output).toContain("Road Warden");
+    expect(run.output).toContain("Accept Aid-Only Terms");
+    expect(run.output).toContain("Use Rowan's Public Report");
+    expect(run.output).toContain("Chosen: Road Warden.");
+    expect(run.output).toContain("Chosen: Accept Aid-Only Terms.");
+    expect(run.output).toContain("Chosen: Use Rowan's Public Report.");
     expect(run.output).toMatch(/^[0-9a-f]{64}$/m);
   });
 
@@ -784,21 +778,19 @@ describe("overworld_play CLI (scripted mode)", () => {
     ]);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output).toContain("you must choose one permanent background");
+    expect(run.output).toContain("Choose one permanent background");
     expect(run.output).toContain("Background: Permanent background —");
     expect(run.output).toContain("Starts with: Fieldcraft 4; weatherproof field kit");
     expect(run.output).toContain("Return obligation: Return Hayden's winter packet");
     expect(run.output).not.toMatch(/\b[12]\/3\b/);
     expect(run.output).not.toContain("Civic order:");
     expect(run.output).toContain(
-      "! Story choice detail — Ready-made dispatch — Aid-Only promise + Hayden's frost report",
+      "! Choice details — Ready-made setup — Aid-Only + Hayden's report",
     );
     expect(run.output).toContain("Choose: `choose albany:doctrine_road_warden_aid_route`");
+    expect(run.output).toContain("Chosen: Ready-made setup — Aid-Only + Hayden's report.");
     expect(run.output).toContain(
-      "Chosen: Ready-made dispatch — Aid-Only promise + Hayden's frost report.",
-    );
-    expect(run.output).toContain(
-      "Ready-made dispatch chosen — Background: Road-Warden Relief Hand; Wolf-Winter promise: Negotiate Aid-Only Promise; Report: Take Hayden's Frost-Heave Report. Optional field kit, relief wagon, second rider, and road remain open.",
+      "Quick setup chosen. Background: Road Warden. Wolf-Winter promise: Accept Aid-Only Terms. Report: Use Hayden's Frost Report. You can still choose a field kit, relief wagon, second rider, and route.",
     );
     expect(run.output).not.toContain("Registered role —");
     expect(run.output).not.toContain("Packet commitments: duty");
@@ -816,10 +808,10 @@ describe("overworld_play CLI (scripted mode)", () => {
 
     expect(run.status, run.output).toBe(0);
     expect(run.output).toContain(
-      "Guidance: Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves. Wolf-Winter is a complete opening chapter. End closes the journey there; Continue carries its consequences into the optional Gallowmere chapter.",
+      "Guidance: Complete Wolf-Winter. Jobs, events, and sites can help you find it, but they do not complete this goal. Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter.",
     );
     expect(run.output).toContain(
-      "No road passage is available from here. Follow the visible local guidance above.",
+      "You cannot travel toward this goal from here. Follow the local goal guidance above.",
     );
     expect(run.output).not.toContain("There is no current goal passage to follow from here.");
     expect(run.output).not.toContain("A scripted command was rejected.");
@@ -829,7 +821,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     const run = runCli(["--commands", "talk rowan; follow goal"]);
 
     expect(run.status).toBe(1);
-    expect(run.output).toContain("Choose the active journey prompt first");
+    expect(run.output).toContain("Use an `inspect <id>` or `choose <id>` command shown above.");
     expect(run.output).toContain("inspect <id>");
     expect(run.output).toContain("choose <id>");
     expect(run.output).not.toContain("Goal passage stop:");
@@ -840,7 +832,7 @@ describe("overworld_play CLI (scripted mode)", () => {
 
     expect(run.status, run.output).toBe(0);
     expect(run.output.match(/Commands:/g)?.length ?? 0).toBe(2);
-    expect(run.output).toContain("actions · help · quit");
+    expect(run.output).toContain("actions | help | quit");
     expect(run.output).not.toContain("A scripted command was rejected.");
   });
 
@@ -848,11 +840,11 @@ describe("overworld_play CLI (scripted mode)", () => {
     const run = runCli(["--commands", "talk rowan; journal; log"]);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output).toContain("Enter Albany's Relief Compact");
+    expect(run.output).toContain("Rowan Quill is Albany's records clerk");
     expect(run.output).not.toMatch(/\b1\/3\b/);
     expect(run.output).not.toContain("Civic order:");
     expect(run.output).toContain("No roads travelled yet.");
-    expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
+    expect(run.output.match(/! Compare choices/g)?.length ?? 0).toBe(1);
     expect(run.output).not.toContain("A scripted command was rejected.");
   });
 
@@ -860,7 +852,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     const run = runCli(["--commands", "talk rowan; look; quit"]);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
+    expect(run.output.match(/! Compare choices/g)?.length ?? 0).toBe(1);
     expect(run.output).toContain("--- Journey ---");
     expect(run.output).not.toContain("A scripted command was rejected.");
   });
@@ -884,10 +876,10 @@ describe("overworld_play CLI (scripted mode)", () => {
       baselineHash,
       baselineHash,
     ]);
-    expect(neutral.output).toContain(`! Story choice detail — ${option.title}`);
-    expect(neutral.output).toContain("This story choice is mandatory.");
-    expect(neutral.output).toContain("Back to the story choice comparison");
-    expect(neutral.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
+    expect(neutral.output).toContain(`! Choice details — ${option.title}`);
+    expect(neutral.output).toContain("You must choose.");
+    expect(neutral.output).toContain("Back to the choice list.");
+    expect(neutral.output.match(/! Compare choices/g)?.length ?? 0).toBe(1);
 
     const malformed = runCli([
       "--commands",
@@ -895,7 +887,9 @@ describe("overworld_play CLI (scripted mode)", () => {
     ]);
     expect(malformed.status).toBe(1);
     expect(outputSnapshotHashes(malformed.output)).toEqual([baselineHash, baselineHash]);
-    expect(malformed.output).toContain("Inspect an exact option id");
+    expect(malformed.output).toContain(
+      "Inspect an option using its number, exact id, or full label shown above.",
+    );
   });
 
   it("makes choosing after mandatory detail hash-identical to a direct API choice", () => {
@@ -913,7 +907,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     ]);
     expect(inspected.status, inspected.output).toBe(0);
     expect(outputSnapshotHashes(inspected.output)).toEqual([expected.snapshotHash()]);
-    expect(inspected.output).toContain(`! Story choice detail — ${option.title}`);
+    expect(inspected.output).toContain(`! Choice details — ${option.title}`);
     expect(inspected.output).toContain(`Chosen: ${option.title}.`);
     const acceptedStart = inspected.output.indexOf(`Chosen: ${option.title}.`);
     const acceptedEnd = inspected.output.indexOf("\n--- Journey ---", acceptedStart);
@@ -947,7 +941,7 @@ describe("overworld_play CLI (scripted mode)", () => {
         expect(run.output).toContain("Could not continue:");
         expect(run.output).toContain(expectedMessage);
         expect(run.output).toContain("A scripted command was rejected.");
-        expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(2);
+        expect(run.output.match(/! Compare choices/g)?.length ?? 0).toBe(2);
         expect(run.output).not.toContain("Restored ");
         expect(run.output).not.toMatch(/\n\s+at\s/);
       }
@@ -987,8 +981,8 @@ describe("overworld_play CLI (scripted mode)", () => {
         `Inspect field kit: \`inspect ${preparationAction.storyChoiceId}\``,
       );
       expect(run.output).toContain(`Inspect: \`inspect ${option.id}\``);
-      expect(run.output).toContain(`! Story choice detail — ${option.title}`);
-      expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
+      expect(run.output).toContain(`! Choice details — ${option.title}`);
+      expect(run.output.match(/! Compare choices/g)?.length ?? 0).toBe(1);
       expect(outputSnapshotHashes(run.output)).toEqual([expected.snapshotHash()]);
     } finally {
       rmSync(temp, { recursive: true, force: true });
@@ -1062,32 +1056,32 @@ describe("overworld_play CLI (scripted mode)", () => {
 
       expect(run.status, run.output).toBe(0);
       expect(run.output).not.toContain("A scripted command was rejected.");
-      expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(3);
+      expect(run.output.match(/! Compare choices/g)?.length ?? 0).toBe(3);
       for (const storyChoiceId of [preparation.id, allocation.id]) {
         const commandIndex = run.output.indexOf(`> inspect ${storyChoiceId}`);
         expect(
           commandIndex,
           `missing scripted inspection for ${storyChoiceId}`,
         ).toBeGreaterThanOrEqual(0);
-        const comparisonIndex = run.output.indexOf("! Story choice comparison", commandIndex);
+        const comparisonIndex = run.output.indexOf("! Compare choices", commandIndex);
         expect(comparisonIndex, `missing comparison after ${storyChoiceId}`).toBeGreaterThan(
           commandIndex,
         );
         const adjacentRecall = run.output.slice(commandIndex, comparisonIndex);
-        expect(adjacentRecall).toContain("The Wolf-Winter dispatch recap:");
-        expect(adjacentRecall).not.toContain("The Wolf-Winter exact active terms and plan slots:");
+        expect(adjacentRecall).toContain("The Wolf-Winter departure plan:");
+        expect(adjacentRecall).not.toContain("The Wolf-Winter choices, costs, and effects:");
       }
-      expect(
-        run.output.match(/The Wolf-Winter exact active terms and plan slots:/g) ?? [],
-      ).toHaveLength(1);
+      expect(run.output.match(/The Wolf-Winter choices, costs, and effects:/g) ?? []).toHaveLength(
+        1,
+      );
       for (const option of [preparationOption, allocationOption]) {
-        expect(run.output).toContain(`! Story choice detail — ${option.title}`);
+        expect(run.output).toContain(`! Choice details — ${option.title}`);
       }
-      expect(run.output.match(/Back to the story choice comparison/g)?.length ?? 0).toBe(2);
+      expect(run.output.match(/Back to the choice list\./g)?.length ?? 0).toBe(2);
       for (const briefing of [
-        "Albany Station: ready to depart now, or choose one field kit; relief-wagon and riding choices are separate.",
-        "Albany Station: ready to depart now, or choose the relief wagon's job; field-kit and riding choices are separate.",
-        "Albany Station: ready to depart now alone, or ask June Pike to ride; field kit and relief wagon choices are separate.",
+        "You can leave Albany Station now or choose one field kit. The relief wagon and June are separate choices.",
+        "You can leave Albany Station now or assign the relief wagon. The field kit and June are separate choices.",
+        "You can leave Albany Station alone or ask June Pike to join. The field kit and relief wagon are separate choices.",
       ]) {
         expect(run.output).toContain(briefing);
       }
@@ -1096,11 +1090,11 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.output).toContain(
         `Talk to ${fieldTeamAction.contactName}: \`talk ${fieldTeamAction.contactName}\``,
       );
-      const junePromptStart = run.output.lastIndexOf("\n! Story choice comparison\n");
+      const junePromptStart = run.output.lastIndexOf("\n! Compare choices\n");
       expect(junePromptStart).toBeGreaterThan(-1);
       const juneFlowOutput = run.output.slice(junePromptStart);
       expect(juneFlowOutput).toContain(`Inspect: \`inspect ${allyOption.id}\``);
-      expect(juneFlowOutput).toContain("ready to depart now alone, or ask June Pike to ride");
+      expect(juneFlowOutput).toContain("leave Albany Station alone or ask June Pike to join");
       expect(run.output).toContain(`Chosen: ${allyOption.title}.`);
       const chosenStart = run.output.indexOf(`Chosen: ${allyOption.title}.`);
       const chosenEnd = run.output.indexOf("\n--- Journey ---", chosenStart);
@@ -1132,7 +1126,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       ]);
       expect(run.status, run.output).toBe(0);
       expect(outputSnapshotHashes(run.output)).toEqual([baselineHash, baselineHash]);
-      expect(run.output).toContain("Story comparison closed without changing the journey.");
+      expect(run.output).toContain("Closed without making a choice.");
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }
@@ -1201,10 +1195,10 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(outputSnapshotHashes(run.output)).toEqual([baselineHash, baselineHash, baselineHash]);
       for (const id of [preparation.id, allocation.id]) {
         expect(run.output).toContain(
-          `Optional story choice "${id}" has already been resolved. Use \`look\` to see what is available now.`,
+          `You already made the optional choice "${id}". Use \`look\` to see what remains.`,
         );
       }
-      expect(run.output).not.toContain("No optional story choice exactly matches");
+      expect(run.output).not.toContain("No optional choice matches");
       expect(run.output.match(/A scripted command was rejected\./g) ?? []).toHaveLength(1);
     } finally {
       rmSync(temp, { recursive: true, force: true });
@@ -1240,7 +1234,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       );
       for (const id of controls) {
         expect(run.output).toContain(
-          `No optional story choice exactly matches "${id}". Use the \`inspect <id>\` command shown by \`look\`.`,
+          `No optional choice matches "${id}". Use an \`inspect <id>\` command shown by \`look\`.`,
         );
       }
       expect(run.output).not.toContain("has already been resolved");
@@ -1257,12 +1251,9 @@ describe("overworld_play CLI (scripted mode)", () => {
     ]);
 
     expect(run.status).toBe(1);
-    expect(run.output).toContain(
-      "future job (currently unavailable): Rowan's Winter Return Docket",
-    );
+    expect(run.output).toContain("Rowan's Winter Return Docket is known but not available yet.");
     expect(run.output).not.toContain("new job: Rowan's Winter Return Docket");
-    expect(run.output).toContain("discovered future work but currently unavailable");
-    expect(run.output).toContain("conditions are hidden or unmet");
+    expect(run.output).toContain("Continue the journey and check again later.");
   });
 
   it("reports a completed discovered job as complete instead of hidden future work", () => {
@@ -1345,7 +1336,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     try {
       const blocked = runCli(["--restore", snapshotPath, "--commands", "follow goal"]);
       expect(blocked.status).toBe(1);
-      expect(blocked.output).toContain("Choose the active journey prompt first");
+      expect(blocked.output).toContain("Answer the current choice with `choose <number|label>`.");
       expect(blocked.output).not.toContain("Goal passage stop:");
 
       const continued = runCli([
@@ -1367,7 +1358,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       const ended = runCli(["--restore", snapshotPath, "--commands", "choose End here"]);
       expect(ended.status, ended.output).toBe(0);
       expect(ended.output).toContain("Chosen: End here.");
-      expect(ended.output).toContain("Journey ended — this journey is read-only.");
+      expect(ended.output).toContain("! Journey ended. This record is read-only.");
 
       const quit = runCli(["--restore", snapshotPath, "--commands", "hash; quit"]);
       expect(quit.status, quit.output).toBe(0);
@@ -1388,8 +1379,8 @@ describe("overworld_play CLI (scripted mode)", () => {
     try {
       const run = runCli(["--restore", snapshotPath, "--commands", "go 1"]);
       expect(run.status, run.output).toBe(0);
-      expect(run.output).toContain("Journey ended — this journey is read-only.");
-      expect(run.output).toContain("truthful exit receipt is preserved for review");
+      expect(run.output).toContain("! Journey ended. This record is read-only.");
+      expect(run.output).toContain("The exit record is saved for review.");
       expect(run.output).toContain(receipt!.receiptHash);
       expect(run.output).not.toContain("Resumed in");
       expect(run.output).not.toContain("Roads:");
@@ -1440,13 +1431,15 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.output).toContain(expectedJourney.goalGuidance);
       expect(run.output).toContain("Saratoga Springs city");
       expect(run.output).toContain(expectedPassage.label);
-      expect(run.output).toContain("Action: `follow goal`");
+      expect(run.output).toContain("Travel: `follow goal`");
       expect(run.output).toContain(
-        `Goal passage stop: road_encounter at ${expectedFollow.stoppedAt}.`,
+        `Stopped at ${expectedFollow.stoppedAt}. A road encounter needs your response.`,
       );
       expect(run.output).toContain(expectedEncounter!.event.title);
       expect(run.output).toContain(expectedEncounter!.event.summary);
-      expect(run.output).toContain(`Goal passage stop: objective at ${expectedArrival.stoppedAt}.`);
+      expect(run.output).toContain(
+        `Stopped at ${expectedArrival.stoppedAt}. Reached the goal town.`,
+      );
       expect(run.output).toContain("Walked");
       expect(run.output).toContain("to Queensbury Market Streets");
       expect(run.output).not.toContain('No local route matches "queensbury market streets"');

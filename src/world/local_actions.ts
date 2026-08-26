@@ -59,7 +59,7 @@ export function describeOverworldJobAction(
       id: `job:${job.id}`,
       kind: "job",
       title: `Completed ${job.title}: ${sceneOption.title}`,
-      text: `${sceneOption.consequence}${area ? ` The decision is logged against ${area.name}.` : ""}`,
+      text: `${sceneOption.consequence}${area ? ` Location: ${area.name}.` : ""}`,
       minutes: sceneOption.terms.minutes,
       regionalRenown: sceneOption.terms.renown,
     };
@@ -68,7 +68,7 @@ export function describeOverworldJobAction(
     id: `job:${job.id}`,
     kind: "job",
     title: `Completed ${job.title}`,
-    text: `${job.objective} ${job.reward}${area ? ` The work is logged against ${area.name}.` : ""}`,
+    text: `${job.objective} ${job.reward}${area ? ` Location: ${area.name}.` : ""}`,
     minutes: job.minutes,
     regionalRenown: job.difficulty,
   };
@@ -82,7 +82,7 @@ export function describeOverworldPoiAction(
     id: `scout:${poi.id}`,
     kind: "poi",
     title: `Scouted ${poi.title}`,
-    text: `${poi.summary} You mark the site as a local lead for ${current.name}.`,
+    text: `${poi.summary} This point of interest is now recorded as a lead in ${current.name}.`,
     minutes: 20,
   };
 }
@@ -107,7 +107,7 @@ export function describeOverworldEventAction(
     id: `investigate:${event.id}`,
     kind: "event",
     title: `Investigated ${event.title}`,
-    text: `${event.summary} The pressure is ${event.pressure}, intensity ${event.intensity}.`,
+    text: `${event.summary} Pressure: ${event.pressure}. Intensity: ${event.intensity}.`,
     minutes: 20 + event.intensity * 5,
   };
 }

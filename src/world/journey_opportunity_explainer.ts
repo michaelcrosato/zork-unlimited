@@ -160,12 +160,12 @@ function roadAction(
   homeId: string,
 ): JourneyOpportunityNextAction {
   const step = state.nextRoadToward(homeId);
-  if (!step) throw new Error("The projected opportunity has no currently lawful road step.");
+  if (!step) throw new Error("This opportunity has no legal road step from here.");
   return freezeAction({
     tool: OPPORTUNITY_TRAVEL_TOOL,
     arguments: { road_id: step.roadId },
     command: `go ${step.destinationId}`,
-    label: `Travel one road toward ${step.destinationName}.`,
+    label: `Take one road toward ${step.destinationName}.`,
   });
 }
 
@@ -207,7 +207,7 @@ function areaRouteAction(step: JourneyOpportunityAreaStep): JourneyOpportunityNe
     tool: OPPORTUNITY_MOVE_AREA_TOOL,
     arguments: { area_route_id: step.routeId },
     command: `enter ${step.destinationAreaId}`,
-    label: `Walk one local route toward ${step.destinationName}.`,
+    label: `Take one local route toward ${step.destinationName}.`,
   });
 }
 
@@ -224,9 +224,7 @@ export function nextJourneyOpportunityAreaProgress(
     (areaId) => !state.visitedAreaIds.has(areaId),
   );
   if (frontierStep) return areaRouteAction(frontierStep);
-  throw new Error(
-    "The projected opportunity has no currently lawful local action that can advance discovery.",
-  );
+  throw new Error("No available local action can reveal the route to this lead.");
 }
 
 function localAreaAction(
@@ -234,7 +232,7 @@ function localAreaAction(
   areaId: string,
 ): JourneyOpportunityNextAction {
   if (!state.currentAreaId || !state.areasById.has(state.currentAreaId)) {
-    throw new Error("The projected opportunity has no current local area.");
+    throw new Error("This opportunity has no current local area.");
   }
   return nextJourneyOpportunityAreaProgress(state, areaId);
 }
@@ -244,13 +242,13 @@ function eventAction(
   event: JourneyOpportunityEventDefinition,
 ): JourneyOpportunityNextAction {
   const scene = event.authored_scene;
-  if (!scene) throw new Error("The projected event has no authored pursuit.");
+  if (!scene) throw new Error("This event has no available follow-up.");
   if (!state.journalEntryIds.has(`scout:${scene.required_poi_id}`)) {
     return freezeAction({
       tool: OPPORTUNITY_SCOUT_POI_TOOL,
       arguments: { poi_id: scene.required_poi_id },
       command: `scout ${scene.required_poi_id}`,
-      label: "Scout the event's visible local point of interest.",
+      label: "Scout the required point of interest.",
     });
   }
   if (!hasTalkedTo(state.journalEntryIds, scene.required_contact_id)) {
@@ -258,7 +256,7 @@ function eventAction(
       tool: OPPORTUNITY_TALK_CONTACT_TOOL,
       arguments: { character_id: scene.required_contact_id },
       command: `talk ${scene.required_contact_id}`,
-      label: "Talk to the event's visible local contact.",
+      label: "Talk to the required contact.",
     });
   }
   if (!state.journalEntryIds.has(`investigate:${event.id}`)) {
@@ -272,13 +270,13 @@ function eventAction(
   const choice = state.eventChoices.find(([eventId]) => eventId === event.id);
   const option = choice ? scene.options.find((candidate) => candidate.id === choice[1]) : undefined;
   if (!choice || !option) {
-    throw new Error("The projected event has no currently lawful authored action.");
+    throw new Error("This event has no legal action right now.");
   }
   return freezeAction({
     tool: OPPORTUNITY_RESOLVE_EVENT_TOOL,
     arguments: { event_id: event.id, option_id: option.id },
     command: `resolve ${event.id} ${option.id}`,
-    label: `Choose the currently visible “${option.title}” event action.`,
+    label: `Choose “${option.title}” for this event.`,
   });
 }
 
@@ -287,13 +285,13 @@ function jobAction(
   job: JourneyOpportunityJobDefinition,
 ): JourneyOpportunityNextAction {
   const scene = job.authored_scene;
-  if (!scene) throw new Error("The projected job has no authored pursuit.");
+  if (!scene) throw new Error("This job has no available follow-up.");
   if (!state.journalEntryIds.has(`scout:${scene.required_poi_id}`)) {
     return freezeAction({
       tool: OPPORTUNITY_SCOUT_POI_TOOL,
       arguments: { poi_id: scene.required_poi_id },
       command: `scout ${scene.required_poi_id}`,
-      label: "Scout the job's visible local point of interest.",
+      label: "Scout the required point of interest.",
     });
   }
   if (!hasTalkedTo(state.journalEntryIds, scene.required_contact_id)) {
@@ -301,19 +299,19 @@ function jobAction(
       tool: OPPORTUNITY_TALK_CONTACT_TOOL,
       arguments: { character_id: scene.required_contact_id },
       command: `talk ${scene.required_contact_id}`,
-      label: "Talk to the job's visible local contact.",
+      label: "Talk to the required contact.",
     });
   }
   const choice = state.jobChoices.find(([jobId]) => jobId === job.id);
   const option = choice ? scene.options.find((candidate) => candidate.id === choice[1]) : undefined;
   if (!choice || !option) {
-    throw new Error("The projected job has no currently lawful authored action.");
+    throw new Error("This job has no legal action right now.");
   }
   return freezeAction({
     tool: OPPORTUNITY_WORK_JOB_TOOL,
     arguments: { job_id: job.id, option_id: option.id },
     command: `work ${job.id} ${option.id}`,
-    label: `Choose the currently visible “${option.title}” job action.`,
+    label: `Choose “${option.title}” for this job.`,
   });
 }
 
@@ -335,7 +333,7 @@ export function explainJourneyOpportunity(
   } else if (lead.access === "mapped" || lead.access === "route_unmapped") {
     nextAction = localAreaAction(state, definition.area);
   } else if (definition.area !== state.currentAreaId) {
-    throw new Error("The projected opportunity does not match the current local area.");
+    throw new Error("This opportunity is not in the current area.");
   } else {
     nextAction =
       identity.kind === "event"

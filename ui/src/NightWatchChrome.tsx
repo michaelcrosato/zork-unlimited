@@ -91,8 +91,8 @@ const PANELS: ReadonlyArray<{
   },
   {
     id: "terms",
-    label: "Exact terms",
-    detail: "Checks · Costs · Outcomes",
+    label: "Actions & costs",
+    detail: "Checks · Costs · Results",
     icon: (props) => <Scales {...props} />,
   },
   {
