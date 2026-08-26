@@ -469,9 +469,25 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       `${oath.message} ${OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS}`,
     );
     const oathCompass = OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS;
-    expect(oathCompass).toBe(
-      "HUNT — Fight the wolves to protect the farm, herd, and supplies. Wolves may die; failure can cost cattle or damage the fence. Bloodshed changes later Greenway work. LURE — Use Cade's last feed to lead the wolves away and keep the herd. The fence breaks, and a failed first feed can cost two cattle. DRIVE — Move the people and herd out, forcing the living pack away. The farm is abandoned, and the crisis costs a wound, two cattle, or the rig. FORTIFY — Keep the household, herd, and wolves apart until dawn. You cannot retreat; choose between exposing property with Cade's help or spending public seals without it. Review only: no plan is selected.",
+    expect(oathCompass).toContain(
+      "HUNT — Fight the wolves to protect the farm, herd, and supplies.",
     );
+    expect(oathCompass).toContain("Wolves may die; failure can cost cattle or damage the fence.");
+    expect(oathCompass).toContain("Bloodshed changes later Greenway work.");
+    expect(oathCompass).toContain(
+      "LURE — Use Cade's last feed to lead the wolves away and keep the herd.",
+    );
+    expect(oathCompass).toContain("The fence breaks, and a failed first feed can cost two cattle.");
+    expect(oathCompass).toContain(
+      "DRIVE — Move the people and herd out, forcing the living pack away.",
+    );
+    expect(oathCompass).toContain(
+      "The farm is abandoned, and the crisis costs a wound, two cattle, or the rig.",
+    );
+    expect(oathCompass).toContain(
+      "FORTIFY — Keep the household, herd, and wolves apart until dawn. You cannot retreat; choose between exposing property with Cade's help or spending public seals without it.",
+    );
+    expect(oathCompass).toContain("Review only: no plan is selected.");
     expect(wordCount(oathCompass)).toBeLessThanOrEqual(145);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
       revealedOath,

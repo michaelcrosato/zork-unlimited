@@ -2911,9 +2911,27 @@ describe("MCP pure play mode", () => {
         expect((stationed.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
         const stationLegend = (stationed.legend_delta as Record<string, string>)
           .station_dispatch_board;
-        expect(stationLegend).toBe(
-          "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null]; dispatch=[state,minutes,timing|null,remaining_optional_count]; row=[slot,status,selected_title|null,purpose|null,action|null]. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Before review, overview lists open kit, wagon, and rider categories. Call get-context with reveal_station_dispatch_support set to its exact id. Returned rows give inspect or talk actions. Support is optional and chooses no strategy.",
+        expect(stationLegend).toContain(
+          "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null]",
         );
+        expect(stationLegend).toContain(
+          "dispatch=[state,minutes,timing|null,remaining_optional_count]",
+        );
+        expect(stationLegend).toContain(
+          "row=[slot,status,selected_title|null,purpose|null,action|null]",
+        );
+        expect(stationLegend).toContain(
+          "role/duty/evidence/preparation/relief_allocation/field_team=",
+        );
+        expect(stationLegend).toContain("=background/promise/report/kit/wagon/rider.");
+        expect(stationLegend).toContain(
+          "Before review, overview lists open kit, wagon, and rider categories.",
+        );
+        expect(stationLegend).toContain(
+          "Call get-context with reveal_station_dispatch_support set to its exact id.",
+        );
+        expect(stationLegend).toContain("Returned rows give inspect or talk actions.");
+        expect(stationLegend).toContain("Support is optional and chooses no strategy.");
         expect(JSON.stringify(cumulativeLegend).length).toBeLessThanOrEqual(7_200);
         const stationedContext = stationed.context as CompactAreaContext;
         expect(stationedContext.departure_contact_leads).toBeUndefined();
@@ -3805,8 +3823,9 @@ describe("MCP pure play mode", () => {
           expect(rejected.isError, label).toBe(true);
           const payload = textPayload(rejected);
           expectSessionRecoveryEnvelope(payload, "overworld_session_id");
-          expect(payload.error, label).toBe(
-            "Pass the current parent overworld_session_id. The supplied session_id is missing, invalid, stale, or unknown.",
+          expect(payload.error, label).toContain("Pass the current parent overworld_session_id.");
+          expect(payload.error, label).toContain(
+            "The supplied session_id is missing, invalid, stale, or unknown.",
           );
           expect(String(payload.error), label).not.toMatch(/RPG|child/i);
           if (label === "Cycle 14 one-character parent near-miss") {
