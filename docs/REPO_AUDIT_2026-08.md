@@ -620,6 +620,9 @@ Details that matter and are easy to miss:
 | `verify:opening-density` | **OK** — 644/732 word tokens, 12/12 actionable options |
 | `typecheck` / `lint` / `format:check` | **OK** |
 | `crawl:smoke` (Tier 1) | **OK** — 6,000 steps, **zero findings**; 12/12 quests, overworld 247/247 nodes · 344/344 edges · 12/12 boards |
+| `validate` (12 shipped quests) | not reached — `health` stopped at the test step |
+| **`npm test`** | **20 failed / 4,084 passed / 3 skipped** across 461 files — **every failure a timeout**, see F8 |
+| **`npm run health`** | **exit 1** on this container, on timeouts only |
 | MCP server | starts clean, **43 tools** registered |
 | Full playthrough | Wolf-Winter completed **60/60**, `ending_held`; journey ended at decision 40 with a valid exit receipt |
 
@@ -736,6 +739,64 @@ this is the tier with the most headroom. The two property files that exist
 weight.
 
 ---
+
+### F8 — The health bar's test suite is environment-sensitive, and fails on timeouts alone under load
+
+`npm run health` **exited 1** on this container. That is the finding — not a
+gameplay defect, but a defect in the instrument the whole flywheel trusts.
+
+| | |
+|---|---|
+| Files | 461 · **11 failed**, 450 passed |
+| Tests | 4,107 · **20 failed**, 4,084 passed, 3 skipped |
+| Wall clock | **6,414 s (1 h 47 m)** — of which `import` alone was **4,339 s** |
+
+**Every one of the 20 failures is a timeout**, in two shapes:
+
+- 12 × `Test timed out in 60000ms` / `120000ms`
+- 8 × `spawnSync /opt/node22/bin/node ETIMEDOUT` in subprocess-spawning CLI
+  tests, several reporting exit `143` (SIGTERM)
+
+Not one is an assertion about behaviour. I confirmed the diagnosis directly by
+re-running one of the failing files with the ceiling raised:
+
+```
+npx vitest run --project standard --testTimeout=600000 \
+  tests/unit/world_campaign_service_rules.test.ts
+→ Test Files 1 passed (1) · Tests 14 passed (14) · Duration 96.11s
+```
+
+14/14 green, in 96 s — against a 60 s per-test ceiling. The failing files
+cluster exactly where you would predict: **8 of the 11 spawn a child `node`
+process** (`overworld_cli`, `rpg_play_world_source`, `trace_cli_integrity`,
+`crawl_workers_determinism`, `feedback_rebootstrap_cli`,
+`blind_runner_config_contract`, and two starting-slice counterfactuals).
+
+Why this matters more than an ordinary flake:
+
+1. **`health` is the bar**, and `loop.sh` reverts the entire cycle when it is
+   red (`_reject_cycle "health"`). A timing-sensitive bar means an autonomous
+   cycle can lose real work to machine load rather than to a defect — and the
+   durable failure ledger will record it as a health failure, indistinguishable
+   from a genuine one.
+2. **The circuit breakers count these.** `AI_LOOP_MAX_CONSECUTIVE_FAILURES=5`
+   is five contended runs away from halting the loop.
+3. **CI already mitigates this and `health` does not.** `ci.yml` shards tests
+   across two runners with a cost-weighted allocator; a local or cloud
+   `npm run health` runs all 4,107 serially in one process tree.
+
+A per-test timeout is a proxy for "this hung", but these tests genuinely need
+more than 60 s of CPU on a loaded machine. Raising the ceilings for the
+subprocess-spawning group — or giving them a `hangTimeout` distinct from the
+unit-test default, the way `test:coverage` already carries its own
+`--testTimeout=300000` — would make a red `health` mean what it is supposed to
+mean.
+
+One incidental confirmation: the failing assertion in
+`blind_runner_config_contract.test.ts` printed its own captured output,
+`• tools/list → 43 tools`. The test agrees with the server and with F3 — the
+README's "42" is the outlier.
+
 
 ## 11. What is genuinely excellent
 
