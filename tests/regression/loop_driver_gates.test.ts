@@ -5,26 +5,13 @@
  * the test suite has to lock it directly.
  */
 import { describe, expect, it } from "vitest";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
-import { hashState } from "../../src/core/hash.js";
-import { loadOverworldManifest } from "../../src/world/source.js";
 
 const REPO_ROOT = process.cwd();
 const loopText = readFileSync("loop.sh", "utf8");
-const CURRENT_WORLD = loadOverworldManifest(REPO_ROOT);
-const CURRENT_WORLD_HASH = hashState(CURRENT_WORLD);
 const bashRuntime = spawnSync("bash", ["-c", 'pwd; node -p "process.platform"'], {
   cwd: REPO_ROOT,
   env: process.env,
@@ -36,28 +23,6 @@ if (bashRuntime.status !== 0) {
 const [BASH_REPO_ROOT = "", BASH_NODE_PLATFORM = ""] = bashRuntime.stdout.trim().split(/\r?\n/u);
 if (!BASH_REPO_ROOT || !BASH_NODE_PLATFORM) {
   throw new Error("Could not resolve the loop-test bash repository path and Node platform.");
-}
-
-function stableWindowsNode(): string | null {
-  if (process.platform !== "win32") return null;
-  const located = spawnSync("where.exe", ["node"], { encoding: "utf8" });
-  const candidates = located.stdout
-    .split(/\r?\n/u)
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0 && existsSync(entry));
-  return (
-    candidates.find((entry) => /[\\/]Program Files[\\/]nodejs[\\/]node\.exe$/iu.test(entry)) ??
-    candidates.at(-1) ??
-    null
-  );
-}
-
-function windowsPathForBash(path: string): string {
-  const match = /^([A-Za-z]):[\\/](.*)$/u.exec(path);
-  if (!match) return path.replaceAll("\\", "/");
-  const drive = match[1]!.toLowerCase();
-  const suffix = match[2]!.replaceAll("\\", "/");
-  return BASH_REPO_ROOT.startsWith("/mnt/") ? `/mnt/${drive}/${suffix}` : `/${drive}/${suffix}`;
 }
 
 function sectionBetween(start: string, end: string): string {
@@ -114,176 +79,6 @@ const initRepo = [
   "git commit -qm baseline",
   "start_ref=$(git rev-parse HEAD)",
 ].join("\n");
-
-function cycleEvidenceFixture(expectedCommit: string): {
-  report: string;
-  evidence: string;
-  sidecar: string;
-} {
-  const decisionProofHash = "b".repeat(64);
-  const receiptPayload = {
-    contractVersion: 1,
-    exitReason: "player_ended_at_choice",
-    goalVersion: 1,
-    goalId: "albany_local_lead",
-    goalStatus: "active",
-    acceptedDecisions: 40,
-    exitReasons: ["checkpoint"],
-    checkpoint: 40,
-    decisionProofHash,
-    retentionHistory: [
-      {
-        sequence: 1,
-        atDecision: 40,
-        reasons: ["checkpoint"],
-        checkpoint: 40,
-        choice: "end",
-        decisionProofHash,
-      },
-    ],
-  };
-  const receipt = { ...receiptPayload, receiptHash: hashState(receiptPayload) };
-  const interview = {
-    schema_version: 2,
-    issue_consistency_version: 1,
-    play_mode: "pure",
-    start_surface: "fresh_overworld",
-    retention_eligible: true,
-    journey_exit_receipt: receipt,
-    clarity: 4,
-    enjoyment: 4,
-    goal_understood: true,
-    got_stuck: false,
-    confusions: [],
-    bugs: [],
-    best_moment: "Following the local lead.",
-    worst_moment: "The opening was dense.",
-    would_replay: true,
-    verdict: "The journey was coherent and worth continuing.",
-  };
-  const report = `# Cycle playtest
-
-## Playthrough log
-
-I followed the fresh-overworld goal until the journey checkpoint, then chose to end.
-
-Clarity: 4/5. Enjoyment: 4/5.
-
-## Bugs or design flaws
-
-None observed.
-
-## Verdict
-
-The journey was coherent and worth continuing.
-
-\`\`\`json exit-interview
-${JSON.stringify(interview, null, 2)}
-\`\`\`
-`;
-  const build = {
-    git_commit: expectedCommit,
-    tracked_worktree_clean: true,
-    world_id: CURRENT_WORLD.id,
-    world_hash: CURRENT_WORLD_HASH,
-  };
-  const evidence = `${JSON.stringify({
-    schema_version: 2,
-    play_mode: "pure",
-    event: "fresh_start",
-    start_surface: "fresh_overworld",
-    session_id: "o-loop-driver-gate",
-    run_seed: 17,
-    build,
-  })}\n${JSON.stringify({
-    schema_version: 2,
-    play_mode: "pure",
-    event: "journey_exit",
-    start_surface: "fresh_overworld",
-    session_id: "o-loop-driver-gate",
-    run_seed: 17,
-    build,
-    quest_outcomes: [],
-    receipt,
-  })}\n`;
-  const sidecar = JSON.stringify({
-    schema_version: 2,
-    report_schema_version: 2,
-    play_mode: "pure",
-    start_surface: "fresh_overworld",
-    retention_eligible: true,
-    evidence_status: "verified",
-    session_id: "o-loop-driver-gate",
-    run_seed: 17,
-    build,
-    quest_outcomes: [],
-    receipt,
-  });
-  return { report, evidence, sidecar };
-}
-
-function runGit(root: string, args: string[]): string {
-  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
-  if (result.status !== 0) {
-    throw new Error(`git ${args.join(" ")} failed: ${result.stdout}\n${result.stderr}`);
-  }
-  return result.stdout.trim();
-}
-
-function setupPlaytestGateFixture(root: string, reportMode: "missing" | "empty" | "valid"): void {
-  mkdirSync(join(root, "content"), { recursive: true });
-  cpSync(join(REPO_ROOT, "content", "world"), join(root, "content", "world"), {
-    recursive: true,
-  });
-  mkdirSync(join(root, "content", "rpg"), { recursive: true });
-  cpSync(join(REPO_ROOT, "content", "rpg", "quests"), join(root, "content", "rpg", "quests"), {
-    recursive: true,
-  });
-
-  const windowsNode = stableWindowsNode();
-  const useWindowsRuntime = windowsNode !== null;
-  const loader = useWindowsRuntime
-    ? pathToFileURL(join(REPO_ROOT, "node_modules", "tsx", "dist", "loader.mjs")).href
-    : encodeURI(`file://${BASH_REPO_ROOT}/node_modules/tsx/dist/loader.mjs`);
-  const verifier = useWindowsRuntime
-    ? join(REPO_ROOT, "scripts", "verify-cycle-playtest.ts").replaceAll("\\", "/")
-    : `${BASH_REPO_ROOT}/scripts/verify-cycle-playtest.ts`;
-  const nodeCommand = windowsNode
-    ? BASH_NODE_PLATFORM === "win32"
-      ? windowsNode.replaceAll("\\", "/")
-      : windowsPathForBash(windowsNode)
-    : "node";
-  writeFileSync(
-    join(root, "package.json"),
-    JSON.stringify({
-      private: true,
-      scripts: {
-        "loop:verify-playtest": `"${nodeCommand}" --import "${loader}" "${verifier}"`,
-      },
-    }),
-  );
-  writeFileSync(join(root, ".gitignore"), "ai-runs/\n");
-  writeFileSync(join(root, "AI_LOOP_STATE.md"), "# state\n");
-  runGit(root, ["init", "-q"]);
-  runGit(root, ["config", "user.email", "loop@example.invalid"]);
-  runGit(root, ["config", "user.name", "loop-test"]);
-  runGit(root, ["add", ".gitignore", "AI_LOOP_STATE.md", "package.json", "content"]);
-  runGit(root, ["commit", "-qm", "baseline"]);
-  const head = runGit(root, ["rev-parse", "HEAD"]);
-
-  const runId = "2026-08-07T12-00-00-000Z";
-  const runDir = join(root, "ai-runs", runId);
-  mkdirSync(runDir, { recursive: true });
-  writeFileSync(
-    join(root, "ai-runs", "latest-cycle.json"),
-    JSON.stringify({ runId, playtestRecord: `ai-runs/${runId}/playtest.md` }),
-  );
-  const fixture = cycleEvidenceFixture(head);
-  if (reportMode === "valid") writeFileSync(join(runDir, "playtest.md"), fixture.report);
-  if (reportMode === "empty") writeFileSync(join(runDir, "playtest.md"), "");
-  writeFileSync(join(runDir, "playtest.evidence.jsonl"), fixture.evidence);
-  writeFileSync(join(runDir, "playtest.run.json"), fixture.sidecar);
-}
 
 describe("loop.sh verification gates", () => {
   it("is syntactically valid bash", () => {

@@ -1635,8 +1635,12 @@ exit 93
         timeout: 30_000,
       });
       const retiredOutput = `${retired.stdout ?? ""}\n${retired.stderr ?? ""}\n${retired.error?.message ?? ""}`;
+      // "claude" is not a registered id — the Claude Code entry is `claude_code`.
+      // A near-miss must be refused outright and the message must name the real ids,
+      // never silently resolved to whichever provider looks closest.
       expect(retired.status, retiredOutput).toBe(2);
-      expect(retiredOutput).toContain("live Claude blind provider is retired");
+      expect(retiredOutput).toContain('"claude" is not registered');
+      expect(retiredOutput).toContain("claude_code");
       expect(retiredOutput).not.toContain("Blind playtest →");
     }
   }, 30_000);

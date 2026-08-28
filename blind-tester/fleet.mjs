@@ -114,8 +114,8 @@ export const FLEET_USAGE = `Usage: npm run fleet -- [options]
 Options:
   --count <n>                         Player count (default: 100)
   --concurrency <n>                   Concurrent players (default: 4)
-  --provider codex                    Live provider (default: codex)
-  --model <exact-model>               Codex model (default: gpt-5.3-codex-spark)
+  --provider <id>                     Live provider from blind-tester/providers.json (default: codex)
+  --model <exact-model>               Exact model from that provider's catalog
   --personas <name>                   Structural mock persona
   --target <overworld|quest:id>       Start surface (live: overworld only)
   --seed-base <n>                     First player seed (default: 1000)
@@ -386,15 +386,41 @@ export function parseFleetArgs(argv) {
   assertFleetInt(opts.seedBase, "seed-base", undefined);
   assertFleetInt(opts.maxRetries, "max-retries", 0);
   assertFleetSeedRange(opts);
-  if (opts.provider === "claude") {
+  // Validated against blind-tester/providers.json, never a vendor list embedded here.
+  // A fleet that can only be one vendor produces homogeneous evidence, and homogeneous
+  // evidence is exactly what the ranking layer cannot safely count (see
+  // scoreCluster: N runs of one lineage is one instrument sampled N times).
+  const registered = readFleetProviderRegistry();
+  const provider = registered.find((candidate) => candidate.id === opts.provider);
+  if (!provider) {
+    const known = registered
+      .map((candidate) => candidate.id)
+      .sort()
+      .join(", ");
+    throw new Error(`fleet: --provider "${opts.provider}" is not registered; known: ${known}`);
+  }
+  if (provider.kind !== "headless_cli") {
     throw new Error(
-      "fleet: the live Claude provider is retired; use --provider codex with an exact supported Codex model",
+      `fleet: provider "${opts.provider}" is ${provider.kind} and cannot be launched by the fleet; ` +
+        "play it through its own client and record it with `npm run playtest:ingest`",
     );
   }
-  if (opts.provider !== "codex") {
-    throw new Error("fleet: --provider must be exactly codex");
+  const catalog = readFleetCatalog(provider);
+  if (opts.model === null) {
+    // Default to the cheapest tier: the fleet's job is throughput, and the expensive
+    // reference cohort is opt-in precisely so it is never spent by accident.
+    const fallback = catalog.models.find((candidate) => candidate.tier === "volume");
+    opts.model = (fallback ?? catalog.models[0]).id;
   }
-  if (opts.model === null) opts.model = "gpt-5.3-codex-spark";
+  // A structural mock never contacts a vendor, so its model id is a synthetic label
+  // rather than a real model — validating it against a live catalog would forbid the
+  // zero-token CI lane for no benefit.
+  if (!opts.mock && !catalog.models.some((candidate) => candidate.id === opts.model)) {
+    const known = catalog.models.map((candidate) => candidate.id).join(", ");
+    throw new Error(
+      `fleet: model "${opts.model}" is not in the ${provider.id} catalog; known models: ${known}`,
+    );
+  }
   if (
     opts.admissionReceipt !== null &&
     (opts.mock ||
@@ -415,6 +441,31 @@ export function parseFleetArgs(argv) {
   }
   assertFleetTargetPolicy(opts);
   return opts;
+}
+
+/**
+ * Read the provider registry and one provider's catalog.
+ *
+ * Read at call time rather than cached at import: an operator editing a catalog to add
+ * a model their subscription just unlocked should not have to restart anything, and a
+ * long-running QA loop re-reads on every wave.
+ */
+function readFleetProviderRegistry() {
+  const raw = JSON.parse(readFileSync(join(HERE, "providers.json"), "utf8"));
+  return Array.isArray(raw?.providers) ? raw.providers : [];
+}
+
+function readFleetCatalog(provider) {
+  const raw = JSON.parse(readFileSync(join(HERE, "..", provider.catalogPath), "utf8"));
+  if (raw?.provider !== provider.id) {
+    throw new Error(
+      `fleet: catalog ${provider.catalogPath} declares provider "${raw?.provider}" but is registered for "${provider.id}"`,
+    );
+  }
+  if (!Array.isArray(raw.models) || raw.models.length === 0) {
+    throw new Error(`fleet: catalog ${provider.catalogPath} lists no models`);
+  }
+  return raw;
 }
 
 function componentSha256(component) {
@@ -820,12 +871,10 @@ export function requireSparkMassAdmissionReceipt({
 }
 
 function assertFleetTargetPolicy(opts) {
-  const provider = opts.provider ?? "codex";
-  if (provider !== "codex") {
-    throw new Error(
-      "fleet: the live Claude provider is retired; current plans require provider codex",
-    );
-  }
+  // Provider legality is settled against the registry in parseFleetArgs; this function
+  // is only about the TARGET. A second vendor gate here was what made "add a provider"
+  // a two-place edit, and two-place edits are how a registry silently stops being the
+  // source of truth.
   if (
     opts.target !== "overworld" &&
     !/^quest:[a-z0-9]+(?:_[a-z0-9]+)*$/.test(String(opts.target ?? ""))
@@ -839,9 +888,14 @@ function assertFleetTargetPolicy(opts) {
       "fleet: live blind LLM runs must target overworld; quest targets require explicit --mock",
     );
   }
-  if (!opts.mock && opts.personas !== "default") {
+  // Personas ARE allowed on live runs. They used to be refused so that pure retention
+  // evidence came from one neutral contract, but every session record now carries its
+  // persona id and the content hash of the persona file, and retention metrics already
+  // group by persona — so a "20-year cynical veteran" cohort is a segment to read, not
+  // a contamination to prevent. What must never happen is a persona going unrecorded.
+  if (!opts.mock && opts.personas === "mixed") {
     throw new Error(
-      "fleet: pure live runs use the default first-time-player persona; non-default or mixed personas require explicit --mock structural mode",
+      "fleet: --personas mixed is a structural sampling mode; name the personas explicitly for a live cohort so every session records which one it ran",
     );
   }
   if (opts.mock && opts.allowDuplicateCohort != null) {
@@ -849,11 +903,9 @@ function assertFleetTargetPolicy(opts) {
       "fleet: --allow-duplicate-cohort applies only to live pure cohorts, never --mock structural fleets",
     );
   }
-  if (!opts.mock && !isProviderModel(provider, opts.model, true)) {
-    throw new Error(
-      "fleet: Codex pure fleets require exact model gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, or gpt-5.3-codex-spark; aliases, mix, and fallback are forbidden",
-    );
-  }
+  // Exact-model enforcement for live runs lives in parseFleetArgs, against the
+  // provider's own catalog. Repeating a vendor-specific list here is what made the
+  // registry stop being the source of truth.
 }
 
 /** Expand parsed fleet options into the concrete list of runs (pure; exported for tests). */
@@ -870,7 +922,9 @@ export function planFleetRuns(opts) {
       opts.personas === "mixed" ? PERSONA_ROTATION[i % PERSONA_ROTATION.length] : opts.personas;
     const model = opts.model;
     if (!opts.mock && !isProviderModel(provider, model, false)) {
-      throw new Error("fleet: pure live plans require an exact provider/model allowlist match");
+      throw new Error(
+        `fleet: pure live plans require an exact registered provider/model pair (got ${provider}/${model})`,
+      );
     }
     runs.push({
       seed,
@@ -1855,10 +1909,28 @@ function isCodexFleetModel(model) {
   return CERTIFIED_CODEX_MODELS.includes(model);
 }
 
+/**
+ * Is this an exact provider/model pair the registry recognizes?
+ *
+ * Reads the provider's own catalog rather than a per-vendor allowlist, so a newly
+ * registered vendor works here with no edit. `allowMix` is kept for the historical
+ * "mix" selector that older attestations may still carry; it is not a live path.
+ */
 function isProviderModel(provider, model, allowMix) {
-  if (provider === "codex") return isCodexFleetModel(model);
-  if (provider === "claude") return isFleetModel(model) || (allowMix && model === "mix");
-  return false;
+  if (allowMix && model === "mix") return true;
+  // The historical "claude" provider is no longer launchable, but its attestations must
+  // stay READABLE: resume and verification paths still parse evidence recorded before
+  // the registry existed, and refusing to recognize its models would retroactively
+  // invalidate archived runs rather than merely stopping new ones.
+  if (provider === "claude") return isFleetModel(model);
+  try {
+    const registered = readFleetProviderRegistry().find((candidate) => candidate.id === provider);
+    if (!registered) return false;
+    return readFleetCatalog(registered).models.some((candidate) => candidate.id === model);
+  } catch {
+    // An unreadable catalog is not a licence to accept an arbitrary model.
+    return false;
+  }
 }
 
 function isExactPureFleetAttestation(attestation) {

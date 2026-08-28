@@ -289,20 +289,31 @@ describe("loop status/stop process helpers", () => {
     expect(loopScript).not.toContain('echo "$$" > "$LOOP_PID_FILE"');
   });
 
-  it("fails the cycle on agent errors and requires build-bound playtest evidence", () => {
+  it("fails the cycle on agent errors", () => {
     expect(loopScript).toContain('return "$rc"');
     expect(loopScript).toContain("agent_rc=$?");
     expect(loopScript).not.toContain("agent step reported an error — continuing to verify");
-    expect(loopScript).toContain("loop:verify-playtest");
     expect(loopScript).toContain("loop:seal-feedback");
-    expect(loopScript).toContain('--expected-commit "$current_ref"');
     expect(packageScripts["loop:seal-feedback"]).toBe("tsx scripts/seal-feedback-acceptance.ts");
+  });
+
+  it("reads the QA bucket instead of verifying a per-cycle playtest", () => {
+    // The dev loop no longer plays the game: experience evidence is an INPUT, produced
+    // asynchronously by the playtest loop, never a condition on landing a change.
+    expect(loopScript).not.toContain("loop:verify-playtest");
+    expect(loopScript).toContain("report_qa_bucket");
+    expect(loopScript).toContain("qa:bucket");
+    expect(packageScripts["qa:bucket"]).toBe("tsx bin/qa.ts");
+    expect(packageScripts["qa:triage"]).toBe("tsx bin/triage.ts");
   });
 
   it("persists classified failures and exposes them through loop status", () => {
     expect(loopScript).toContain("failure-ledger.json");
     expect(loopScript).toContain("record_cycle_failure");
-    expect(loopScript).toContain('_reject_cycle "playtest"');
+    // The classified gates that remain after the playtest gate was removed.
+    expect(loopScript).toContain('_reject_cycle "health"');
+    expect(loopScript).toContain('_reject_cycle "integrity"');
+    expect(loopScript).not.toContain('_reject_cycle "playtest"');
     expect(statusScript).toContain("--- durable failure ledger ---");
     expect(statusScript).toContain("loop:failures -- summary");
   });
