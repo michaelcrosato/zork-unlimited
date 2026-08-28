@@ -27,11 +27,16 @@ Development and playtesting are **separate loops that run in parallel**, and
   bar. It does NOT play the game.
 - **Playtest loop** — `playtest-loop.sh`. Plays the published build over and
   over, across as many vendors and personas as the operator's quota allows, and
-  promotes corroborated findings into `qa/tickets/`.
+  promotes corroborated findings into the intake queue.
 
-The dev loop reads that bucket at the start of a cycle; it never waits for it.
-An empty bucket is normal and means the assessor's own candidates carry the
-cycle.
+Other teams are optional and use the same intake: an audit agent, a research or
+design agent, the crawler, or a person. **Playtest feedback is not the only way
+the game changes.** Everything files a submission into `intake/queue/` with
+`npm run submit`, and the dev loop reads only that queue.
+
+The dev loop reads it at the start of a cycle; it never waits for it. An empty
+queue is normal and means the assessor's own candidates carry the cycle (set
+`AI_LOOP_IDLE_WHEN_EMPTY=1` to wait instead).
 
 ## The dev loop (one cycle)
 
@@ -39,10 +44,12 @@ cycle.
 `docs/afk_loop.md` is the full protocol; the three-tier testing pyramid (on its
 always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
 
-1. **Assess** — read the QA bucket first (`npm run qa:bucket -- --summary`): a
-   `verified` or `corroborated` ticket is the strongest available signal. Then
-   `npm run ai:loop` ranks the next-best improvement (compiled hot spots, when
-   present, are a primary input). An empty bucket is normal, not a stall.
+1. **Assess** — read the intake queue first (`npm run work`): a queued
+   submission is somebody's actual request, and a `verified` or `corroborated`
+   playtest item is the strongest evidence available. Claim it with
+   `npm run work -- --claim <id>` and close it with `--done <id>`. Then
+   `npm run ai:loop` ranks the next-best improvement when the queue is empty —
+   which is normal, not a stall.
 2. **Crawl gate (pre)** — `npm run crawl:smoke` must be green before touching anything.
 3. **One change** — make a single focused improvement (engine, content, or tooling).
 4. **Freeze the revision** — run focused checks, then make a local provisional

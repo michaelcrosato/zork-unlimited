@@ -25,6 +25,10 @@
 #   PLAYTEST_PUBLISH=0                       push the corpus after each wave [0]
 #   PLAYTEST_DELAY_SECONDS=N                 pause between waves [30]
 #   PLAYTEST_MAX_WAVES=N                     stop after N waves [unbounded]
+#   PLAYTEST_STORE=<dir>                     session corpus [ai-runs/playtest/sessions]
+#                                            Point several QA worktrees at ONE absolute
+#                                            path and they pool into a single corpus —
+#                                            content addressing means no lock is needed.
 #   PLAYTEST_ALLOW_SHARED_CHECKOUT=1         permit running beside a live dev loop [0]
 set -euo pipefail
 
@@ -52,6 +56,8 @@ PERSONAS="${PLAYTEST_PERSONAS:-default}"
 CONCURRENCY="${PLAYTEST_CONCURRENCY:-4}"
 DELAY="${PLAYTEST_DELAY_SECONDS:-30}"
 SEED_BASE="${PLAYTEST_SEED_BASE:-$(date +%s)}"
+STORE="${PLAYTEST_STORE:-ai-runs/playtest/sessions}"
+export PLAYTEST_STORE="$STORE"
 
 if [[ ! -d node_modules ]]; then npm install; fi
 
@@ -72,15 +78,33 @@ persona_at() {
 
 run_player() {
   local provider="$1" seed="$2" persona="$3" model="$4"
-  local args=(--provider "$provider" --seed "$seed" --persona "$persona")
+  # Own the output prefix rather than letting run.sh choose one: the recorder needs to
+  # find these artifacts afterwards, and parsing the prefix back out of stdout would
+  # break the moment a log line changed.
+  local out="ai-runs/playtest/runs/${provider}_seed${seed}_${persona}"
+  mkdir -p "$(dirname "$out")"
+  local args=(--provider "$provider" --seed "$seed" --persona "$persona" --out "$out")
   [[ -n "$model" ]] && args+=(--model "$model")
   echo "  ▸ $provider seed=$seed persona=$persona ${model:+model=$model}"
-  # One player failing is expected and uninteresting — a timeout, a rate limit, a
-  # client hiccup. The wave carries on; the failure is still written to the corpus by
-  # the runner, because a run that died is evidence too.
-  if ! blind-tester/run.sh "${args[@]}" >/dev/null 2>&1; then
-    echo "    (player exited nonzero — recorded and skipped)"
+
+  # One player failing is expected and uninteresting — a timeout, a rate limit, a client
+  # hiccup. The wave carries on.
+  blind-tester/run.sh "${args[@]}" >"$out.runner.log" 2>&1 ||     echo "    (player exited nonzero — still recorded)"
+
+  # Record UNCONDITIONALLY. A run that timed out or crashed is evidence about the game
+  # just as much as a finished one, and the recorder is what decides the outcome label
+  # from the artifacts that actually landed. Dropping failures here is precisely how a
+  # QA corpus quietly becomes a highlight reel.
+  local record_args=(--out "$out" --provider "$provider" --persona "$persona" --store "$STORE")
+  [[ -n "$model" ]] && record_args+=(--model "$model")
+  if [[ -z "$model" ]]; then
+    # No pin: ask the registry which model this provider defaulted to, so the record
+    # names the model that actually played rather than a guess.
+    local resolved
+    resolved="$(node blind-tester/resolve-provider.mjs "$provider" 2>/dev/null | cut -f3)" || resolved=""
+    [[ -n "$resolved" ]] && record_args+=(--model "$resolved")
   fi
+  npx tsx bin/record-playtest-session.ts "${record_args[@]}" 2>&1 | sed "s/^/    /" ||     echo "    (could not record this session — artifacts remain at $out.*)"
 }
 
 run_wave() {
@@ -109,11 +133,14 @@ run_wave() {
   wait || true
   echo "  wave $wave: $index player(s) dispatched"
 
+  echo "  corpus: $(npx tsx bin/qa.ts --store-summary --store "$STORE" 2>/dev/null || echo "unavailable")"
   if [[ "${PLAYTEST_TRIAGE:-1}" == "1" ]]; then
-    npm run --silent qa:triage || echo "  triage failed; corpus is intact, retrying next wave"
+    npm run --silent qa:triage -- --store "$STORE" || \
+      echo "  triage failed; corpus is intact, retrying next wave"
   fi
   if [[ "${PLAYTEST_PUBLISH:-0}" == "1" ]]; then
-    npm run --silent qa:publish || echo "  publish failed; sessions remain staged locally"
+    npm run --silent qa:publish -- --store "$STORE" || \
+      echo "  publish failed; sessions remain staged locally"
   fi
 }
 

@@ -16,7 +16,10 @@
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { buildLocationIndex } from "../src/feedback/normalize.js";
+import { DEFAULT_QUEUE_DIR } from "../src/intake/submission.js";
+import { upsertSubmission } from "../src/intake/queue.js";
 import { DEFAULT_TICKET_DIR } from "../src/qa/ticket.js";
+import { submissionsFromTickets } from "../src/qa/ticket_submission.js";
 import { readTickets, summarizeBucket, writeTickets } from "../src/qa/ticket_store.js";
 import { DEFAULT_SESSION_STORE, listPlaytestSessions } from "../src/qa/session_store.js";
 import { triagePlaytestCorpus } from "../src/qa/triage.js";
@@ -96,6 +99,17 @@ function main(): void {
   }
   writeTickets(result.tickets, ticketDir);
   console.log(`Wrote ${result.tickets.length} ticket(s) to ${ticketDir}.`);
+
+  // Only actionable tickets cross into the dev loop's queue. The rest stay visible in
+  // the bucket — they are real evidence, just not yet work.
+  const queueDir = argValue("--queue", DEFAULT_QUEUE_DIR);
+  const promoted = submissionsFromTickets(result.tickets);
+  for (const submission of promoted) upsertSubmission(submission, queueDir);
+  console.log(
+    promoted.length === 0
+      ? `Nothing promoted to ${queueDir}: no ticket is corroborated or verified yet.`
+      : `Promoted ${promoted.length} submission(s) to ${queueDir}.`,
+  );
 }
 
 main();

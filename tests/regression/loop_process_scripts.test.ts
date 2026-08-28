@@ -297,14 +297,25 @@ describe("loop status/stop process helpers", () => {
     expect(packageScripts["loop:seal-feedback"]).toBe("tsx scripts/seal-feedback-acceptance.ts");
   });
 
-  it("reads the QA bucket instead of verifying a per-cycle playtest", () => {
+  it("reads the intake queue instead of verifying a per-cycle playtest", () => {
     // The dev loop no longer plays the game: experience evidence is an INPUT, produced
-    // asynchronously by the playtest loop, never a condition on landing a change.
+    // asynchronously by the playtest loop, never a condition on landing a change. And
+    // the queue it reads is source-agnostic — playtest triage is one filer among
+    // several, so an audit finding or a human request reaches the loop the same way.
     expect(loopScript).not.toContain("loop:verify-playtest");
     expect(loopScript).toContain("report_qa_bucket");
-    expect(loopScript).toContain("qa:bucket");
-    expect(packageScripts["qa:bucket"]).toBe("tsx bin/qa.ts");
+    expect(loopScript).toContain("run --silent work");
+    expect(packageScripts["work"]).toBe("tsx bin/work.ts");
+    expect(packageScripts["submit"]).toBe("tsx bin/submit.ts");
     expect(packageScripts["qa:triage"]).toBe("tsx bin/triage.ts");
+  });
+
+  it("can idle for queued work instead of inventing it", () => {
+    expect(loopScript).toContain("AI_LOOP_IDLE_WHEN_EMPTY");
+    expect(loopScript).toContain("await_queued_work");
+    // Opt-in: the default must still fall through to assessor candidates, or an empty
+    // queue would silently stall a loop nobody is watching.
+    expect(loopScript).toContain('"${AI_LOOP_IDLE_WHEN_EMPTY:-0}" == "1"');
   });
 
   it("persists classified failures and exposes them through loop status", () => {

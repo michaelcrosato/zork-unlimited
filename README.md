@@ -290,8 +290,13 @@ un-blocked the throughput the old single loop spent waiting.
 **Playtest loop** (`playtest-loop.sh`): runs independently and in parallel,
 plays the most recently published build with as many cheap players as your
 quota allows plus a small expensive reference cohort, records every playthrough,
-and promotes corroborated or reproduced findings into `qa/tickets/` — the dev
-loop's inbox.
+and promotes corroborated or reproduced findings into the intake queue.
+
+**Intake** (`intake/queue/`, `npm run work` / `npm run submit`): the dev loop's
+one inbox. Playtest triage is a source, not the only one — an audit agent, a
+research proposal, the crawler, or a person all file the same submission, and
+`npm run intake:sync` mirrors the queue to GitHub Issues so people can file from
+anywhere.
 
 Either loop runs on any model. The dev loop auto-detects an installed agent
 (`codex`, `claude`, `gemini`; `AI_AGENT` selects, `AI_AGENT_CMD` overrides), and

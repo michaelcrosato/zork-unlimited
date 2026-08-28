@@ -7,8 +7,10 @@
 # outright. No vendor is privileged, and adding one is a single table entry.
 #
 # This loop DOES NOT PLAY THE GAME. Blind playtesting is a separate, independently
-# paced loop (playtest-loop.sh) whose findings arrive here as QA tickets under
-# qa/tickets/. That split is the point: this loop used to spend most of its wall
+# paced loop (playtest-loop.sh). Its corroborated findings arrive here as submissions
+# in intake/queue/ — the same queue an audit agent, a research proposal, the crawler,
+# or a person files into, because playtest feedback is not the only way the game
+# changes. That split is the point: this loop used to spend most of its wall
 # clock blocked on one blind playthrough of the exact commit under test, which
 # capped throughput at roughly one change per playtest. Now the mechanical bar —
 # crawl, health, verifier integrity — is the whole gate, and quality evidence
@@ -16,6 +18,11 @@
 #
 # Env knobs (defaults in brackets):
 #   AI_AGENT=<id>                    pick a dev agent by id (codex|claude|gemini) [auto-detect]
+#   AI_LOOP_IDLE_WHEN_EMPTY=1        wait for queued work instead of falling back to the
+#                                    assessor's own candidates [0]
+#   AI_LOOP_IDLE_POLL_SECONDS=N      how often to re-check the queue while idling [300]
+#   AI_LOOP_TRIAGE_STORE=<dir>       triage this shared playtest corpus at cycle start,
+#                                    so QA worktrees never have to sync tickets []
 #   AI_LOOP_COMMIT=1                 provisional + final-ledger commits [0 = evidence-only]
 #   AI_LOOP_PUSH=1                   push after commit [0]; see the push note below
 #   AI_LOOP_MAX_CYCLES=N             stop after N cycles [unbounded]
@@ -355,6 +362,18 @@ safe_commit_if_enabled() {
   git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Autonomous dev cycle: record verified change}"
 }
 
+refresh_intake_queue() {
+  # If several QA worktrees are pooling into one corpus, triage it HERE at cycle start
+  # rather than having each QA loop push tickets around. Triage is pure over the corpus,
+  # so running it in the dev worktree produces exactly what running it in a QA worktree
+  # would — which means the queue never needs syncing between checkouts at all.
+  [[ -n "${AI_LOOP_TRIAGE_STORE:-}" ]] || return 0
+  npm run --silent qa:triage -- --store "$AI_LOOP_TRIAGE_STORE" || {
+    echo "Shared-corpus triage failed; continuing on the queue as it stands."
+    return 0
+  }
+}
+
 report_qa_bucket() {
   # The dev loop no longer plays the game, so there is no per-cycle playtest gate to
   # satisfy here. What replaces it is not another gate but an INPUT: the QA bucket
@@ -366,10 +385,28 @@ report_qa_bucket() {
   # from "wait for one playtest" to "wait for the fleet". When the bucket is empty the
   # assessor's own maintenance candidates carry the cycle, exactly as they already do
   # when no hot spots are compiled.
-  npm run --silent qa:bucket -- --summary || {
-    echo "QA bucket unreadable; continuing on assessor candidates."
+  npm run --silent work -- --list || {
+    echo "Intake queue unreadable; continuing on assessor candidates."
     return 0
   }
+}
+
+await_queued_work() {
+  # Opt-in idle mode. Default behaviour is unchanged — an empty queue falls through to
+  # the assessor's own maintenance candidates, so the loop always has something to do.
+  # Set AI_LOOP_IDLE_WHEN_EMPTY=1 when you would rather the loop WAIT than invent work:
+  # useful once the queue is the real roadmap and speculative churn costs more than it
+  # returns.
+  [[ "${AI_LOOP_IDLE_WHEN_EMPTY:-0}" == "1" ]] || return 0
+  local poll="${AI_LOOP_IDLE_POLL_SECONDS:-300}"
+  while true; do
+    refresh_intake_queue
+    if [[ -n "$(npm run --silent work -- --next-id 2>/dev/null)" ]]; then
+      return 0
+    fi
+    echo "Queue empty; idling ${poll}s before re-checking (AI_LOOP_IDLE_WHEN_EMPTY=1)."
+    sleep "$poll"
+  done
 }
 
 cycle_failure_stage="unclassified"
@@ -432,6 +469,12 @@ run_cycle() {
     _revert_failed_cycle
     mark_cycle_failure "$stage" "$reason"
   }
+  # Queue first: a corroborated or reproduced submission is stronger evidence than any
+  # candidate the assessor can synthesize, and it may have come from an audit or a person
+  # rather than from playtesting at all.
+  refresh_intake_queue
+  await_queued_work
+  report_qa_bucket
   npm run ai:loop || {
     echo "ai:loop failed"
     _reject_cycle "assess" "ai:loop could not assess or initialize the cycle"
@@ -487,11 +530,9 @@ run_cycle() {
     _reject_cycle "integrity" "verifier-integrity drift check failed"
     return 1
   }
-  # No playtest gate. Experience evidence is produced by the independent playtest
-  # loop and consumed at the START of a cycle as QA tickets, not proven at the end of
-  # one. Print what the bucket holds so the cycle log still records what quality
-  # evidence existed at landing time; it cannot fail the cycle.
-  report_qa_bucket
+  # No playtest gate. Experience evidence is an INPUT, consumed from the intake queue
+  # at the start of the cycle, never a condition on landing a change. The queue was
+  # already printed there; reprinting it here would only duplicate the cycle log.
   require_final_ledger_only || {
     _reject_cycle "ledger-only" "post-play changes were not limited to AI_LOOP_STATE.md"
     return 1

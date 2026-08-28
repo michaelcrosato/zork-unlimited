@@ -277,3 +277,32 @@ export function playtestSessionDirName(record: PlaytestSessionRecord): string {
   const stamp = record.recorded_at.replace(/[-:]/g, "").replace(/\.\d+/, "");
   return `${stamp}__${record.provider.id}__${record.model.id}__${record.record_id.slice(0, 12)}`;
 }
+
+/**
+ * Split a parsed exit interview into the two halves a record stores separately.
+ *
+ * One half is the player's OPINION (clarity, bugs, confusions, verdict); the other is
+ * the game's own server-authored EXIT RECEIPT. They are kept apart because the pipeline
+ * treats them differently — opinion is clustered and corroborated, the receipt is
+ * evidence — and letting a client's prose sit in a field the pipeline trusts is exactly
+ * the confusion that would make retention numbers meaningless.
+ *
+ * Shared by every ingest path (the runner's own recorder and the manual desktop ingest)
+ * so a session recorded one way is byte-identical to the same session recorded the
+ * other way.
+ */
+export function splitExitInterview(parsed: unknown): {
+  interview: PlaytestSessionBody["exit_interview"];
+  receipt: PlaytestSessionBody["journey_receipt"];
+} {
+  const record = parsed as Record<string, unknown>;
+  const subjective: Record<string, unknown> = {};
+  for (const key of Object.keys(SubjectiveExitInterviewSchema.shape)) {
+    if (key in record) subjective[key] = record[key];
+  }
+  const carried = record.journey_exit_receipt;
+  return {
+    interview: SubjectiveExitInterviewSchema.parse(subjective),
+    receipt: carried === undefined ? null : JourneyExitReceiptSchema.parse(carried),
+  };
+}

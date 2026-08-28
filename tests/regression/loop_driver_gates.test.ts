@@ -93,6 +93,8 @@ describe("loop.sh verification gates", () => {
     const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
     const ordered = [
       "require_clean_evidence_cycle_start",
+      "refresh_intake_queue",
+      "report_qa_bucket",
       "npm run ai:loop",
       "run_agent",
       'require_provisional_commit "$start_ref"',
@@ -100,7 +102,6 @@ describe("loop.sh verification gates", () => {
       "npm run crawl:smoke",
       "npm run health",
       'npm run verify:integrity -- --against "$start_ref"',
-      "report_qa_bucket",
       "require_final_ledger_only",
       "safe_commit_if_enabled",
       "git push",
@@ -444,9 +445,11 @@ describe("the dev loop does not gate on a playtest", () => {
     expect(driver).not.toContain("loop:verify-playtest");
   });
 
-  it("reads the QA bucket instead, and cannot fail the cycle on it", () => {
-    const bucket = `${sectionBetween("report_qa_bucket() {", "\n}\n\ncycle_failure_stage")}\n}`;
-    expect(bucket).toContain("qa:bucket");
+  it("reads the intake queue instead, and cannot fail the cycle on it", () => {
+    const bucket = `${sectionBetween("report_qa_bucket() {", "\n}\n\nawait_queued_work")}\n}`;
+    // The queue, not just the QA bucket: an audit finding or a human request is work
+    // too, and a loop that could only see playtest output would be blind to both.
+    expect(bucket).toContain("run --silent work");
     // Every path returns 0: an empty or unreadable bucket is a normal state.
     expect(bucket).toContain("return 0");
     expect(bucket).not.toMatch(/return 1/);

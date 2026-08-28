@@ -15,6 +15,19 @@
  */
 import { DEFAULT_TICKET_DIR, isActionable, type QaTicket } from "../src/qa/ticket.js";
 import { readTickets, summarizeBucket } from "../src/qa/ticket_store.js";
+import {
+  DEFAULT_SESSION_STORE,
+  listPlaytestSessions,
+  summarizePlaytestStore,
+} from "../src/qa/session_store.js";
+
+// Piping to `head`/`less` closes stdout early; Node turns that into an unhandled EPIPE
+// and a stack trace. A list-printing CLI is going to be piped, so swallow it and exit
+// quietly rather than making a normal shell idiom look like a crash.
+process.stdout.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EPIPE") process.exit(0);
+  throw error;
+});
 
 function argValue(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);
@@ -36,6 +49,26 @@ function line(ticket: QaTicket): string {
 }
 
 function main(): void {
+  // `--store-summary` reports the CORPUS rather than the queue. The playtest loop prints
+  // it each wave so an operator can see evidence accumulating before anything has been
+  // corroborated enough to promote — otherwise a healthy loop looks identical to a
+  // broken one for its first few waves.
+  if (process.argv.includes("--store-summary")) {
+    const store = argValue("--store", process.env.PLAYTEST_STORE ?? DEFAULT_SESSION_STORE);
+    const { entries, unreadable } = listPlaytestSessions(store);
+    const s = summarizePlaytestStore(entries);
+    const outcomes = Object.entries(s.byOutcome)
+      .sort()
+      .map(([k, v]) => `${k} ${v}`)
+      .join(", ");
+    console.log(
+      `${s.total} session(s); ${outcomes || "none"}; lineages ${s.families.join("+") || "none"}; ` +
+        `metrics-eligible ${s.metricsEligible}` +
+        (unreadable.length > 0 ? `; ${unreadable.length} unreadable` : ""),
+    );
+    return;
+  }
+
   const dir = argValue("--dir", DEFAULT_TICKET_DIR);
   const { tickets, unreadable } = readTickets(dir);
   for (const bad of unreadable) console.error(`! unreadable ticket ${bad.file}: ${bad.reason}`);
