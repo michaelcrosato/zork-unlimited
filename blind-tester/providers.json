@@ -1,0 +1,63 @@
+{
+  "providers": [
+    {
+      "id": "codex",
+      "displayName": "OpenAI Codex CLI",
+      "vendor": "openai",
+      "family": "gpt",
+      "kind": "headless_cli",
+      "isolation": "runner_enforced",
+      "launch": {
+        "executable": "codex",
+        "argv": ["-a", "never", "exec", "--sandbox", "read-only", "--cd", "{CWD}", "-"],
+        "binaryOverrideEnv": "BLIND_CODEX_BIN"
+      },
+      "catalogPath": "blind-tester/catalogs/codex.json",
+      "transportContract": "game-direct-mcp-v1",
+      "notes": "Strongest at driving the dev loop as well. Historical strict-code-mode and direct-MCP receipts remain readable through src/blind/receipt_binding.ts."
+    },
+    {
+      "id": "claude_code",
+      "displayName": "Claude Code CLI",
+      "vendor": "anthropic",
+      "family": "claude",
+      "kind": "headless_cli",
+      "isolation": "runner_enforced",
+      "launch": {
+        "executable": "claude",
+        "argv": ["-p", "--permission-mode", "plan", "--add-dir", "{CWD}"],
+        "binaryOverrideEnv": "BLIND_CLAUDE_BIN"
+      },
+      "catalogPath": "blind-tester/catalogs/claude_code.json",
+      "transportContract": "game-direct-mcp-v1",
+      "notes": "Also a strong dev-loop driver."
+    },
+    {
+      "id": "gemini_cli",
+      "displayName": "Gemini CLI",
+      "vendor": "google",
+      "family": "gemini",
+      "kind": "headless_cli",
+      "isolation": "runner_enforced",
+      "launch": {
+        "executable": "gemini",
+        "argv": ["--model", "{MODEL}", "--prompt-interactive", "-"],
+        "binaryOverrideEnv": "BLIND_GEMINI_BIN"
+      },
+      "catalogPath": "blind-tester/catalogs/gemini_cli.json",
+      "transportContract": "game-direct-mcp-v1",
+      "notes": "Well suited to cheap mass-parallel volume cohorts."
+    },
+    {
+      "id": "grok_desktop",
+      "displayName": "Grok (desktop / web client)",
+      "vendor": "xai",
+      "family": "grok",
+      "kind": "desktop_client",
+      "isolation": "operator_attested",
+      "catalogPath": "blind-tester/catalogs/grok_desktop.json",
+      "transportContract": "operator-attested-mcp-v1",
+      "notes": "No headless CLI ships today, so sessions are captured through the desktop client and ingested with `npm run playtest:ingest`. Kept as operator_attested until a CLI exists, at which point this becomes a headless_cli entry and its past sessions keep their original, honest label."
+    }
+  ]
+}

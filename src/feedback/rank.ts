@@ -4,6 +4,7 @@
  * an already-built `IssueCluster` (see cluster.ts).
  */
 import type { FeedbackSource, FixLayer } from "./schema.js";
+import type { PlaytestTier } from "../blind/providers.js";
 import type { IssueCluster, IssueSeverity } from "./cluster.js";
 
 /** S4 (blocking) outweighs S0 (cosmetic) sixteenfold — protocol polarity. */
@@ -12,14 +13,101 @@ export const SEVERITY_WEIGHT = { S0: 1, S1: 2, S2: 4, S3: 8, S4: 16 } as const;
 /** Crawler+fleet agreement on the same cluster is the strongest signal. */
 export const BOTH_SOURCES_BONUS = 2;
 
+/**
+ * Tier factors. These are the numbers that make a mass-parallel, mixed-vendor fleet
+ * safe to rank, and each encodes a specific claim about what the evidence means.
+ *
+ * `REFERENCE_ONLY_FACTOR` is above 1 on purpose, and it is the whole reason the
+ * reference cohort earns its cost. A defect only the expensive models notice arrives
+ * with a tiny mention count — three runs against forty — so under plain
+ * count×severity it sorts near the bottom, and the calibration instrument gets
+ * outvoted by the very cohort it exists to check. Weighting it UP restores the
+ * asymmetry the cohort was bought for.
+ *
+ * `VOLUME_SINGLE_FAMILY_FACTOR` is below 1 for the mirror-image reason. One cheap
+ * model reporting "I got stuck" forty times is forty samples of one model's ceiling,
+ * not forty players failing. Until a second lineage sees it, treat it as a capability
+ * signal rather than a product defect — the discount is deliberately soft (it demotes,
+ * never suppresses) because a real defect will pick up a second family quickly.
+ */
+export const REFERENCE_CONFIRMED_FACTOR = 2;
+export const REFERENCE_ONLY_FACTOR = 1.5;
+export const VOLUME_SINGLE_FAMILY_FACTOR = 0.5;
+
+/** Distinct lineages required before a volume-only cluster is taken at face value. */
+export const VOLUME_CONSENSUS_FAMILIES = 2;
+
 function hasBothSources(sources: readonly FeedbackSource[]): boolean {
   return sources.includes("crawler") && sources.includes("fleet");
 }
 
-/** count × severity weight × (both sources agree ? BOTH_SOURCES_BONUS : 1). */
+/**
+ * Repetition within one lineage still counts — but sub-linearly.
+ *
+ * Straight mention-counting makes a cohort's SIZE the dominant term, so whoever ran
+ * the most players decides the roadmap. A saturating curve keeps repetition
+ * informative (8 mentions outrank 1) while preventing a 200-run Gemini cohort from
+ * burying a 3-run finding that four vendors independently confirmed.
+ */
+function volumeWeight(mentions: number): number {
+  return 1 + Math.log2(1 + Math.max(0, mentions));
+}
+
+/**
+ * Read the provider dimensions tolerantly.
+ *
+ * A cluster does not only arrive fresh from `clusterIssues`: an already-compiled
+ * `hotspots.json` written before these fields existed is read back by
+ * `readLatestHotspots` and re-ranked, and there the keys are simply absent. Treating
+ * "absent" as "no provider metadata" is what routes those through the legacy formula
+ * instead of throwing on a historical artifact.
+ */
+function clusterFamilies(c: IssueCluster): readonly string[] {
+  return c.families ?? [];
+}
+
+function clusterTiers(c: IssueCluster): readonly PlaytestTier[] {
+  return c.tiers ?? [];
+}
+
+function tierFactor(c: IssueCluster): number {
+  const tiers = clusterTiers(c);
+  const sawReference = tiers.includes("reference");
+  const sawVolume = tiers.includes("volume");
+  if (sawReference && sawVolume) return REFERENCE_CONFIRMED_FACTOR;
+  if (sawReference) return REFERENCE_ONLY_FACTOR;
+  if (sawVolume && clusterFamilies(c).length < VOLUME_CONSENSUS_FAMILIES) {
+    return VOLUME_SINGLE_FAMILY_FACTOR;
+  }
+  return 1;
+}
+
+/**
+ * Rank one cluster.
+ *
+ * Two regimes, and which one applies is a property of the EVIDENCE, not a setting:
+ *
+ *  - No provider metadata (crawler-only findings, and every report written before the
+ *    multi-vendor playtest loop existed) → the original
+ *    `count × severity × both-sources` rule, evaluated identically. Historical
+ *    rankings and the accepted-manifest hashes that pin them stay exactly as they
+ *    were, so this change cannot silently restate past compiles.
+ *
+ *  - Provider metadata present → distinct FAMILIES carry the count, repetition
+ *    saturates, and the tier factor applies. Independence is what is being measured;
+ *    volume is only evidence of itself.
+ */
 export function scoreCluster(c: IssueCluster): number {
-  const diversity = hasBothSources(c.sources) ? BOTH_SOURCES_BONUS : 1;
-  return c.issues.length * SEVERITY_WEIGHT[c.maxSeverity] * diversity;
+  const sourceBonus = hasBothSources(c.sources) ? BOTH_SOURCES_BONUS : 1;
+  const severity = SEVERITY_WEIGHT[c.maxSeverity];
+
+  const families = clusterFamilies(c);
+  if (families.length === 0 && clusterTiers(c).length === 0) {
+    return c.issues.length * severity * sourceBonus;
+  }
+
+  const familyCount = Math.max(1, families.length);
+  return familyCount * volumeWeight(c.issues.length) * severity * tierFactor(c) * sourceBonus;
 }
 
 /**

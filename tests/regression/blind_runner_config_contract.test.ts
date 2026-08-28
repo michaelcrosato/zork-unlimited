@@ -1283,9 +1283,12 @@ printf 'codex-cli 0.144.1\\n'
 
     expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-codex}"');
     expect(runner).toContain("--provider)");
-    expect(runner).toContain("--provider must be exactly codex");
-    expect(runner).toContain("The live Claude blind provider is retired");
-    expect(runner).toContain('MODEL="gpt-5.3-codex-spark"');
+    // Provider and model are validated through the registry, never against a vendor
+    // list embedded here: a runner that has to be edited to gain a vendor is a runner
+    // that stays single-vendor.
+    expect(runner).toContain("resolve-provider.mjs");
+    expect(runner).not.toContain("--provider must be exactly codex");
+    expect(runner).toContain("this runner cannot launch it");
     expect(launcher).toContain('["provider", "--provider", true]');
 
     const launchAt = runner.indexOf('CODEX_EVENTS="$OUT.codex.jsonl"');
@@ -1617,7 +1620,8 @@ exit 93
     );
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
     expect(result.status, output).toBe(2);
-    expect(output).toContain("--provider must be exactly codex");
+    expect(output).toContain("is not registered");
+    expect(output).toContain("claude_code");
     expect(output).not.toContain("Blind playtest →");
 
     for (const [args, env] of [
@@ -1677,7 +1681,7 @@ exit 93
     );
     const inlineOutput = `${inline.stdout ?? ""}\n${inline.stderr ?? ""}\n${inline.error?.message ?? ""}`;
     expect(inline.status, inlineOutput).toBe(2);
-    expect(inlineOutput).toContain("--provider must be exactly codex");
+    expect(inlineOutput).toContain("is not registered");
     expect(inlineOutput).not.toContain("Live blind LLM runs must start");
     expect(inlineOutput).not.toContain("Ambiguous:");
 

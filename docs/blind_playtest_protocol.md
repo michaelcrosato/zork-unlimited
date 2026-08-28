@@ -1,5 +1,18 @@
 # Blind playtest protocol
 
+> **Any model can be a blind playtester.** Providers are declared in
+> `src/blind/providers.ts` and their playable models in operator-owned catalogs
+> under `blind-tester/catalogs/`; the runner validates against that registry
+> rather than against any hard-coded vendor. The Codex-specific sections below
+> describe ONE provider's hardened launch path — they are the worked example of
+> a `runner_enforced` transport, not a statement that Codex is required.
+>
+> Vendors with no headless CLI (Grok today) are played through their own client
+> and recorded with `npm run playtest:ingest`. Those sessions are stamped
+> `operator_attested`: they are kept in full and count toward bug corroboration,
+> but are excluded from experience metrics because no code here watched the
+> client. See [`two_loop_workflow.md`](./two_loop_workflow.md).
+
 Blind playtests measure the experience a new player actually receives. They are
 Tier 2 of `docs/testing_pyramid.md`: a fresh reasoning agent has no repository,
 content, solution, authoring, or diagnostic access and plays only through the

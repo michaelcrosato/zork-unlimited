@@ -305,7 +305,7 @@ describe("loop.sh verification gates", () => {
       "npm run crawl:smoke",
       "npm run health",
       'npm run verify:integrity -- --against "$start_ref"',
-      "require_playtest_record",
+      "report_qa_bucket",
       "require_final_ledger_only",
       "safe_commit_if_enabled",
       "git push",
@@ -344,10 +344,7 @@ describe("loop.sh verification gates", () => {
   });
 
   it("safe_commit_if_enabled is inert unless AI_LOOP_COMMIT=1", () => {
-    const safeCommit = sectionBetween(
-      "safe_commit_if_enabled() {",
-      "\n}\n\nrequire_playtest_record()",
-    );
+    const safeCommit = sectionBetween("safe_commit_if_enabled() {", "\n}\n\nreport_qa_bucket()");
 
     expect(safeCommit.indexOf('[[ "${AI_LOOP_COMMIT:-0}" != "1" ]]')).toBeLessThan(
       safeCommit.indexOf("loop:seal-feedback"),
@@ -558,94 +555,117 @@ describe("loop.sh provisional/final commit contracts", () => {
 
 describe("loop.sh agent selection", () => {
   const agentCommand = `${sectionBetween("agent_cmd() {", "\n}\n\nrun_agent()")}\n}`;
+  const registry = `${sectionBetween("dev_agent_binary() {", "\n}\n\ndev_agent_command()")}\n}\n${sectionBetween("dev_agent_command() {", "\n}\n\n# Resolve")}\n}`;
+  // Empty PATH so ONLY the stub functions below resolve. Without this the test
+  // inherits whatever agents happen to be installed on the machine running it, and
+  // "no agent available" becomes unassertable on a developer box.
+  const preamble = [
+    "set -uo pipefail",
+    'PATH=""',
+    "DEV_AGENT_IDS=(codex claude gemini)",
+    registry,
+  ].join("\n");
 
-  it("uses installed Codex as the only automatic agent and never inspects its login file", () => {
-    expect(agentCommand).toContain("if command -v codex >/dev/null 2>&1; then");
-    expect(agentCommand).not.toMatch(/claude/i);
+  function resolve(lines: string[]): { status: number | null; stdout: string; stderr: string } {
+    const result = spawnSync("bash", ["-s"], {
+      cwd: process.cwd(),
+      env: process.env,
+      input: [preamble, ...lines, agentCommand, "agent_cmd"].join("\n"),
+      encoding: "utf8",
+    });
+    return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  }
+
+  it("never inspects a vendor credential file to decide which agent to run", () => {
     expect(agentCommand).not.toMatch(new RegExp(["auth", "json"].join("\\."), "i"));
+    expect(agentCommand).not.toMatch(/credential/i);
   });
 
-  it("resolves the installed Codex CLI for automatic runs", () => {
-    const result = spawnSync("bash", ["-s"], {
-      cwd: process.cwd(),
-      env: process.env,
-      input: [
-        "set -uo pipefail",
-        "unset AI_AGENT_CMD AI_CODEX_SANDBOX",
-        "codex() { :; }",
-        agentCommand,
-        "agent_cmd",
-      ].join("\n"),
-      encoding: "utf8",
-    });
+  it("auto-detects any supported agent, not one privileged vendor", () => {
+    const codexOnly = resolve(["unset AI_AGENT AI_AGENT_CMD AI_CODEX_SANDBOX", "codex() { :; }"]);
+    expect(codexOnly.status, codexOnly.stderr).toBe(0);
+    expect(codexOnly.stdout).toContain("codex -a never exec --sandbox workspace-write --cd ");
 
-    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
-    expect(result.stdout).toContain("codex -a never exec --sandbox workspace-write --cd ");
+    // With no codex installed the loop still runs — on whatever IS installed.
+    const claudeOnly = resolve(["unset AI_AGENT AI_AGENT_CMD", "claude() { :; }"]);
+    expect(claudeOnly.status, claudeOnly.stderr).toBe(0);
+    expect(claudeOnly.stdout).toContain("claude -p");
+
+    const geminiOnly = resolve(["unset AI_AGENT AI_AGENT_CMD", "gemini() { :; }"]);
+    expect(geminiOnly.status, geminiOnly.stderr).toBe(0);
+    expect(geminiOnly.stdout).toContain("gemini");
   });
 
-  it("gives an explicit AI_AGENT_CMD precedence over automatic Codex selection", () => {
-    const result = spawnSync("bash", ["-s"], {
-      cwd: process.cwd(),
-      env: process.env,
-      input: [
-        "set -uo pipefail",
-        "unset AI_CODEX_SANDBOX",
-        "codex() { :; }",
-        'AI_AGENT_CMD="explicit-agent --headless"',
-        agentCommand,
-        "agent_cmd",
-      ].join("\n"),
-      encoding: "utf8",
-    });
+  it("honours AI_AGENT over auto-detection order", () => {
+    const result = resolve([
+      "unset AI_AGENT_CMD",
+      "codex() { :; }",
+      "claude() { :; }",
+      'AI_AGENT="claude"',
+    ]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("claude -p");
+    expect(result.stdout).not.toContain("codex");
+  });
 
-    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+  it("refuses to silently substitute another vendor when the requested one is absent", () => {
+    // Substituting would make the cycle ledger claim work an agent never did.
+    const result = resolve(["unset AI_AGENT_CMD", "codex() { :; }", 'AI_AGENT="gemini"']);
+    expect(result.stdout.trim()).toBe("");
+    expect(result.stderr).toContain("gemini");
+    expect(result.stderr).toContain("not on PATH");
+  });
+
+  it("rejects an unknown AI_AGENT id instead of guessing", () => {
+    const result = resolve(["unset AI_AGENT_CMD", "codex() { :; }", 'AI_AGENT="not-an-agent"']);
+    expect(result.stdout.trim()).toBe("");
+    expect(result.stderr).toContain("is not a known dev agent");
+  });
+
+  it("gives an explicit AI_AGENT_CMD precedence over every registry entry", () => {
+    const result = resolve([
+      "unset AI_CODEX_SANDBOX",
+      "codex() { :; }",
+      'AI_AGENT="codex"',
+      'AI_AGENT_CMD="explicit-agent --headless"',
+    ]);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toBe("explicit-agent --headless\n");
+  });
+
+  it("emits nothing when no agent is available, so the cycle degrades to evidence-only", () => {
+    const result = resolve(["unset AI_AGENT AI_AGENT_CMD"]);
+    expect(result.stdout.trim()).toBe("");
   });
 });
 
-describe("require_playtest_record", () => {
-  const gate = `${sectionBetween("require_playtest_record() {", "\n}\n\nrun_cycle()")}\n}`;
+describe("the dev loop does not gate on a playtest", () => {
+  const driver = readFileSync("loop.sh", "utf8");
 
-  it("is a no-op for evidence-only runs", () => {
-    const result = runGateHarness(gate, { AI_LOOP_COMMIT: "0" });
-
-    expect(result.status, result.output).toBe(0);
+  it("has no playtest gate left to fail a cycle", () => {
+    // The whole point of splitting the loops: experience evidence is an INPUT to a
+    // cycle, never a condition on landing one.
+    expect(driver).not.toContain("require_playtest_record");
+    expect(driver).not.toContain("loop:verify-playtest");
   });
 
-  it("refuses to commit when latest-cycle metadata is missing", () => {
-    const result = runGateHarness(gate, { AI_LOOP_COMMIT: "1" });
-
-    expect(result.status).toBe(1);
-    expect(result.output).toContain("No cycle metadata");
-    expect(result.output).toContain("Refusing to commit");
+  it("reads the QA bucket instead, and cannot fail the cycle on it", () => {
+    const bucket = `${sectionBetween("report_qa_bucket() {", "\n}\n\ncycle_failure_stage")}\n}`;
+    expect(bucket).toContain("qa:bucket");
+    // Every path returns 0: an empty or unreadable bucket is a normal state.
+    expect(bucket).toContain("return 0");
+    expect(bucket).not.toMatch(/return 1/);
   });
 
-  it("refuses to commit when the recorded report is absent or empty despite valid raw evidence", () => {
-    const missing = runGateHarness(
-      gate,
-      { AI_LOOP_COMMIT: "1" },
-      "require_playtest_record",
-      (root) => setupPlaytestGateFixture(root, "missing"),
-    );
-    expect(missing.status).toBe(5);
-    expect(missing.output).toContain("cycle playtest report is missing");
-
-    const empty = runGateHarness(gate, { AI_LOOP_COMMIT: "1" }, "require_playtest_record", (root) =>
-      setupPlaytestGateFixture(root, "empty"),
-    );
-    expect(empty.status).toBe(5);
-    expect(empty.output).toContain("report is empty");
+  it("keeps the mechanical gates as the whole bar", () => {
+    expect(driver).toContain("crawl:smoke");
+    expect(driver).toContain("npm run health");
+    expect(driver).toContain("verify:integrity");
   });
 
-  it("allows a commit only for a report reproduced by raw evidence and a sidecar", () => {
-    const result = runGateHarness(
-      gate,
-      { AI_LOOP_COMMIT: "1" },
-      "require_playtest_record",
-      (root) => setupPlaytestGateFixture(root, "valid"),
-    );
-
-    expect(result.status, result.output).toBe(0);
-    expect(result.output).toContain("verified pure cycle playtest");
+  it("still rejects a cycle whose outer gates go red", () => {
+    expect(driver).toContain('_reject_cycle "health"');
+    expect(driver).toContain('_reject_cycle "integrity"');
+    expect(driver).toContain('_reject_cycle "crawl-post"');
   });
 });

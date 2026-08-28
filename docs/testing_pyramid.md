@@ -18,8 +18,10 @@ reference for what each tier does, when it runs, and its exact shapes.
   checking nine invariant oracles every step. `crawl:smoke` runs every loop
   cycle (pre- and post-work gate); `crawl:deep` is a longer soak, nightly or
   manual.
-- **Tier 2 — pure blind LLM playtests** (`blind-tester/`): a fresh,
-  no-repo-access agent starts a brand-new overworld game, receives only the
+- **Tier 2 — pure blind LLM playtests** (`blind-tester/`, driven by the
+  independent playtest loop — see [`two_loop_workflow.md`](./two_loop_workflow.md)):
+  a fresh, no-repo-access agent on ANY registered provider starts a brand-new
+  overworld game, receives only the
   human player surface, and follows its versioned current goals, authored story
   choices, and goal/checkpoint continue-or-end choices. Under current contract
   v3, every goal-completion retention event identifies the goal it closed and a

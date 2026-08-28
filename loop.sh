@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
-# The AFK loop driver. Usage: ./loop.sh [--once]   (protocol: docs/afk_loop.md)
+# The DEV loop driver. Usage: ./loop.sh [--once]   (protocol: docs/afk_loop.md)
 #
-# CODEX-ONLY DEFAULT: the routine improvement loop runs OpenAI Codex / ChatGPT
-# indefinitely. It resolves the installed Codex CLI without inspecting local
-# credential files; provide AI_AGENT_CMD only when an operator deliberately wants
-# a different headless command.
+# ANY MODEL CAN RUN THIS LOOP. The driver resolves whichever supported headless
+# coding agent is installed (see DEV_AGENT_IDS below) without inspecting credential
+# files; AI_AGENT names one explicitly and AI_AGENT_CMD overrides the command
+# outright. No vendor is privileged, and adding one is a single table entry.
+#
+# This loop DOES NOT PLAY THE GAME. Blind playtesting is a separate, independently
+# paced loop (playtest-loop.sh) whose findings arrive here as QA tickets under
+# qa/tickets/. That split is the point: this loop used to spend most of its wall
+# clock blocked on one blind playthrough of the exact commit under test, which
+# capped throughput at roughly one change per playtest. Now the mechanical bar —
+# crawl, health, verifier integrity — is the whole gate, and quality evidence
+# arrives asynchronously from a fleet that never has to wait for a build.
 #
 # Env knobs (defaults in brackets):
+#   AI_AGENT=<id>                    pick a dev agent by id (codex|claude|gemini) [auto-detect]
 #   AI_LOOP_COMMIT=1                 provisional + final-ledger commits [0 = evidence-only]
 #   AI_LOOP_PUSH=1                   push after commit [0]; see the push note below
 #   AI_LOOP_MAX_CYCLES=N             stop after N cycles [unbounded]
 #   AI_LOOP_DELAY_SECONDS=N          pause between cycles [10]
-#   AI_AGENT_CMD="..."               explicit full agent command (overrides Codex)
-#   AI_CODEX_SANDBOX=...             codex sandbox [workspace-write]
+#   AI_AGENT_CMD="..."               explicit full agent command (overrides the registry)
+#   AI_CODEX_SANDBOX=...             sandbox for the codex entry only [workspace-write]
 #   AI_AGENT_TIMEOUT_SECONDS=N       hang-kill budget per agent turn [2400]
 #   AI_LOOP_MAX_CONSECUTIVE_FAILURES / AI_LOOP_MAX_TOTAL_FAILURES   breakers [5 / 15]
 #   AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES=N   retained durable failure records [100]
@@ -39,7 +48,7 @@ fi
 # Commit-mode scratch is committed (green) or reverted (red); evidence-only mode
 # stops once it leaves pending work. AI_LOOP_ALLOW_DIRTY=1 opts back in deliberately
 # for commit mode — the operator accepts those reset/mutation risks. It NEVER waives
-# the exact-clean start required by an evidence-only pure playtest.
+# the exact-clean start an evidence-only cycle requires before it commits.
 if [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] && [[ -n "$(git status --porcelain)" ]]; then
   echo "Refusing to start: the working tree is dirty, and a failed cycle's"
   echo "self-recovery would hard-reset tracked edits. Cycle-created untracked"
@@ -177,22 +186,75 @@ latest_prompt() {
   find ai-runs \( -path '*/prompt.md' -o -path '*/agent-prompt.md' \) -type f -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}'
 }
 
-# Resolve the headless agent command that does each cycle's WORK (incl. the
-# mandatory blind LLM playtest). Precedence:
-#   1. $AI_AGENT_CMD           — explicit full command, wins over everything
-#   2. installed `codex`       — the automatic, Codex-only default
-#   3. (not installed)         — evidence-only: the prompt is written, no work is done
-# Codex runs non-interactively per OpenAI's documented autonomous pattern
-# (`codex exec -a never --sandbox workspace-write`). An explicit AI_AGENT_CMD must
-# likewise read the prompt from STDIN. Provider-specific blind-playtest adapters
-# remain documented with the blind harness rather than selected implicitly here.
+# ── Dev-agent registry ───────────────────────────────────────────────────────────
+# The contract an entry must satisfy — the ONLY things this loop assumes about the
+# agent, and therefore everything you need to add a vendor:
+#
+#   1. reads its instructions from STDIN (never argv: the cycle prompt is long, and
+#      argv leaks it into the process table)
+#   2. can create and edit files in $PWD, and run the repo's own commands
+#   3. runs to completion non-interactively, with no approval prompt
+#   4. exits 0 on success and nonzero on failure — a nonzero exit fails the cycle,
+#      because partial output is not evidence the requested work completed
+#
+# Anything meeting that contract works, whether or not it is listed here. The list
+# exists so the common cases need no configuration, not to restrict the field.
+#
+# Flags are operator-verifiable: CLIs change, and a wrong flag here should be a
+# one-line fix rather than a reason to distrust the loop. Confirm yours once with
+# `AI_AGENT=<id> AI_LOOP_MAX_CYCLES=1 ./loop.sh`.
+DEV_AGENT_IDS=(codex claude gemini)
+
+dev_agent_binary() {
+  case "$1" in
+    codex)  echo "codex" ;;
+    claude) echo "claude" ;;
+    gemini) echo "gemini" ;;
+    *)      return 1 ;;
+  esac
+}
+
+dev_agent_command() {
+  case "$1" in
+    codex)  echo "codex -a never exec --sandbox ${AI_CODEX_SANDBOX:-workspace-write} --cd $PWD -" ;;
+    claude) echo "claude -p --permission-mode acceptEdits --add-dir $PWD" ;;
+    gemini) echo "gemini --yolo" ;;
+    *)      return 1 ;;
+  esac
+}
+
+# Resolve the headless agent that does each cycle's WORK. Precedence:
+#   1. $AI_AGENT_CMD  — explicit full command, wins over everything
+#   2. $AI_AGENT      — a registry id; fails loudly if that agent is not installed,
+#                       because silently substituting another vendor would make the
+#                       cycle ledger claim work an agent never did
+#   3. auto-detect    — first installed agent in DEV_AGENT_IDS order
+#   4. none installed — evidence-only: the prompt is written, no work is done
 agent_cmd() {
   if [[ -n "${AI_AGENT_CMD:-}" ]]; then echo "$AI_AGENT_CMD"; return 0; fi
 
-  local codex_cmd="codex -a never exec --sandbox ${AI_CODEX_SANDBOX:-workspace-write} --cd $PWD -"
-  if command -v codex >/dev/null 2>&1; then
-    echo "$codex_cmd"
+  if [[ -n "${AI_AGENT:-}" ]]; then
+    local requested_bin
+    if ! requested_bin="$(dev_agent_binary "$AI_AGENT")"; then
+      echo "AI_AGENT=\"$AI_AGENT\" is not a known dev agent (${DEV_AGENT_IDS[*]}); set AI_AGENT_CMD for anything else." >&2
+      return 0
+    fi
+    if ! command -v "$requested_bin" >/dev/null 2>&1; then
+      echo "AI_AGENT=\"$AI_AGENT\" was requested but \"$requested_bin\" is not on PATH." >&2
+      return 0
+    fi
+    dev_agent_command "$AI_AGENT"
+    return 0
   fi
+
+  local id bin
+  for id in "${DEV_AGENT_IDS[@]}"; do
+    bin="$(dev_agent_binary "$id")" || continue
+    if command -v "$bin" >/dev/null 2>&1; then
+      dev_agent_command "$id"
+      return 0
+    fi
+  done
 }
 
 run_agent() {
@@ -201,7 +263,12 @@ run_agent() {
   if [[ -z "$prompt" ]]; then echo "No AFK agent prompt found; skipping agent handoff."; return 0; fi
   if [[ "${AI_LOOP_RUN_AGENT:-1}" != "1" ]]; then echo "AI_LOOP_RUN_AGENT is not 1; prompt is ready at $prompt."; return 0; fi
   cmd="$(agent_cmd)"
-  if [[ -z "$cmd" ]]; then echo "No Codex CLI available (install codex, or set AI_AGENT_CMD, e.g. 'codex -a never exec --sandbox workspace-write -'); evidence-only. Prompt at $prompt."; return 0; fi
+  if [[ -z "$cmd" ]]; then
+    echo "No supported dev agent found on PATH (tried: ${DEV_AGENT_IDS[*]})."
+    echo "Install one, set AI_AGENT=<id>, or set AI_AGENT_CMD to any command that reads the prompt from STDIN."
+    echo "Evidence-only this cycle. Prompt at $prompt."
+    return 0
+  fi
   local budget="${AI_AGENT_TIMEOUT_SECONDS:-2400}"
   # Per-cycle override: ai-loop.ts writes agentTimeoutSeconds into latest-cycle.json
   # for ultraplan cycles, which run a bounded multi-agent Workflow and need a larger
@@ -252,8 +319,10 @@ require_provisional_commit() {
 }
 
 require_final_ledger_only() {
-  # After the exact-clean blind run, findings belong to the NEXT cycle. The sole
-  # tracked mutation allowed now is completion of this cycle's terse ledger entry.
+  # After the outer gates pass, the sole tracked mutation still allowed is completion
+  # of this cycle's terse ledger entry. (Historically this fenced off the exact-clean
+  # blind run; the fence is still worth keeping now that the run is gone, because it
+  # is what stops a cycle from quietly growing a second change after it verified.)
   [[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0
   local changed
   changed="$({
@@ -283,22 +352,24 @@ safe_commit_if_enabled() {
   npm run --silent loop:seal-feedback -- --meta "$meta" --expected-commit "$current_ref" --start-ref "$cycle_failure_start_ref" || return 1
   git add -- AI_LOOP_STATE.md
   git diff --cached --quiet && { echo "No final ledger change to commit."; return 1; }
-  git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Autonomous AFK cycle: record verified playtest}"
+  git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Autonomous dev cycle: record verified change}"
 }
 
-require_playtest_record() {
-  # MANDATORY LLM PLAYTEST (every commit-enabled cycle): require the canonical
-  # sidecar-last publication, schema-valid V2 pure report, exact journey receipt,
-  # clean-build attestation, and exact provisional HEAD. A merely nonempty markdown
-  # file or a valid report from an older revision cannot satisfy this gate.
-  [[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0
-  local meta="ai-runs/latest-cycle.json" current_ref
-  if [[ ! -f "$meta" ]]; then
-    echo "No cycle metadata ($meta); cannot verify the mandatory playtest. Refusing to commit."
-    return 1
-  fi
-  current_ref="$(git rev-parse HEAD)" || return 1
-  npm run --silent loop:verify-playtest -- --meta "$meta" --expected-commit "$current_ref"
+report_qa_bucket() {
+  # The dev loop no longer plays the game, so there is no per-cycle playtest gate to
+  # satisfy here. What replaces it is not another gate but an INPUT: the QA bucket
+  # (qa/tickets/), filled asynchronously by playtest-loop.sh.
+  #
+  # This is informational and NEVER fails the cycle. An empty bucket is a normal,
+  # expected state — it means the fleet has not yet corroborated anything new — and a
+  # dev loop that stopped there would have simply moved the old blocking dependency
+  # from "wait for one playtest" to "wait for the fleet". When the bucket is empty the
+  # assessor's own maintenance candidates carry the cycle, exactly as they already do
+  # when no hot spots are compiled.
+  npm run --silent qa:bucket -- --summary || {
+    echo "QA bucket unreadable; continuing on assessor candidates."
+    return 0
+  }
 }
 
 cycle_failure_stage="unclassified"
@@ -416,11 +487,11 @@ run_cycle() {
     _reject_cycle "integrity" "verifier-integrity drift check failed"
     return 1
   }
-  # Quality feedback is mandatory: only a build-bound verified publication counts.
-  require_playtest_record || {
-    _reject_cycle "playtest" "mandatory current-revision pure playtest verification failed"
-    return 1
-  }
+  # No playtest gate. Experience evidence is produced by the independent playtest
+  # loop and consumed at the START of a cycle as QA tickets, not proven at the end of
+  # one. Print what the bucket holds so the cycle log still records what quality
+  # evidence existed at landing time; it cannot fail the cycle.
+  report_qa_bucket
   require_final_ledger_only || {
     _reject_cycle "ledger-only" "post-play changes were not limited to AI_LOOP_STATE.md"
     return 1

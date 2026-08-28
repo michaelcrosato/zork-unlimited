@@ -49,3 +49,9 @@ ORIGINAL_REQUEST.md
 *.p12
 secrets.json
 **/credentials.json
+
+# Playtest session corpus: written by the QA loop, published to its own branch by
+# `npm run qa:publish` rather than committed here. A mass-parallel cohort writes
+# hundreds of session directories, and a dev loop whose worktree is never clean
+# cannot take a provisional commit.
+ai-runs/playtest/

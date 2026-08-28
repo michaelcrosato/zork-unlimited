@@ -1,9 +1,14 @@
-# The AdventureForge AFK loop
+# The AdventureForge dev loop
+
+> **This is one of two loops.** Playtesting runs separately and in parallel —
+> see [`two_loop_workflow.md`](./two_loop_workflow.md). Either loop runs on any
+> model.
 
 An autonomous improvement loop that **constantly evaluates the next-best
-improvement** across the whole project, makes one focused change per cycle, takes
-**mandatory LLM-playtest quality feedback every cycle**, and lands it under
-**trust-but-verify** (see `AGENTS.md`). It draws on the agent's broad knowledge to
+improvement** across the whole project, makes one focused change per cycle, and
+lands it under **trust-but-verify** (see `AGENTS.md`). It consumes quality
+feedback as QA tickets produced asynchronously by the playtest loop; it does not
+produce that feedback itself, and it never waits for it. It draws on the agent's broad knowledge to
 _choose and craft_ improvements, and on the deterministic verification suite to
 _prove_ they're correct.
 
@@ -11,6 +16,9 @@ _prove_ they're correct.
 
 ```
 loop.sh  (outer driver — orchestration + the bar)
+│
+├─ 0. QA BUCKET     npm run qa:bucket --summary  (tickets the playtest loop promoted;
+│     empty is normal and never stalls the cycle)
 │
 ├─ 1. ASSESS        npm run ai:loop → src/ai-loop.ts (uses src/afk/assessor.ts)
 │     Deterministically scans every pack + repo signals and ranks

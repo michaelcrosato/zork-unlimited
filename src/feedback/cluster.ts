@@ -20,6 +20,7 @@
  *      pipeline is a pure function of the *set* of input issues, never their
  *      order (see the "input order never changes the clustering" test).
  */
+import type { PlaytestTier } from "../blind/providers.js";
 import type { CanonicalLocation, FeedbackSource } from "./schema.js";
 
 export type IssueSeverity = "S0" | "S1" | "S2" | "S3" | "S4";
@@ -33,6 +34,19 @@ export type IssueRecord = {
   text: string;
   persona: string | null;
   target: string; // "overworld" | "quest:<id>"
+  /**
+   * Which model lineage reported this, and at which cost tier. Both are optional
+   * because crawler findings have no model behind them at all, and because evidence
+   * predating the multi-vendor playtest loop carries neither — a cluster with no
+   * provider metadata is scored by the original count×severity rule (see
+   * `scoreCluster`), so historical rankings are unchanged.
+   *
+   * When present they are what stops a mass-parallel fleet from fooling the ranking:
+   * forty reports from one cheap model are one instrument sampled forty times, and
+   * `familyOf` is how the ranking tells that apart from four vendors agreeing.
+   */
+  providerFamily?: string | null;
+  tier?: PlaytestTier | null;
 };
 
 export type IssueCluster = {
@@ -44,6 +58,10 @@ export type IssueCluster = {
   severityBand: SeverityBand;
   sources: FeedbackSource[];
   personas: string[];
+  /** Distinct model lineages that reported this cluster, sorted. Empty when unknown. */
+  families: string[];
+  /** Distinct cost tiers that reported it, sorted. Empty when unknown. */
+  tiers: PlaytestTier[];
 };
 
 /** Jaccard similarity threshold for pass-2 cross-bucket merges. */
@@ -247,6 +265,22 @@ function finalizeCluster(cluster: WorkingCluster): IssueCluster {
     ),
   ].sort();
 
+  const families = [
+    ...new Set(
+      sortedIssues
+        .map((issue) => issue.providerFamily)
+        .filter((family): family is string => typeof family === "string" && family.length > 0),
+    ),
+  ].sort();
+
+  const tierOrder: readonly PlaytestTier[] = ["reference", "volume"];
+  const tiersPresent = new Set(
+    sortedIssues
+      .map((issue) => issue.tier)
+      .filter((tier): tier is PlaytestTier => tier === "volume" || tier === "reference"),
+  );
+  const tiers = tierOrder.filter((tier) => tiersPresent.has(tier));
+
   const rawUnion = [...new Set(sortedIssues.flatMap((issue) => issue.location.raw))].sort();
   const location: CanonicalLocation = { ...first.location, raw: rawUnion };
 
@@ -259,6 +293,8 @@ function finalizeCluster(cluster: WorkingCluster): IssueCluster {
     severityBand: severityBand(maxSeverity),
     sources,
     personas,
+    families,
+    tiers,
   };
 }
 
