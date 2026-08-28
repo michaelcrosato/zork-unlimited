@@ -146,6 +146,20 @@ function main(): void {
     failureNote = arg("--failure-note") ?? `session recorded with outcome "${outcome}"`;
   }
 
+  // An attestation is what makes a hand-played session honest, so it is also what
+  // selects the evidence class. A provider the runner cannot launch at all always
+  // requires one; a normally-runner-launched provider requires one HERE, because
+  // arriving through this command is itself proof the runner did not launch it.
+  const attestedBy = arg("--attested-by");
+  if (attestedBy === null) {
+    throw new Error(
+      `--attested-by is required: a session ingested by hand was not launched by the runner, ` +
+        `so it cannot be recorded as runner-enforced. Say who is vouching for the tool boundary ` +
+        `(and pass --method describing how).`,
+    );
+  }
+  const sessionIsolation = "operator_attested" as const;
+
   const world = parseOverworldManifest(JSON.parse(readFileSync(WORLD_PATH, "utf8")));
   const body: PlaytestSessionBody = {
     schema_version: 1,
@@ -162,12 +176,24 @@ function main(): void {
       id: provider.id,
       vendor: provider.vendor,
       family: provider.family,
-      isolation: provider.isolation,
+      // Isolation is a property of THIS SESSION, not only of the provider.
+      //
+      // A registry entry says how that vendor is normally launched, but this command
+      // exists precisely for sessions the runner did NOT launch. Reading isolation
+      // straight off the registry would stamp a hand-played Claude Code session
+      // `runner_enforced` — claiming the runner proved a tool boundary it never saw,
+      // which is exactly the contamination the evidence classes exist to prevent.
+      //
+      // So the downgrade is always available and the upgrade never is: supplying an
+      // attestation makes any session operator-attested, and no flag can make a session
+      // runner-enforced. That asymmetry is the invariant — provenance can only ever be
+      // weakened by hand, never strengthened.
+      isolation: sessionIsolation,
       transport_contract: provider.transportContract,
-      ...(provider.isolation === "operator_attested"
+      ...(sessionIsolation === "operator_attested"
         ? {
             operator_attestation: {
-              attested_by: required("--attested-by"),
+              attested_by: attestedBy!,
               method: required("--method"),
               attested_at: new Date().toISOString(),
             },

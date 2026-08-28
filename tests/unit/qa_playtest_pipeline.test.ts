@@ -416,3 +416,59 @@ describe("ranking across a mixed-vendor fleet", () => {
     expect(scoreCluster(both)).toBeGreaterThan(scoreCluster(volumeOnly));
   });
 });
+
+describe("provenance can be weakened by hand but never strengthened", () => {
+  it("keeps a runner-launched session's proof intact", () => {
+    const record = sealPlaytestSession(body());
+    expect(record.provider.isolation).toBe("runner_enforced");
+    expect(record.provider.operator_attestation).toBeUndefined();
+    expect(countsTowardExperienceMetrics(record)).toBe(false); // not `completed`
+  });
+
+  it("refuses an attestation on a session the runner proved", () => {
+    // A human vouching for something the machine already established is not extra
+    // assurance — it is a claim nobody can check layered over one anybody can.
+    expect(() =>
+      sealPlaytestSession(
+        body({
+          provider: {
+            id: "codex",
+            vendor: "openai",
+            family: "gpt",
+            isolation: "runner_enforced",
+            transport_contract: "game-direct-mcp-v1",
+            operator_attestation: {
+              attested_by: "someone",
+              method: "trust me",
+              attested_at: "2026-08-28T12:00:00.000Z",
+            },
+          },
+        }),
+      ),
+    ).toThrow(/take no operator attestation/);
+  });
+
+  it("lets a normally-runner-launched provider be recorded as attested when hand-played", () => {
+    // The case the live test surfaced: a Claude Code session played through MCP by hand.
+    // The provider is `runner_enforced` in the registry, but THIS session was not
+    // launched by the runner, so the record must say so.
+    const handPlayed = sealPlaytestSession(
+      body({
+        provider: {
+          id: "claude_code",
+          vendor: "anthropic",
+          family: "claude",
+          isolation: "operator_attested",
+          transport_contract: "game-direct-mcp-v1",
+          operator_attestation: {
+            attested_by: "operator",
+            method: "played through the MCP server by hand",
+            attested_at: "2026-08-28T12:00:00.000Z",
+          },
+        },
+      }),
+    );
+    expect(handPlayed.provider.family).toBe("claude");
+    expect(countsTowardExperienceMetrics(handPlayed)).toBe(false);
+  });
+});
