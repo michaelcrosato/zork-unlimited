@@ -33,6 +33,10 @@ import {
   writePlaytestSession,
 } from "../../src/qa/session_store.js";
 import { derivePromotion, isActionable, ticketId } from "../../src/qa/ticket.js";
+import { triagePlaytestCorpus } from "../../src/qa/triage.js";
+import { submissionsFromTickets } from "../../src/qa/ticket_submission.js";
+import { buildLocationIndex } from "../../src/feedback/normalize.js";
+import { nextWork, readQueue, upsertSubmission } from "../../src/intake/queue.js";
 import { scoreCluster } from "../../src/feedback/rank.js";
 import type { IssueCluster } from "../../src/feedback/cluster.js";
 
@@ -470,5 +474,174 @@ describe("provenance can be weakened by hand but never strengthened", () => {
     );
     expect(handPlayed.provider.family).toBe("claude");
     expect(countsTowardExperienceMetrics(handPlayed)).toBe(false);
+  });
+});
+
+/**
+ * The whole chain, on disk, with realistically-worded reports.
+ *
+ * Every test above this point builds evidence by hand and calls one function with it.
+ * That is why a total clustering failure survived them all: `derivePromotion` was
+ * correct, `scoreCluster` was correct, and no test ever asked whether a finding written
+ * the way a real playtester writes it could actually REACH the dev loop.
+ *
+ * A live run answered that: six sessions produced 55 issues and 55 clusters, so no
+ * ticket ever exceeded one report and nothing could promote. The cause was upstream of
+ * both functions — reporters cite machine ids in prose ("room steading_yard, blocked
+ * exit north"), which failed to canonicalize and gave every report its own location.
+ *
+ * So this exercises the seam rather than the parts: session records on disk → triage →
+ * clustering → promotion → the dev loop's queue. The `where` strings below are the
+ * verbatim wordings three independent playtesters used for one defect.
+ */
+describe("end to end: a corroborated finding reaches the dev loop's queue", () => {
+  const transcript = "line one\nline two\n";
+
+  /** One reporter, one vendor, one wording of the same blocked exit. */
+  function reporter(over: {
+    provider: PlaytestSessionBody["provider"];
+    model: PlaytestSessionBody["model"];
+    where: string;
+    seed: number;
+  }): PlaytestSessionBody {
+    return body({
+      run_seed: over.seed,
+      game_session_id: `o-${over.seed}`,
+      provider: over.provider,
+      model: over.model,
+      exit_interview: {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: over.where,
+            severity: "S3" as const,
+            note: "Blocked reason claims both approach routes are selected; exactly one was.",
+          },
+        ],
+      },
+    });
+  }
+
+  const REPORTERS = [
+    {
+      seed: 101,
+      where: "quest wolf_winter, room steading_yard, blocked exit north",
+      provider: {
+        id: "codex",
+        vendor: "openai",
+        family: "gpt",
+        isolation: "runner_enforced" as const,
+        transport_contract: "game-direct-mcp-v1",
+      },
+      model: { id: "gpt-5.3-codex-spark", tier: "volume" as const, settings: {} },
+    },
+    {
+      seed: 201,
+      where: "wolf_winter quest opening room steading_yard, blocked exit north",
+      provider: {
+        id: "gemini_cli",
+        vendor: "google",
+        family: "gemini",
+        isolation: "runner_enforced" as const,
+        transport_contract: "game-direct-mcp-v1",
+      },
+      model: { id: "gemini-3-flash", tier: "volume" as const, settings: {} },
+    },
+    {
+      seed: 301,
+      where: "steading_yard",
+      provider: {
+        id: "claude_code",
+        vendor: "anthropic",
+        family: "claude",
+        isolation: "runner_enforced" as const,
+        transport_contract: "game-direct-mcp-v1",
+      },
+      model: { id: "claude-haiku-4-5-20251001", tier: "volume" as const, settings: {} },
+    },
+  ];
+
+  function triageCorpus(reporters: readonly (typeof REPORTERS)[number][]) {
+    const store = tempDir();
+    for (const r of reporters) {
+      writePlaytestSession(store, sealPlaytestSession(reporter(r)), transcript);
+    }
+    const { entries, unreadable } = listPlaytestSessions(store);
+    expect(unreadable).toEqual([]);
+    return triagePlaytestCorpus({
+      sessions: entries.map((entry) => entry.record),
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+    });
+  }
+
+  it("merges three wordings of one defect into a single ticket", () => {
+    const { tickets, stats } = triageCorpus(REPORTERS);
+    expect(stats.sessions).toBe(3);
+    // The regression this whole block exists for: 3 issues must not be 3 clusters.
+    expect(stats.issues).toBe(3);
+    expect(stats.clusters).toBe(1);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.evidence.report_count).toBe(3);
+  });
+
+  it("promotes it, because three vendors are three independent witnesses", () => {
+    const ticket = triageCorpus(REPORTERS).tickets[0]!;
+    expect(ticket.evidence.families).toEqual(["claude", "gemini", "gpt"]);
+    expect(ticket.promotion).toBe("corroborated");
+    expect(isActionable(ticket)).toBe(true);
+  });
+
+  it("withholds the identical finding when one vendor reports it three times", () => {
+    // Same three wordings, same count — but one lineage. Nothing may promote: one
+    // instrument sampled three times is not three witnesses.
+    const oneVendor = REPORTERS.map((r) => ({ ...r, provider: REPORTERS[2]!.provider }));
+    const { tickets, stats } = triageCorpus(oneVendor);
+    expect(stats.clusters).toBe(1);
+    expect(tickets[0]!.evidence.report_count).toBe(3);
+    expect(tickets[0]!.evidence.families).toEqual(["claude"]);
+    expect(tickets[0]!.promotion).toBe("accumulating");
+    expect(isActionable(tickets[0]!)).toBe(false);
+  });
+
+  it("hands the promoted finding to the dev loop as the next piece of work", () => {
+    const queue = tempDir();
+    const { tickets } = triageCorpus(REPORTERS);
+    const promoted = submissionsFromTickets(tickets);
+    expect(promoted).toHaveLength(1);
+    for (const submission of promoted) upsertSubmission(submission, queue);
+
+    const work = nextWork(readQueue(queue).submissions);
+    expect(work).not.toBeNull();
+    expect(work!.source).toBe("playtest");
+    expect(work!.evidence.lineages).toEqual(["claude", "gemini", "gpt"]);
+    expect(work!.evidence.observations).toBe(3);
+    // The dev agent must be able to find the place from the queue item alone.
+    expect(work!.body).toContain("steading_yard");
+  });
+
+  it("keeps one queue item as the same finding keeps arriving", () => {
+    const queue = tempDir();
+    const first = submissionsFromTickets(triageCorpus(REPORTERS).tickets);
+    for (const s of first) upsertSubmission(s, queue);
+    // A later wave re-triages the whole corpus from scratch, as the loop actually does.
+    const second = submissionsFromTickets(triageCorpus(REPORTERS).tickets);
+    for (const s of second) upsertSubmission(s, queue);
+    expect(readQueue(queue).submissions).toHaveLength(1);
+  });
+
+  it("does not promote a finding only one vendor saw, even beside a promoted one", () => {
+    const solo = {
+      ...REPORTERS[0]!,
+      seed: 999,
+      where: "quest wolf_winter, room broken_paling, blocked exit north",
+    };
+    const { tickets } = triageCorpus([...REPORTERS, solo]);
+    const promoted = submissionsFromTickets(tickets);
+    expect(tickets.length).toBeGreaterThan(1);
+    // Both are real evidence and both stay in the bucket; only one is work.
+    expect(promoted).toHaveLength(1);
+    expect(promoted[0]!.body).toContain("steading_yard");
   });
 });

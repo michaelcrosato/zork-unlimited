@@ -133,10 +133,37 @@ function clusterKind(cluster: IssueCluster): TicketKind {
   return anyRealBug ? "bug" : "experience";
 }
 
+/** Longest a report excerpt may run before the location suffix. */
+const TITLE_EXCERPT_LIMIT = 72;
+
+/**
+ * A title a person can actually scan.
+ *
+ * This used to be the cluster's stemmed token bag — "action albany approach block both
+ * cannot @ steading_yard". That string is a FINGERPRINT: alphabetically sorted, stemmed,
+ * stripped of the words that carry the meaning. Two unrelated tickets read almost alike
+ * and a real one reads as noise, which is exactly what makes a queue impossible to
+ * triage by eye.
+ *
+ * The first report's own sentence is both readable and deterministic: `finalizeCluster`
+ * sorts a cluster's issues canonically, so the chosen excerpt is a pure function of the
+ * evidence set rather than of the order reports happened to arrive.
+ *
+ * Identity does not ride on this. `ticketId` fingerprints `cluster.key`, and a queue
+ * submission keys on `ticket_id`, so rewording a title can never re-key a ticket or
+ * fork it into a second piece of work.
+ */
 function ticketTitle(cluster: IssueCluster): string {
-  const tokens = cluster.tokens.slice(0, 6).join(" ");
   const where = locationLabel(cluster.location);
-  return tokens.length > 0 ? `${tokens} @ ${where}` : where;
+  const first = (cluster.issues[0]?.text ?? "").replace(/\s+/g, " ").trim();
+  // Take the first sentence when there is one, so a paragraph-long report still
+  // produces a headline rather than a truncated wall.
+  const sentence = first.split(/(?<=[.!?])\s/)[0] ?? first;
+  const excerpt =
+    sentence.length > TITLE_EXCERPT_LIMIT
+      ? `${sentence.slice(0, TITLE_EXCERPT_LIMIT).replace(/\s+\S*$/, "")}…`
+      : sentence;
+  return excerpt.length > 0 ? `${excerpt} @ ${where}` : where;
 }
 
 /**
