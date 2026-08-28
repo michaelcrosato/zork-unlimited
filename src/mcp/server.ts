@@ -1557,6 +1557,32 @@ const AREA_MOVE_INPUT = (shape: ZodRawShape) =>
     ["area_route_id", "route_id", "area_id"],
   );
 
+/**
+ * Give ordinary play the same inline action ids that pure play already gets.
+ *
+ * Action ids are not derivable from room prose — narration says "DON padded byre-jerkin"
+ * where the only legal action is `take_byre_jerkin` — so without them a player has to
+ * call `list_legal_actions` before nearly every step. One playtest lead measured roughly
+ * a third of its tool calls as that discovery overhead rather than play, which on a
+ * mass-parallel cheap fleet is a third of the token budget buying no coverage.
+ *
+ * Measured on a fresh session, so this is not a trade-off in either direction: inline
+ * costs 48 characters (+16%) on an observation, while the separate call costs 89
+ * characters AND a whole extra round trip. Pure play has had it all along; every other
+ * caller — a person, the dev loop, a hand-driven MCP session — was paying the extra turn
+ * for strictly less information.
+ *
+ * An explicit `include_actions` from the caller still wins.
+ */
+function withInlineActions(
+  response: Record<string, unknown>,
+  input: Record<string, unknown>,
+): never {
+  return (
+    input.include_actions === undefined ? { ...response, include_actions: true } : response
+  ) as never;
+}
+
 function defaultCompactRpg(args: unknown): never {
   const input: Record<string, unknown> =
     typeof args === "object" && args !== null ? { ...(args as Record<string, unknown>) } : {};
@@ -1571,7 +1597,7 @@ function defaultCompactRpg(args: unknown): never {
     compact_observation: true,
     ...input,
   };
-  if (PLAY_MODE !== "pure") return response as never;
+  if (PLAY_MODE !== "pure") return withInlineActions(response, input);
   return {
     ...response,
     hide_graph: true,
@@ -1618,7 +1644,7 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
     compact_observation: true,
     ...input,
   };
-  if (PLAY_MODE !== "pure") return response as never;
+  if (PLAY_MODE !== "pure") return withInlineActions(response, input);
   return {
     ...response,
     hide_graph: true,
