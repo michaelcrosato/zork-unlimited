@@ -53,7 +53,8 @@ and the verifier-integrity drift check — the same bar as before, minus the pla
 
 ## Any model, either loop
 
-Nothing in this repo privileges a vendor.
+The dev loop is genuinely vendor-neutral. The playtest loop is neutral in everything
+except how it PROVES blindness — see the constraint below before planning a cohort.
 
 **Dev loop.** `loop.sh` auto-detects the first installed agent in `DEV_AGENT_IDS`
 (`codex`, `claude`, `gemini`). Pick one with `AI_AGENT=<id>`, or point
@@ -74,8 +75,32 @@ learns a vendor's name.
 ```bash
 npm run qa:bucket -- --summary              # what the dev loop can pick up
 AI_AGENT=claude ./loop.sh                   # dev loop on Claude Code
-PLAYTEST_COHORT="gemini_cli:8,codex:2" ./playtest-loop.sh
+PLAYTEST_COHORT="codex:8" ./playtest-loop.sh
 ```
+
+### The one place a vendor IS privileged: runner-enforced blindness
+
+**Only Codex can currently produce a `runner_enforced` session.** Every other vendor —
+`claude_code`, `gemini_cli`, Grok — must go through `npm run playtest:ingest` and lands
+`operator_attested`. Running them through `playtest-loop.sh` fails at launch with
+`Could not resolve the existing Codex home; pure run refused.`
+
+This is structural, not an oversight. `runner_enforced` means the runner can PROVE the
+agent saw only the AdventureForge MCP tools, and that proof is read back out of Codex's
+own rollout logs by `blind-tester/codex-rollout.mjs` (1,566 lines) plus
+`codex-process-anchor.mjs`, `codex-pure-envelope.mjs` and `codex-strict-stream.mjs`.
+No equivalent reader exists for any other vendor, so there is nothing to verify against.
+
+What this does and does not cost you:
+
+- Multi-vendor **bug corroboration still works**. `operator_attested` sessions count
+  toward it, and corroboration across families is the promotion rung that matters.
+- Multi-vendor **experience metrics do not**. Retention and clarity numbers take
+  `runner_enforced` sessions only, so today those are a Codex-only measurement.
+
+So a mixed fleet is worth running — just drive the non-Codex vendors through their own
+client and ingest them, exactly as the Grok path already describes, and read headline
+experience numbers as Codex's alone until per-vendor capture exists.
 
 ### Cheap by default, expensive on purpose
 
@@ -114,8 +139,10 @@ a 3-run finding that four vendors confirmed.
 | `runner_enforced`   | the runner owns argv, cwd and the tool allowlist, and records proof | yes                             | yes                              |
 | `operator_attested` | a human asserts the client had only the AdventureForge MCP tools    | yes                             | **no**                           |
 
-Vendors with no headless CLI — Grok today — are played through their own client and
-recorded with `npm run playtest:ingest`. The attestation naming who vouched is
+Vendors the runner cannot prove — Grok, which has no headless CLI, and today every
+non-Codex vendor, since the capture that establishes `runner_enforced` is Codex-specific
+(see above) — are played through their own client and recorded with
+`npm run playtest:ingest`. The attestation naming who vouched is
 **required**. This keeps the corpus maximally inclusive without letting unverifiable
 runs quietly move a headline quality number, which is the contamination the
 `BLIND_AGENT_CMD` ban has always existed to prevent.

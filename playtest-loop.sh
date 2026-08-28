@@ -80,6 +80,41 @@ fi
 
 if [[ ! -d node_modules ]]; then npm install; fi
 
+# Refuse a cohort this runner cannot actually launch, BEFORE dispatching anyone.
+#
+# `runner_enforced` blindness is proved by reading Codex's own rollout logs
+# (blind-tester/codex-rollout.mjs and friends); no equivalent reader exists for any
+# other vendor, so run.sh refuses a non-Codex pure run with "Could not resolve the
+# existing Codex home". Without this check every player in the wave dies that way and
+# the recorder — which cannot tell a launch refusal from a genuine mid-play crash —
+# files each one as a `failed` session, seeding the corpus with fake data points that
+# carry a real vendor family and say nothing whatsoever about the game.
+#
+# Non-Codex vendors are still first-class evidence; they just arrive through
+# `npm run playtest:ingest` as `operator_attested`. See docs/two_loop_workflow.md.
+if [[ "$MOCK" != "1" ]]; then
+  unsupported=()
+  IFS=',' read -ra preflight_groups <<< "$COHORT"
+  for group in "${preflight_groups[@]}"; do
+    provider="${group%%:*}"
+    [[ "$provider" != "codex" ]] && unsupported+=("$provider")
+  done
+  if (( ${#unsupported[@]} > 0 )); then
+    echo "This runner can only launch 'codex' for a live playtest; refusing the cohort."
+    echo "  unsupported in COHORT: ${unsupported[*]}"
+    echo
+    echo "Only Codex can produce a runner_enforced session: that class means the runner"
+    echo "PROVED the agent saw nothing but the AdventureForge MCP tools, and the proof is"
+    echo "read out of Codex's rollout logs. No other vendor has an equivalent reader yet."
+    echo
+    echo "Play those vendors in their own client and ingest the result instead:"
+    echo "  npx tsx bin/ingest-playtest-session.ts --provider <id> --attested-by <you> ..."
+    echo "They land operator_attested — still counted for bug corroboration, excluded from"
+    echo "experience metrics. Set PLAYTEST_MOCK=1 to dry-run the wiring for any provider."
+    exit 1
+  fi
+fi
+
 # Model pin lookup: PLAYTEST_MODELS="codex=gpt-5.6-terra,gemini_cli=gemini-2.5-pro".
 model_for() {
   local provider="$1" pair
