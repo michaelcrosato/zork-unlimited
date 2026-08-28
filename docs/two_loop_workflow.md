@@ -264,6 +264,33 @@ git worktree add ../af-qa-c main
 mkdir -p /d/af-corpus            # ONE shared session corpus, outside every worktree
 ```
 
+### Preflight, part two: prove the wiring before you spend a cohort
+
+Every other way to find out whether a cohort string, a model pin or a store path is
+right costs a vendor a real cohort of tokens. `PLAYTEST_MOCK=1` runs the loop end to end
+against `run.sh`'s bundled scripted agent instead — no model, no tokens:
+
+```bash
+PLAYTEST_MOCK=1 \
+PLAYTEST_COHORT="gemini_cli:2,codex:1" \
+PLAYTEST_STORE=/d/af-corpus \
+./playtest-loop.sh --once
+```
+
+A healthy run dispatches every player, writes each one's artifacts, and records
+**nothing**:
+
+```
+  ▸ codex seed=600 persona=default
+    (wiring check — not recorded; log at ai-runs/playtest/logs/codex_seed600_default.runner.log)
+  corpus: 0 session(s); none; lineages none
+```
+
+Recording nothing is the point, not a failure. A scripted agent has no opinion, and
+filing its canned exit interview would let three mock runs read as three vendors
+agreeing. If a player reports a nonzero exit instead, read the named log — the wiring is
+wrong and a real cohort would have failed the same way.
+
 ### Terminal 1 — dev loop
 
 ```bash

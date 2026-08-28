@@ -109,7 +109,40 @@ function main(): void {
   // build that was played, and the game session id. Without it we know a run happened
   // but not precisely what it played, so the record says exactly that rather than
   // guessing from the surrounding files.
-  const parsedSidecar = sidecarText ? parseBlindRunSidecar(JSON.parse(sidecarText)) : null;
+  // Takes the raw TEXT, not a parsed object: it rejects duplicate keys itself, which it
+  // cannot do once `JSON.parse` has already collapsed them. Handing it `JSON.parse(...)`
+  // type-checks silently — `JSON.parse` returns `any` — and then fails every single
+  // parse with "not valid JSON", which is how this went unnoticed: the sidecar was never
+  // read at all, so every recorded session silently fell back to seed 0, an
+  // `unknown-<path>` session id, and the checkout's HEAD instead of the build played.
+  const parsedSidecar = sidecarText ? parseBlindRunSidecar(sidecarText) : null;
+
+  // A STRUCTURAL run is not evidence and must never enter the corpus.
+  //
+  // `--mock` and `--smoke` drive the game with a scripted agent and no model behind it
+  // at all, yet still emit a report carrying a filled-in exit interview. Recorded
+  // naively, that canned text becomes a vendor's opinion: the provider's registry entry
+  // stamps the record `runner_enforced`, and its family counts toward corroboration — so
+  // three mock runs under three provider ids read as three independent vendors agreeing
+  // and promote straight into the dev queue. Fabricated evidence that looks verified is
+  // worse than no evidence, which is the whole reason the isolation classes exist.
+  //
+  // The sidecar states it plainly (`play_mode: "structural"`, `evidence_status:
+  // "not_applicable"`); the defect was only that this reader ignored it, while
+  // `src/blind/feedback_ledger.ts` has always applied the same rule. Skipping is not
+  // discarding a playthrough — nothing played. Exits 0 so a wiring check driven through
+  // playtest-loop.sh reports a clean skip instead of looking like a crash.
+  if (parsedSidecar?.ok === true && parsedSidecar.sidecar.play_mode !== "pure") {
+    // Non-pure narrows to the structural sidecar, which always names its kind.
+    const kind = parsedSidecar.sidecar.structural_kind;
+    console.log(
+      `skipped ${outPrefix}: ${kind} run, not a playtest. Structural runs exercise the ` +
+        `wiring with no model behind them, so recording one would file a scripted exit ` +
+        `interview in the corpus as a vendor's opinion.`,
+    );
+    return;
+  }
+
   // Only the V2 pure sidecar carries the seed and the build. A V1 or structural sidecar
   // is still a real artifact, but it cannot tell us WHICH build was played — so the
   // record falls back to the checkout below and does not pretend otherwise.

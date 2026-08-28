@@ -59,6 +59,25 @@ SEED_BASE="${PLAYTEST_SEED_BASE:-$(date +%s)}"
 STORE="${PLAYTEST_STORE:-ai-runs/playtest/sessions}"
 export PLAYTEST_STORE="$STORE"
 
+# PLAYTEST_MOCK=1 is a zero-token WIRING CHECK, not a playtest.
+#
+# Every other way to find out whether this loop is plumbed correctly — the cohort
+# string, the model pins, the store path, the recorder invocation — costs a real vendor
+# a real cohort of tokens, which is a bad way to discover a typo. A mock wave drives
+# run.sh with its bundled scripted agent instead.
+#
+# It deliberately records NOTHING: bin/record-playtest-session.ts refuses a structural
+# run, because a scripted agent has no opinion and filing its canned exit interview as a
+# vendor's would let three mock runs read as three vendors agreeing. So a green mock wave
+# proves the wiring and leaves the corpus untouched — which is exactly what a dry run
+# should do.
+MOCK="${PLAYTEST_MOCK:-0}"
+MOCK_QUEST="${PLAYTEST_MOCK_QUEST:-breaking_weir}"
+if [[ "$MOCK" == "1" ]]; then
+  echo "PLAYTEST_MOCK=1 — wiring check on quest '$MOCK_QUEST'. No model runs and"
+  echo "nothing is recorded; the recorder is expected to skip every structural run."
+fi
+
 if [[ ! -d node_modules ]]; then npm install; fi
 
 # Model pin lookup: PLAYTEST_MODELS="codex=gpt-5.6-terra,gemini_cli=gemini-2.5-pro".
@@ -83,13 +102,34 @@ run_player() {
   # break the moment a log line changed.
   local out="ai-runs/playtest/runs/${provider}_seed${seed}_${persona}"
   mkdir -p "$(dirname "$out")"
+  # The runner log MUST live outside the "$out.*" namespace. run.sh refuses to start when
+  # any file named "<prefix>.*" already exists — a deliberate guard against mixing a new
+  # run's artifacts with a stale one's — and the shell creates a redirect target BEFORE
+  # the command runs. Writing the log to "$out.runner.log" therefore made run.sh find its
+  # own log and refuse, so every player failed instantly with "Refusing to reuse report
+  # prefix". Keep these two namespaces apart.
+  local log_dir="ai-runs/playtest/logs"
+  mkdir -p "$log_dir"
+  local runner_log="${log_dir}/${provider}_seed${seed}_${persona}.runner.log"
   local args=(--provider "$provider" --seed "$seed" --persona "$persona" --out "$out")
   [[ -n "$model" ]] && args+=(--model "$model")
+  # --mock owns run.sh's bundled agent and requires a quest target; the overworld start
+  # is reserved for real players.
+  [[ "$MOCK" == "1" ]] && args+=(--quest "$MOCK_QUEST" --mock)
   echo "  ▸ $provider seed=$seed persona=$persona ${model:+model=$model}"
 
   # One player failing is expected and uninteresting — a timeout, a rate limit, a client
   # hiccup. The wave carries on.
-  blind-tester/run.sh "${args[@]}" >"$out.runner.log" 2>&1 ||     echo "    (player exited nonzero — still recorded)"
+  blind-tester/run.sh "${args[@]}" >"$runner_log" 2>&1 ||     echo "    (player exited nonzero — still recorded; log at $runner_log)"
+
+  # A wiring check records nothing. Leaning on the recorder's structural guard is not
+  # enough: a run that dies BEFORE writing its sidecar is indistinguishable from a real
+  # failed playtest, so a broken mock wave would file junk "failed" sessions carrying
+  # real vendor families. The loop knows it is a dry run; it should not ask.
+  if [[ "$MOCK" == "1" ]]; then
+    echo "    (wiring check — not recorded; log at $runner_log)"
+    return 0
+  fi
 
   # Record UNCONDITIONALLY. A run that timed out or crashed is evidence about the game
   # just as much as a finished one, and the recorder is what decides the outcome label
