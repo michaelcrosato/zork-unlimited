@@ -14,6 +14,12 @@
  * rung, never forcing a pick):
  *   1. exact id hit — raw equals a questId / node id / region id / room|scene
  *      id (case-insensitive, trimmed).
+ *  1b. embedded id hit — raw is a SENTENCE that quotes one such id. Restricted
+ *      to ids containing an underscore, because a one-word id cannot be told
+ *      apart from the ordinary English word. Candidates that are only coarser
+ *      views of another candidate (a quest named alongside its own room) are
+ *      dropped before the single-candidate test, so naming a place and its
+ *      container in one breath resolves instead of reading as a tie.
  *   2. exact name hit — a node/region/area name or quest/room title, each
  *      punctuation-normalized (lowercased; every run of non-alphanumeric
  *      characters collapsed to a single space; trimmed), appears as a
@@ -250,6 +256,47 @@ function locationTemplateKey(location: LocationTemplate): string {
   ]);
 }
 
+/**
+ * Is `ancestor` the same place as `descendant`, only described more coarsely?
+ *
+ * True when every field `ancestor` DOES pin matches `descendant`, and `ancestor` leaves
+ * at least one further field unpinned. So `quest wolf_winter` is a strict ancestor of
+ * `quest wolf_winter / room steading_yard`, while two different rooms of one quest — or
+ * the same room id under two different quests — are not related at all.
+ *
+ * This exists so that citing a place and its container in one breath is not mistaken for
+ * ambiguity. "room steading_yard in quest wolf_winter" names ONE location twice at two
+ * zoom levels; a ladder that counts those as two rival candidates refuses a match it
+ * should have made.
+ */
+function isStrictAncestor(ancestor: LocationTemplate, descendant: LocationTemplate): boolean {
+  if (ancestor.kind !== descendant.kind) return false;
+  let coarser = false;
+  for (const field of ["questId", "region", "node", "sceneId"] as const) {
+    const pinned = ancestor[field];
+    if (pinned === null) {
+      if (descendant[field] !== null) coarser = true;
+      continue;
+    }
+    if (pinned !== descendant[field]) return false;
+  }
+  return coarser;
+}
+
+/**
+ * Drop candidates that are only coarser views of another candidate, keeping the most
+ * specific reading of each distinct place.
+ *
+ * Deliberately NOT a tiebreaker: it removes redundancy, never rivalry. Two genuinely
+ * different places both survive, so a caller that requires a single candidate still
+ * refuses to force a match — the property the whole ladder is built on.
+ */
+function narrowToMostSpecific(candidates: readonly LocationTemplate[]): LocationTemplate[] {
+  return candidates.filter(
+    (candidate) => !candidates.some((other) => isStrictAncestor(candidate, other)),
+  );
+}
+
 /** Distinct locations by shape — duplicate registrations of the identical location collapse. */
 function uniqueLocations(locations: readonly LocationTemplate[]): LocationTemplate[] {
   const byKey = new Map<string, LocationTemplate>();
@@ -277,6 +324,39 @@ export function canonicalizeLocation(raw: string, idx: LocationIndex): Canonical
   if (idKey.length > 0) {
     const idCandidates = uniqueLocations(idx.ids.get(idKey) ?? []);
     if (idCandidates.length === 1) return finalize(idCandidates[0]!);
+
+    // Rung 1b: a known id quoted INSIDE a sentence.
+    //
+    // Rung 1 only fires when the whole field IS the id, and rungs 2-3 match human-facing
+    // NAMES — while `normalizePhrase` collapses "steading_yard" to "steading yard", so an
+    // id never matches a name phrase either. That left a gap exactly where the reports
+    // come from: the MCP surface hands models ids, not titles, so a model writes "room
+    // steading_yard, blocked exit north" and every such report landed `unmapped`, keyed
+    // on its own raw wording. Four reports of one defect became four locations, and since
+    // clustering never merges across locations, corroboration could not accumulate.
+    //
+    // Two guards keep this from pinning prose to a place it merely mentions:
+    //
+    // - Only ids carrying an underscore count. A single-word id is indistinguishable
+    //   from the English word — "armory" is a room id AND a noun — so a bare word stays
+    //   unmapped, while "steading_yard" is unmistakably a machine id being quoted.
+    // - Only raws with surrounding prose reach this rung. A raw that IS just an id is
+    //   rung 1's alone, so an id that resolves to rival places ("new_york_city" is both
+    //   a region and a node) keeps its ambiguous verdict instead of being narrowed here.
+    //
+    // Ids are matched on whole tokens (every id in the index is `[a-z0-9_]+`), so
+    // "steading_yard" never hits inside "steading_yard_north". Two distinct places still
+    // refuse to resolve; only a place cited alongside its own container collapses.
+    const rawTokens = idKey.split(/[^a-z0-9_]+/).filter((token) => token.length > 0);
+    if (rawTokens.length > 1) {
+      const embedded: LocationTemplate[] = [];
+      for (const token of new Set(rawTokens)) {
+        if (!token.includes("_")) continue;
+        embedded.push(...(idx.ids.get(token) ?? []));
+      }
+      const embeddedCandidates = narrowToMostSpecific(uniqueLocations(embedded));
+      if (embeddedCandidates.length === 1) return finalize(embeddedCandidates[0]!);
+    }
   }
 
   const normalizedRaw = normalizePhrase(raw);

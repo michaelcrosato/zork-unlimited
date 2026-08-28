@@ -112,6 +112,74 @@ describe("location normalization", () => {
   });
 });
 
+describe("rung 1b — an id quoted inside a sentence", () => {
+  // Regression cover for a live failure: six playtest sessions produced 55 issues and
+  // 55 clusters, nothing merging, because reporters cite MACHINE IDS in prose (the MCP
+  // surface hands models ids, never titles) and every such report fell to `unmapped`,
+  // which keys on the raw wording. Four reports of one defect became four locations,
+  // and clustering never merges across locations — so corroboration could never build.
+  it("resolves a room id cited in prose, exactly as if it stood alone", () => {
+    // Reality check (content/rpg/quests/wolf_winter.yaml): room id "steading_yard".
+    expect(c("quest wolf_winter, room steading_yard, blocked exit north")).toMatchObject({
+      kind: "quest",
+      questId: "wolf_winter",
+      sceneId: "steading_yard",
+    });
+  });
+
+  it("gives four wordings of one defect the identical location", () => {
+    // The four raws below are verbatim from four independent playtest reports of the
+    // same blocked exit. Same location or they cannot cluster, whatever else matches.
+    const wordings = [
+      "wolf_winter quest opening room steading_yard, blocked exit north",
+      "quest wolf_winter, room steading_yard, blocked exit north",
+      "steading_yard",
+      "quest wolf_winter, room steading_yard, blocked exit north (reproduced on both approaches)",
+    ];
+    const resolved = wordings.map((raw) => {
+      const { raw: _ignoredRawText, ...identity } = c(raw);
+      return JSON.stringify(identity);
+    });
+    expect(new Set(resolved).size).toBe(1);
+    expect(resolved[0]).toContain("steading_yard");
+  });
+
+  it("prefers the room over the quest that contains it, rather than reading a tie", () => {
+    // Both ids are present. They are one place at two zoom levels, not two rivals.
+    expect(c("in wolf_winter the room steading_yard is unclear")).toMatchObject({
+      sceneId: "steading_yard",
+    });
+  });
+
+  it("still refuses a one-word id, which prose cannot be told apart from", () => {
+    // "armory" is a dawn_beacon room id and an ordinary noun. Requiring an underscore
+    // is what keeps a stray mention from pinning the report to that room.
+    expect(c("armory sounds drifted past, and the watch stayed quiet")).toMatchObject({
+      kind: "unmapped",
+    });
+  });
+
+  it("still refuses two genuinely different places named in one sentence", () => {
+    // Reality check: "gate_arch" is a room id in BOTH dawn_beacon and factors_mark.
+    // Sibling rooms under different quests are rivals, and no narrowing applies.
+    expect(c("the gate_arch description is wrong")).toMatchObject({ kind: "unmapped" });
+  });
+
+  it("does not let a bare colliding id be narrowed behind rung 1's back", () => {
+    // "new_york_city" is both a region and a node. A raw that IS just that id stays
+    // rung 1's call — ambiguous — even though the region is a coarser view of the node.
+    expect(c("new_york_city")).toMatchObject({ kind: "unmapped" });
+  });
+
+  it("matches whole tokens only, never an id that merely prefixes a longer one", () => {
+    // "armory_annex" is not an id. It must not resolve to the "armory" room just
+    // because that id is a prefix of it. ("armory" is chosen because its title, "The
+    // Armory", is a single content token and so ineligible for rung 3 — this asserts
+    // the token boundary rather than accidentally measuring a later rung.)
+    expect(c("armory_annex was confusing")).toMatchObject({ kind: "unmapped" });
+  });
+});
+
 describe("matchesAtTokenBoundary (rung-2 substring guard)", () => {
   // No shipped location name is currently a single short token like "store" —
   // every real "...store..." title is multi-word ("The Herb Store", "The
