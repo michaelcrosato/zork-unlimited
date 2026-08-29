@@ -24,6 +24,10 @@ concurrency:
 jobs:
   verify-prerequisites:
     runs-on: ubuntu-latest
+    # Every job gets a ceiling. The critical path is dominated by two unbounded
+    # things — the vitest shards and the crawl — and a hung one would otherwise sit
+    # against the runner's 6-hour default while the branch looks "in progress".
+    timeout-minutes: 30
     steps:
       # fetch-depth: 0 is load-bearing, not hygiene. The verifier's real teeth —
       # the per-cycle count ratchet and the guard-weakening check — live in drift
@@ -81,6 +85,7 @@ jobs:
   test-shards:
     name: Tests (${{ matrix.group }}/2)
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -114,6 +119,7 @@ jobs:
   # fails, then fails explicitly instead of being skipped or succeeding accidentally.
   verify:
     if: ${{ always() }}
+    timeout-minutes: 10
     needs: [verify-prerequisites, test-shards, crawl-smoke]
     runs-on: ubuntu-latest
     steps:
@@ -129,6 +135,7 @@ jobs:
 
   crawl-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -136,3 +143,37 @@ jobs:
       - run: npm ci
       - name: Mechanical crawl gate (all quests + overworld, deterministic seeds)
         run: npm run crawl:smoke
+
+  # Every other job here is ubuntu-only, and that blind spot shipped a real defect:
+  # four CLIs derived the repo root as `resolve(new URL("..", import.meta.url).pathname)`,
+  # which on win32 yields "C:\C:\dev\zork-unlimited". Five tests failed on Windows,
+  # `npm run health` was red there, and loop.sh — which gates every cycle on health —
+  # could not land a change on that platform, while CI stayed green the whole time.
+  #
+  # This lane is deliberately NOT the whole suite: a second 34-minute shard pair would
+  # double the critical path to catch a narrow class of bug. It runs the static gates
+  # (which are where path handling actually breaks) plus the path-sensitive CLI tests,
+  # in about three minutes. It is advisory — not in `verify`'s needs list — so a
+  # Windows-only runner hiccup cannot block a merge; it exists to make the platform
+  # visible at all, which it previously was not.
+  windows-smoke:
+    name: Windows path + CLI smoke (advisory)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint (catches new-URL-pathname via no-restricted-syntax)
+        run: npm run lint
+      - name: Validate every shipped quest
+        run: npm run validate
+      - name: Path-sensitive CLI tests
+        run: npx vitest run tests/unit/doctor_cli.test.ts tests/unit/record_playtest_session_cli.test.ts tests/unit/qa_triage_cli.test.ts

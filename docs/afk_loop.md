@@ -220,11 +220,14 @@ fourth piece of the reviewer subagent contract — _objective · output format �
   game-native contract as a human measures the _experience_, including its real
   continue/end retention choice, and the feedback compiler
   turns both crawler findings and blind reports into ranked hot spots. The crawl
-  gate is mandatory around every change. The blind playtest is **not** a per-cycle
-  gate any more — that coupling is exactly what the two-loop split removed
-  (`docs/two_loop_workflow.md`); experience evidence is produced asynchronously by
-  the playtest loop and consumed as QA tickets at the START of a cycle, never
-  proven at the end of one.
+  gate is mandatory around every change. The blind playtest is **intended** to
+  stop being a per-cycle gate — that coupling is exactly what the two-loop split
+  set out to remove (`docs/two_loop_workflow.md`) — but that migration is only
+  half done. `require_playtest_record` is gone from `loop.sh`, yet
+  `loop:seal-feedback` still requires this cycle's pure report, evidence and
+  sidecar before the final ledger commit, and `src/ai-loop.ts` still instructs the
+  agent to produce them. Treat the playtest as mandatory in commit-mode until the
+  seal is migrated; see the note in `AGENTS.md` step 5.
 - **Externalized state + one change per cycle**: `AI_LOOP_STATE.md` is the durable
   history; `ai-runs/<id>/` holds ignored per-cycle evidence, playtest report, and any
   ultraplan fresh-agent handoff.

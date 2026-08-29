@@ -65,10 +65,26 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    null only for off-list work); this is what can consume an accepted feedback
    recommendation. Never push the provisional commit. Pure evidence starts only
    when `git status --porcelain` is exactly empty; a later red gate resets it.
-5. **No playtest gate** — the dev loop does not play the game. Experience
-   evidence is produced asynchronously by the playtest loop and consumed as QA
-   tickets at the START of a cycle, not proven at the end of one. `loop.sh`
-   prints the bucket for the cycle log; it can never fail the cycle.
+5. **No playtest gate — except one that is still wired up.** The intent, and the
+   whole point of the two-loop split, is that the dev loop does not play the game:
+   experience evidence is produced asynchronously by the playtest loop and consumed
+   as QA tickets at the START of a cycle, not proven at the end of one. `loop.sh`
+   prints the bucket for the cycle log and can never fail the cycle, and
+   `require_playtest_record` is gone from the driver.
+
+   **But the migration is not finished, and the unfinished half will destroy your
+   work if you trust this section literally.** In commit-mode
+   (`AI_LOOP_COMMIT=1`), `safe_commit_if_enabled` still calls
+   `npm run loop:seal-feedback`, and `sealFeedbackAcceptance`
+   (`scripts/seal-feedback-acceptance.ts`) still requires
+   `ai-runs/<runId>/playtest.{md,evidence.jsonl,run.json}` and a pure V2 sidecar
+   bound to the exact provisional commit. `src/ai-loop.ts` still emits the matching
+   "STEP 3 — Play the provisional revision" instruction, so a cycle that follows
+   the generated prompt passes. A cycle that skips the playtest because this
+   charter said there is no gate passes pre-crawl, the change, post-crawl, health
+   and integrity — and is then hard-reset at the seal. Until that is finished,
+   either run the blind playtest the cycle prompt asks for, or run with
+   `AI_LOOP_COMMIT=0`. Finishing it is queued in `intake/queue/`.
 6. **Compile feedback (prompted-agent step)** — run `npm run feedback:status`.
    It verifies the local report ledger plus hash-bound pending cycle reports against
    the last accepted report manifest. Run `npm run feedback:compile` only when status

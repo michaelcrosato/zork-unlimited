@@ -298,8 +298,12 @@ Full reference: [`docs/two_loop_workflow.md`](./docs/two_loop_workflow.md).
 own candidates; an empty bucket is normal and never stalls the loop), **work**
 (one focused change), **verify** (`crawl:smoke`, the health bar, and an integrity
 check against the pre-cycle ref so the verifier itself can't be weakened). It
-does **not** play the game: there is no per-cycle playtest gate, which is what
-un-blocked the throughput the old single loop spent waiting.
+is meant to stop playing the game — removing the per-cycle playtest gate is what
+un-blocks the throughput the old single loop spent waiting on. That migration is
+**half done**: the gate is gone from `loop.sh`, but `loop:seal-feedback` still
+requires the cycle's own pure playtest artifacts before the final ledger commit in
+commit-mode, and the generated cycle prompt still asks for them. See `AGENTS.md`
+step 5 before running a cycle without one.
 
 **Playtest loop** (`playtest-loop.sh`): runs independently and in parallel,
 plays the most recently published build with as many cheap players as your
