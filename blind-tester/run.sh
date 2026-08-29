@@ -268,6 +268,35 @@ if [[ "$PLAY_MODE" == "pure" && -n "${BLIND_AGENT_CMD:-}" ]]; then
   exit 2
 fi
 
+# The pure path below is Codex-specific from end to end, and it must say so HERE.
+#
+# `runner_enforced` blindness is proved by reading Codex's own rollout logs
+# (blind-tester/codex-rollout.mjs and friends); no equivalent reader exists for any
+# other vendor, and every later step — the Codex home requirement, the transport
+# contract chosen by exact Codex model string, the `codex` client preflight, the
+# hardened strict-stream launch — is built around that one client. The registry
+# `kind` gate above only asks whether a provider is a headless CLI at all, which
+# `claude_code` and `gemini_cli` both are, so without this check a pure run for
+# either vendor sails past argument validation and eventually executes
+# `codex exec --model <that vendor's model>`: a burned launch whose failure names
+# the wrong cause. The refusal the protocol docs have always attributed to this
+# runner was in fact only the missing-`~/.codex` error, which does not fire at all
+# on the documented AFK-loop machine (Codex installed and logged in).
+#
+# Structural --smoke/--mock runs are unaffected: they never launch a live client,
+# so any provider may be used to exercise the plumbing. Non-Codex vendors remain
+# first-class evidence through `npm run playtest:ingest`, which stamps them
+# `operator_attested` — the honest label for a session no runner witnessed.
+PURE_LAUNCHABLE_PROVIDER="codex"
+if [[ "$PLAY_MODE" == "pure" && "$PROVIDER" != "$PURE_LAUNCHABLE_PROVIDER" ]]; then
+  echo "Provider \"$PROVIDER\" cannot produce pure evidence: this runner can only launch \"$PURE_LAUNCHABLE_PROVIDER\"." >&2
+  echo "runner_enforced blindness is read out of Codex's own rollout logs; no other vendor has an equivalent reader yet." >&2
+  echo "Play it in its own client, then record the session with:" >&2
+  echo "  npm run playtest:ingest -- --provider $PROVIDER --model $MODEL ..." >&2
+  echo "Structural plumbing checks for any provider remain available via --smoke or --mock." >&2
+  exit 2
+fi
+
 case "$TIMEOUT" in
   ''|*[!0-9]*|0) echo "BLIND_TIMEOUT requires a positive whole number of seconds." >&2; exit 2 ;;
 esac

@@ -156,6 +156,52 @@ export function authoritativePolicy(
   };
 }
 
+export type FeedbackStatusCounts = {
+  /** Report identities this compile would actually rank. */
+  cohortVerified: number;
+  cohortActionable: number;
+  cohortExcludedMocks: number;
+  /** Every verified identity currently on disk, ranked by this compile or not. */
+  corpusVerified: number;
+};
+
+/**
+ * The one-line `feedback:status` verdict.
+ *
+ * Pure and exported because the bootstrap case is a trap worth pinning. A bootstrap
+ * cohort is EMPTY by construction (`inspectFeedbackCohort` sets `cohortVerified = []`),
+ * so the counts an operator sees are all zero and the line said "compile ready" — while
+ * the compile it authorizes writes EVERY currently-verified report identity into the
+ * manifest's `seen_report_ids`. Every later delta compile filters those out, and report
+ * identity is content-derived with a monotone lineage, so nothing can re-admit them.
+ *
+ * That matters most in the one place a bootstrap is normally reached by hand: the
+ * documented `npm run feedback:rebootstrap` recovery after a re-clone or a wiped
+ * `ai-runs/`. Verified reports sitting in `blind-tester/reports` at that moment are
+ * consumed without ever producing a hot spot, and the status line was the last chance
+ * to say so. Counting the corpus rather than the cohort is what makes the warning
+ * possible at all.
+ */
+export function formatFeedbackStatusLine(
+  policyKind: FeedbackCohortPolicy["kind"],
+  counts: FeedbackStatusCounts,
+): string {
+  const ready =
+    policyKind === "bootstrap" ||
+    (policyKind !== "standalone" &&
+      counts.cohortActionable >= MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS);
+  const line =
+    `feedback:status — ${policyKind}; ${counts.cohortVerified} new verified reports, ` +
+    `${counts.cohortActionable} actionable, ${counts.cohortExcludedMocks} excluded mocks; ` +
+    `${ready ? "compile ready" : `${MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS} actionable reports required`}.`;
+  if (policyKind !== "bootstrap" || counts.corpusVerified === 0) return line;
+  const reports = counts.corpusVerified === 1 ? "report" : "reports";
+  return (
+    `${line} A bootstrap compile ranks nothing and marks all ${counts.corpusVerified} ` +
+    `verified ${reports} on disk as already seen; no later delta compile can re-admit them.`
+  );
+}
+
 function rootRelativeRef(root: string, path: string): string {
   const ref = relative(resolve(root), resolve(root, path)).replaceAll("\\", "/");
   if (ref.length === 0 || ref === ".." || ref.startsWith("../") || isAbsolute(ref)) {
@@ -229,14 +275,13 @@ function main(): void {
 
   if (parsed.status) {
     const inspection = inspectFeedbackCohort(root, inputs, policy);
-    const actionable = inspection.cohort.actionable_report_ids.length;
-    const ready =
-      policy.kind === "bootstrap" ||
-      (policy.kind !== "standalone" && actionable >= MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS);
     console.log(
-      `feedback:status — ${policy.kind}; ${inspection.cohort.verified_report_ids.length} new verified reports, ` +
-        `${actionable} actionable, ${inspection.cohort.excluded_mock_report_ids.length} excluded mocks; ` +
-        `${ready ? "compile ready" : `${MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS} actionable reports required`}.`,
+      formatFeedbackStatusLine(policy.kind, {
+        cohortVerified: inspection.cohort.verified_report_ids.length,
+        cohortActionable: inspection.cohort.actionable_report_ids.length,
+        cohortExcludedMocks: inspection.cohort.excluded_mock_report_ids.length,
+        corpusVerified: inspection.corpus.verified_report_ids.length,
+      }),
     );
     return;
   }

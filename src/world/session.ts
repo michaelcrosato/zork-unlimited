@@ -3923,10 +3923,31 @@ export class OverworldSession {
     return recorded.entry;
   }
 
+  /**
+   * The overworld analogue of the quest surface's `isRpgCheckpointSafeBoundary`:
+   * an arrival that raised a road encounter is mid-scene, not a break. Letting
+   * the Continue/End checkpoint materialize there tells the player they reached
+   * a "safe break" while the very next action they can take —
+   * `resolveRoadEncounter` — throws "Choose whether to continue or end this
+   * journey before taking another gameplay action", and ending there freezes the
+   * journey read-only with the encounter still live and still asking to be
+   * resolved. A due checkpoint is not lost: `nextCheckpoint` survives, and the
+   * encounter's own resolution decision is a safe boundary that materializes it
+   * one decision later as "the first safe break after decision N".
+   */
+  private overworldCheckpointSafeBoundary(): boolean {
+    return this.pendingRoadEncounter === null;
+  }
+
   travel(edgeId: string): OverworldJourneyTravelResult {
     this.assertJourneyAcceptingDecision();
     const entry = this.applyRoadTravelLeg(edgeId);
-    const journeyDecision = this.recordOverworldDecision(`travel:${edgeId}`, "movement", true);
+    const journeyDecision = this.recordOverworldDecision(
+      `travel:${edgeId}`,
+      "movement",
+      true,
+      this.overworldCheckpointSafeBoundary(),
+    );
     this.clearSessionCaches();
     return withJourneyDecision(cloneOverworldTravelLogEntry(entry), journeyDecision);
   }
@@ -3984,6 +4005,7 @@ export class OverworldSession {
       ),
       "movement",
       true,
+      this.overworldCheckpointSafeBoundary(),
     );
     this.clearSessionCaches();
     const result: OverworldGoalPassageResult = {

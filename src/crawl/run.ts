@@ -18,6 +18,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { canonicalize } from "../core/hash.js";
+import { maneuverActionId } from "../rpg/action_ids.js";
 import { renderCoverageMarkdown, type OverworldCoverageSummary } from "./coverage.js";
 import { CrawlFindingSchema, findingFingerprint, type CrawlFinding } from "./findings.js";
 import { crawlOverworld } from "./overworld_crawler.js";
@@ -63,10 +64,12 @@ export type CrawlRunOptions = {
    *  `tests/unit/crawl_run.test.ts`'s `describe("runPlanInProcess with
    *  injected quests …")`. IN-PROCESS ONLY: `runPlanWithWorkers` ships each
    *  worker its slice of `opts` through `worker_threads`' `workerData`, which
-   *  is structured-cloned — functions cannot cross that boundary — so worker
-   *  shards always fall back to the real `prepareShippedQuest` regardless of
-   *  what the parent process's `opts.prepareQuest` was set to. Never set this
-   *  from `bin/crawl.ts` or `parseCrawlArgs`; it exists purely for tests. */
+   *  is structured-cloned, and structured clone THROWS on a function rather
+   *  than dropping it — so the seam is stripped on the way out by
+   *  `workerCloneableOptions` (see its doc comment) and worker shards always
+   *  fall back to the real `prepareShippedQuest` regardless of what the parent
+   *  process's `opts.prepareQuest` was set to. Never set this from
+   *  `bin/crawl.ts` or `parseCrawlArgs`; it exists purely for tests. */
   prepareQuest?: (root: string, questId: string) => PreparedQuest;
 };
 
@@ -283,13 +286,32 @@ function describePlanItem(item: CrawlPlanItem): string {
 /**
  * Static, declared-content totals for a prepared quest — the denominators for
  * `questCoverage`. Deliberately a content-surface count (declared rooms/exits/
- * interactions/topics/enemies from the pack), not a state-space reachability
+ * objects/topics/enemies from the pack), not a state-space reachability
  * proof: the latter would need to explore every state combination a run's
  * seeds may never visit, which is out of scope here and would make `--smoke`
- * far too slow. `roomsTotal`/`endingsDeclared` are exact; `actionsTotal` is a
- * coarse upper-bound-ish estimate for a coverage ratio, not an exact action-id
- * census (a real one would double as `enumerateRpgActions`'s ground truth run
- * over the full reachable state space).
+ * far too slow. `roomsTotal`/`endingsDeclared` are exact.
+ *
+ * `actionsTotal` is an UPPER BOUND on the distinct `RpgActionOption.id` values
+ * `enumerateRpgActions` can ever emit for this pack — which is exactly what the
+ * numerator (`actionIdsTried`, a set of those same ids) is drawn from, so the
+ * printed `actions X/Y` ratio can never exceed 100%. It used to be described as
+ * "coarse upper-bound-ish" and was in fact neither bound: it summed each room's
+ * exits (but a MOVE's id is `go_<direction>`, NOT room-scoped, so every room's
+ * `north` exit shares ONE id — a large overcount) while omitting whole families
+ * the enumerator emits per object (`examine_`/`read_`/`open_`/`close_`/`drop_`/
+ * `unlock_`), per npc (`examine_npc_`/`talk_`), per enemy maneuver, and the two
+ * always-available globals (`look_around`/`inventory`) — a larger undercount.
+ * Seven of the twelve shipped quests reported over 100% coverage in the
+ * `--smoke` lane as a result, so nothing could ever gate or trend on the ratio.
+ *
+ * The families below mirror `enumerateRpgBaseActions` (src/rpg/legal_actions.ts)
+ * plus the runner's combat additions, gated only on STRUCTURAL facts — the
+ * conditions a pack's content can never satisfy in any state, never the
+ * state-dependent ones (`present`, `isOpen`, inventory membership, dialogue
+ * activity), which is what keeps this a bound rather than a census. Collecting
+ * literal ids in a Set rather than adding counts is what collapses the shared
+ * ones (`go_north` across rooms, an `ask_<topic>` reachable from two nodes)
+ * exactly the way the numerator's own Set does.
  */
 function computeQuestTotals(prepared: PreparedQuest): {
   roomsTotal: number;
@@ -301,18 +323,74 @@ function computeQuestTotals(prepared: PreparedQuest): {
   const allRoomIds = pack.rooms.map((r) => r.id).sort();
   const endingsDeclared = [...new Set(pack.endings.map((e) => e.id))].sort();
 
-  let actionsTotal = 0;
-  for (const room of pack.rooms) actionsTotal += room.exits.length; // MOVE
-  for (const obj of pack.objects) {
-    if (obj.takeable) actionsTotal += 1; // TAKE
-    actionsTotal += obj.interactions.length; // USE/READ/INSPECT/OPEN/CLOSE
-  }
-  for (const npc of pack.npcs) {
-    for (const node of npc.dialogue.nodes) actionsTotal += node.topics.length; // ASK
-  }
-  actionsTotal += pack.enemies.length; // ATTACK
+  const actionIds = new Set<string>();
 
-  return { roomsTotal: allRoomIds.length, allRoomIds, endingsDeclared, actionsTotal };
+  // MOVE — one id per DISTINCT compass direction anywhere in the pack.
+  for (const room of pack.rooms) {
+    for (const exit of room.exits) actionIds.add(`go_${exit.direction}`);
+  }
+
+  // Objects. `examine_` resolves for any present object, so it is unconditional;
+  // the rest are gated on a structural fact that no state can supply:
+  // READ needs `read_text` or a READ interaction (otherwise the resolver has
+  // nothing to narrate and returns null in every state); TAKE needs `takeable`;
+  // DROP needs a droppable, non-`held` object (an effect can `add_item` a
+  // non-takeable object, so DROP is not conditioned on `takeable`); OPEN/CLOSE
+  // need `openable` or an interaction with that verb; UNLOCK needs a `key_id`.
+  let useInteractions = 0;
+  for (const obj of pack.objects) {
+    const verbs = new Set(obj.interactions.map((it) => it.verb));
+    actionIds.add(`examine_${obj.id}`);
+    if (obj.read_text !== undefined || verbs.has("READ")) actionIds.add(`read_${obj.id}`);
+    if (obj.takeable) actionIds.add(`take_${obj.id}`);
+    if (obj.held !== true && obj.droppable !== false) actionIds.add(`drop_${obj.id}`);
+    if (obj.openable || verbs.has("OPEN")) actionIds.add(`open_${obj.id}`);
+    if (obj.openable || verbs.has("CLOSE")) actionIds.add(`close_${obj.id}`);
+    if (obj.key_id !== undefined) actionIds.add(`unlock_${obj.id}`);
+    // USE ids are minted by `projectUseAction`'s authored-identity rules (legacy
+    // `use_<item>_on_<target>` spellings, verb-named stages on an overloaded
+    // target), which are not reconstructable from the pack alone. Counting one
+    // per targeted USE interaction stays an upper bound: two interactions may
+    // share an id, never the reverse.
+    useInteractions += obj.interactions.filter(
+      (it) => it.verb === "USE" && it.target !== undefined,
+    ).length;
+  }
+
+  // NPCs: `talk_<npc>`, `ask_<topic>` (topic ids are pack-global, not npc- or
+  // node-scoped, so the Set collapses a topic two nodes both offer), and
+  // `examine_npc_<npc>` — which the enumerator disambiguates with a `__N`
+  // suffix when an object already claimed that id (only possible when a pack
+  // ships an object literally named `npc_<npcId>`), mirrored here so that
+  // corner stays inside the bound.
+  for (const npc of pack.npcs) {
+    let examineId = `examine_npc_${npc.id}`;
+    for (let n = 2; actionIds.has(examineId); n++) examineId = `examine_npc_${npc.id}__${n}`;
+    actionIds.add(examineId);
+    actionIds.add(`talk_${npc.id}`);
+    for (const node of npc.dialogue.nodes) {
+      for (const topic of node.topics) actionIds.add(`ask_${topic.id}`);
+    }
+  }
+
+  // Enemies: the ordinary strike, plus one id per declared maneuver.
+  for (const enemy of pack.enemies) {
+    actionIds.add(`attack_${enemy.id}`);
+    for (const maneuver of enemy.maneuvers ?? []) {
+      actionIds.add(maneuverActionId(enemy.id, maneuver.id));
+    }
+  }
+
+  // Always-available informational actions.
+  actionIds.add("look_around");
+  actionIds.add("inventory");
+
+  return {
+    roomsTotal: allRoomIds.length,
+    allRoomIds,
+    endingsDeclared,
+    actionsTotal: actionIds.size + useInteractions,
+  };
 }
 
 /** Fingerprint-based dedupe over already-built findings from possibly-different
@@ -434,17 +512,59 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
   let truncated = false;
   const skippedItems: string[] = [];
 
+  const prepareQuest = opts.prepareQuest ?? prepareShippedQuest;
+
+  /**
+   * A quest the seconds budget skipped must still get a row, or it vanishes from
+   * the run's output entirely: `questCoverage` is keyed by the quests that
+   * actually RAN, `mergeQuestCoverage` iterates only the keys present, and both
+   * `bin/crawl.ts`'s console table and `summary.md`'s "## Quest coverage" list
+   * iterate that same map — so a truncated run silently prints fewer quest rows
+   * rather than showing the quest at zero. (`--deep` truncates the SAME tail in
+   * every shard, since all eight walk one lexicographic plan order, so the
+   * vanished rows are the same quests every night.) A zero row unions correctly
+   * with any shard that did finish the quest: `orphans` merge by INTERSECTION,
+   * and "every room orphaned" intersected with a real shard's orphans is that
+   * shard's own set, so a placeholder never degrades a real result.
+   *
+   * Preparing the pack costs a read+compile the skip was meant to avoid, but it
+   * is the only source of the static denominators and it is paid at most once
+   * per skipped quest, after the budget is already spent — cheap next to
+   * silently under-reporting the run. A prepare that throws (missing/invalid
+   * content) leaves the quest absent exactly as before rather than turning a
+   * truncated run into a crashed one.
+   */
+  const recordSkippedQuest = (item: Extract<CrawlPlanItem, { kind: "quest" }>): void => {
+    if (questCoverage[item.questId] !== undefined) return;
+    let totals: ReturnType<typeof computeQuestTotals>;
+    try {
+      totals = computeQuestTotals(prepareQuest(opts.root, item.questId));
+    } catch {
+      return;
+    }
+    questCoverage[item.questId] = {
+      roomsVisited: 0,
+      roomsTotal: totals.roomsTotal,
+      actionsTried: 0,
+      actionIdsTried: [],
+      actionsTotal: totals.actionsTotal,
+      endingsReached: [],
+      endingsDeclared: totals.endingsDeclared,
+      orphans: { rooms: totals.allRoomIds, endings: totals.endingsDeclared },
+    };
+  };
+
   for (const item of items) {
     // Soft wall-clock cutoff: checked BETWEEN plan items only, never mid-quest —
     // a (quest,seed) episode always finishes once started.
     if (deadline !== null && Date.now() >= deadline) {
       truncated = true;
       skippedItems.push(describePlanItem(item));
+      if (item.kind === "quest") recordSkippedQuest(item);
       continue;
     }
 
     if (item.kind === "quest") {
-      const prepareQuest = opts.prepareQuest ?? prepareShippedQuest;
       const prepared = prepareQuest(opts.root, item.questId);
       const totals = computeQuestTotals(prepared);
       const roomsVisited = new Set<string>();
@@ -657,6 +777,25 @@ export function mergeSummaries(
   };
 }
 
+/**
+ * The slice of `CrawlRunOptions` a worker thread can actually be handed.
+ *
+ * `workerData` is structured-cloned, and structured clone does NOT silently drop
+ * a function — it throws `DataCloneError: () => {} could not be cloned`. So
+ * forwarding `opts` verbatim turned any caller that set the in-process-only
+ * `prepareQuest` seam and asked for `--workers 2` into an opaque
+ * worker-construction crash surfacing as a raw stack from `bin/crawl.ts`, even
+ * though the seam's own doc comment promised worker shards would fall back to
+ * the real `prepareShippedQuest`. Dropping the seam here is what makes that
+ * documented contract true; every other option is plain data and clones fine.
+ */
+export function workerCloneableOptions(
+  opts: CrawlRunOptions,
+): Omit<CrawlRunOptions, "prepareQuest"> {
+  const { prepareQuest: _inProcessOnly, ...cloneable } = opts;
+  return cloneable;
+}
+
 /** Runs one worker thread on its slice of the plan, resolving with the
  *  shard's `CrawlRunSummary`. Uses `worker_threads` (not a `child_process`
  *  fallback): the worker loads `worker_bootstrap.mjs` — plain JS the thread
@@ -692,7 +831,7 @@ export function mergeSummaries(
 function runWorkerShard(items: CrawlPlanItem[], opts: CrawlRunOptions): Promise<CrawlRunSummary> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./worker_bootstrap.mjs", import.meta.url), {
-      workerData: { items, opts },
+      workerData: { items, opts: workerCloneableOptions(opts) },
     });
     let settled = false;
     worker.once("message", (summary: CrawlRunSummary) => {

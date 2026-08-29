@@ -35,6 +35,7 @@ import {
   compactOverworldOpportunityExplanation,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
+  compactOverworldQuestCompletionResultLegendKeys,
   compactOverworldServiceResultLegendKeys,
   compactOverworldServiceResult,
   compactOverworldTravelResult,
@@ -83,6 +84,7 @@ import {
   rpgSourceFields,
   type RpgMcpSessionRuntime,
   type RpgSessionPayload,
+  type RpgSessionPayloadBody,
 } from "./rpg_session_runtime.js";
 import { runRpgGetObservation } from "./rpg_session_tools.js";
 import type { RpgViewOptions } from "./rpg_view_projection.js";
@@ -268,7 +270,8 @@ type ResumedEmbeddedJourneyForArgs<Args extends RpgViewOptions & OverworldRespon
 
 type ResumedEmbeddedRpgField<Args extends RpgViewOptions & OverworldResponseOptions> = {
   rpg_session_id: string;
-  rpg_session: RpgSessionPayload<Args> & EmbeddedJourneyField<ResumedEmbeddedJourneyForArgs<Args>>;
+  rpg_session: RpgSessionPayloadBody<Args> &
+    EmbeddedJourneyField<ResumedEmbeddedJourneyForArgs<Args>>;
 };
 
 type OverworldJourneyChoiceResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
@@ -406,6 +409,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "explanation",
         (session) => session.explainOpportunity({ kind: args.kind, id: args.id }),
         compactOverworldOpportunityExplanation,
+        OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.opportunity_explanation,
       );
     },
 
@@ -1041,7 +1045,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         responseOptions,
         session,
         responseOptions.compact_result === true
-          ? OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.quest_completion
+          ? compactOverworldQuestCompletionResultLegendKeys(
+              responseValue as OverworldCompactQuestCompletionResult,
+            )
           : [],
       );
       return {

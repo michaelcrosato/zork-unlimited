@@ -101,6 +101,11 @@ export function assertTraceMode(trace: {
  * the result `ok` reflects whether the replayed final hash matches it. If it also
  * carries `per_step_hashes` (Trace v2), `divergedAtStep` localizes the first
  * action whose post-state diverged — the actual debugging value (§15).
+ *
+ * `ok` is the conjunction of every check the trace made available: a per-step
+ * divergence fails the replay on its own, whether or not a final hash was
+ * recorded to compare. `ok:true` therefore means "nothing this trace could prove
+ * wrong is wrong", never "nothing was checked".
  */
 export function replayTrace<A extends EngineAction>(
   trace: Trace<A>,
@@ -119,11 +124,28 @@ export function replayTrace<A extends EngineAction>(
   const stepField = divergedAtStep !== undefined ? { divergedAtStep } : {};
 
   if (trace.expected_final_hash === undefined) {
+    // A trace may legitimately omit the final hash — assertTraceExpectedFinalHash
+    // (integrity.ts) permits absence, so hand-authored and trimmed traces land
+    // here. But a per-step baseline the trace DOES carry is still evidence, and a
+    // divergence against it is a known replay failure: reporting ok:true beside a
+    // populated divergedAtStep is self-contradictory, and every consumer gates on
+    // `.ok` alone (bin/replay exits 0, inspect_trace prints hash_ok:true), so the
+    // one thing this replay actually proved wrong would be announced as a clean
+    // round-trip (§8.8, §15). Fail on the divergence we can see.
+    if (divergedAtStep === undefined) {
+      return {
+        ok: true,
+        finalHash,
+        message: "Replayed with no expected final hash to assert.",
+      };
+    }
     return {
-      ok: true,
+      ok: false,
       finalHash,
-      ...stepField,
-      message: "Replayed with no expected final hash to assert.",
+      divergedAtStep,
+      message:
+        `Replayed with no expected final hash to assert, but the recorded per-step baseline diverged. ` +
+        `First divergence at step ${divergedAtStep} (action ${describeAction(trace, divergedAtStep)}).`,
     };
   }
 

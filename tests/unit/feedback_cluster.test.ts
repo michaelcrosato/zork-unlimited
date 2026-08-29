@@ -6,6 +6,7 @@ import {
   tokenizeIssue,
 } from "../../src/feedback/cluster.js";
 import type { IssueRecord } from "../../src/feedback/cluster.js";
+import { suggestFixLayer } from "../../src/feedback/rank.js";
 import type { CanonicalLocation } from "../../src/feedback/schema.js";
 
 const loc: CanonicalLocation = {
@@ -168,6 +169,51 @@ describe("merging independently-authored reports of one defect", () => {
     // collapse distinct findings filed against the same place.
     const clusters = clusterIssues(issuesAt(somewhere, THREE_DEFECTS));
     expect(clusters).toHaveLength(3);
+  });
+
+  it("never chains two dissimilar issues together through an intermediary", () => {
+    // Regression cover for single-link agglomeration. Pass 2 used to compare the two
+    // clusters' growing token UNIONS, so A+B could merge, then B+C, leaving A and C in
+    // one cluster having never been compared at all. These three are verbatim from the
+    // audit that found it: the crash and the music remark share NO significant token,
+    // yet the door confusion sat between them and pulled all three into one cluster at
+    // count 3 and maxSeverity S4.
+    const crash = "Game crashed when I opened the door";
+    const door = "The door description confused me about which way it opens";
+    const music = "The description of the music was confusing";
+    expect(jaccard(tokenizeIssue(crash), tokenizeIssue(music))).toBe(0);
+    expect(jaccard(tokenizeIssue(crash), tokenizeIssue(door))).toBeGreaterThan(
+      JACCARD_MERGE_THRESHOLD,
+    );
+    expect(jaccard(tokenizeIssue(door), tokenizeIssue(music))).toBeGreaterThan(
+      JACCARD_MERGE_THRESHOLD,
+    );
+
+    const clusters = clusterIssues([
+      { ...issue(crash, { severity: "S4", ref: "crash" }), location: somewhere },
+      { ...issue(door, { severity: "S1", ref: "door" }), location: somewhere },
+      { ...issue(music, { severity: "S0", ref: "music" }), location: somewhere },
+    ]);
+    const crashCluster = clusters.find((c) => c.issues.some((i) => i.ref === "crash"))!;
+    expect(crashCluster.issues.map((i) => i.ref)).not.toContain("music");
+
+    // No cluster may hold a pair that never cleared the threshold — the property, not
+    // just this example.
+    for (const c of clusters) {
+      for (const left of c.issues) {
+        for (const right of c.issues) {
+          if (left.ref === right.ref) continue;
+          expect(
+            jaccard(tokenizeIssue(left.text), tokenizeIssue(right.text)),
+          ).toBeGreaterThanOrEqual(JACCARD_MERGE_THRESHOLD);
+        }
+      }
+    }
+
+    // The consequence the audit cared about: alone, the crash routes to the engine.
+    // Chained, the union of all three tokens hit the ladder's first rung instead and
+    // filed a blocking crash as prose polish.
+    expect(suggestFixLayer(crashCluster)).toBe("engine_rule");
   });
 
   it("separates the two populations by a real margin, not by luck", () => {

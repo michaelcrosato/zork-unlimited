@@ -581,6 +581,12 @@ body {
   text-transform: uppercase;
 }
 
+/* The crash boundary offers a reload beside the discard; keep them apart when
+   two buttons share this card, and let them wrap on a narrow window. */
+.save-recovery-card > button + button {
+  margin: 0.75rem 0 0 0.75rem;
+}
+
 .nw-decision-deck.is-dense .nw-action-card > h2 {
   font-size: clamp(0.88rem, 1.08vw, 1.05rem);
   line-height: 1.14;

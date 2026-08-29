@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { verifyBlindReportText } from "./report_verifier.js";
 import {
@@ -184,6 +184,15 @@ export function buildBlindFeedbackLedger(
     const verifyWithAdjacentPureSidecar = () => {
       const sidecarPath = fullPath.replace(/\.md$/, ".run.json");
       if (!existsSync(sidecarPath)) return null;
+      // A reused explicit output prefix must not let an older successful run's
+      // sidecar bless a newer timed-out/partial report. run.sh publishes the
+      // adjacent sidecar last and only `--after` the durable run evidence, so a
+      // sidecar that predates its own report cannot have been written for it.
+      // src/feedback/compile.ts applies exactly this check; the two retention
+      // consumers read the same reports directory and must not disagree about
+      // which bundles are admissible, or acceptance becomes a function of which
+      // one happened to look.
+      if (statSync(sidecarPath).mtimeMs < statSync(fullPath).mtimeMs) return null;
       const parsedSidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
       if (!parsedSidecar.ok || parsedSidecar.sidecar.play_mode !== "pure") return null;
       const providerAuthority = validateAdjacentPureProviderAuthority(fullPath);

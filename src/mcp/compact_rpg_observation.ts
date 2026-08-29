@@ -117,6 +117,15 @@ export type RpgCompactObservation = {
  * tests/unit/compact_legend.test.ts asserts emitted contexts stay covered. Sent
  * ONCE per RPG session (new_game / start_world_quest / load_game), never repeated
  * in per-step payloads.
+ *
+ * The creating response sends it unconditionally, including when that response
+ * itself carries a verbose observation. `compact_events` and `compact_observation`
+ * default to true PER CALL and independently of how the session was created, so a
+ * session started with compact_observation:false still gets tagged event tuples
+ * (`[["m","barrow_mouth","entry_hall"]]`) and a positional `context` out of the very
+ * next default step_action. This response is the RPG surface's only carrier — there
+ * is no per-response legend_delta here the way the overworld surface has one — so
+ * withholding it left those payloads permanently undecodable.
  */
 export const RPG_COMPACT_LEGEND = {
   v: "compact observation version",

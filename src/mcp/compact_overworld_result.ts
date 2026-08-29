@@ -198,6 +198,16 @@ export const OVERWORLD_COMPACT_RESULT_LEGEND = {
   "result.renown": "renown result: [region_name, gained, total_after]",
   "result.from": "area left: [area_id, area_name]",
   "result.to": "area reached: [area_id, area_name]",
+  // `route` (bare) is plan_overworld_session_route's five-tuple; `result.route` is a
+  // plain road name on an area-travel result. Two different shapes, so the dotted path
+  // has to be defined separately — an agent merging "by exact field" would otherwise
+  // decode a label string against the tuple definition.
+  "result.route": "route taken, by name",
+  "result.m": "in-game minutes this action spent",
+  "result.at": "arrival clock: 'Day N, HH:MM'",
+  "result.known": "true when this was already discovered, so nothing new was recorded",
+  "explanation.lead": "[kind, lead_id, title, area_name, access]",
+  "explanation.next_action": "[tool, arguments, command, label]",
 } as const;
 
 export type OverworldCompactResultLegendKey = keyof typeof OVERWORLD_COMPACT_RESULT_LEGEND;
@@ -206,18 +216,98 @@ export const OVERWORLD_COMPACT_RESULT_LEGEND_KEYS = {
   route: ["route"],
   travel: ["travel"],
   goal_passage: ["passage.minutes", "passage.supplies", "passage.fatigue", "passage.legs"],
-  road_encounter: ["result.entry", "result.encounter"],
+  road_encounter: ["result.entry", "result.encounter", "result.m"],
   journey_story_choice: ["result.entry"],
   quest_start: ["quest"],
-  quest_completion: ["result.entry", "result.quest", "result.ending", "result.renown"],
-  area_travel: ["result.from", "result.to"],
+  opportunity_explanation: ["explanation.lead", "explanation.next_action"],
+  area_travel: ["result.from", "result.to", "result.route", "result.m", "result.at"],
 } as const satisfies Record<string, readonly OverworldCompactResultLegendKey[]>;
+
+/**
+ * Result fields whose own name IS the definition — plain English, no positional
+ * schema and no abbreviation to decode. Enumerating them is what makes the
+ * coverage check below fail closed: a NEW result field is either listed here as a
+ * deliberate "needs no definition" call, or it needs a legend entry, and there is
+ * no third option that compiles.
+ *
+ * `m`, `at`, `known` and `route` are deliberately NOT here. `m` in particular
+ * shipped on action, service, road-encounter, quest-completion and area-travel
+ * results with no entry anywhere in either legend, leaving a blind agent to infer
+ * elapsed in-game time from an unlabelled integer.
+ */
+type SelfDescribingCompactResultField =
+  | "action"
+  | "changed"
+  | "choiceId"
+  | "consequence"
+  | "destination"
+  | "discovered_truncated"
+  | "displaySummary"
+  | "entry_text"
+  | "fatigue_gained"
+  | "goal"
+  | "goal_id"
+  | "journeyDecision"
+  | "legs_truncated"
+  | "renown_gained"
+  | "stop_reason"
+  | "stopped_at"
+  | "storyChoiceId"
+  | "strategy"
+  | "supplies_used"
+  | "text"
+  | "travel_condition";
+
+/** Every emitted path that still lacks an exact-path definition. */
+type UndefinedCompactResultPath<Value, Prefix extends string> = Exclude<
+  `${Prefix}.${Exclude<keyof Value & string, SelfDescribingCompactResultField>}`,
+  OverworldCompactResultLegendKey
+>;
+
+/**
+ * Fail-closed coverage for the RESULT legend, matching what
+ * `OVERWORLD_COMPACT_LEGEND satisfies Record<keyof OverworldCompactView, string>`
+ * already does for the context legend. Result keys had neither that tie nor the
+ * runtime throw, so `m` (and area travel's colliding `route`) shipped undefined for
+ * as long as they have existed. A missing path fails to compile here and the error
+ * text names the exact path.
+ */
+type AssertEveryCompactResultPathDefined<Missing extends never> = Missing;
+
+type _CompactResultLegendCoverage = [
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactActionResult, "result">
+  >,
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactJourneyStoryChoiceResult, "result">
+  >,
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactQuestCompletionResult, "result">
+  >,
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactServiceResult, "result">
+  >,
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactRoadEncounterResult, "result">
+  >,
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactAreaTravelResult, "result">
+  >,
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactGoalPassageResult, "passage">
+  >,
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactOpportunityExplanation, "explanation">
+  >,
+];
 
 export function compactOverworldActionResultLegendKeys(
   result: OverworldCompactActionResult,
 ): OverworldCompactResultLegendKey[] {
   return [
     "result.entry",
+    "result.m",
+    ...(result.known ? (["result.known"] as const) : []),
     ...(result.areas ? (["result.areas"] as const) : []),
     ...(result.jobs ? (["result.jobs"] as const) : []),
     ...(result.sites ? (["result.sites"] as const) : []),
@@ -231,7 +321,22 @@ export function compactOverworldServiceResultLegendKeys(
   return [
     "result.supplies",
     "result.fatigue",
+    "result.m",
     ...(result.entry ? (["result.entry"] as const) : []),
+  ];
+}
+
+/** Quest completion only carries `known` when the foldback was already recorded. */
+export function compactOverworldQuestCompletionResultLegendKeys(
+  result: OverworldCompactQuestCompletionResult,
+): OverworldCompactResultLegendKey[] {
+  return [
+    "result.entry",
+    "result.quest",
+    "result.ending",
+    "result.renown",
+    "result.m",
+    ...(result.known ? (["result.known"] as const) : []),
   ];
 }
 

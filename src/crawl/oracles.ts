@@ -127,10 +127,25 @@ const COMPASS_DIRECTIONS = [
 /**
  * Deterministically synthesize an action NOT in the legal set, for the
  * negative-legality probe (a listed-illegal action must be rejected cleanly,
- * never silently accepted or thrown). Tries, in order: an unlisted MOVE
- * direction, a TAKE of an item that is not currently present/held, then — only
- * while mid-dialogue — an ASK of a topic id no live topic uses. Returns null if
- * none of these can be built (e.g. every compass direction is already legal).
+ * never silently accepted or thrown). Draws uniformly from EVERY illegal
+ * candidate the current state affords, across three families: an unlisted MOVE
+ * direction, a TAKE of an item that is not currently offered or held, and —
+ * only while mid-dialogue — an ASK of a topic id no live topic uses. Returns
+ * null only when none of the three can be built at all.
+ *
+ * This used to be an ordered fallback chain (MOVE first, TAKE only if every
+ * compass direction was already legal, ASK only if that failed too). No shipped
+ * room has all twelve directions legal at once, so the later legs were
+ * unreachable for real content and the oracle only ever probed movement
+ * rejection — never a TAKE of an absent object, never a dead dialogue topic,
+ * which is exactly where a resolver is likelier to accept something it should
+ * not. Pooling the candidates and picking once fixes the coverage without
+ * costing determinism, and deliberately keeps the rng draw to EXACTLY ONE
+ * `rng.int` per call, as the old first-branch-wins shape did in practice: this
+ * generator shares its `Rng` with the crawl's action policy, so any change in
+ * how many values it consumes would shift every subsequent policy pick and
+ * silently re-route the whole crawl. The ASK sentinel is therefore derived by
+ * lengthening a fixed prefix until it is unused, not by drawing a random suffix.
  */
 export function sampleIllegalAction(
   index: RpgIndex,
@@ -152,25 +167,21 @@ export function sampleIllegalAction(
     }
   }
 
-  const candidateDirections = COMPASS_DIRECTIONS.filter((d) => !legalMoveDirections.has(d));
-  if (candidateDirections.length > 0) {
-    const direction = candidateDirections[rng.int(0, candidateDirections.length - 1)]!;
-    return { type: "MOVE", direction };
+  const candidates: RpgAction[] = [];
+  for (const direction of COMPASS_DIRECTIONS) {
+    if (!legalMoveDirections.has(direction)) candidates.push({ type: "MOVE", direction });
   }
-
-  const candidateItems = [...index.objects.keys()].filter(
-    (id) => !legalTakeItems.has(id) && !state.inventory.includes(id),
-  );
-  if (candidateItems.length > 0) {
-    const item = candidateItems[rng.int(0, candidateItems.length - 1)]!;
-    return { type: "TAKE", item };
+  for (const item of index.objects.keys()) {
+    if (!legalTakeItems.has(item) && !state.inventory.includes(item)) {
+      candidates.push({ type: "TAKE", item });
+    }
   }
-
   if (dialogueNpc !== null) {
-    let topic = `__illegal_topic_${rng.int(0, 999_999)}`;
-    while (legalAskTopics.has(topic)) topic = `__illegal_topic_${rng.int(0, 999_999)}`;
-    return { type: "ASK", npc: dialogueNpc, topic };
+    let topic = "__illegal_topic";
+    while (legalAskTopics.has(topic)) topic += "_";
+    candidates.push({ type: "ASK", npc: dialogueNpc, topic });
   }
 
-  return null;
+  if (candidates.length === 0) return null;
+  return candidates[rng.int(0, candidates.length - 1)]!;
 }

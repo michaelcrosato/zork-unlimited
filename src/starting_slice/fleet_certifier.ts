@@ -206,6 +206,21 @@ export interface StartingSliceMetrics {
   in_scope_issue_reports: number;
 }
 
+/**
+ * The typical-first-goal decision budget the completion p50 must clear.
+ *
+ * This threshold is DECLARED in docs/starting_slice_causal_matrix.json as
+ * `contract.maximum_typical_first_goal_decisions`, and the certifier used to carry an
+ * unlinked copy of it as a bare `45` in the gate expression below. Two numbers, one
+ * contract, no cross-check: tightening the matrix's budget left the gate at 45 and the
+ * slice would still certify against the looser bar it no longer declared. Naming it
+ * gives the drift somewhere to be caught — tests/unit/starting_slice_causal_matrix.test.ts
+ * pins this constant against the matrix, so the two can no longer disagree quietly.
+ * (Note the gate KEY, `completion_p50_at_most_45_decisions`, is part of the published
+ * certification JSON shape; changing the budget means renaming it too, deliberately.)
+ */
+export const STARTING_SLICE_MAX_TYPICAL_FIRST_GOAL_DECISIONS = 45;
+
 export interface StartingSliceGates {
   completion_at_least_90_percent: boolean;
   completion_p50_at_most_45_decisions: boolean;
@@ -1347,7 +1362,8 @@ export function evaluateStartingSliceRuns(
   // averages or binary floating-point values can move a boundary run.
   const gates: StartingSliceGates = {
     completion_at_least_90_percent: completed * 100 >= expectedCount * 90,
-    completion_p50_at_most_45_decisions: p50 !== null && p50 <= 45,
+    completion_p50_at_most_45_decisions:
+      p50 !== null && p50 <= STARTING_SLICE_MAX_TYPICAL_FIRST_GOAL_DECISIONS,
     got_stuck_at_most_5_percent: stuck * 100 <= expectedCount * 5,
     clarity_average_at_least_4_2: clarityTotal * 10 >= expectedCount * 42,
     enjoyment_average_at_least_4_2: enjoymentTotal * 10 >= expectedCount * 42,

@@ -40,12 +40,22 @@ function argValue(flag: string, fallback: string): string {
  * Read from git rather than from the sessions themselves so that a build nobody has
  * played yet still counts as "newer" — otherwise a quiet period in the fleet would make
  * every ticket look freshly seen.
+ *
+ * The whole history, deliberately, not a window. `buildsSince` returns null for a commit
+ * it cannot find and triage skips aging on null — a fail-open the comment there defends,
+ * because expiring a ticket whose build simply was not published would be worse than
+ * keeping it. But a truncated window turns that safety valve into the normal case: with
+ * the previous `-n200` on a repository already past 1,500 commits, every session played
+ * on a build older than the last two hundred was permanently exempt from
+ * STALE_AFTER_BUILDS, which is precisely the ticket most likely to describe something
+ * already fixed. Full history costs one 41-byte line per commit and is read once.
  */
-function buildHistory(limit: number): string[] {
+function buildHistory(): string[] {
   try {
-    return execFileSync("git", ["log", "--format=%H", `-n${limit}`], {
+    return execFileSync("git", ["log", "--format=%H"], {
       cwd: REPO_ROOT,
       encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
     })
       .split("\n")
       .filter(Boolean);
@@ -67,11 +77,20 @@ function main(): void {
     return;
   }
 
-  const existing = readTickets(ticketDir).tickets;
+  // Unreadable tickets are reported here for the same reason unreadable sessions are,
+  // one screen up: they are workflow state — somebody's `wont_fix`, somebody's notes —
+  // that this run is about to write around without seeing. `writeTickets` leaves those
+  // files in place, so the operator can repair one instead of discovering from git
+  // history that triage removed it.
+  const { tickets: existing, unreadable: unreadableTickets } = readTickets(ticketDir);
+  for (const bad of unreadableTickets) {
+    console.error(`! unreadable ticket ${bad.file}: ${bad.reason} (left in place)`);
+  }
+
   const result = triagePlaytestCorpus({
     sessions: entries.map((entry) => entry.record),
     locationIndex: buildLocationIndex(REPO_ROOT),
-    buildHistory: buildHistory(200),
+    buildHistory: buildHistory(),
     existingTickets: existing,
   });
 

@@ -616,6 +616,61 @@ describe("overworld snapshot restore integrity", () => {
     ).toBe(legacyText);
   });
 
+  it("rejects forged prose in content-authored local journal lines under the current world", () => {
+    const { a, snapshot } = exportedSnapshotWithResolvedInitialEvent();
+    // scout and investigate write the two content-authored local lines the
+    // starting slice can produce; both are pure functions of the world file, so
+    // there is exactly one string the engine could have written for each.
+    const forgeable = snapshot.journalEntries.filter(
+      (candidate) => candidate.kind === "poi" || candidate.kind === "event",
+    );
+    expect([...forgeable.map((candidate) => candidate.kind)].sort()).toEqual(["event", "poi"]);
+
+    for (const entry of forgeable) {
+      const replaceEntry = (replacement: JournalEntry): Snapshot => ({
+        ...snapshot,
+        journalEntries: snapshot.journalEntries.map((candidate) =>
+          candidate === entry ? replacement : candidate,
+        ),
+      });
+      const authoredCopy = new RegExp(
+        `${entry.kind} journal entry .* does not match its authored copy`,
+      );
+
+      expect(() =>
+        a.restore_overworld_session({
+          snapshot: replaceEntry({ ...entry, title: `Forged ${entry.kind} title` }),
+        }),
+      ).toThrow(authoredCopy);
+
+      expect(() =>
+        a.restore_overworld_session({
+          snapshot: replaceEntry({
+            ...entry,
+            text: "Forged: the sheriff waives every fee for you forever.",
+          }),
+        }),
+      ).toThrow(authoredCopy);
+
+      // A save written against different world content legitimately carries the
+      // prose of its own generation, so it still restores under the provenance
+      // warning with the player's own history intact.
+      const legacyText = "Earlier generation wording for this line.";
+      const legacy = a.restore_overworld_session({
+        snapshot: {
+          ...replaceEntry({ ...entry, text: legacyText }),
+          worldHash: "0".repeat(64),
+        },
+      });
+      const legacyExport = a.export_overworld_session({ session_id: legacy.session_id });
+      expect(legacyExport.ok).toBe(true);
+      if (!legacyExport.ok) throw new Error(`expected legacy ${entry.kind} export`);
+      expect(
+        legacyExport.snapshot.journalEntries.find((candidate) => candidate.id === entry.id)?.text,
+      ).toBe(legacyText);
+    }
+  });
+
   it("upgrades exact predecessor contact copy and survives re-export plus a second restore", () => {
     const { a, snapshot, entry } = exportedSnapshotWithBaseHaydenConversation();
     const predecessorText =

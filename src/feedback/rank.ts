@@ -56,11 +56,14 @@ function volumeWeight(mentions: number): number {
 /**
  * Read the provider dimensions tolerantly.
  *
- * A cluster does not only arrive fresh from `clusterIssues`: an already-compiled
- * `hotspots.json` written before these fields existed is read back by
- * `readLatestHotspots` and re-ranked, and there the keys are simply absent. Treating
- * "absent" as "no provider metadata" is what routes those through the legacy formula
- * instead of throwing on a historical artifact.
+ * `IssueCluster.families`/`tiers` are non-optional, so a cluster built by
+ * `clusterIssues` always has them — this is not absorbing a historical artifact.
+ * (`readLatestHotspots` returns compiled `Hotspot` records, and nothing in the repo
+ * rebuilds an `IssueCluster` from a written file, so there is no re-rank path here to
+ * be tolerant of.) What the `?? []` actually absorbs is a caller that hands in a
+ * cluster-shaped object without these keys, which is how the rank tests build minimal
+ * fixtures. Keeping it means such a shape ranks by the legacy formula instead of
+ * throwing on a missing key.
  */
 function clusterFamilies(c: IssueCluster): readonly string[] {
   return c.families ?? [];

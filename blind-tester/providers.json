@@ -22,7 +22,7 @@
       "vendor": "anthropic",
       "family": "claude",
       "kind": "headless_cli",
-      "isolation": "runner_enforced",
+      "isolation": "operator_attested",
       "launch": {
         "executable": "claude",
         "argv": ["-p", "--permission-mode", "plan", "--add-dir", "{CWD}"],
@@ -30,7 +30,7 @@
       },
       "catalogPath": "blind-tester/catalogs/claude_code.json",
       "transportContract": "game-direct-mcp-v1",
-      "notes": "Also a strong dev-loop driver."
+      "notes": "Also a strong dev-loop driver. Ships a CLI, but blind-tester/run.sh has no launch branch for it and there is no reader for its session logs, so nothing here can PROVE what tools it saw: its sessions are hand-played and ingested, which is what operator_attested means. This becomes runner_enforced the day the runner can launch and audit it, and its earlier sessions keep their original, honest label."
     },
     {
       "id": "gemini_cli",
@@ -38,15 +38,15 @@
       "vendor": "google",
       "family": "gemini",
       "kind": "headless_cli",
-      "isolation": "runner_enforced",
+      "isolation": "operator_attested",
       "launch": {
         "executable": "gemini",
-        "argv": ["--model", "{MODEL}", "--prompt-interactive", "-"],
+        "argv": ["--model", "{MODEL}"],
         "binaryOverrideEnv": "BLIND_GEMINI_BIN"
       },
       "catalogPath": "blind-tester/catalogs/gemini_cli.json",
       "transportContract": "game-direct-mcp-v1",
-      "notes": "Well suited to cheap mass-parallel volume cohorts."
+      "notes": "Well suited to cheap mass-parallel volume cohorts. Ships a CLI, but blind-tester/run.sh has no launch branch for it and there is no reader for its session logs, so its sessions are hand-played and ingested as operator_attested until one exists."
     },
     {
       "id": "grok_desktop",

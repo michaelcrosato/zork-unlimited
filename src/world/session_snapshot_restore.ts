@@ -48,6 +48,7 @@ import {
 } from "./session_journal_timeline.js";
 import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import {
+  assertSnapshotAuthoredLocalActionCopyProofs,
   assertSnapshotDiscoveredAreaCountReplay,
   assertSnapshotDiscoveredLocalSourceCountReplay,
   assertSnapshotContactPresentationProofs,
@@ -2054,6 +2055,11 @@ export function planOverworldSessionSnapshotRestore(args: {
           ?.optionId ?? null
       );
     },
+    snapshot.worldHash === worldHash,
+  );
+  assertSnapshotAuthoredLocalActionCopyProofs(
+    localActionJournalSources,
+    journalTimeline,
     snapshot.worldHash === worldHash,
   );
   assertSnapshotEventResolutionProofs(

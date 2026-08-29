@@ -53,6 +53,14 @@ export function readTickets(dir: string = DEFAULT_TICKET_DIR): {
  * regenerates the same filenames for the same problems. Files for tickets no longer
  * present are removed — but note that triage carries unmatched prior tickets forward
  * precisely so this removal only ever drops something a caller deliberately dropped.
+ *
+ * That carry-forward only protects tickets the caller could READ. A file that no longer
+ * parses — a schema bump, a hand-edit, a partial write — never reaches `readTickets`'s
+ * ticket list, so it is never carried forward, so the cleanup below used to delete it:
+ * a maintainer's `wont_fix` and notes vanished on the next `qa:triage`, silently, and
+ * the only record that the ticket had ever existed was git history. A file we cannot
+ * parse is exactly the file we cannot know we are done with, so it is left alone. It
+ * stays visible through `readTickets().unreadable`, which every reader already reports.
  */
 export function writeTickets(tickets: readonly QaTicket[], dir: string = DEFAULT_TICKET_DIR): void {
   const root = resolve(dir);
@@ -60,7 +68,14 @@ export function writeTickets(tickets: readonly QaTicket[], dir: string = DEFAULT
 
   const wanted = new Map(tickets.map((ticket) => [ticketFileName(ticket), ticket]));
   for (const name of readdirSync(root)) {
-    if (name.endsWith(".json") && !wanted.has(name)) rmSync(join(root, name));
+    if (!name.endsWith(".json") || wanted.has(name)) continue;
+    const file = join(root, name);
+    try {
+      QaTicketSchema.parse(JSON.parse(readFileSync(file, "utf8")));
+    } catch {
+      continue; // unreadable, therefore not ours to delete
+    }
+    rmSync(file);
   }
   for (const [name, ticket] of wanted) {
     writeFileSync(join(root, name), `${JSON.stringify(ticket, null, 2)}\n`, "utf8");

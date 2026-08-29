@@ -19,6 +19,8 @@ import { fileURLToPath } from "node:url";
 
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
+  compactOverworldOpportunityExplanation,
+  compactOverworldQuestCompletionResultLegendKeys,
   OVERWORLD_COMPACT_RESULT_LEGEND,
   OVERWORLD_COMPACT_RESULT_LEGEND_KEYS,
 } from "../../src/mcp/compact_overworld_result.js";
@@ -32,6 +34,57 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import { RPG_COMPACT_LEGEND } from "../../src/mcp/compact_rpg_observation.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
+/**
+ * The exact published MCP tool surface. `TOOL_REGISTRATIONS` is exported so tests
+ * can pin it; pinning the names (not just a count) is what makes an accidental
+ * rename or removal readable in the failure diff.
+ */
+const EXPECTED_TOOL_SURFACE = [
+  "adapt_story",
+  "apply_content_patch",
+  "care_overworld_session",
+  "choose_overworld_session_journey",
+  "choose_overworld_session_story",
+  "complete_overworld_session_quest",
+  "explain_overworld_session_opportunity",
+  "explore_overworld_session_area",
+  "explore_overworld_session_site",
+  "export_overworld_session",
+  "follow_overworld_session_goal",
+  "generate_rpg_pack",
+  "get_observation",
+  "get_overworld_session",
+  "get_overworld_session_context",
+  "get_state",
+  "get_transcript",
+  "inspect_overworld_session_story",
+  "inspect_trace",
+  "investigate_overworld_session_event",
+  "list_legal_actions",
+  "list_overworld",
+  "load_game",
+  "load_quest",
+  "move_overworld_session_area",
+  "new_game",
+  "plan_overworld_session_route",
+  "replay_trace",
+  "resolve_overworld_session_event",
+  "resolve_overworld_session_road_encounter",
+  "rest_overworld_session",
+  "restore_overworld_session",
+  "resupply_overworld_session",
+  "save_game",
+  "scout_overworld_session_poi",
+  "start_overworld",
+  "start_overworld_session_quest",
+  "start_world_quest",
+  "step_action",
+  "talk_overworld_session_contact",
+  "travel_overworld_session",
+  "validate_quest",
+  "work_overworld_session_job",
+] as const;
 
 function api() {
   return createToolApi({ root: ROOT });
@@ -64,7 +117,13 @@ describe("compact legends", () => {
       47: "04e4a1a44b2ce7e3131a09e143add5fd5b599502715f901758da3ca681ccc1e6",
       48: "8c7f281cab4e663cc1fc0fac73d0af68e26499ff5bf67bfb63a7a74b240aa838",
       49: "ff1e6f0fa60641609dacce89ea162da62ead7952dd1c27818ba78452c033487d",
-      50: "8f529aa79a079bd08a0e5a4c3a8d7302f00e1f764ed5e092aed486517cd169e4",
+      // v50 re-signed on 2026-08-28: the RESULT legend gained the six exact paths a
+      // compact result was already emitting undefined — `result.m` (in-game minutes,
+      // on five different result shapes), `result.at`, `result.known`, area travel's
+      // `result.route` (which previously collided with the bare five-tuple `route`),
+      // and the two positional `explanation.*` tuples. No positional schema changed,
+      // so v50 still decodes exactly as before; only definitions were added.
+      50: "1aa9defdcc42f3410b0205f0163b42852c7db25a8c8fc0b5457247db04dffcf1",
     } as const;
     const signature = createHash("sha256")
       .update(
@@ -204,6 +263,7 @@ describe("compact legends", () => {
       "result.areas",
       "result.jobs",
       "result.sites",
+      "result.m",
     ]);
     expectLegendCovers(
       { ...started.legend, ...scouted.legend_delta } as Record<string, string>,
@@ -312,6 +372,7 @@ describe("compact legends", () => {
     expect(rested.legend_delta).toEqual({
       "result.supplies": OVERWORLD_COMPACT_RESULT_LEGEND["result.supplies"],
       "result.fatigue": OVERWORLD_COMPACT_RESULT_LEGEND["result.fatigue"],
+      "result.m": OVERWORLD_COMPACT_RESULT_LEGEND["result.m"],
     });
     const serialized = JSON.stringify(rested);
     expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"result":{'));
@@ -352,16 +413,113 @@ describe("compact legends", () => {
 
   it("declares result-only quest schemas centrally", () => {
     expect(OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.quest_start).toEqual(["quest"]);
-    expect(OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.quest_completion).toEqual([
-      "result.entry",
-      "result.quest",
-      "result.ending",
-      "result.renown",
-    ]);
+    // Completion carries `known` only for a foldback that was already recorded, so
+    // its disclosure list is computed from the emitted result rather than fixed.
+    expect(
+      compactOverworldQuestCompletionResultLegendKeys({
+        m: 45,
+        quest: ["q", "Q", "area"],
+        ending: ["e", "E"],
+        renown: ["region", 1, 2],
+        entry: ["quest", "Q", "Day 1, 08:00"],
+        text: "done",
+      }),
+    ).toEqual(["result.entry", "result.quest", "result.ending", "result.renown", "result.m"]);
+    expect(
+      compactOverworldQuestCompletionResultLegendKeys({
+        m: 45,
+        known: true,
+        quest: ["q", "Q", "area"],
+        ending: ["e", "E"],
+        renown: ["region", 1, 2],
+        entry: ["quest", "Q", "Day 1, 08:00"],
+        text: "done",
+      }),
+    ).toContain("result.known");
     for (const keys of Object.values(OVERWORLD_COMPACT_RESULT_LEGEND_KEYS)) {
       for (const key of keys) {
         expect(OVERWORLD_COMPACT_RESULT_LEGEND, `compact result path "${key}"`).toHaveProperty(key);
       }
+    }
+  });
+
+  /**
+   * `route` is the one key in either legend that names two different shapes.
+   * plan_overworld_session_route's bare `route` is a five-tuple
+   * [town, minutes, supplies, fatigue, [road_id, ...]]; an area-travel result's
+   * `route` is a plain road name. A blind agent following the documented rule
+   * ("merge legend_delta patches by exact field") therefore decoded a label
+   * string against a tuple definition. The exact path is what disambiguates it.
+   */
+  it("defines area travel's own route label, minutes, and arrival clock", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const areaId = started.context.here[3];
+    if (!areaId) throw new Error("expected a fresh Albany starting area");
+    const explored = a.explore_overworld_session_area({
+      session_id: started.session_id,
+      area_id: areaId,
+      expected_snapshot_hash: started.snapshot_hash,
+    });
+    expect(explored.ok).toBe(true);
+    if (!explored.ok) throw new Error("expected starting-area exploration to succeed");
+    const areaRouteId = explored.context.area_routes?.[0]?.[0];
+    if (!areaRouteId) throw new Error("expected a discovered Albany area route");
+
+    const moved = a.move_overworld_session_area({
+      session_id: started.session_id,
+      area_route_id: areaRouteId,
+      expected_snapshot_hash: explored.snapshot_hash,
+    });
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) throw new Error("expected area travel to succeed");
+    expect(typeof moved.result.route).toBe("string");
+    expect(typeof moved.result.m).toBe("number");
+    expect(typeof moved.result.at).toBe("string");
+
+    const accumulated = {
+      ...started.legend,
+      ...explored.legend_delta,
+      ...moved.legend_delta,
+    } as Record<string, string>;
+    for (const key of ["result.route", "result.m", "result.at"] as const) {
+      expect(accumulated[key], `area travel field "${key}"`).toBe(
+        OVERWORLD_COMPACT_RESULT_LEGEND[key],
+      );
+    }
+    // The two definitions must stay distinguishable, or the exact path buys nothing.
+    expect(OVERWORLD_COMPACT_RESULT_LEGEND["result.route"]).not.toBe(
+      OVERWORLD_COMPACT_RESULT_LEGEND.route,
+    );
+  });
+
+  it("defines the positional tuples an opportunity explanation ships", () => {
+    expect(OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.opportunity_explanation).toEqual([
+      "explanation.lead",
+      "explanation.next_action",
+    ]);
+    const compact = compactOverworldOpportunityExplanation({
+      lead: {
+        id: "albany_city__civic_core__event",
+        kind: "event",
+        title: "Albany Civic Center: charter backlog",
+        area: "Albany Civic Center",
+        access: "here",
+      },
+      nextAction: {
+        tool: "explore_overworld_session_area",
+        arguments: { area_id: "albany_city__civic_core" },
+        command: "explore albany_city__civic_core",
+        label: "Explore Albany Civic Center",
+      },
+    });
+    // Both fields are positional tuples, so neither can rely on its name.
+    for (const field of Object.keys(compact)) {
+      expect(Array.isArray((compact as Record<string, unknown>)[field])).toBe(true);
+      expect(
+        OVERWORLD_COMPACT_RESULT_LEGEND,
+        `compact explanation field "${field}"`,
+      ).toHaveProperty(`explanation.${field}`);
     }
   });
 
@@ -424,6 +582,7 @@ describe("compact legends", () => {
     expect(rested.legend_delta).toEqual({
       "result.supplies": OVERWORLD_COMPACT_RESULT_LEGEND["result.supplies"],
       "result.fatigue": OVERWORLD_COMPACT_RESULT_LEGEND["result.fatigue"],
+      "result.m": OVERWORLD_COMPACT_RESULT_LEGEND["result.m"],
     });
 
     const fullRestored = a.restore_overworld_session({
@@ -554,13 +713,72 @@ describe("compact legends", () => {
     expect("legend" in observed).toBe(false);
   });
 
+  /**
+   * `compact_events` and `compact_observation` are PER-CALL flags that both default
+   * to true, and the RPG surface has no legend_delta — the session-creating response
+   * is its only carrier. Gating that carrier on the creating call's own
+   * compact_observation flag therefore left a verbose start playing the rest of the
+   * quest against tuples whose key was never sent.
+   */
+  it("defines the compact tuples a verbose RPG start still receives on its next step", () => {
+    const a = api();
+    const started = a.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      seed: 1,
+      compact_observation: false,
+    });
+    expect(started).toHaveProperty("observation");
+    expect(started.legend).toBe(RPG_COMPACT_LEGEND);
+
+    const stepped = a.step_action({
+      session_id: started.session_id,
+      action_id: a.list_legal_actions({ session_id: started.session_id }).actions[0] as string,
+    });
+    // Both halves of the next payload are positional despite the verbose start.
+    const [firstEvent] = stepped.events as unknown[];
+    expect(Array.isArray(firstEvent), "step_action events ship as tagged tuples").toBe(true);
+    expect(stepped).toHaveProperty("context");
+    const legendKeys = new Set(Object.keys(started.legend!));
+    expect(legendKeys, "event tuples have no definition").toContain("events");
+    for (const key of Object.keys((stepped as { context: Record<string, unknown> }).context)) {
+      expect(legendKeys, `compact observation key "${key}" has no legend entry`).toContain(key);
+    }
+  });
+
   it("every registered MCP tool has an informative description", () => {
-    expect(TOOL_REGISTRATIONS.length).toBeGreaterThanOrEqual(35);
     const names = TOOL_REGISTRATIONS.map((registration) => registration.name);
     expect(new Set(names).size).toBe(names.length);
     for (const { name, description } of TOOL_REGISTRATIONS) {
       expect(description.length, `tool "${name}" description too terse`).toBeGreaterThanOrEqual(15);
       expect(description.trim(), `tool "${name}" description is blank`).not.toBe("");
     }
+  });
+
+  /**
+   * This guard used to be `toBeGreaterThanOrEqual(35)`, which cannot fail on
+   * either half of the drift it exists to catch: a floor stays green when a tool
+   * is added AND when one is removed. The 2026-08 audit found README.md's group
+   * breakdown listing 25 overworld tools for a group of 26 (so its four groups
+   * summed to 42 against a 43-tool surface); the doc was corrected, this guard was
+   * not, and the same group count drifted again. Pin the surface itself, so adding
+   * or removing a tool fails here and the diff names it.
+   *
+   * If you are updating README.md's "**43 tools**, in four groups" breakdown, the
+   * measured split is: World catalog 1 + Overworld sessions 26 + RPG quest sessions
+   * and authoring 16.
+   */
+  it("registers exactly the published tool surface", () => {
+    const names = TOOL_REGISTRATIONS.map((registration) => registration.name);
+    expect([...names].sort()).toEqual([...EXPECTED_TOOL_SURFACE].sort());
+    expect(names.length).toBe(43);
+
+    // The one group whose count the README states and the audit found wrong. The
+    // rule is objective — every session tool carries `overworld` in its name and
+    // the catalog read is the single non-session one — so this cannot drift silently.
+    const overworldGroup = names.filter(
+      (name) => name.includes("overworld") && name !== "list_overworld",
+    );
+    expect(overworldGroup).toHaveLength(26);
+    expect(names.filter((name) => name === "list_overworld")).toHaveLength(1);
   });
 });

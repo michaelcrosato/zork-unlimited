@@ -74,9 +74,15 @@ export function describeOverworldJobAction(
   };
 }
 
+/**
+ * Only the town's display name reaches the copy, and the scout planner already
+ * refuses any point of interest whose `home` is not the current town. Taking the
+ * narrow shape lets the snapshot restore rebuild this exact line from the
+ * manifest index, which carries town names but not whole nodes.
+ */
 export function describeOverworldPoiAction(
   poi: OverworldPoi,
-  current: OverworldNode,
+  current: Pick<OverworldNode, "name">,
 ): OverworldLocalActionDescriptor<"poi"> {
   return {
     id: `scout:${poi.id}`,

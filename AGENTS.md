@@ -113,8 +113,11 @@ strict subsets of it — use them for fast iteration, not as an additional
 requirement on top of health.
 
 `npm run health` runs nine steps, in this order: verifier integrity, bug-trace
-integrity, the opening-density budget, typecheck, lint, format check, tests, UI
-typecheck, and pack validation. The UI typecheck means UI deps
+integrity, the opening-density budget, typecheck, lint, format check, UI
+typecheck, pack validation, and finally the vitest suite. Everything cheap runs
+first on purpose — the suite is ~48 of the bar's ~50 minutes, so a broken pack or
+a UI type error that used to surface three quarters of an hour in now fails in
+about a minute. The UI typecheck means UI deps
 (`npm --prefix ui install`) are required for the bar, not just for running the
 UI server. Do not commit or merge red.
 

@@ -35,6 +35,31 @@ describe("replayTrace", () => {
     expect(result.finalHash).toBe(trace.expected_final_hash);
   });
 
+  it("returns ok: false on a KNOWN per-step divergence even with no expected_final_hash", () => {
+    // A trace may legitimately omit expected_final_hash (assertTraceExpectedFinalHash
+    // permits absence), which is the shape a hand-authored or trimmed bug trace takes.
+    // If such a trace still carries a per_step_hashes baseline and replay diverges
+    // from it, the divergence is proven — reporting ok:true beside divergedAtStep is
+    // self-contradictory, and every consumer gates on `.ok` alone (bin/replay exits 0,
+    // inspect_trace prints hash_ok:true), so the failure would be announced as a clean
+    // round-trip.
+    const trace = recordTrace(microRules, microInitState(), WIN, {
+      trace_id: "tr_test",
+      content_hash: MICRO_CONTENT_HASH,
+      worldQuestId: "test_quest",
+    });
+
+    const hashes = [...trace.per_step_hashes!];
+    hashes[2] = "0".repeat(64); // corrupt the 3rd step's recorded baseline
+    const { expected_final_hash: _drop, ...noFinalHash } = { ...trace, per_step_hashes: hashes };
+
+    const result = replayTrace(noFinalHash as Trace<RpgAction>, microRules);
+
+    expect(result.divergedAtStep).toBe(2);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("step 2");
+  });
+
   it("returns ok: true when final hash matches and no divergence at step", () => {
     const trace = recordTrace(microRules, microInitState(), WIN, {
       trace_id: "tr_test",

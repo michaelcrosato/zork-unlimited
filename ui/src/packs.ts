@@ -6,14 +6,21 @@
  * GameSession compiles on demand. The New York overworld (`worldData.js`) is the
  * single world AND quest registry; `App.tsx` maps an overworld quest's source
  * path to the matching pack entry here and compiles it in-browser.
+ *
+ * This module deliberately does NO YAML parsing. It is evaluated during import,
+ * before React mounts and before the page paints anything, and the double-click
+ * launcher opens a single self-contained file with no loading state — so every
+ * millisecond spent here is a millisecond of blank screen. It used to run a full
+ * `yaml.parse` over all twelve shipped packs (~680 KB) to fill a `name` field
+ * whose only consumer was the sort on the next line: `App.tsx` looks entries up
+ * by `path` and reads `source`, and `GameSession.start*` re-parses the one
+ * selected pack anyway. Sorting by `path` is the same stable, deterministic
+ * order without the parse. Anything that needs an authored title should read
+ * `meta.title` off the compiled pack (`GameSession.title`), not re-parse here.
  */
-import type { Mode } from "./engine.js";
-import { parse as parseYaml } from "yaml";
 
 export type PackEntry = {
   path: string;
-  name: string;
-  mode: Mode;
   source: string;
 };
 
@@ -24,19 +31,6 @@ const raw = import.meta.glob("../../content/rpg/quests/*.yaml", {
   eager: true,
 }) as Record<string, string>;
 
-function readPackTitle(source: string): string {
-  const rawPack = parseYaml(source) as { meta?: { title?: string } };
-  if (!rawPack.meta?.title) {
-    throw new Error("A shipped quest pack is missing its meta.title.");
-  }
-  return rawPack.meta.title;
-}
-
 export const PACKS: PackEntry[] = Object.entries(raw)
-  .map(([path, source]) => ({
-    path,
-    name: readPackTitle(source),
-    mode: "rpg" as const,
-    source,
-  }))
-  .sort((a, b) => a.name.localeCompare(b.name));
+  .map(([path, source]) => ({ path, source }))
+  .sort((a, b) => a.path.localeCompare(b.path));

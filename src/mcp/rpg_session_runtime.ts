@@ -45,14 +45,36 @@ export type RpgSourceFields = {
   generated_rpg_seed?: number;
 };
 
-export type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
+/**
+ * Field guide for every positional field this session can ship, sent on
+ * session-creating responses only — never repeated per step.
+ *
+ * It rides unconditionally, including beside a verbose observation. `compact_events`
+ * and `compact_observation` are per-call flags that both default to true, so the step
+ * after a `compact_observation:false` start returns tagged event tuples AND a
+ * positional `context`. Gating the only carrier on the creating call's own flag made
+ * that whole session undecodable; the definitions cost ~1.5KB once.
+ */
+export type RpgSessionLegendField = { legend: RpgCompactLegend };
+
+export function rpgSessionLegendField(): RpgSessionLegendField {
+  return { legend: RPG_COMPACT_LEGEND };
+}
+
+/**
+ * Everything a session payload carries EXCEPT the one-time legend. A resumed
+ * embedded quest re-projects a session that was created earlier, so it must not
+ * repeat definitions the launch response already sent.
+ */
+export type RpgSessionPayloadBody<Args extends RpgViewOptions = RpgViewOptions> = {
   session_id: string;
   state_hash: string;
-  /** Field guide for the compact context/events; sent only on session-creating responses. */
-  legend?: RpgCompactLegend;
 } & RpgSourceFields &
   RpgViewField<Args> &
   EmbeddedQuestCharacterContinuityField<Args>;
+
+export type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> =
+  RpgSessionPayloadBody<Args> & RpgSessionLegendField;
 
 type RpgOpeningViewOptions = RpgViewOptions & {
   include_world_intro?: boolean;
@@ -255,8 +277,9 @@ export class RpgMcpSessionRuntime {
     return {
       session_id: session.id,
       // The legend rides only on session-creating responses, keeping every
-      // subsequent per-step payload lean.
-      ...(args.compact_observation === true ? { legend: RPG_COMPACT_LEGEND } : {}),
+      // subsequent per-step payload lean — but it rides on every one of them,
+      // because the next default step is compact whatever this call asked for.
+      ...rpgSessionLegendField(),
       ...rpgViewField(
         this.sessions,
         session,
@@ -267,6 +290,8 @@ export class RpgMcpSessionRuntime {
       ...rpgSourceFields(session),
       ...embeddedQuestCharacterContinuityField(session, args),
       state_hash: publicRpgStateHash(session.stateHash),
-    } as RpgSessionPayload<Args>;
+      // RpgViewField<Args> stays conditional on an unresolved generic here, so the
+      // compiler cannot relate the literal to the payload type either way.
+    } as unknown as RpgSessionPayload<Args>;
   }
 }

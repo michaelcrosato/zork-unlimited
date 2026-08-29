@@ -119,21 +119,88 @@ export function isAuthoredInspectAction(index: RpgModelIndex, action: RpgAction)
 }
 
 /** Find the USE interaction (if any) for using `item` on `target`. Exported so the
- *  RPG runner (Stage 4) can detect a skill-check interaction before resolving. */
+ *  RPG runner (Stage 4) can detect a skill-check interaction before resolving.
+ *
+ *  Resolved through `index.useInteractionsByTarget`, so a row is found by what it
+ *  TARGETS rather than by which object it was authored under. Reading the target
+ *  object's own `interactions` list made authoring position a hidden requirement:
+ *  enumeration, the command parser and the winnability validator all harvest USE
+ *  rows from every object, so a `USE rope on well` written under `rope` was offered
+ *  in the menu and certified as a win route, then failed to resolve and vanished —
+ *  a pack that validated clean and could not be finished. Every shipped row happens
+ *  to sit on its target, so this widens what resolves without changing any of them. */
 export function useInteraction(
   index: RpgModelIndex,
   target: string,
   item?: string,
   state?: GameState,
 ): Interaction | undefined {
-  return index.objects.get(target)?.interactions.find((it) => {
-    if (it.verb !== "USE" || it.item !== item || it.target !== target) return false;
+  return index.useInteractionsByTarget.get(target)?.find((it) => {
+    if (it.item !== item) return false;
     return state === undefined || evalConditions(it.conditions, state);
   });
 }
 
 function readInteractions(index: RpgModelIndex, target: string): Interaction[] {
   return (index.objects.get(target)?.interactions ?? []).filter((it) => it.verb === "READ");
+}
+
+/**
+ * True when `condition` is a gate the interaction's OWN effects flip: the
+ * `not_flag: X` / `set_flag: X` pair (and its `has_flag`/`clear_flag` inverse) that
+ * authors use to make a clue fire exactly once.
+ *
+ * Deliberately limited to flags. An item or var gate that an interaction also
+ * consumes (`has_item: X` alongside `remove_item: X`) is NOT treated as one-shot
+ * bookkeeping: there the precondition is the thing itself, and dropping it would
+ * keep offering the action after the object is gone.
+ */
+function selfRetiringGate(condition: Condition, effects: readonly Effect[]): boolean {
+  if ("not_flag" in condition)
+    return effects.some((e) => "set_flag" in e && e.set_flag === condition.not_flag);
+  if ("has_flag" in condition)
+    return effects.some((e) => "clear_flag" in e && e.clear_flag === condition.has_flag);
+  return false;
+}
+
+/**
+ * The subset of a READ interaction's conditions that gate READING AT ALL, as opposed
+ * to gating that interaction's one-shot payload.
+ *
+ * The shipped idiom is `read_text` on the object plus one READ interaction gated
+ * `not_flag: X` whose effects `set_flag: X`. ANDing every condition into the ACTION
+ * (as this case used to) retired the whole row after the first read, so the document
+ * BODY — the charter's inheritance clause, the memorandum's list of names, the tally
+ * the player is meant to quote back later — became unreachable for the rest of the
+ * game, on all 16 shipped objects that carry a READ. Stripping the interaction's own
+ * self-retiring flag gate keeps the body readable while the payload still fires once.
+ *
+ * The genuinely environmental gates stay: `has_item: dark_lantern` on the printers'
+ * memorandum must keep the text unreadable in the dark, and `not_flag:
+ * oswin_overruled` must keep a superseded exhibit closed. Because the result is
+ * always a SUBSET of the authored conditions, this can only ever offer READ in states
+ * where it was already offered plus states where it was wrongly withheld — it never
+ * withdraws one. In any state where READ was legal before, every interaction's
+ * conditions held, so the effects are unchanged too.
+ */
+function readAccessConditions(it: Interaction): Condition[] {
+  const keep = (condition: Condition): Condition | null => {
+    if (selfRetiringGate(condition, it.effects)) return null;
+    // `all_of` is the authored spelling for a multi-part gate, and content mixes the
+    // one-shot flag in with real preconditions there, so recurse instead of treating
+    // the whole group as atomic. `any_of`/`none_of` stay atomic: a disjunction is not
+    // retired just because one arm is.
+    if ("all_of" in condition) {
+      const survivors = condition.all_of
+        .map((child) => keep(child))
+        .filter((child): child is Condition => child !== null);
+      return survivors.length > 0 ? { all_of: survivors } : null;
+    }
+    return condition;
+  };
+  return it.conditions
+    .map((condition) => keep(condition))
+    .filter((condition): condition is Condition => condition !== null);
 }
 
 /** The object's interactions for a state-reactive verb (INSPECT/OPEN/CLOSE),
@@ -201,12 +268,18 @@ function resolveRpgActionCore(
       if (!present(index, state, action.target)) return null;
       const o = index.objects.get(action.target);
       if (!o) return null;
+      // READ interactions are fired PER-INTERACTION, exactly as INSPECT/OPEN/CLOSE are
+      // (`firingInteractions`), so a one-shot clue retires itself without retiring the
+      // document it is attached to. The action's own conditions keep only the gates that
+      // decide whether the object can be read at all (`readAccessConditions`).
       const reads = readInteractions(index, action.target);
       const effects: Effect[] = [];
       if (o.read_text) effects.push({ narrate: o.read_text });
-      for (const it of reads) effects.push(...it.effects);
+      for (const it of reads) {
+        if (evalConditions(it.conditions, state)) effects.push(...it.effects);
+      }
       if (effects.length === 0) return null; // nothing to read
-      const conditions: Condition[] = reads.flatMap((it) => it.conditions);
+      const conditions: Condition[] = reads.flatMap((it) => readAccessConditions(it));
       return { conditions, effects };
     }
     case "TAKE": {
@@ -218,6 +291,15 @@ function resolveRpgActionCore(
       // take_effects (bug_0107) fire after the first pickup, so a goal item can award
       // climactic points on the deliberate CLAIM. If the item is dropped and re-taken,
       // objectState.takenBy records that the claim already happened (bug_0383).
+      //
+      // Note the exact scope of that guard: DROP's `place_object` is its ONLY writer, so
+      // it covers the drop/re-take loop and nothing else. Any other route out of the
+      // inventory — an authored `remove_item` for a consumed key, an item handed over, a
+      // maneuver's resource cost — leaves objectState untouched, `locateObject` falls back
+      // to the object's authored home room, and a re-TAKE re-awards. Shipped packs keep
+      // those sets disjoint by convention (tide_mill.yaml hand-writes `takenBy: player`
+      // beside its own `remove_item`), which is what `rpg_score_economy_sound` proves; the
+      // one-shot is therefore a content convention here, not yet an engine invariant.
       return {
         conditions: [],
         effects: [
@@ -565,7 +647,10 @@ function structurallyPresentUse(
   projection: UseActionProjection,
 ): boolean {
   if (projection.action.type !== "USE") return false;
-  if (!index.objects.get(projection.action.target)?.interactions.includes(interaction))
+  // The hint must belong to a row this index actually knows about — keyed by target,
+  // matching what `useInteraction` will resolve, so a hint is never advertised for a
+  // row the engine cannot run.
+  if (!index.useInteractionsByTarget.get(projection.action.target)?.includes(interaction))
     return false;
   return (
     present(index, state, projection.action.target) &&
@@ -660,8 +745,17 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   for (const o of index.objectsWithUseInteractions) {
     for (const it of o.interactions) {
       const projection = projectUseAction(index, state, it);
-      if (!projection) continue;
+      if (!projection || projection.action.type !== "USE") continue;
       if (!evalConditions(it.conditions, state)) continue;
+      // Several authored rows may share one (item, target) pair, and the id is derived
+      // from that pair alone — so they all mint the SAME action id. Only one of them can
+      // ever run: `useInteraction`, and with it every id-addressed surface, takes the
+      // first condition-satisfying row. Listing the others produced duplicate ids whose
+      // second entry was permanently unselectable AND whose advertised skill_check
+      // belonged to a row the engine would not execute — the menu promised a d20 roll
+      // that never happened. Project exactly the row resolution will pick.
+      if (useInteraction(index, projection.action.target, projection.action.item, state) !== it)
+        continue;
       // A USE may declare a natural verb (command_verb) so the listed command matches
       // the prose that primes it. Its id stays verb-agnostic unless every target-only
       // row on an overloaded target has a distinct verb, in which case that verb names

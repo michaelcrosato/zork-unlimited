@@ -97,6 +97,43 @@ describe("fixer.applyContentPatch", () => {
     expect(res.report.findings[0]?.code).toBe("PATCH_TARGET_MISSING");
   });
 
+  it("counts ops that CHANGED a field, not ops that were proposed", () => {
+    // `applied` is the repair's proof, so it must not credit a write that never
+    // happened. Setting meta.title to the value it already holds changes nothing;
+    // setting it to a new one changes exactly one field.
+    const title = (rawPack as { meta: { title: string } }).meta.title;
+
+    const noop = applyContentPatch(rawPack, {
+      layer: "content",
+      summary: "restate the title the pack already has",
+      ops: [{ op: "set_meta", field: "title", value: title }],
+    });
+    expect(noop.ok).toBe(true);
+    if (noop.ok) expect(noop.applied).toBe(0);
+
+    const real = applyContentPatch(rawPack, {
+      layer: "content",
+      summary: "retitle",
+      ops: [{ op: "set_meta", field: "title", value: `${title} (revised)` }],
+    });
+    expect(real.ok).toBe(true);
+    if (real.ok) expect(real.applied).toBe(1);
+  });
+
+  it("refuses a set_meta op naming a JavaScript prototype key", () => {
+    // set_meta is the one op with an open field name, so it can name "__proto__".
+    // Assigning that on a plain object runs Object.prototype's setter, which
+    // silently discards a primitive — the patch would report success having
+    // changed nothing at all.
+    const res = applyContentPatch(rawPack, {
+      layer: "content",
+      summary: "x",
+      ops: [{ op: "set_meta", field: "__proto__", value: "hijacked" }],
+    });
+    expect(res.ok).toBe(false);
+    expect(res.report.findings[0]?.code).toBe("PATCH_UNSAFE_FIELD");
+  });
+
   it("refuses a patch that breaks the schema (§16)", () => {
     // max_score must be a number; a string value must be rejected, not shipped.
     const res = applyContentPatch(rawPack, {
@@ -134,5 +171,22 @@ describe("fixer.regressionTestStub", () => {
     expect(source).not.toContain("loadRpgSourceFile");
     expect(source).not.toContain("content/rpg/quests");
     expect(source).not.toContain("packPath");
+  });
+
+  it("generates a regression that cannot pass vacuously", () => {
+    // `replayTrace` returns ok:true with "no expected final hash to assert" when a
+    // trace omits expected_final_hash, and replaying against unrelated content
+    // proves nothing about the bug. A stub whose only assertion is `.ok` is a
+    // permanently green test — the exact trap this project's tautology guard
+    // exists for, and one a stub can plant before any scanner can see it.
+    const source = regressionTestStub(
+      "bug_test_0003",
+      "traces/bugs/bug_test_0003.json",
+      "cold_forge",
+    );
+
+    expect(source).toContain("expect(trace.content_hash).toBe(source.compiled.contentHash);");
+    expect(source).toContain("expect(trace.expected_final_hash).toBeDefined();");
+    expect(source).toContain("expect(result.finalHash).toBe(trace.expected_final_hash);");
   });
 });

@@ -90,6 +90,27 @@ export const PROTECTED_FILES = [
   // Decides WHICH test files CI runs. A filter here silently shrinks the suite while
   // every shard still reports green, so it belongs beside the counts it could hide.
   "scripts/ci-test-groups.ts",
+  // The same rationale one layer lower, and the sharper half of it. ci-test-groups.ts
+  // only chooses which PATHS are handed to vitest; vitest.config.ts decides which of
+  // those paths a project actually RUNS. Appending one glob to a project exclude array
+  // drops hundreds of files while every shard still exits 0, because vitest silently
+  // ignores a file filter that matches no project include. Nothing else in this guard
+  // could notice: the text under tests stays byte-identical, so all four counts, the
+  // disabled-marker scan and the protected list are unchanged. detectSuiteCoverage
+  // below reads this file directly for exactly that reason.
+  //
+  // NOTE: keep this comment free of apostrophes and quotes and brackets — see below.
+  "vitest.config.ts",
+  // The protected solver above is reached by 12 files — including the protected cap
+  // backstop right above — through a three-line re-export shim that was itself
+  // unprotected. It is not a .test.ts file, so no count and no disabled-marker scan
+  // here has ever read it. Replacing its re-export with a weakened local search
+  // neutralises the protected solver AND its protected backstop at once, with no
+  // PROTECTED_DELETED, no VERIFIER_TOUCHED and no count change — precisely the launder
+  // the note above says guarding both was meant to prevent.
+  //
+  // NOTE: keep this comment free of apostrophes and quotes and brackets — see below.
+  "tests/regression/support/exhaustive_endings.ts",
 ];
 
 /** Paths that must not reappear while the repo normalizes to RPG-only authoring. */
@@ -222,23 +243,54 @@ export const APPROVED_D10_COMPLETION_RECORD = "docs/EXTERNAL_REVIEW_COMPLETION.m
 // has room. Re-measure and re-raise them deliberately, never lower them.
 //
 // Measured 2026-08-05 over 462 files: 3,255 cases / 20,297 assertions / 19,382 strong.
+// Re-measured 2026-08-28 over 465 files: 3,491 cases / 22,613 assertions / 21,619 strong.
+// The corpus had grown ~7-11% under floors that never moved, so the "~80%" the paragraph
+// above claims had quietly decayed to 74.5% / 71.6% / 71.7% — 891 cases, 6,413
+// assertions and 6,119 strong matchers that a static-only run would accept losing. The
+// floors below are the deliberate re-raise back to ~80% of that measurement; the drift
+// ratchet (--against) remains the check that catches a single-cycle drop of any size.
 
 /** Never drop below this many test cases (a mass-deletion tripwire). */
-export const MIN_TEST_CASES = 2600;
+export const MIN_TEST_CASES = 2790;
 
 /** Never drop below this many `expect()` assertions (the assertion-gutting tripwire,
  *  parallel to MIN_TEST_CASES), while the drift ASSERTION_COUNT_REGRESSION guards the
  *  precise per-cycle drop. */
-export const MIN_ASSERTIONS = 16200;
+export const MIN_ASSERTIONS = 18000;
 
 /** Never drop below this many STRONG (value-pinning) matchers — the strict→loose-swap
  *  tripwire, parallel to MIN_ASSERTIONS, while the drift STRONG_ASSERTION_REGRESSION
  *  guards the precise per-cycle drop. */
-export const MIN_STRONG_ASSERTIONS = 15500;
+export const MIN_STRONG_ASSERTIONS = 17250;
 
-/** A disabled / focused test marker — any of these in a test file is a red flag. */
-const DISABLED_RE =
-  /\b(?:it|test|describe)\s*\.\s*(?:skip|only|todo)\b|\b(?:xit|xdescribe|xtest)\s*\(/;
+/** Any chain of vitest modifiers sitting between the runner name and the terminal
+ *  modifier — `.concurrent`, `.sequential`, `.each(...)`, `.for(...)`, `.extend(...)`.
+ *  Written as a generic identifier hop rather than a fixed list so a modifier vitest
+ *  adds later cannot open the hole again the day it ships. */
+const MODIFIER_CHAIN = String.raw`(?:\.\s*[A-Za-z_$][A-Za-z0-9_$]*\s*(?:\([^()]*\))?\s*)*`;
+
+/** A disabled / focused test marker — any of these in a test file is a red flag.
+ *  Three shapes, and the first two are separate for a reason:
+ *   - `it`/`test`/`describe`, any modifier chain, then `.skip`/`.only`/`.todo`. The chain
+ *     hop is load-bearing: `test.concurrent.skip(` disables a test, and the plain
+ *     two-token form never saw it because the alternation requires it/test/describe
+ *     IMMEDIATELY before the dot.
+ *   - `describe.skipIf(...)` / `describe.runIf(...)`. A conditional SUITE wrapper is the
+ *     one perfectly count-preserving disable vitest offers: `describe` is not matched by
+ *     TESTCASE_RE, so wrapping a suite in `.skipIf(true)` leaves the case, assertion,
+ *     strong-matcher and tautology counts byte-identical while every `it()` inside stops
+ *     running — no static floor and no drift ratchet can see it. The it()/test() forms of
+ *     skipIf/runIf are deliberately NOT flagged: they are this repo's existing legitimate
+ *     per-platform gate (four uses today), and turning an honest `it(` into
+ *     `it.runIf(cond)(` REMOVES an `it(` match, so the drift case count already catches
+ *     that direction.
+ *   - the `xit`/`xdescribe`/`xtest` prefix forms.
+ */
+const DISABLED_RE = new RegExp(
+  String.raw`\b(?:it|test|describe)\s*${MODIFIER_CHAIN}\.\s*(?:skip|only|todo)\b` +
+    String.raw`|\bdescribe\s*${MODIFIER_CHAIN}\.\s*(?:skipIf|runIf)\b` +
+    String.raw`|\b(?:xit|xdescribe|xtest)\s*\(`,
+);
 const TESTCASE_RE = /\b(?:it|test)\s*\(/g;
 /** An assertion call. Counting these guards the test BODIES (vitest's `expect(`),
  *  so gutting a test's assertions while keeping its `it()` shell is caught even
@@ -463,6 +515,314 @@ export function listRuntimeSourceFiles(root: string): string[] {
   ].sort();
 }
 
+/**
+ * The vitest config is the last input to the bar that nothing here used to read, and it
+ * is the one that decides which of the discovered test files each project actually RUNS.
+ * It is not under tests/ (so no count and no disabled-marker scan sees it), not in the
+ * tsconfig include list (so the typecheck skips it), and not in the lint/format targets.
+ * Appending one glob to a project exclude array therefore drops hundreds of files from
+ * every shard while all four counters stay byte-identical, DISABLED_RE finds nothing,
+ * and the shards still exit 0 — vitest silently ignores a per-file filter that matches
+ * no project include, and the shard step can only assert that ci-test-groups.ts (a plain
+ * readdir walk, independent of this config) produced a non-empty list.
+ *
+ * The three functions below close that hole by reading the config as TEXT — a pure
+ * regex/brace parse, no eval and no import, matching parseGuardConstants — and asserting
+ * the single invariant that matters: every file listTestFiles finds is RUN by at least
+ * one project. They fail CLOSED: a config this parser cannot read is an error, never a
+ * silent skip, because a silent skip here is indistinguishable from the attack.
+ */
+export const VITEST_CONFIG_FILE = "vitest.config.ts";
+
+export type VitestSuiteProject = { name: string; include: string[]; exclude: string[] };
+
+/** Comments are stripped before the structural parse so a brace or bracket inside prose
+ *  cannot throw off depth counting. Deliberately a character scanner rather than two
+ *  regex passes: the suite include glob is `tests/**` + `/*.test.ts`, whose middle is a
+ *  literal `/**` + `/` — a regex block-comment strip eats it out of the string and turns
+ *  the broadest include in the file into a pattern that matches nothing. String literals
+ *  are copied through verbatim, escapes included. */
+function stripTsComments(text: string): string {
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i]!;
+    const next = text[i + 1];
+    if (ch === '"' || ch === "'" || ch === "`") {
+      out += ch;
+      i += 1;
+      while (i < text.length) {
+        const inner = text[i]!;
+        out += inner;
+        i += 1;
+        if (inner === "\\") {
+          out += text[i] ?? "";
+          i += 1;
+          continue;
+        }
+        if (inner === ch) break;
+      }
+      continue;
+    }
+    if (ch === "/" && next === "/") {
+      while (i < text.length && text[i] !== "\n") i += 1;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i += 1;
+      i += 2;
+      out += " ";
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
+/** Minimal glob → RegExp over the vocabulary this config actually uses: `**` spanning
+ *  whole directory segments, `*` within one segment, and literal path text. Returns null
+ *  for anything richer (character classes, braces, extglobs) rather than guessing — the
+ *  caller turns that null into a hard error, so an unreadable filter can never be read
+ *  as a matching one. */
+function globToRegExp(glob: string): RegExp | null {
+  if (/[?[\]{}()!+@]/.test(glob)) return null;
+  let out = "^";
+  for (let i = 0; i < glob.length; i += 1) {
+    const ch = glob[i]!;
+    if (ch !== "*") {
+      out += /[A-Za-z0-9_/-]/.test(ch) ? ch : `\\${ch}`;
+      continue;
+    }
+    if (glob[i + 1] === "*") {
+      i += 1;
+      if (glob[i + 1] === "/") {
+        i += 1;
+        out += "(?:[^/]+/)*";
+      } else {
+        out += ".*";
+      }
+    } else {
+      out += "[^/]*";
+    }
+  }
+  return new RegExp(`${out}$`);
+}
+
+function sliceBalanced(text: string, open: number, openCh: string, closeCh: string): string | null {
+  let depth = 0;
+  for (let i = open; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === openCh) depth += 1;
+    else if (ch === closeCh) {
+      depth -= 1;
+      if (depth === 0) return text.slice(open + 1, i);
+    }
+  }
+  return null;
+}
+
+/** The brace-balanced object literals at the top level of the given array body. */
+function topLevelObjects(body: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i];
+    if (ch === "{") {
+      if (depth === 0) start = i;
+      depth += 1;
+    } else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        out.push(body.slice(start + 1, i));
+        start = -1;
+      }
+    }
+  }
+  return depth === 0 ? out : [];
+}
+
+/**
+ * Pure parse of the vitest config TEXT into each project's include/exclude filter lists,
+ * resolving the module-level `const` bindings the config uses to name them. Returns null
+ * if any part cannot be read — an unparseable config is a fail-closed error upstream, not
+ * an assumed-healthy one.
+ */
+export function parseVitestSuiteProjects(configText: string): VitestSuiteProject[] | null {
+  const text = stripTsComments(configText);
+  const declarations = new Map<string, string>();
+  const declRe =
+    /(?:^|\n)\s*(?:export\s+)?const\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*("(?:[^"\\]|\\.)*"|\[[^\]]*\])\s*(?:as\s+const\s*)?;/g;
+  let decl: RegExpExecArray | null;
+  while ((decl = declRe.exec(text)) !== null) declarations.set(decl[1]!, decl[2]!);
+
+  // Element commas are split outside string literals: a glob may legitimately contain a
+  // comma (`*.{test,spec}.ts`), and a naive split would tear it into halves that then
+  // fail to parse — inside runStatic that would be a thrown SyntaxError, i.e. a crashed
+  // bar rather than the clean fail-closed finding this check promises.
+  const splitElements = (body: string): string[] => {
+    const parts: string[] = [];
+    let current = "";
+    let quote: string | null = null;
+    for (let i = 0; i < body.length; i += 1) {
+      const ch = body[i]!;
+      if (quote !== null) {
+        current += ch;
+        if (ch === "\\") {
+          current += body[i + 1] ?? "";
+          i += 1;
+        } else if (ch === quote) quote = null;
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") {
+        quote = ch;
+        current += ch;
+        continue;
+      }
+      if (ch === ",") {
+        parts.push(current);
+        current = "";
+        continue;
+      }
+      current += ch;
+    }
+    parts.push(current);
+    return parts;
+  };
+  const stringLiteral = (part: string): string | null => {
+    const quote = part[0];
+    if (part.length < 2 || (quote !== '"' && quote !== "'" && quote !== "`")) return null;
+    if (part[part.length - 1] !== quote) return null;
+    if (quote !== '"') return part.slice(1, -1);
+    try {
+      return JSON.parse(part) as string;
+    } catch {
+      return null;
+    }
+  };
+
+  const resolveExpression = (expression: string, seen: Set<string>): string[] | null => {
+    const trimmed = expression.trim();
+    if (/^["'`]/.test(trimmed)) {
+      const literal = stringLiteral(trimmed);
+      return literal === null ? null : [literal];
+    }
+    if (trimmed.startsWith("[")) {
+      const out: string[] = [];
+      for (const rawPart of splitElements(trimmed.slice(1, -1))) {
+        const part = rawPart.trim();
+        if (part === "") continue;
+        const nested = resolveExpression(part.startsWith("...") ? part.slice(3) : part, seen);
+        if (nested === null) return null;
+        out.push(...nested);
+      }
+      return out;
+    }
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(trimmed)) return null;
+    // A cycle would otherwise recurse forever; an unknown identifier is unresolvable.
+    if (seen.has(trimmed)) return null;
+    const declaration = declarations.get(trimmed);
+    if (declaration === undefined) return null;
+    return resolveExpression(declaration, new Set([...seen, trimmed]));
+  };
+
+  const projectsKey = text.indexOf("projects:");
+  if (projectsKey < 0) return null;
+  const arrayStart = text.indexOf("[", projectsKey);
+  if (arrayStart < 0) return null;
+  const body = sliceBalanced(text, arrayStart, "[", "]");
+  if (body === null) return null;
+
+  const projects: VitestSuiteProject[] = [];
+  const chunks = topLevelObjects(body);
+  if (chunks.length === 0) return null;
+  for (const [index, chunk] of chunks.entries()) {
+    const filterRe = (key: string): RegExpExecArray | null =>
+      new RegExp(`\\b${key}:\\s*(\\[[^\\]]*\\]|[A-Za-z_$][A-Za-z0-9_$]*)`).exec(chunk);
+    const includeExpression = filterRe("include");
+    // A project with no include falls back to the vitest default glob, which this parser
+    // cannot reason about; refuse rather than assume it covers everything.
+    if (includeExpression === null) return null;
+    const include = resolveExpression(includeExpression[1]!, new Set());
+    if (include === null) return null;
+    const excludeExpression = filterRe("exclude");
+    const exclude =
+      excludeExpression === null ? [] : resolveExpression(excludeExpression[1]!, new Set());
+    if (exclude === null) return null;
+    projects.push({
+      name: /\bname:\s*"([^"]*)"/.exec(chunk)?.[1] ?? `project ${index}`,
+      include,
+      exclude,
+    });
+  }
+  return projects;
+}
+
+/**
+ * Every discovered test file must be RUN by at least one vitest project, and every
+ * literal (non-glob) filter entry must name a file that still exists. The first catches
+ * the silent-shrink attack (a widened exclude, a narrowed include); the second catches
+ * its accidental twin, where a renamed proof leaves a dead pin behind and its dedicated
+ * project quietly runs nothing. Pure: config text and file list in, findings out.
+ */
+export function detectSuiteCoverage(configText: string, testPaths: string[]): Finding[] {
+  const unreadable = (detail: string): Finding[] => [
+    {
+      severity: "error",
+      code: "SUITE_CONFIG_UNREADABLE",
+      message: `cannot read the vitest project filters in ${VITEST_CONFIG_FILE} (${detail}), so the guard cannot prove the suite still runs every test file — this check fails closed because a silent skip here is indistinguishable from the exclude-glob attack it exists to catch`,
+      where: VITEST_CONFIG_FILE,
+    },
+  ];
+  const projects = parseVitestSuiteProjects(configText);
+  if (projects === null || projects.length === 0) return unreadable("no project filters parsed");
+
+  const findings: Finding[] = [];
+  const known = new Set(testPaths);
+  const compiled: { name: string; include: RegExp[]; exclude: RegExp[] }[] = [];
+  for (const project of projects) {
+    const compiledFilters: Record<"include" | "exclude", RegExp[]> = { include: [], exclude: [] };
+    for (const kind of ["include", "exclude"] as const) {
+      for (const pattern of project[kind]) {
+        const re = globToRegExp(pattern);
+        if (re === null) return unreadable(`unsupported ${kind} pattern ${pattern}`);
+        compiledFilters[kind].push(re);
+        if (!pattern.includes("*") && !known.has(pattern))
+          findings.push({
+            severity: "error",
+            code: "SUITE_FILTER_STALE",
+            message: `vitest project ${project.name} ${kind}s ${pattern}, which is not a test file in this tree — a filter pinned to a renamed or deleted file silently stops selecting anything`,
+            where: VITEST_CONFIG_FILE,
+          });
+      }
+    }
+    compiled.push({
+      name: project.name,
+      include: compiledFilters.include,
+      exclude: compiledFilters.exclude,
+    });
+  }
+
+  const unclaimed = testPaths.filter(
+    (path) =>
+      !compiled.some(
+        (project) =>
+          project.include.some((re) => re.test(path)) &&
+          !project.exclude.some((re) => re.test(path)),
+      ),
+  );
+  if (unclaimed.length > 0)
+    findings.push({
+      severity: "error",
+      code: "SUITE_FILE_UNCLAIMED",
+      message: `${unclaimed.length} test file(s) are matched by no vitest project and therefore never run, while every shard still reports green: ${unclaimed.slice(0, 5).join(", ")}${unclaimed.length > 5 ? ", …" : ""}`,
+      where: VITEST_CONFIG_FILE,
+    });
+  return findings;
+}
+
 /** Test files that contain a disabled/focused marker. Pure over the given texts. */
 export function detectDisabledTests(files: { path: string; text: string }[]): Finding[] {
   const findings: Finding[] = [];
@@ -564,6 +924,13 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
   findings.push(...detectForbiddenLegacyImports(sourceFiles));
   const testPaths = listTestFiles(root);
   findings.push(...detectForbiddenPathPatterns(testPaths));
+  // The suite-coverage check belongs in STATIC mode, not just drift: `npm run health`
+  // runs static only, and a config that quietly stops running most of the suite is
+  // exactly the kind of green-but-hollow bar this guard exists to prevent. Skipped only
+  // when the config is absent, which PROTECTED_MISSING has already reported as an error.
+  const vitestConfig = join(root, VITEST_CONFIG_FILE);
+  if (existsSync(vitestConfig))
+    findings.push(...detectSuiteCoverage(readFileSync(vitestConfig, "utf8"), testPaths));
   const testFiles = readAll(root, testPaths);
   findings.push(...detectDisabledTests(testFiles));
   const cases = countTestCases(testFiles);
@@ -868,12 +1235,16 @@ export type GuardConstants = {
  * legacy wildcard and compared as a tightening, rather than becoming unreadable.
  */
 export function parseGuardConstants(text: string): GuardConstants | null {
+  // An optional `: Type` annotation is tolerated on both forms. Without it, writing
+  // `export const MIN_TEST_CASES: number = 100;` made this parser return null — which
+  // (before runDrift learned to fail closed on that) disarmed detectGuardWeakening
+  // entirely while runStatic went on enforcing the lowered floor from the real binding.
   const num = (name: string): number | null => {
-    const m = new RegExp(`export const ${name}\\s*=\\s*(\\d+)`).exec(text);
+    const m = new RegExp(`export const ${name}\\s*(?::[^=;]*)?=\\s*(\\d+)`).exec(text);
     return m ? Number(m[1]) : null;
   };
   const arr = (name: string): string[] | null => {
-    const m = new RegExp(`export const ${name}\\s*=\\s*\\[([\\s\\S]*?)\\]`).exec(text);
+    const m = new RegExp(`export const ${name}\\s*(?::[^=;]*)?=\\s*\\[([\\s\\S]*?)\\]`).exec(text);
     if (!m) return null;
     const entries = m[1]!.match(/"([^"]*)"|'([^']*)'/g);
     // An explicitly empty array is a real (and, for pin source scopes,
@@ -1007,7 +1378,11 @@ function countTestArtifactsAtRef(root: string, ref: string): TestArtifactCounts 
       if (meta[1] === "blob" && /^tests\/.*\.test\.ts$/.test(path))
         blobs.push({ oid: meta[2]!, path });
     }
-    if (blobs.length === 0) return { cases: 0, assertions: 0, strong: 0, tautologies: 0 };
+    // No test blobs at the ref is UNREADABLE, not a zero corpus. Returning zeros here
+    // bypassed the deliberate COUNT_BASELINE_UNREADABLE error below and made every
+    // count-regression comparison trivially pass (now >= 0) — the same fail-open shape
+    // as the guard-self check above, one layer down.
+    if (blobs.length === 0) return null;
     // `cat-file --batch` emits, per requested object: "<oid> <type> <size>\n" then
     // exactly <size> bytes of content then a trailing "\n". Slice by byte offsets (the
     // size is a byte count) so multi-byte UTF-8 content is reconstructed exactly.
@@ -1199,6 +1574,20 @@ export function runDrift(
       code: "GUARD_BASELINE_UNREADABLE",
       message: `cannot read scripts/verify-integrity.ts at ${ref}, so the guard-weakening check could not run`,
       where: ref,
+    });
+  }
+  if (guardNow === null) {
+    // The WORKING-TREE half of the same check, and the half that was fail-OPEN: only the
+    // baseline null was ever reported, so a cycle that made its own constants unparseable
+    // — a type annotation on a MIN_* floor was enough — skipped detectGuardWeakening with
+    // no finding at all and the run said OK, while runStatic imported the real binding and
+    // enforced whatever the cycle had lowered it to. The parser is more tolerant now; this
+    // is the backstop for every shape it still cannot read.
+    findings.push({
+      severity: "error",
+      code: "GUARD_SELF_UNREADABLE",
+      message: `cannot parse the guard constants in the working tree scripts/verify-integrity.ts, so the guard-weakening check could not run — a floor or protected list this parser cannot read is treated as tampering, not as absence of tampering`,
+      where: "scripts/verify-integrity.ts",
     });
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };

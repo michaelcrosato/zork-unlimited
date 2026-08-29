@@ -6,7 +6,55 @@
     <title>AdventureForge</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      #root is not empty on purpose. React's createRoot clears this container on
+      its first render, so the player never sees the text below once the game
+      starts. It is here for the case React never gets that far: a module that
+      throws while it is being imported (a content or schema change reaching the
+      player through PLAY.bat's rebuild) leaves the page with no script running
+      and no error boundary mounted, and the double-click audience has no
+      devtools console to read. Without this they would get a silent black page.
+      Every colour is inline and self-contained because the stylesheet that
+      normally paints the page may not have loaded either.
+    -->
+    <div id="root">
+      <noscript
+        style="
+          background: #080d10;
+          color: #e9e6de;
+          display: block;
+          font-family: system-ui, sans-serif;
+          line-height: 1.55;
+          margin: 2rem auto;
+          max-width: 42rem;
+          padding: 1.5rem;
+        "
+      >
+        AdventureForge needs JavaScript. Turn it on for this page and open PLAY.bat again.
+      </noscript>
+      <div
+        style="
+          background: #080d10;
+          border: 1px solid #f29227;
+          color: #e9e6de;
+          font-family: system-ui, sans-serif;
+          line-height: 1.55;
+          margin: 2rem auto;
+          max-width: 42rem;
+          padding: 1.5rem;
+        "
+      >
+        <h1 style="font-size: 1.5rem; margin: 0 0 0.75rem">Starting AdventureForge…</h1>
+        <p style="margin: 0 0 0.75rem">
+          The game is loading its world and quests. This takes a moment on the first open.
+        </p>
+        <p style="margin: 0">
+          If this message is still here after a few seconds, the game failed to start. Close this
+          tab and run PLAY.bat again; if it happens every time, the build is broken and the world or
+          a quest pack needs to be checked.
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

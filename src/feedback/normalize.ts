@@ -14,12 +14,14 @@
  * rung, never forcing a pick):
  *   1. exact id hit — raw equals a questId / node id / region id / room|scene
  *      id (case-insensitive, trimmed).
- *  1b. embedded id hit — raw is a SENTENCE that quotes one such id. Restricted
- *      to ids containing an underscore, because a one-word id cannot be told
- *      apart from the ordinary English word. Candidates that are only coarser
- *      views of another candidate (a quest named alongside its own room) are
- *      dropped before the single-candidate test, so naming a place and its
- *      container in one breath resolves instead of reading as a tie.
+ *  1b. embedded id hit — raw QUOTES one such id rather than being it, whether
+ *      inside a sentence or merely wrapped in punctuation (backticks, quotes,
+ *      parentheses, a trailing full stop). Restricted to ids containing an
+ *      underscore, because a one-word id cannot be told apart from the
+ *      ordinary English word. Candidates that are only coarser views of
+ *      another candidate (a quest named alongside its own room) are dropped
+ *      before the single-candidate test, so naming a place and its container
+ *      in one breath resolves instead of reading as a tie.
  *   2. exact name hit — a node/region/area name or quest/room title, each
  *      punctuation-normalized (lowercased; every run of non-alphanumeric
  *      characters collapsed to a single space; trimmed), appears as a
@@ -28,7 +30,11 @@
  *      "The Gate-Arch" vs "The Gate Arch") produce the identical phrase — a
  *      raw that hits that phrase then hits every location registered under
  *      it, and a tie across distinct locations falls through rather than
- *      silently crediting whichever one happened to be indexed first.
+ *      silently crediting whichever one happened to be indexed first. A hit
+ *      whose every occurrence sits INSIDE a strictly longer hit's occurrence
+ *      is dropped before the tie is counted (longest match wins), so a place
+ *      whose name properly contains a shorter place's name still resolves to
+ *      itself rather than reading as a permanent two-candidate tie.
  *   3. unique contiguous fuzzy hit — strip a small fixed stopword set ("the",
  *      "a", "an", "of", "in", "on", "at", "to", "and") from both the
  *      candidate's normalized tokens and raw's normalized tokens. A candidate
@@ -38,7 +44,8 @@
  *      content-token sequence appears CONTIGUOUSLY, in the same order,
  *      inside raw's content-token sequence — tolerant of a little connective
  *      noise around the name, never of its words scattered loose across an
- *      unrelated sentence.
+ *      unrelated sentence. The same longest-match preference as rung 2
+ *      applies to the surviving candidates.
  *   4. otherwise: `unmapped`, raw preserved for audit.
  */
 import { listShippedQuestIds, prepareShippedQuest } from "../crawl/prepare.js";
@@ -70,6 +77,8 @@ const RUNG3_STOPWORDS: ReadonlySet<string> = new Set([
 type NameCandidate = {
   /** Punctuation-normalized literal name/title text — used for the rung-2 substring test. */
   phrase: string;
+  /** `phrase` split into tokens — used to locate the rung-2 hit's span inside raw. */
+  phraseTokens: readonly string[];
   /**
    * `phrase`'s tokens with the rung-3 stopword set stripped — used for the rung-3
    * contiguous match. Fewer than 2 entries makes the candidate ineligible for rung 3.
@@ -136,12 +145,17 @@ export function matchesAtTokenBoundary(normalizedRaw: string, phrase: string): b
   return ` ${normalizedRaw} `.includes(` ${phrase} `);
 }
 
-/** True iff `needle` appears as a contiguous, in-order run inside `haystack`. */
-function containsContiguousSubsequence(
-  haystack: readonly string[],
-  needle: readonly string[],
-): boolean {
-  if (needle.length === 0 || needle.length > haystack.length) return false;
+/** Half-open `[start, end)` range of token indexes covered by one phrase occurrence. */
+type PhraseSpan = { readonly start: number; readonly end: number };
+
+/**
+ * Every place `needle` appears as a contiguous, in-order run inside `haystack`,
+ * as token-index spans. Spans rather than a bare boolean because the rungs need
+ * to know WHERE a name matched, not just that it did — see `preferLongestMatches`.
+ */
+function contiguousSpans(haystack: readonly string[], needle: readonly string[]): PhraseSpan[] {
+  const spans: PhraseSpan[] = [];
+  if (needle.length === 0 || needle.length > haystack.length) return spans;
   for (let start = 0; start <= haystack.length - needle.length; start++) {
     let matched = true;
     for (let i = 0; i < needle.length; i++) {
@@ -150,9 +164,47 @@ function containsContiguousSubsequence(
         break;
       }
     }
-    if (matched) return true;
+    if (matched) spans.push({ start, end: start + needle.length });
   }
-  return false;
+  return spans;
+}
+
+/** One candidate location plus every span of raw its name matched at. */
+type PhraseMatch = { location: LocationTemplate; spans: readonly PhraseSpan[] };
+
+/**
+ * Longest-match preference: drop a candidate whose every occurrence sits INSIDE a
+ * strictly longer candidate's occurrence.
+ *
+ * Without this, any location whose human-facing name properly contains a shorter
+ * location's name is permanently unresolvable from its own exact name. Real example:
+ * "North Hempstead town" (node `north_hempstead_town`) also contains the whole name of
+ * "Hempstead town" (node `hempstead_town`), so both hit at rung 2, the ladder reads a
+ * two-candidate tie, and the report lands `unmapped` — keyed on its own raw wording,
+ * where clustering can never corroborate it. 51 of 783 shipped named locations failed
+ * to resolve from the exact name the game shows the player.
+ *
+ * It stays a redundancy rule, not a tiebreaker, because eclipsing is judged per
+ * occurrence: a raw that mentions "Hempstead Town" somewhere the longer name does NOT
+ * cover keeps both candidates and still refuses to force a pick. Two rivals of equal
+ * length never eclipse each other either, so "The Gate Arch" in two quest packs stays
+ * ambiguous exactly as before.
+ */
+function preferLongestMatches(matches: readonly PhraseMatch[]): LocationTemplate[] {
+  const eclipsed = (span: PhraseSpan, match: PhraseMatch): boolean =>
+    matches.some(
+      (other) =>
+        other !== match &&
+        other.spans.some(
+          (candidate) =>
+            candidate.end - candidate.start > span.end - span.start &&
+            candidate.start <= span.start &&
+            span.end <= candidate.end,
+        ),
+    );
+  return matches
+    .filter((match) => match.spans.some((span) => !eclipsed(span, match)))
+    .map((match) => match.location);
 }
 
 /** Builds the location index once, compiling every shipped quest pack. Cache the result. */
@@ -172,7 +224,13 @@ export function buildLocationIndex(root: string): LocationIndex {
   const addName = (rawName: string, location: LocationTemplate): void => {
     const phrase = normalizePhrase(rawName);
     if (phrase.length === 0) return;
-    names.push({ phrase, contentTokens: stripStopwords(tokenize(phrase)), location });
+    const phraseTokens = tokenize(phrase);
+    names.push({
+      phrase,
+      phraseTokens,
+      contentTokens: stripStopwords(phraseTokens),
+      location,
+    });
   };
 
   const regionNameByNodeId = new Map<string, string>();
@@ -340,15 +398,26 @@ export function canonicalizeLocation(raw: string, idx: LocationIndex): Canonical
     // - Only ids carrying an underscore count. A single-word id is indistinguishable
     //   from the English word — "armory" is a room id AND a noun — so a bare word stays
     //   unmapped, while "steading_yard" is unmistakably a machine id being quoted.
-    // - Only raws with surrounding prose reach this rung. A raw that IS just an id is
-    //   rung 1's alone, so an id that resolves to rival places ("new_york_city" is both
-    //   a region and a node) keeps its ambiguous verdict instead of being narrowed here.
+    // - Only a raw that is MORE than the bare id reaches this rung. A raw that IS just
+    //   an id is rung 1's alone, so an id that resolves to rival places ("new_york_city"
+    //   is both a region and a node) keeps its ambiguous verdict instead of being
+    //   narrowed here.
+    //
+    // That second guard is "more than the bare id", NOT "more than one token": an id
+    // wrapped in punctuation — `steading_yard` in markdown backticks, in quotes, in
+    // parentheses, or trailing a full stop, which is how a model quotes a machine id —
+    // splits into exactly ONE token, so a plain `length > 1` test skipped it while rung
+    // 1 had already missed it (its lookup key still carries the punctuation). Comparing
+    // the lone token against `idKey` is what tells "the raw IS the id" apart from "the
+    // raw merely decorates it": 54 of the 1032 underscore-bearing ids resolved bare and
+    // fell to `unmapped` in every quoted spelling.
     //
     // Ids are matched on whole tokens (every id in the index is `[a-z0-9_]+`), so
     // "steading_yard" never hits inside "steading_yard_north". Two distinct places still
     // refuse to resolve; only a place cited alongside its own container collapses.
     const rawTokens = idKey.split(/[^a-z0-9_]+/).filter((token) => token.length > 0);
-    if (rawTokens.length > 1) {
+    const rawIsBareId = rawTokens.length === 1 && rawTokens[0] === idKey;
+    if (rawTokens.length > 0 && !rawIsBareId) {
       const embedded: LocationTemplate[] = [];
       for (const token of new Set(rawTokens)) {
         if (!token.includes("_")) continue;
@@ -363,22 +432,34 @@ export function canonicalizeLocation(raw: string, idx: LocationIndex): Canonical
   if (normalizedRaw.length > 0) {
     // Rung 2: exact name hit, both sides punctuation-normalized (see normalizePhrase)
     // and token-boundary-aligned (see matchesAtTokenBoundary) so a short name never
-    // matches mid-word inside an unrelated longer word.
+    // matches mid-word inside an unrelated longer word. Surviving hits then go through
+    // the longest-match preference, so a name that is only a fragment of a longer name
+    // matched at the same place in raw stops counting as a rival.
+    const rawNameTokens = tokenize(normalizedRaw);
     const nameHits = idx.names.filter((candidate) =>
       matchesAtTokenBoundary(normalizedRaw, candidate.phrase),
     );
-    const nameCandidates = uniqueLocations(nameHits.map((hit) => hit.location));
+    const nameCandidates = uniqueLocations(
+      preferLongestMatches(
+        nameHits.map((hit) => ({
+          location: hit.location,
+          spans: contiguousSpans(rawNameTokens, hit.phraseTokens),
+        })),
+      ),
+    );
     if (nameCandidates.length === 1) return finalize(nameCandidates[0]!);
 
-    // Rung 3: unique contiguous fuzzy hit over stopword-stripped content tokens.
-    const rawContentTokens = stripStopwords(tokenize(normalizedRaw));
+    // Rung 3: unique contiguous fuzzy hit over stopword-stripped content tokens, under
+    // the same longest-match preference as rung 2.
+    const rawContentTokens = stripStopwords(rawNameTokens);
     if (rawContentTokens.length > 0) {
-      const fuzzyHits = idx.names.filter(
-        (candidate) =>
-          candidate.contentTokens.length >= 2 &&
-          containsContiguousSubsequence(rawContentTokens, candidate.contentTokens),
-      );
-      const fuzzyCandidates = uniqueLocations(fuzzyHits.map((hit) => hit.location));
+      const fuzzyHits: PhraseMatch[] = [];
+      for (const candidate of idx.names) {
+        if (candidate.contentTokens.length < 2) continue;
+        const spans = contiguousSpans(rawContentTokens, candidate.contentTokens);
+        if (spans.length > 0) fuzzyHits.push({ location: candidate.location, spans });
+      }
+      const fuzzyCandidates = uniqueLocations(preferLongestMatches(fuzzyHits));
       if (fuzzyCandidates.length === 1) return finalize(fuzzyCandidates[0]!);
     }
   }

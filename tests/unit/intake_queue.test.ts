@@ -110,6 +110,18 @@ describe("queue ordering", () => {
     expect([loud, considered].sort(compareSubmissions)[0]!.title).toBe("considered");
   });
 
+  // `maxPriority` was declared in nextWork's signature and never applied, so a caller
+  // asking for "nothing below P1" was handed the whole queue — the worst shape of no-op,
+  // because a P3 answer to that question looks perfectly plausible.
+  it("honours a maxPriority ceiling rather than accepting and ignoring it", () => {
+    const p0 = make({ priority: "P0", title: "p0" });
+    const p3 = make({ priority: "P3", title: "p3" });
+    expect(nextWork([p0, p3], { maxPriority: "P1" })!.priority).toBe("P0");
+    // The ceiling has to be able to answer "nothing that urgent is queued".
+    expect(nextWork([p3], { maxPriority: "P1" })).toBeNull();
+    expect(nextWork([p3])!.priority).toBe("P3");
+  });
+
   it("breaks ties on independent lineages before raw counts", () => {
     const broad = make({
       title: "broad",
@@ -230,6 +242,17 @@ describe("queue persistence", () => {
     expect(submissions[0]!.priority).toBe("P0");
   });
 
+  // readQueue parses strictly, so anything the write path lets through off-schema is a
+  // file the queue can never read back: reported unreadable on every subsequent read,
+  // invisible to `npm run work` and to the GitHub push loop, and re-minted identically
+  // by whatever wrote it. `npm run submit -- --area ""` reached exactly that dead end.
+  it("refuses to write a submission it could never read back", () => {
+    const dir = tempQueue();
+    const offSchema = { ...make({ title: "poison" }), area: "" } as Submission;
+    expect(() => upsertSubmission(offSchema, dir)).toThrow(/refusing to write submission/);
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
   it("reports an unreadable submission instead of hiding it", () => {
     const dir = tempQueue();
     writeFileSync(join(dir, "P1-human-deadbeefdeadbeef.json"), "{ not json", "utf8");
@@ -292,6 +315,35 @@ describe("GitHub mirroring", () => {
     expect(adopted.external?.number).toBe(7);
     // Non-af labels survive; our own encoding does not get duplicated into labels.
     expect(adopted.labels).toEqual(["enhancement"]);
+  });
+
+  // Anyone with write access to the tracker can type a label, so `af:kind/<x>` is
+  // untrusted input. Casting it straight into the schema type minted a submission whose
+  // `kind` was not in the enum at all, which the queue wrote to disk and could never
+  // read back — one unparseable file per sync, forever, for a typo.
+  it("falls back to the default kind when a label names one the schema does not have", () => {
+    const adopted = submissionFromIssue({
+      number: 11,
+      url: "u",
+      title: "Add frobnicators",
+      body: "b",
+      state: "OPEN",
+      labels: ["af:kind/frobnicate"],
+    });
+    expect(adopted.kind).toBe("feature");
+    expect(SubmissionSchema.safeParse(adopted).success).toBe(true);
+  });
+
+  it("still honours a kind label the schema does have", () => {
+    const adopted = submissionFromIssue({
+      number: 12,
+      url: "u",
+      title: "Docs are wrong",
+      body: "b",
+      state: "OPEN",
+      labels: ["af:kind/docs"],
+    });
+    expect(adopted.kind).toBe("docs");
   });
 
   it("gives an adopted issue a stable id so re-syncing never duplicates it", () => {

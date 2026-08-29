@@ -182,14 +182,40 @@ describe("MCP server registration", () => {
     expect(chooseBlock).toContain("Story id required for Station support.");
   });
 
-  it("keeps exact departure terms behind the read-only compact-context request", () => {
+  it("keeps exact departure terms behind an opt-in compact-context argument", () => {
     const block = registeredToolBlock("get_overworld_session_context");
     expect(block).toContain("include_departure_recap_terms");
     expect(block).toContain("Include the full terms of the selected plan.");
-    expect(
-      TOOL_REGISTRATIONS.find((candidate) => candidate.name === "get_overworld_session_context")
-        ?.annotations.readOnlyHint,
-    ).toBe(true);
+  });
+
+  /**
+   * `readOnlyHint` is a promise to the CLIENT, and clients act on it: they
+   * auto-approve, they cache, and a timed-out call is safe to retry. Both tools
+   * below take a `reveal_*` argument that writes a durable receipt into the
+   * session's persistence state, which moves the snapshot hash every guarded call
+   * afterwards is checked against. Annotations are static per tool, so a tool that
+   * CAN write cannot advertise read-only for the arguments where it does not.
+   */
+  it("never advertises read-only on a tool whose reveal argument writes a durable receipt", () => {
+    const byName = new Map(
+      TOOL_REGISTRATIONS.map((registration) => [registration.name, registration]),
+    );
+    for (const name of ["get_overworld_session_context", "inspect_overworld_session_story"]) {
+      const registration = byName.get(name);
+      expect(registration, `${name} must stay registered`).toBeDefined();
+      expect(READ_ONLY_TOOLS.has(name), `${name} must not be in READ_ONLY_TOOLS`).toBe(false);
+      expect(registration?.annotations.readOnlyHint ?? false, name).toBe(false);
+      expect(registration?.annotations.idempotentHint ?? false, name).toBe(false);
+    }
+    // The published prose must not re-assert the claim the annotations just dropped.
+    // NOTE: inspect_overworld_session_story's own summary still says "Never changes
+    // state", which is false for the reveal_id path. Correcting it changes the
+    // pure-MCP tools/list projection, and that projection is pinned by a reviewed
+    // per-tool digest in blind-tester/codex-pure-envelope.mjs, so the prose fix has
+    // to land with that digest update rather than ahead of it.
+    expect(registeredToolBlock("get_overworld_session_context")).not.toContain(
+      "without changing state",
+    );
   });
 
   it("advertises world-bound and generated starts, not the retired Charter-Marches quest menu", () => {

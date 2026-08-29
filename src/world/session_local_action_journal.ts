@@ -1,7 +1,9 @@
 import {
+  describeOverworldAreaAction,
   describeOverworldContactAction,
   describeOverworldEventAction,
   describeOverworldJobAction,
+  describeOverworldPoiAction,
   describeOverworldSiteAction,
 } from "./local_actions.js";
 import { questCompletionMinutes } from "./session_quests.js";
@@ -574,6 +576,114 @@ export function assertSnapshotContactPresentationProofs(
     if (entry.town !== expectedTown) {
       throw new Error(
         `Overworld session snapshot contact presentation "${entry.id}" is bound to town "${entry.town}", expected "${expectedTown}".`,
+      );
+    }
+  }
+}
+
+type OverworldAuthoredLocalActionCopy = Readonly<{ title: string; text: string }>;
+
+function authoredCopyOf(
+  action: Readonly<{ title: string; text: string }>,
+): OverworldAuthoredLocalActionCopy {
+  return { title: action.title, text: action.text };
+}
+
+/**
+ * The line the world file authors for this entry, or null when there is nothing
+ * to compare it against.
+ *
+ * The kinds below are pure functions of manifest content plus proof the
+ * snapshot has already had to survive, so the engine can only ever have written
+ * one string for each of them. Three kinds are deliberately absent:
+ *
+ * - `contact` copy depends on which authored presentation was live at the
+ *   entry's campaign boundary, so it needs the whole quest-state replay.
+ *   `assertSnapshotContactPresentationProofs` above owns it.
+ * - `resolution` and `quest_done` copy folds in run-time facts the journal is
+ *   the only record of — the town name and region the player stood in, the
+ *   elapsed minutes, a launch approach's return summary — so there is no
+ *   independent authored string to compare them with.
+ *
+ * Anything unresolvable returns null rather than throwing: the timeline source
+ * gate and `localJournalActionDuration` already report unknown ids and missing
+ * or foreign local-scene proofs with their own precise errors.
+ */
+function authoredLocalActionCopy(
+  entry: OverworldJournalEntry,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+): OverworldAuthoredLocalActionCopy | null {
+  switch (entry.kind) {
+    case "area": {
+      const sourceId = journalSourceId(entry, "area:");
+      const area = sourceId ? sources.areasById.get(sourceId) : undefined;
+      return area ? authoredCopyOf(describeOverworldAreaAction(area)) : null;
+    }
+    case "event": {
+      const sourceId = journalSourceId(entry, "investigate:");
+      const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
+      return event ? authoredCopyOf(describeOverworldEventAction(event)) : null;
+    }
+    case "job": {
+      const sourceId = journalSourceId(entry, "job:");
+      const job = sourceId ? sources.jobsById.get(sourceId) : undefined;
+      if (!job) return null;
+      const area = sources.areasById.get(job.area) ?? null;
+      if (!job.authored_scene) {
+        return entry.localSceneProof ? null : authoredCopyOf(describeOverworldJobAction(job, area));
+      }
+      const proof = entry.localSceneProof;
+      if (!proof || proof.sceneId !== job.authored_scene.id) return null;
+      const option = resolveLocalJobSceneOption(job.authored_scene, proof.optionId);
+      return authoredCopyOf(describeOverworldJobAction(job, area, option));
+    }
+    case "poi": {
+      const sourceId = journalSourceId(entry, "scout:");
+      const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
+      // The scout planner refuses any point of interest outside the current
+      // town, so the town in the authored line is always the point's own home.
+      return poi
+        ? authoredCopyOf(
+            describeOverworldPoiAction(poi, { name: sources.townNameForSource(poi.home) }),
+          )
+        : null;
+    }
+    case "site": {
+      const sourceId = journalSourceId(entry, "site:");
+      const site = sourceId ? sources.sitesById.get(sourceId) : undefined;
+      return site ? authoredCopyOf(describeOverworldSiteAction(site)) : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Prove that every stored area/event/job/point-of-interest/site line is still
+ * the line the world file authors for it. Without this the only local-action
+ * copy proof in the restore is the contact one, so an exported save could be
+ * hand-edited to put arbitrary prose — a promised reward, a waived fee, a fact
+ * the player never earned — into the journal, and the restore would accept it,
+ * render it, and re-export it verbatim as engine-written history.
+ *
+ * `verifyAuthoredCopy` is false exactly when the snapshot was written against
+ * different world content, which is the same gate the contact proof uses: a
+ * save from an earlier prose generation legitimately carries the older line,
+ * and the restore already reports that provenance as a warning rather than
+ * rewriting the player's own history out from under them.
+ */
+export function assertSnapshotAuthoredLocalActionCopyProofs(
+  sources: OverworldLocalActionJournalReachabilityIndex,
+  journalTimeline: OverworldJournalTimelineIndex,
+  verifyAuthoredCopy = true,
+): void {
+  if (!verifyAuthoredCopy) return;
+  for (const { entry } of journalTimeline.localActionEntries) {
+    const authored = authoredLocalActionCopy(entry, sources);
+    if (!authored) continue;
+    if (entry.title !== authored.title || entry.text !== authored.text) {
+      throw new Error(
+        `Overworld session snapshot ${entry.kind} journal entry "${entry.id}" does not match its authored copy.`,
       );
     }
   }

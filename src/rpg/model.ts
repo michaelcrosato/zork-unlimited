@@ -18,7 +18,15 @@ import {
 import { evalConditions } from "../core/conditions.js";
 import { appendMatchingText, reactiveName, reactiveText } from "../core/reactive_text.js";
 import type { GameState } from "../core/state.js";
-import type { DialogueNode, Ending, GameObject, Npc, Room, RpgPack } from "./schema.js";
+import type {
+  DialogueNode,
+  Ending,
+  GameObject,
+  Interaction,
+  Npc,
+  Room,
+  RpgPack,
+} from "./schema.js";
 import { initRuntimeState } from "./state_init.js";
 import type { CampaignCharacterImportInput } from "./campaign_character_import.js";
 import {
@@ -36,6 +44,23 @@ export type RpgModelIndex = {
   homeRoom: Map<string, string>;
   containerOf: Map<string, string>;
   objectsWithUseInteractions: GameObject[];
+  /**
+   * Every authored USE interaction that names a target, keyed by that TARGET —
+   * regardless of which object the row was authored under.
+   *
+   * USE resolution used to read `objects.get(target).interactions` directly, which
+   * silently made "the row must be authored on the object it targets" a load-bearing
+   * rule that nothing states and no validator checks. Enumeration
+   * (`enumerateRpgBaseActions`), the natural-language parser (`customUseByVerb`) and
+   * the foundation validator's effect harvest all walk EVERY object instead, so a
+   * `USE rope on well` authored under `rope` was listed, typed, and certified
+   * winnable — then dropped at resolution because the lookup only ever saw the well's
+   * own rows. Indexing by target makes the runtime agree with the three surfaces that
+   * were already host-agnostic. Insertion order is pack-object order, so "first
+   * condition-satisfying row" means the same thing here as it does in the
+   * enumeration loop.
+   */
+  useInteractionsByTarget: ReadonlyMap<string, readonly Interaction[]>;
   /** Target-only USE hubs whose authored rows each have a distinct natural verb. */
   verbIdentifiedTargetOnlyUseTargets: ReadonlySet<string>;
 };
@@ -57,6 +82,15 @@ export function indexRpgModel(pack: RpgPack): RpgModelIndex {
   const objectsWithUseInteractions = pack.objects.filter((o) =>
     o.interactions.some((it) => it.verb === "USE" && it.target !== undefined),
   );
+  const useInteractionsByTarget = new Map<string, Interaction[]>();
+  for (const object of objectsWithUseInteractions) {
+    for (const interaction of object.interactions) {
+      if (interaction.verb !== "USE" || interaction.target === undefined) continue;
+      const rows = useInteractionsByTarget.get(interaction.target);
+      if (rows) rows.push(interaction);
+      else useInteractionsByTarget.set(interaction.target, [interaction]);
+    }
+  }
   const targetOnlyUseVerbs = new Map<string, (string | undefined)[]>();
   const selfUseTargets = new Set<string>();
   for (const object of objectsWithUseInteractions) {
@@ -101,6 +135,7 @@ export function indexRpgModel(pack: RpgPack): RpgModelIndex {
     homeRoom,
     containerOf,
     objectsWithUseInteractions,
+    useInteractionsByTarget,
     verbIdentifiedTargetOnlyUseTargets,
   };
 }

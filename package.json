@@ -26,7 +26,7 @@
     "audit:ending-render-proof": "tsx scripts/run-with-soft-budget.ts --label ending-render-proof --seconds 420 --history ai-runs/performance-budget-history.json -- npm run test:ending-render-proof",
     "audit:standard-coverage": "tsx scripts/run-with-soft-budget.ts --label standard-suite --seconds 4200 --history ai-runs/performance-budget-history.json -- npm run test:coverage",
     "audit:non-player": "npm run verify:bug-traces && npm run verify:opening-density && npm run audit:ending-render-proof && npm run audit:standard-coverage",
-    "health": "npm run verify:integrity && npm run verify:bug-traces && npm run verify:opening-density && npm run typecheck && npm run lint && npm run format:check && npm test && npm run ui:typecheck && npm run validate",
+    "health": "npm run verify:integrity && npm run verify:bug-traces && npm run verify:opening-density && npm run typecheck && npm run lint && npm run format:check && npm run ui:typecheck && npm run validate && npm test",
     "test:watch": "vitest",
     "replay": "tsx bin/replay.ts",
     "validate": "tsx bin/validate.ts",

@@ -14,7 +14,8 @@
  *       (obstacles, tools, walk warning);
  *   (2) the +5 score effect is still present (non-regression);
  *   (3) the journal entry is absent before reading and present after;
- *   (4) a second read is blocked by the not_flag:read_marks gate (no stacking);
+ *   (4) the one-shot payload fires exactly once — a second read re-shows the prose but
+ *       stacks neither the journal entry nor the +5;
  *   (5) win route (talk Pell → read book → clear rack → cross walk → open race → commit
  *       one flood course → valley) reaches its consequence ending at 50/50.
  */
@@ -108,17 +109,27 @@ describe("bug_0318 — reading the flood-book adds a journal entry (was silent)"
     expect(bookEntries(s1).length).toBe(1);
   });
 
-  it("(4) second read is blocked — entry does not stack", () => {
+  it("(4) the one-shot payload fires once — entry and score do not stack", () => {
     let s = initStateForRpgPack(index, 1);
     s = act(s, isRead);
     expect(bookEntries(s).length).toBe(1);
-    // READ should no longer be in the legal set (gated by not_flag: read_marks).
-    expect(options(s).some((o) => isRead(o.action))).toBe(false);
-    // Forced re-step is rejected.
+    const scoreAfterFirstRead = score(s);
+
+    // The document stays READABLE after its one-shot payload has fired. This assertion
+    // used to be the inverse — that READ left the legal set entirely — which is what
+    // made all 16 shipped documents unreadable for the rest of the game once their
+    // journal/score effect had fired. The property this regression actually exists to
+    // protect is that the PAYLOAD does not stack, not that the prose becomes
+    // unreachable, so it is asserted directly now.
+    expect(options(s).some((o) => isRead(o.action))).toBe(true);
+
     const readAction: Action = { type: "READ", target: "flood_book" };
     const r = step(s, readAction);
-    expect(r.ok).toBe(false);
-    expect(bookEntries(s).length).toBe(1);
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error("re-read should be legal");
+    expect(bookEntries(r.state).length).toBe(1);
+    expect(score(r.state)).toBe(scoreAfterFirstRead);
+    expect(r.state.flags["read_marks"]).toBe(true);
   });
 
   it("(5) win route: preparation → obstacles → chosen flood course → valley = 50/50", () => {

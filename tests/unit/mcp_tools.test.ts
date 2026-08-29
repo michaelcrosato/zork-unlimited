@@ -6,6 +6,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import {
   COMPACT_DESCRIPTION_CHAR_LIMIT,
   COMPACT_DIALOGUE_CHAR_LIMIT,
+  RPG_COMPACT_LEGEND,
   RPG_COMPACT_OBSERVATION_VERSION,
 } from "../../src/mcp/compact_rpg_observation.js";
 import {
@@ -4013,11 +4014,15 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect("actions" in compactReload.context).toBe(false);
     // load_game creates a session, so it carries the one-time legend; the
     // recurring payload (minus legend) must stay under the verbose reload.
-    expect(compactReload.legend).toBeDefined();
-    expect("legend" in fullReload).toBe(false);
+    expect(compactReload.legend).toBe(RPG_COMPACT_LEGEND);
+    // A verbose reload still gets tagged event tuples AND a positional context out
+    // of the very next default step_action, and this is the only response that can
+    // define them, so it carries the legend too.
+    expect(fullReload.legend).toBe(RPG_COMPACT_LEGEND);
     const { legend: _compactReloadLegend, ...compactReloadRecurring } = compactReload;
+    const { legend: _fullReloadLegend, ...fullReloadRecurring } = fullReload;
     expect(JSON.stringify(compactReloadRecurring).length).toBeLessThan(
-      JSON.stringify(fullReload).length,
+      JSON.stringify(fullReloadRecurring).length,
     );
 
     const actionBundledReload = a.load_game({

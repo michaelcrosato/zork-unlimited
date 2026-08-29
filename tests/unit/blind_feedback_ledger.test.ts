@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -185,10 +185,29 @@ describe("blind feedback ledger", () => {
         exit_reason: "player_ended_at_choice",
       });
 
+      // Dropping the closing fence leaves a terminal pure interview, which the
+      // verifier still recovers through its sidecar. Republish the sidecar after
+      // the rewrite so this stays a statement about report SHAPE and not an
+      // accidental assertion that a stale sidecar may bless a rewritten report.
+      const sidecarPath = reportPath.replace(/\.md$/, ".run.json");
+      const verifiedSidecar = readFileSync(sidecarPath, "utf8");
       writeFileSync(reportPath, readFileSync(reportPath, "utf8").replace(/\r?\n```\r?\n$/u, ""));
+      writeFileSync(sidecarPath, verifiedSidecar);
       expect(buildBlindFeedbackLedger(reports, { cwd: root })).toMatchObject({
         accepted_reports: 1,
         rejected_reports: 0,
+      });
+
+      // A sidecar older than its own report is an earlier run's receipt left on a
+      // reused output prefix; run.sh publishes the sidecar last, so that ordering
+      // is impossible for a bundle the runner actually produced. The durable
+      // ledger must refuse it exactly as `npm run feedback:compile` does — the two
+      // read the same directory, and acceptance cannot depend on which one looks.
+      const staleTime = new Date("2000-01-01T00:00:00.000Z");
+      utimesSync(sidecarPath, staleTime, staleTime);
+      expect(buildBlindFeedbackLedger(reports, { cwd: root })).toMatchObject({
+        accepted_reports: 0,
+        rejected_reports: 1,
       });
 
       writeFileSync(

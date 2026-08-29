@@ -176,6 +176,10 @@ describe("GameSession — RPG-only structured play", () => {
       "go_north",
       "go_west",
       "examine_falcon_jesses",
+      // Still offered after its one-shot payload has fired: a document's prose stays
+      // reachable, only its journal/score effect is once-only. This entry was absent
+      // while a fired READ interaction retired the whole row.
+      "read_falcon_jesses",
       "examine_npc_aldric",
       "look_around",
       "inventory",

@@ -6,10 +6,11 @@ import {
   mergeSummaries,
   runPlanInProcess,
   sliceSeeds,
+  workerCloneableOptions,
   type CrawlPlanItem,
   type CrawlRunOptions,
 } from "../../src/crawl/run.js";
-import { preparePack, type PreparedQuest } from "../../src/crawl/prepare.js";
+import { listShippedQuestIds, preparePack, type PreparedQuest } from "../../src/crawl/prepare.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 
 function isQuestItem(p: CrawlPlanItem): p is Extract<CrawlPlanItem, { kind: "quest" }> {
@@ -331,5 +332,201 @@ describe("runPlanInProcess with injected quests (real, non-empty findings)", () 
     expect(merged.findings).toEqual(combined.findings);
     expect(Object.keys(merged.countsByCode)).toEqual(Object.keys(combined.countsByCode));
     expect(merged.countsByCode).toEqual(combined.countsByCode);
+  });
+});
+
+/**
+ * `questCoverage.actionsTotal` is the denominator behind the `actions X/Y` line
+ * `bin/crawl.ts` prints and `writeRunArtifacts` records in summary.{md,json}.
+ * It used to be neither an upper nor a lower bound on the numerator: it summed
+ * every room's exits (though a MOVE's id is `go_<direction>`, shared by every
+ * room offering that direction) while omitting entire families the enumerator
+ * emits — `examine_`/`read_`/`open_`/`close_`/`drop_`/`unlock_` per object,
+ * `examine_npc_`/`talk_` per npc, one id per enemy maneuver, and the global
+ * `look_around`/`inventory`. Five of the twelve shipped quests already exceed
+ * 100% at the modest budget used here (advocates_case, cold_forge, factors_mark,
+ * falconers_ransom, printers_night), so a ratio that can never reach a target is
+ * useless as a gate or a trend line and hides a genuine drop in explored surface
+ * inside denominator noise.
+ *
+ * Deliberately run against the REAL shipped packs rather than a fixture: the
+ * defect was a mismatch between the declared-content estimate and what
+ * `enumerateRpgActions` actually emits for shipped content shapes, which a
+ * hand-built pack cannot witness. One seed and a short step budget keeps this
+ * to about two seconds while still trying enough actions to cross the old bound.
+ */
+describe("quest coverage denominator", () => {
+  it("actionsTotal upper-bounds actionsTried for every shipped quest", () => {
+    const root = process.cwd();
+    const questIds = listShippedQuestIds(root);
+    expect(questIds.length).toBeGreaterThanOrEqual(11);
+
+    const items: CrawlPlanItem[] = questIds.map((questId) => ({
+      kind: "quest",
+      questId,
+      seeds: [1],
+      stepsPerSeed: 150,
+    }));
+    const summary = runPlanInProcess(items, {
+      root,
+      policy: "mixed",
+      commit: "test",
+      quests: "all",
+      overworld: false,
+      seeds: [1],
+      stepsPerSeed: 150,
+      solverBudget: 0,
+      persistEvery: 37,
+      outDir: "ignored",
+      workers: 1,
+    });
+
+    const over = Object.entries(summary.questCoverage)
+      .filter(([, c]) => c.actionsTried > c.actionsTotal)
+      .map(([questId, c]) => `${questId} ${c.actionsTried}/${c.actionsTotal}`);
+    expect(over).toEqual([]);
+    // Guard against a trivially-passing shape: a numerator stuck at zero, or a
+    // non-finite denominator, would satisfy the bound while measuring nothing.
+    for (const [questId, c] of Object.entries(summary.questCoverage)) {
+      expect(c.actionsTried, questId).toBeGreaterThan(0);
+      expect(Number.isFinite(c.actionsTotal), questId).toBe(true);
+    }
+  });
+});
+
+/**
+ * A quest the `--seconds` budget skipped used to vanish from the run's output
+ * entirely rather than reporting zero coverage: `questCoverage` was written only
+ * after a quest actually ran, `mergeQuestCoverage` iterates only the keys
+ * present, and both the console table and summary.md's "## Quest coverage" list
+ * iterate that same map. Under `crawl:deep` every shard walks the identical
+ * lexicographic plan order against the same soft cutoff, so the vanished rows
+ * are the same tail quests every night — and the only signal was a stderr line
+ * that does not affect the exit code.
+ */
+describe("runPlanInProcess seconds-budget truncation", () => {
+  const QUEST_A = "quest_alpha_budget";
+  const QUEST_B = "quest_zulu_budget";
+
+  function injectedPrepareQuest(_root: string, questId: string): PreparedQuest {
+    return { ...preparePack(generateRpgPack(3)), questId };
+  }
+
+  const budgetedOpts = (seeds: number[], secondsBudget?: number): CrawlRunOptions => ({
+    root: process.cwd(),
+    policy: "mixed",
+    commit: "test",
+    quests: "all",
+    overworld: false,
+    seeds,
+    stepsPerSeed: 150,
+    solverBudget: 0,
+    persistEvery: 37,
+    outDir: "ignored",
+    workers: 1,
+    prepareQuest: injectedPrepareQuest,
+    ...(secondsBudget !== undefined ? { secondsBudget } : {}),
+  });
+
+  it("still reports a zero-coverage row for a quest the budget skipped", () => {
+    // `secondsBudget` is a plain number on CrawlRunOptions (the CLI parses whole
+    // seconds, but a direct caller is not bound to that), so a fractional budget
+    // expires during the first item's own crawl without the test burning real wall
+    // time. 150 steps of a generated pack takes an order of magnitude longer than
+    // 50ms, so the second item is always the one that trips the check.
+    const items: CrawlPlanItem[] = [
+      { kind: "quest", questId: QUEST_A, seeds: [11], stepsPerSeed: 150 },
+      { kind: "quest", questId: QUEST_B, seeds: [11], stepsPerSeed: 150 },
+    ];
+    const summary = runPlanInProcess(items, budgetedOpts([11], 0.05));
+
+    expect(summary.truncated).toBe(true);
+    expect(summary.skippedItems).toEqual([`quest:${QUEST_B}`]);
+
+    const skipped = summary.questCoverage[QUEST_B];
+    expect(skipped).toBeDefined();
+    expect(skipped!.roomsVisited).toBe(0);
+    expect(skipped!.actionsTried).toBe(0);
+    expect(skipped!.actionIdsTried).toEqual([]);
+    expect(skipped!.endingsReached).toEqual([]);
+    // The static denominators are real, so the row reads as honest zero coverage
+    // rather than an empty placeholder, and every room/ending is an orphan.
+    expect(skipped!.roomsTotal).toBeGreaterThan(0);
+    expect(skipped!.actionsTotal).toBeGreaterThan(0);
+    expect(skipped!.orphans.rooms).toHaveLength(skipped!.roomsTotal);
+    expect(skipped!.orphans.endings).toEqual(skipped!.endingsDeclared);
+
+    // The quest that DID run is unaffected.
+    expect(summary.questCoverage[QUEST_A]!.roomsVisited).toBeGreaterThan(0);
+  });
+
+  it("a skipped row merges away against a shard that finished the same quest", () => {
+    const truncatedShard = runPlanInProcess(
+      [
+        { kind: "quest", questId: QUEST_A, seeds: [11], stepsPerSeed: 150 },
+        { kind: "quest", questId: QUEST_B, seeds: [11], stepsPerSeed: 150 },
+      ],
+      budgetedOpts([11], 0.05),
+    );
+    const fullShard = runPlanInProcess(
+      [{ kind: "quest", questId: QUEST_B, seeds: [12], stepsPerSeed: 150 }],
+      budgetedOpts([12]),
+    );
+
+    const real = fullShard.questCoverage[QUEST_B]!;
+    // The placeholder must actually be present for this merge to mean anything —
+    // without it the truncated shard contributes no row at all and the assertions
+    // below would hold vacuously.
+    const placeholder = truncatedShard.questCoverage[QUEST_B];
+    expect(placeholder).toBeDefined();
+    expect(placeholder!.orphans.rooms).toHaveLength(real.roomsTotal);
+
+    const merged = mergeSummaries([truncatedShard, fullShard]);
+    const q = merged.questCoverage[QUEST_B]!;
+    // Orphans merge by INTERSECTION, so "every room orphaned" never drags a real
+    // shard's coverage down.
+    expect(q.orphans.rooms).toEqual(real.orphans.rooms);
+    expect(q.roomsVisited).toBe(real.roomsVisited);
+    expect(q.actionIdsTried).toEqual(real.actionIdsTried);
+    expect(q.endingsReached).toEqual(real.endingsReached);
+  });
+});
+
+/**
+ * `CrawlRunOptions.prepareQuest`'s doc comment used to assert that worker shards
+ * "always fall back to the real prepareShippedQuest" because `workerData` is
+ * structured-cloned and "functions cannot cross that boundary". Structured clone
+ * does not drop a function, it THROWS — so a caller that set the seam and asked
+ * for `--workers 2` got an opaque DataCloneError at Worker construction instead
+ * of the documented fallback. `workerCloneableOptions` is what makes the written
+ * contract true.
+ */
+describe("workerCloneableOptions", () => {
+  const opts: CrawlRunOptions = {
+    root: process.cwd(),
+    policy: "mixed",
+    commit: "test",
+    quests: "all",
+    overworld: false,
+    seeds: [11],
+    stepsPerSeed: 10,
+    solverBudget: 0,
+    persistEvery: 37,
+    outDir: "ignored",
+    workers: 2,
+    prepareQuest: (_root, questId) => ({ ...preparePack(generateRpgPack(3)), questId }),
+  };
+
+  it("strips the in-process-only seam so the options survive a structured clone", () => {
+    // The hazard itself: cloning the raw options is exactly what `new Worker(...)` does.
+    expect(() => structuredClone(opts)).toThrow();
+
+    const cloneable = workerCloneableOptions(opts);
+    expect("prepareQuest" in cloneable).toBe(false);
+    expect(structuredClone(cloneable)).toEqual(cloneable);
+    // Everything else is carried through untouched — a worker still honours the
+    // same policy/seeds/budget the parent parsed.
+    const { prepareQuest: _seam, ...rest } = opts;
+    expect(cloneable).toEqual(rest);
   });
 });

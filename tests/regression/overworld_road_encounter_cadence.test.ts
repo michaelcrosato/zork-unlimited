@@ -81,4 +81,58 @@ describe("authored overworld road encounter cadence", () => {
     expect(session.view().pendingRoadEncounter).toBeNull();
     expect(session.journey().acceptedDecisions).toBe(1);
   });
+
+  it("defers a due checkpoint that lands on the travel leg which raised a road encounter", () => {
+    const session = new OverworldSession(world);
+    const activeGoalId = session.journey().goal.id;
+    const choiceRoad = session.view().exits.find((exit) => {
+      const event = roadEventsByEdgeId.get(exit.id);
+      return (
+        event?.requires_choice === true &&
+        (event.active_goal_ids === undefined || event.active_goal_ids.includes(activeGoalId))
+      );
+    });
+    expect(choiceRoad).toBeDefined();
+
+    // Spend the journey up to one decision short of the first fixed checkpoint,
+    // so the travel below is decision 40 and the checkpoint comes due on it.
+    while (session.journey().acceptedDecisions < 39) {
+      session.recordQuestDecision(
+        `test:safe-boundary:${String(session.journey().acceptedDecisions + 1)}`,
+        { countsTowardJourney: true, reason: "situation_changed" },
+        true,
+      );
+    }
+
+    session.travel(choiceRoad!.id);
+
+    // The arrival is mid-scene: the road encounter is live and every other
+    // overworld action refuses until it is resolved. Materializing the
+    // Continue/End choice here would announce a "safe break" and then reject the
+    // one action the player is told to take.
+    expect(session.view().pendingRoadEncounter?.event.id).toBe(
+      roadEventsByEdgeId.get(choiceRoad!.id)!.id,
+    );
+    expect(session.journey()).toMatchObject({
+      status: "active",
+      acceptedDecisions: 40,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+    });
+
+    // The checkpoint is deferred, not dropped: resolving the encounter is a real
+    // safe boundary and surfaces it one decision later.
+    session.resolveRoadEncounter("press_on");
+
+    expect(session.view().pendingRoadEncounter).toBeNull();
+    expect(session.journey()).toMatchObject({
+      status: "awaiting_choice",
+      acceptedDecisions: 41,
+      nextCheckpoint: 40,
+      pendingChoice: { atDecision: 41, checkpoint: 40 },
+    });
+    expect(session.journey().pendingChoice?.message).toContain(
+      "You reached the first safe break after decision 40, now at decision 41.",
+    );
+  });
 });

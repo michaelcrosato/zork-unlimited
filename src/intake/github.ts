@@ -28,6 +28,7 @@
 import { execFileSync } from "node:child_process";
 import {
   defaultPriority,
+  SubmissionKindSchema,
   SubmissionPrioritySchema,
   submissionId,
   SUBMISSION_SCHEMA_VERSION,
@@ -271,8 +272,14 @@ export function submissionFromIssue(issue: PulledIssue): Submission {
   const priority: SubmissionPriority = labelled
     ? SubmissionPrioritySchema.parse(labelled.slice(3))
     : defaultPriority("human", "feature");
+  // Anyone with write access to the tracker can type `af:kind/frobnicate` onto an issue,
+  // so the label is untrusted input and is parsed rather than cast. A cast produced a
+  // submission whose `kind` was not in the schema at all, which the queue then wrote to
+  // disk and could never read back — one unparseable file per sync, forever, for a
+  // typo. An unrecognized kind falls back to the same default an unlabelled issue takes.
   const kindLabel = issue.labels.find((label) => label.startsWith("af:kind/"));
-  const kind = (kindLabel?.slice("af:kind/".length) ?? "feature") as Submission["kind"];
+  const parsedKind = SubmissionKindSchema.safeParse(kindLabel?.slice("af:kind/".length));
+  const kind: Submission["kind"] = parsedKind.success ? parsedKind.data : "feature";
   const now = new Date().toISOString();
 
   return {

@@ -215,7 +215,8 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   five codes `REPRODUCIBLE_CODES` admits (crash, integrity, render, persistence,
   softlock); desync, legality, world and orphan findings carry an unminimized
   repro. `npm run crawl:smoke` is the loop's gate (every cycle, deterministic,
-  ~35-85s wall depending on machine and load);
+  6,000 steps; ~20-35s wall on a fast machine and longer under load — not the
+  ~10s this line used to claim);
   `npm run crawl:deep` is a longer soak run nightly and on manual dispatch by
   `.github/workflows/deep-audit.yml`.
 - **Tier 2 — pure blind LLM playtest**: a fresh agent with NO repo access plays

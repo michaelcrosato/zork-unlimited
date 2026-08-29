@@ -256,6 +256,72 @@ describe("quest crawler", () => {
     expect(softlocks[0]!.message).toBe("live (non-ended) state has zero legal actions");
   });
 
+  // The negative-legality oracle's ACCEPT branch ("illegal action was accepted")
+  // had no witness anywhere in the suite: the only planted LEGALITY fault was the
+  // opposite direction (a listed-legal action rejected), so nothing proved the
+  // branch fires at all. Worse, `sampleIllegalAction` used to be an ordered
+  // fallback chain that returned an unlisted MOVE direction on its first branch —
+  // and no shipped room has all twelve compass directions legal at once, so the
+  // TAKE and ASK legs were dead code for real content and the oracle only ever
+  // probed movement rejection, never a TAKE of an absent object.
+  //
+  // Faking the fault takes BOTH halves of the engine's §8.4.1 gate: `makeStep`
+  // rejects anything outside `rules.legalActions` before it ever calls `resolve`,
+  // so the plant widens the legal set to every compass MOVE and every object TAKE
+  // (the two families the probe draws from) and then fabricates a resolution for
+  // whatever the real resolver refuses. The crawler picks its own actions from
+  // `enumerateRpgActions`, which the plant does not touch, so ordinary stepping is
+  // unaffected and only the synthesized probe action can trip the branch.
+  //
+  // Asserting on two DISTINCT families is what pins the pooled sampler: under the
+  // old first-branch-wins order only MOVE is ever reachable, so the TAKE assertion
+  // cannot pass no matter how long the crawl runs.
+  it("LEGALITY: an engine that accepts a sampled illegal action is caught, across action families", () => {
+    const pack = generateRpgPack(3);
+    const everyDirection = [
+      "north",
+      "south",
+      "east",
+      "west",
+      "up",
+      "down",
+      "in",
+      "out",
+      "northeast",
+      "northwest",
+      "southeast",
+      "southwest",
+    ] as const;
+    const prepared = preparePack(pack, {
+      wrapRules: (rules) => ({
+        ...rules,
+        legalActions: (state) => [
+          ...rules.legalActions(state),
+          ...everyDirection.map((direction) => ({ type: "MOVE" as const, direction })),
+          ...pack.objects.map((o) => ({ type: "TAKE" as const, item: o.id })),
+        ],
+        resolve: (state, action) =>
+          rules.resolve(state, action) ?? {
+            conditions: [],
+            effects: [{ narrate: "planted: the engine accepted an illegal action" }],
+          },
+      }),
+    });
+    const r = crawlQuest(prepared, {
+      ...OPTS,
+      maxSteps: 200,
+      illegalEvery: 5,
+      persistEvery: 0,
+    });
+    const accepted = r.findings.filter(
+      (f) => f.code === "LEGALITY" && f.message.startsWith("illegal action was accepted"),
+    );
+    expect(accepted.length).toBeGreaterThan(0);
+    const families = new Set(accepted.map((f) => (f.action as { type: string }).type));
+    expect(families.has("MOVE")).toBe(true);
+    expect(families.has("TAKE")).toBe(true);
+  });
+
   it("repro dedupe: a finding that fires every step builds its repro trace only once", () => {
     // Task 5 review fix: reproFor/buildRepro must not run on every duplicate-
     // fingerprint occurrence. Force EVERY legal action to be rejected ("no effect
@@ -292,6 +358,33 @@ describe("quest crawler", () => {
     // Unfixed (eager repro on every duplicate) would be ~maxSteps^2/2 ≈ 11,000+
     // resolve calls; fixed stays a small multiple of maxSteps.
     expect(resolveCalls).toBeLessThan(maxSteps * 10);
+  });
+
+  // The coverage numerator must measure EXERCISED surface. `actionIdsTried` was
+  // populated before the rejected-outcome branch, so an action the engine refused
+  // to apply — which changed nothing, and is itself a LEGALITY finding — still
+  // counted toward the `actions X/Y` ratio run.ts prints and writes into
+  // summary.{md,json}. A resolver that refuses everything is the extreme case: the
+  // crawl runs its full step budget, every step is a rejection, and the honest
+  // answer is that zero action surface was exercised.
+  it("coverage: an action the engine rejected is not counted as exercised surface", () => {
+    const prepared = preparePack(generateRpgPack(3), {
+      wrapRules: (rules) => ({ ...rules, resolve: () => null }),
+    });
+    const r = crawlQuest(prepared, {
+      seed: 11,
+      maxSteps: 120,
+      policy: "random",
+      commit: "test",
+      persistEvery: 0,
+      illegalEvery: 0,
+      desyncReplay: false,
+    });
+    expect(r.steps).toBe(120);
+    expect(r.findings.some((f) => f.code === "LEGALITY")).toBe(true);
+    expect(r.coverage.actionIdsTried).toEqual([]);
+    // The start room is still a visited room — only the ACTION numerator is affected.
+    expect(r.coverage.roomsVisited.length).toBeGreaterThan(0);
   });
 
   // Regression: a first step that ALWAYS fails used to hang the crawl. `totalSteps`

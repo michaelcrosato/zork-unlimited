@@ -171,12 +171,86 @@ describe("rung 1b — an id quoted inside a sentence", () => {
     expect(c("new_york_city")).toMatchObject({ kind: "unmapped" });
   });
 
+  it("resolves an id wrapped in punctuation exactly as the bare id does", () => {
+    // Regression: the rung was guarded on "raw has more than one token", but an id in
+    // markdown backticks — the near-universal way a model quotes a machine id — is ONE
+    // token, so it was skipped, while rung 1 had already missed it because its lookup
+    // key still carried the backticks. Reality check (content/rpg/quests/
+    // advocates_case.yaml): room id "market_stall", whose title ("The Market Stall")
+    // shares no distinguishing words with the id, so rungs 2-3 cannot rescue it either
+    // — every quoted spelling landed `unmapped`, keyed on its own raw wording.
+    const bare = { kind: "quest", questId: "advocates_case", sceneId: "market_stall" };
+    expect(c("market_stall")).toMatchObject(bare);
+    expect(c("`market_stall`")).toMatchObject(bare);
+    expect(c('"market_stall"')).toMatchObject(bare);
+    expect(c("(market_stall)")).toMatchObject(bare);
+    expect(c("market_stall.")).toMatchObject(bare);
+  });
+
+  it("keeps both id guards for a decorated id, not just for prose", () => {
+    // The punctuation spelling reaches rung 1b on the same terms prose does, so the two
+    // guards that keep the rung honest still apply: "armory" is a one-word id
+    // indistinguishable from the noun, and "gate_arch" is a room id in two quest packs.
+    expect(c("`armory`")).toMatchObject({ kind: "unmapped" });
+    expect(c("`gate_arch`")).toMatchObject({ kind: "unmapped" });
+  });
+
   it("matches whole tokens only, never an id that merely prefixes a longer one", () => {
     // "armory_annex" is not an id. It must not resolve to the "armory" room just
     // because that id is a prefix of it. ("armory" is chosen because its title, "The
     // Armory", is a single content token and so ineligible for rung 3 — this asserts
     // the token boundary rather than accidentally measuring a later rung.)
     expect(c("armory_annex was confusing")).toMatchObject({ kind: "unmapped" });
+  });
+});
+
+describe("rungs 2-3 — longest match wins between rival names", () => {
+  // Regression cover: a location whose human-facing NAME properly contains a shorter
+  // location's name used to be unresolvable from its own exact name, because both hit
+  // and the ladder read a two-candidate tie. That is the worst possible bucket for a
+  // blind-tester report — testers write the name the game showed them, and an unmapped
+  // location keys on its raw wording (cluster.ts locationKey), so corroboration can
+  // never accumulate. 51 of 783 shipped named locations were affected.
+  it("resolves a name that properly contains a shorter location's name", () => {
+    // Reality check (content/world/new_york_overworld.json): nodes "North Hempstead
+    // town" (north_hempstead_town) and "Hempstead town" (hempstead_town). The shorter
+    // name sits entirely inside the longer one at token boundaries, so both used to hit
+    // rung 2 and rung 3 and the raw stayed unmapped.
+    expect(c("North Hempstead town")).toMatchObject({
+      kind: "overworld",
+      node: "north_hempstead_town",
+    });
+    expect(c("the notice board in North Hempstead town would not open")).toMatchObject({
+      kind: "overworld",
+      node: "north_hempstead_town",
+    });
+    // Same shape one zoom level down: an area name built on the longer node name.
+    expect(c("North Hempstead Civic Center")).toMatchObject({
+      kind: "overworld",
+      node: "north_hempstead_town",
+    });
+  });
+
+  it("still resolves the shorter name on its own", () => {
+    // The preference must not shadow the contained location: nothing longer matches
+    // here, so its own name still resolves to it.
+    expect(c("Hempstead town")).toMatchObject({ kind: "overworld", node: "hempstead_town" });
+  });
+
+  it("refuses to force a pick when the shorter name is also mentioned on its own", () => {
+    // The rule drops redundancy, never rivalry: it is judged per OCCURRENCE, so a raw
+    // that names the shorter place somewhere the longer name does not cover keeps both
+    // candidates and falls through to unmapped, exactly as before.
+    expect(c("I went from Hempstead town to North Hempstead town and both stalled")).toMatchObject({
+      kind: "unmapped",
+    });
+  });
+
+  it("leaves two equally long rival names ambiguous", () => {
+    // Two distinct locations registered under the identical phrase cannot eclipse each
+    // other (neither span is strictly longer), so the tie survives. Reality check:
+    // "New York City" is both a region name and a node name in the real manifest.
+    expect(c("New York City")).toMatchObject({ kind: "unmapped" });
   });
 });
 

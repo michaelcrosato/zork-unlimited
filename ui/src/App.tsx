@@ -41,6 +41,7 @@ import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
+import { OPENING_CHAPTER_HORIZON } from "../../src/world/journey_contract.js";
 import type {
   JourneyChoice,
   JourneyOpportunityKind,
@@ -138,13 +139,36 @@ function containsGoalPhrase(goalCopy: string, candidate: string): boolean {
   return candidate.length > 0 && ` ${goalCopy} `.includes(` ${candidate} `);
 }
 
+const NORMALIZED_CHAPTER_HORIZON = normalizedGoalPhrase(OPENING_CHAPTER_HORIZON);
+
+/**
+ * The copy that describes where the CURRENT goal points.
+ *
+ * The journey's guidance ends with the engine's end-of-chapter horizon, which
+ * names the OPTIONAL next chapter ("carry its results into the optional
+ * Gallowmere chapter") purely so the player understands what Continue and End
+ * mean at the coming checkpoint. That sentence is not direction: matching quest
+ * titles against it labelled the route into Gallowmere's district "Next for
+ * current goal" from the first turn of the opening chapter, while the actual
+ * goal was Wolf-Winter in Albany. Drop the horizon — by the engine's own
+ * constant, so a rewording of it cannot silently reopen the mislabel — and
+ * match only the part of the copy that describes this goal.
+ */
+function goalDirectionCopy(goalText: string, goalGuidance: string | null | undefined): string {
+  return normalizedGoalPhrase(`${goalText} ${goalGuidance ?? ""}`)
+    .split(NORMALIZED_CHAPTER_HORIZON)
+    .join(" ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 /** Resolve destination ids from visible goal copy without hard-coding a quest or area. */
 export function goalRelevantAreaIds(
   goalText: string,
   goalGuidance: string | null | undefined,
   quests: readonly Pick<OverworldQuest, "title" | "area">[],
 ): ReadonlySet<string> {
-  const goalCopy = normalizedGoalPhrase(`${goalText} ${goalGuidance ?? ""}`);
+  const goalCopy = goalDirectionCopy(goalText, goalGuidance);
   return new Set(
     quests
       .filter((quest) => {
@@ -1498,9 +1522,7 @@ export default function App(): JSX.Element {
     });
   }
 
-  const visibleGoalText = normalizedGoalPhrase(
-    `${journey.goal.text} ${journey.goalGuidance ?? ""}`,
-  );
+  const visibleGoalText = goalDirectionCopy(journey.goal.text, journey.goalGuidance);
   const goalAreaIds = goalRelevantAreaIds(
     journey.goal.text,
     journey.goalGuidance,

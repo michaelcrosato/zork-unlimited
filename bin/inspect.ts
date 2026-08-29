@@ -102,7 +102,14 @@ function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
   console.log(
     `\nReplay: ${replay.ok ? "OK" : "DIVERGED"}  final ${replay.finalHash}${replay.expectedFinalHash ? ` (expected ${replay.expectedFinalHash})` : ""}`,
   );
-  const d = diagnose(rules, trace.initial_state, trace.actions);
+  // `diagnose` defaults to "any ending wins", so without this predicate a run that
+  // ended on a DEATH ending is summarized as `no_failure` (low) and the debugger's
+  // one high-severity ending verdict, `death_unrecoverable`, can never be reached
+  // from this surface. The pack already knows: EndingSchema carries `death`.
+  const d = diagnose(rules, trace.initial_state, trace.actions, {
+    isWinningEnding: (endingId) =>
+      index.pack.endings.find((e) => e.id === endingId)?.death !== true,
+  });
   console.log(`Suspected bug: ${d.type} (${d.severity}) — ${d.description}`);
 }
 

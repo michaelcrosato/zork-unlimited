@@ -1344,15 +1344,29 @@ export const TOOL_REGISTRATIONS: ToolRegistration[] = [];
  * else creates or advances a session (a session-store mutation), so it is left as the
  * mutating default. This engine is closed and deterministic, so EVERY tool is
  * non-destructive and non-open-world (no external entities); read-only tools are also
- * idempotent (same args ⇒ same result).
+ * idempotent in the MCP sense (repeating the call adds no further effect).
+ *
+ * Membership is decided by what a tool CAN do, not by what the common call does.
+ * `get_overworld_session_context` and `inspect_overworld_session_story` are reads for
+ * most arguments, but `reveal_station_dispatch_support` / `reveal_id` route into
+ * `revealStationDispatchSupport` / `revealJourneyStory`, which write a durable reveal
+ * receipt into `persistenceState()` and therefore move the snapshot hash the agent is
+ * holding. A client that trusts `readOnlyHint` on those would auto-approve, cache, or
+ * replay a call that silently invalidates every `expected_snapshot_hash` /
+ * `if_snapshot_hash` it retained, so both are annotated as mutating. Annotations are
+ * per-tool and static; there is no way to say "read-only unless this argument is
+ * present", and the conservative side of that is the honest one.
+ *
+ * Note also that read-only is NOT "same args ⇒ byte-identical response": the compact
+ * legend is disclosed once per session, so a repeated `plan_overworld_session_route`
+ * returns the same route with no second `legend_delta`. That is a disclosure ledger,
+ * not game state, which is why these tools stay idempotent.
  */
 export const READ_ONLY_TOOLS = new Set<string>([
   "list_overworld",
   "get_overworld_session",
-  "get_overworld_session_context",
   "explain_overworld_session_opportunity",
   "export_overworld_session",
-  "inspect_overworld_session_story",
   "plan_overworld_session_route",
   "get_observation",
   "list_legal_actions",
@@ -1780,7 +1794,7 @@ const STATION_SUPPORT = {
     .describe(
       PLAY_MODE === "pure"
         ? "Station board[5] reveal id. Also pass the latest if_snapshot_hash."
-        : "Reveal Station support without changing state. Pass the exact board[5] id.",
+        : "Station board[5] reveal id. Records a durable receipt, so the snapshot hash moves.",
     ),
 };
 const OVERWORLD_READ_DETAILS = PLAY_MODE === "pure" ? {} : { ...S, ...W, ...IDS, ...ROUTES };

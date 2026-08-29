@@ -14,13 +14,30 @@
  * `findings.push`, an inverted guard, a `??` default that swallows the case) would pass
  * every existing test GREEN — the present-but-untested-checker surface.
  *
- * The six this corpus closes:
+ * The six this corpus opened with:
  *   - MISSING_STAT            — meta.vars_init lacks a required HP/attack/defense stat
  *   - BAD_HP                  — starting HP is not positive
  *   - ENEMY_ROOM_MISSING      — an enemy stands in a room that does not exist
  *   - ENEMY_DEATH_NOT_DEATH   — an enemy's death_ending names a NON-death ending
  *   - SKILL_CHECK_IMPOSSIBLE  — a check whose difficulty exceeds d20 + best skill
  *   - END_GAME_UNDECLARED     — an RPG-only branch (on_defeat) ends at an undeclared ending
+ *
+ * Then the same blind spot re-opened, exactly as the foundation corpus predicted it
+ * would. `validateRpg` grew from those ten codes to 33 while this list stayed a
+ * hand-written six, and a later audit found MANEUVER_SEQUENCE_ENEMY_GATE_VOLATILE and
+ * MANEUVER_SEQUENCE_HP_CONDITION appearing NOWHERE in the repository outside their
+ * three emit sites — invert either guard and every test stayed green. The fix the
+ * foundation corpus already carries was never brought across: derive the required code
+ * set BY SCANNING THE VALIDATOR SOURCE, so a code that gains an emit site fails this
+ * suite until it is either fixtured here or consciously allowlisted with a witness
+ * elsewhere. The coverage pin below does that, and the two orphaned maneuver-sequence
+ * codes are fixtured as cases seven and eight:
+ *   - MANEUVER_SEQUENCE_ENEMY_GATE_VOLATILE — an active-state condition on a sequenced
+ *     enemy reads one of its own maneuver result flags, so committing an opening could
+ *     make the live foe vanish between beats
+ *   - MANEUVER_SEQUENCE_HP_CONDITION        — a sequenced enemy (or one of its
+ *     maneuvers) gates on combat HP, which changes between beats and cannot be treated
+ *     as an encounter constant
  *
  * Method (the bug_0118/0179 copy-mutate discipline): the GREEN base is the canonical
  * sound pack `generateRpgPack(0)` — it validates clean and carries every structure the
@@ -34,10 +51,12 @@
  * schema/generator/corpus/protected-file change, no hash re-pin — the validator is
  * exercised exactly as shipped.
  */
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect } from "vitest";
+import type { Enemy, RpgPack } from "../../src/rpg/schema.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
-import type { RpgPack } from "../../src/rpg/schema.js";
 
 // The canonical sound pack: validates clean (pinned green by rpg_generator.test.ts).
 const GREEN: RpgPack = generateRpgPack(0);
@@ -52,6 +71,38 @@ const firstEnemy = (p: RpgPack) => {
   const e = p.enemies[0];
   if (!e) throw new Error("base pack has no enemy to mutate");
   return e;
+};
+
+/**
+ * Installs an INERT two-maneuver follow-through sequence on the first enemy and hands
+ * it back. The maneuver-sequence checks only run for an enemy that declares `after`,
+ * so the two sequence cases need this scaffold before their defect — and the scaffold
+ * itself must add no finding, which the differential anchor below asserts outright.
+ */
+const withManeuverSequence = (p: RpgPack): Enemy => {
+  const enemy = firstEnemy(p);
+  enemy.maneuvers = [
+    {
+      id: "opening_drive",
+      command: "drive in low",
+      conditions: [],
+      result_flag: "opening_drive_used",
+      attack_bonus: 2,
+      defense_bonus: -1,
+      narration: "You drive in low.",
+    },
+    {
+      id: "follow_cut",
+      command: "follow with a cut",
+      after: "opening_drive",
+      conditions: [],
+      result_flag: "follow_cut_used",
+      attack_bonus: 1,
+      defense_bonus: 0,
+      narration: "You follow the drive with a cut.",
+    },
+  ];
+  return enemy;
 };
 
 /** Each case = one single-defect mutation of the GREEN base, expected to emit `code`. */
@@ -116,6 +167,25 @@ const CASES: NegativeCase[] = [
       firstEnemy(p).on_defeat.push({ end_game: "no_such_ending" } as never);
     },
   },
+  {
+    code: "MANEUVER_SEQUENCE_ENEMY_GATE_VOLATILE",
+    why: "a sequenced enemy's active-state condition reads its own maneuver result flag",
+    mutate: (p) => {
+      // Committing the opening sets `opening_drive_used`, which would then switch the
+      // live foe off mid-sequence — the enemy the player is halfway through fighting.
+      withManeuverSequence(p).conditions = [{ not_flag: "opening_drive_used" }];
+    },
+  },
+  {
+    code: "MANEUVER_SEQUENCE_HP_CONDITION",
+    why: "a sequenced enemy gates its active state on combat HP, which moves between beats",
+    mutate: (p) => {
+      // HP changes every exchange, so it cannot be treated as an encounter constant
+      // the way the sequence analysis needs. (The validator emits the same code for a
+      // MANEUVER-level HP condition; that branch is pinned separately below.)
+      withManeuverSequence(p).conditions = [{ var_gte: { name: "hp", value: 5 } }];
+    },
+  },
 ];
 
 describe("validateRpg negative corpus — rejection-direction witnesses (bug_0182)", () => {
@@ -143,5 +213,135 @@ describe("validateRpg negative corpus — rejection-direction witnesses (bug_018
       c.mutate(mutant);
       expect(codesOf(mutant).length).toBeGreaterThan(0);
     }
+  });
+
+  it("the maneuver-sequence scaffold is INERT (the two sequence cases isolate their defect)", () => {
+    // Both sequence cases install `withManeuverSequence` before their condition. If the
+    // scaffold itself raised anything, those cases would prove nothing about the guard
+    // they name — they would only prove that adding maneuvers is rejected.
+    const scaffolded = structuredClone(GREEN);
+    withManeuverSequence(scaffolded);
+    expect(codesOf(scaffolded)).toEqual([]);
+    expect(validateRpg(scaffolded).ok).toBe(true);
+  });
+
+  it("REJECTS MANEUVER_SEQUENCE_HP_CONDITION at the MANEUVER level too", () => {
+    // The code has two emit sites: the enemy's own conditions (a CASE above) and any
+    // maneuver's conditions. Inverting either one alone must not pass this suite.
+    const mutant = structuredClone(GREEN);
+    const enemy = withManeuverSequence(mutant);
+    enemy.maneuvers![0]!.conditions = [{ var_gte: { name: "hp", value: 5 } }];
+    const report = validateRpg(mutant);
+    expect(report.ok).toBe(false);
+    expect(report.findings.map((f) => f.code)).toEqual(["MANEUVER_SEQUENCE_HP_CONDITION"]);
+  });
+});
+
+/**
+ * The coverage pin. Without it this corpus pinned only what somebody remembered to add:
+ * the hand-written case list above was written against a validator that emitted ten
+ * codes, `validateRpg` now emits 33, and nothing failed when the gap opened. So invert
+ * the direction, exactly as rpg_foundation_negative_corpus.test.ts does — read the emit
+ * sites out of the validator SOURCE and require every one to have a witness, with the
+ * remainder as an EXPLICIT allowlist. Adding a finding code now fails this suite until
+ * it is fixtured here or consciously listed below.
+ *
+ * Source-parsing keeps the corpus purely additive: no validator change is needed to
+ * make its codes machine-readable.
+ */
+describe("validateRpg finding-code coverage pin", () => {
+  const validatorSource = readFileSync("src/validate/rpg_validator.ts", "utf8");
+  const emittedCodes = [
+    ...new Set(
+      [...validatorSource.matchAll(/\b(?:err|warn)\(\s*"([A-Z][A-Z0-9_]*)"/g)].map((m) => m[1]!),
+    ),
+  ].sort();
+
+  /**
+   * Codes with no fixture in THIS file. Every entry carries a rejection-direction
+   * witness elsewhere in the suite — the maneuver family in
+   * tests/regression/rpg_enemy_maneuvers.test.ts, the combat bounds across
+   * rpg_combat_guaranteed_optin / rpg_combat_winnability_semantics /
+   * dawn_beacon_guaranteed_gauntlet, ENEMY_DEATH_ENDING_UNDECLARED in
+   * rpg_authoring_loop.test.ts, and the pressure tracks in
+   * tests/unit/rpg_pressure_tracks.test.ts. The allowlist keeps the data-driven pin
+   * honest without duplicating those already-strong probes, and the checks below stop
+   * it from becoming a place to park an unwitnessed code. Sorted, to compare against
+   * the sorted emit-site scan.
+   */
+  const WITNESS_ALLOWLIST = [
+    "COMBAT_GAUNTLET_NOT_GUARANTEED",
+    "COMBAT_NOT_GUARANTEED",
+    "COMBAT_UNWINNABLE",
+    "DUPLICATE_MANEUVER_COMMAND",
+    "DUPLICATE_MANEUVER_ID",
+    "DUPLICATE_MANEUVER_RESULT_FLAG",
+    "ENEMY_DEATH_ENDING_UNDECLARED",
+    "MANEUVER_ACTION_ID_COLLISION",
+    "MANEUVER_AFTER_CYCLE",
+    "MANEUVER_AFTER_MISSING",
+    "MANEUVER_AFTER_NOT_ROOT",
+    "MANEUVER_AFTER_SELF",
+    "MANEUVER_DEFEAT_FLAG_COLLISION",
+    "MANEUVER_NO_MODIFIER",
+    "MANEUVER_RESOURCE_EFFECT_CONFLICT",
+    "MANEUVER_RESOURCE_EFFECT_DUPLICATE",
+    "MANEUVER_RESOURCE_EFFECT_UNGUARDED",
+    "MANEUVER_RESULT_FLAG_CLEARED",
+    "MANEUVER_RESULT_FLAG_FOREIGN_WRITER",
+    "MANEUVER_RESULT_FLAG_INITIALIZED",
+    "MANEUVER_SEQUENCE_ANALYSIS_LIMIT",
+    "MANEUVER_SEQUENCE_ENCOUNTER_UNPROVEN",
+    "MANEUVER_SEQUENCE_NO_ROOT",
+    "PRESSURE_INITIAL_BELOW_MIN",
+    "PRESSURE_VAR_UNDECLARED",
+  ];
+
+  /** Every `*.test.ts` in the suite EXCEPT this file — whose allowlist literal above
+   *  would otherwise "witness" every code it lists, making the check vacuous. */
+  const SELF = "rpg_validator_negative_corpus.test.ts";
+  const otherTestSources: { file: string; source: string }[] = [];
+  const collect = (directory: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) collect(path);
+      else if (entry.name.endsWith(".test.ts") && entry.name !== SELF)
+        otherTestSources.push({ file: path, source: readFileSync(path, "utf8") });
+    }
+  };
+  collect("tests");
+
+  const fixturedHere = new Set(CASES.map((c) => c.code));
+
+  it("reads the validator's emit sites at all (the source scan is never vacuous)", () => {
+    // If the emit shape changes, this must fail loudly rather than quietly concluding
+    // the validator emits nothing and passing the coverage check by default.
+    expect(emittedCodes.length).toBeGreaterThan(30);
+    expect(emittedCodes).toContain("COMBAT_UNWINNABLE");
+    expect(emittedCodes).toContain("MISSING_STAT");
+    expect(emittedCodes).toContain("MANEUVER_SEQUENCE_HP_CONDITION");
+    expect(otherTestSources.length).toBeGreaterThan(100);
+  });
+
+  it("every validateRpg finding code has a fixture here, or is explicitly allowlisted", () => {
+    expect(emittedCodes.filter((code) => !fixturedHere.has(code))).toEqual(WITNESS_ALLOWLIST);
+  });
+
+  it("the allowlist carries no stale entries", () => {
+    // A code that gained a fixture here must leave the list...
+    expect(WITNESS_ALLOWLIST.filter((code) => fixturedHere.has(code))).toEqual([]);
+    // ...and a code the validator no longer emits must leave it too.
+    expect(WITNESS_ALLOWLIST.filter((code) => !emittedCodes.includes(code))).toEqual([]);
+  });
+
+  it("every allowlisted code is named by some other test file", () => {
+    // The floor that stops the allowlist from becoming the exemption the pin exists to
+    // prevent: a code parked here with no test naming it anywhere fails immediately.
+    // (Naming is necessary, not sufficient — the strong witness is that file's
+    // assertion, which is why fixturing here is always the better answer.)
+    const unwitnessed = WITNESS_ALLOWLIST.filter(
+      (code) => !otherTestSources.some((entry) => entry.source.includes(code)),
+    );
+    expect(unwitnessed).toEqual([]);
   });
 });

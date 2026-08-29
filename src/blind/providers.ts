@@ -57,7 +57,20 @@ export type PlaytestProviderKind = z.infer<typeof PlaytestProviderKindSchema>;
  * rather than trusted silently.
  */
 export const PlaytestIsolationSchema = z.enum([
-  /** The runner owns argv, cwd, and the tool allowlist, and records proof. */
+  /**
+   * The runner owns argv, cwd, and the tool allowlist, and records proof.
+   *
+   * This is a claim about what `blind-tester/run.sh` can do TODAY, not about what a
+   * vendor is capable of in principle. Shipping a headless CLI is not enough: the
+   * proof is read back out of the client's own session logs, and the runner has a
+   * launch branch and a log reader for exactly one vendor. A provider stamped
+   * `runner_enforced` that the runner cannot launch is the worst possible error in
+   * this file — every session it ever produces is necessarily hand-played, yet the
+   * recorder stamps it with the strongest evidence label in the system and the QA
+   * pipeline then lets it move experience metrics. Set this to `operator_attested`
+   * until the runner can actually witness the vendor, then flip it; sessions keep
+   * whatever label was honest when they were recorded.
+   */
   "runner_enforced",
   /** A human asserts the client had only the AdventureForge MCP tools attached. */
   "operator_attested",

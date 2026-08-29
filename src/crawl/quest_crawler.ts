@@ -83,6 +83,10 @@ export type QuestCrawlResult = {
   endingsReached: string[];
   findings: CrawlFinding[];
   totalRawFindings: number;
+  /** `actionIdsTried` holds only the ids the engine actually APPLIED — an action
+   *  the engine rejected exercised nothing and is itself a LEGALITY finding, so
+   *  it must not inflate the coverage numerator `run.ts` prints as `actions X/Y`
+   *  (the policy's own repeat-avoidance uses a separate attempted-ids set). */
   coverage: { roomsVisited: string[]; actionIdsTried: string[] };
 };
 
@@ -178,7 +182,17 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
     commit: opts.commit,
   });
   const roomsVisited = new Set<string>();
-  const actionIdsTried = new Set<string>();
+  // Two distinct sets, because the two consumers want different questions
+  // answered. `actionIdsAttempted` steers the coverage/mixed policies away from
+  // repeats (`PolicyContext.triedActionIds`) and must therefore include an id
+  // the engine REJECTED — otherwise the policy keeps re-picking the same
+  // never-satisfiable option as "untried" and exploration collapses.
+  // `actionIdsApplied` is the reported coverage numerator, and a rejected action
+  // exercised nothing: it left state untouched by the engine contract (and is
+  // itself a LEGALITY finding). Counting it made `actions X/Y` measure neither
+  // exercised surface nor attempted surface.
+  const actionIdsAttempted = new Set<string>();
+  const actionIdsApplied = new Set<string>();
   const episodes: EpisodeRecord[] = [];
   const endingsReached = new Set<string>();
   let totalSteps = 0;
@@ -405,7 +419,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
       // minimized repro trace can never drift from what the live crawl saw.
       const choice = policy.pick(options, {
         visitedRooms: roomsVisited,
-        triedActionIds: actionIdsTried,
+        triedActionIds: actionIdsAttempted,
       });
       const outcome = runStepOracles({
         prepared,
@@ -425,7 +439,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
       }
 
       record.actions.push(choice.action);
-      actionIdsTried.add(choice.id);
+      actionIdsAttempted.add(choice.id);
 
       if (outcome.kind === "rejected") {
         addFinding(
@@ -443,6 +457,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
       }
 
       // outcome.kind === "applied"
+      actionIdsApplied.add(choice.id);
       state = outcome.state;
       roomsVisited.add(state.current);
       record.perStepHashes.push(hashState(state));
@@ -567,7 +582,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
     totalRawFindings: collector.totalRaw,
     coverage: {
       roomsVisited: [...roomsVisited].sort(),
-      actionIdsTried: [...actionIdsTried].sort(),
+      actionIdsTried: [...actionIdsApplied].sort(),
     },
   };
 }

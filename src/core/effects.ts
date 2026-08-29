@@ -6,13 +6,13 @@
  * is closed — content cannot introduce new effect kinds (§14 gate).
  */
 import { z } from "zod";
-import type { GameState, ObjectRuntime } from "./state.js";
+import { readVar, type GameState, type ObjectRuntime } from "./state.js";
 import type { GameEvent } from "./events.js";
 
 // Numeric var operands must be FINITE: a NaN/±Infinity literal in content is a
 // hard validation error, never a playable pack. This stops a content bug from
-// silently poisoning var comparisons (var_gte/lte/eq all coerce with `?? 0` and
-// behave surprisingly against NaN). Runtime accumulation is guarded separately
+// silently poisoning var comparisons (var_gte/lte/eq all read through `readVar`'s
+// 0 default and behave surprisingly against NaN). Runtime accumulation is guarded separately
 // (see `guardFinite`) for the overflow case the schema cannot see statically.
 const NameValue = z.object({ name: z.string().min(1), value: z.number().finite() }).strict();
 const NameBy = z.object({ name: z.string().min(1), by: z.number().finite() }).strict();
@@ -125,7 +125,7 @@ export function applyEffect(
     };
   }
   if ("set_var" in effect) {
-    const prior = state.vars[effect.set_var.name] ?? 0;
+    const prior = readVar(state.vars, effect.set_var.name);
     const { value, diagnostic } = guardFinite(effect.set_var.name, effect.set_var.value, prior);
     return {
       state: { ...state, vars: { ...state.vars, [effect.set_var.name]: value } },
@@ -139,7 +139,7 @@ export function applyEffect(
     };
   }
   if ("inc_var" in effect) {
-    const prior = state.vars[effect.inc_var.name] ?? 0;
+    const prior = readVar(state.vars, effect.inc_var.name);
     const { value: next, diagnostic } = guardFinite(
       effect.inc_var.name,
       prior + effect.inc_var.by,
@@ -164,7 +164,7 @@ export function applyEffect(
     };
   }
   if ("dec_var" in effect) {
-    const prior = state.vars[effect.dec_var.name] ?? 0;
+    const prior = readVar(state.vars, effect.dec_var.name);
     const { value: next, diagnostic } = guardFinite(
       effect.dec_var.name,
       prior - effect.dec_var.by,
@@ -276,7 +276,28 @@ export function applyEffect(
   return _exhaustive;
 }
 
-/** Apply a list of effects IN ORDER. Returns the new state and ordered events. */
+/**
+ * Apply a list of effects IN ORDER. Returns the new state and ordered events.
+ *
+ * The list stops at `end_game`. Termination is a property of the STATE, not of a
+ * particular call site, so the reducer has to hold it: the engine's own
+ * ended-guards (engine.ts — next action, on_enter, checkWin) all sit OUTSIDE this
+ * loop and can only stop the NEXT list, never the rest of the current one. Without
+ * the check here, `[{end_game:"died"},{goto:"room_b"},{add_item:"sword"},{end_game:"won"}]`
+ * ends the game, then keeps mutating it, and the LAST end_game silently overwrites
+ * `endingId` — so the player is told they died and then handed a second `ending`
+ * event for a victory, in a room they were moved to after death.
+ *
+ * That shape is one authoring slip away, and no validator objects: both validators
+ * only check that an `end_game` target is a declared ending, never where it sits in
+ * a list. The live routes that build such a list are ordinary composition, not
+ * exotica — `resolveSkillCheck` returns `[lead, ...on_failure, ...on_failure_when]`
+ * and the RPG runner concatenates a check's effects onto the interaction's, then
+ * `withRpgDialogueInterruption` appends its dialogue-close `set_var` after all of it.
+ * No shipped pack orders one this way today, so every recorded trace and pinned
+ * per-step hash is unchanged; this keeps it that way by construction rather than by
+ * authoring luck.
+ */
 export function applyEffects(
   effects: Effect[],
   state: GameState,
@@ -284,6 +305,10 @@ export function applyEffects(
   let cur = state;
   const events: GameEvent[] = [];
   for (const e of effects) {
+    // The game is over: nothing further in this list lands, and nothing further
+    // is reported. The effect that ENDED it has already been applied and its
+    // `ending` event pushed, so a terminal list still narrates in full.
+    if (cur.ended) break;
     // `remove_item` is intentionally idempotent. An authored cleanup list may
     // cover several mutually exclusive routes, so the item is not necessarily
     // present on every path. Keep that no-op out of the event log: reporting a

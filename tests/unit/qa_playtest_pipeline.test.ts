@@ -32,7 +32,8 @@ import {
   summarizePlaytestStore,
   writePlaytestSession,
 } from "../../src/qa/session_store.js";
-import { derivePromotion, isActionable, ticketId } from "../../src/qa/ticket.js";
+import { derivePromotion, isActionable, ticketId, type QaTicket } from "../../src/qa/ticket.js";
+import { readTickets, writeTickets } from "../../src/qa/ticket_store.js";
 import { triagePlaytestCorpus } from "../../src/qa/triage.js";
 import { submissionsFromTickets } from "../../src/qa/ticket_submission.js";
 import { buildLocationIndex } from "../../src/feedback/normalize.js";
@@ -355,6 +356,112 @@ describe("ticket promotion", () => {
     expect(isActionable({ ...base, promotion: "accumulating" })).toBe(false);
     expect(isActionable({ ...base, promotion: "corroborated" })).toBe(true);
     expect(isActionable({ ...base, promotion: "verified", status: "wont_fix" })).toBe(false);
+  });
+});
+
+describe("the QA bucket on disk", () => {
+  function ticketOnDisk(over: Partial<QaTicket> = {}): QaTicket {
+    return {
+      schema_version: 1,
+      ticket_id: "0".repeat(16),
+      title: "a ticket",
+      kind: "bug",
+      severity: "S2",
+      status: "open",
+      promotion: "corroborated",
+      location: "steading_yard",
+      excerpts: [],
+      evidence: {
+        report_count: 1,
+        families: ["gpt"],
+        providers: ["codex"],
+        tiers: ["volume"],
+        has_runner_enforced_report: true,
+        session_ids: ["s"],
+        first_seen_build: "a".repeat(40),
+        last_seen_build: "a".repeat(40),
+        first_seen_at: "2026-08-28T12:00:00.000Z",
+        last_seen_at: "2026-08-28T12:00:00.000Z",
+      },
+      priority: 4,
+      ...over,
+    };
+  }
+
+  // Triage carries unmatched prior tickets forward so this cleanup only ever drops
+  // something a caller deliberately dropped — but that protection needs the caller to
+  // have been able to READ the ticket. A file that stopped parsing (schema bump,
+  // hand-edit, partial write) never reaches the carried-forward list, so the cleanup
+  // deleted it and took a maintainer's `wont_fix` and notes with it, silently.
+  it("leaves a ticket file it cannot parse in place instead of deleting it", () => {
+    const dir = tempDir();
+    const damaged = join(dir, `S3-bug-${"f".repeat(16)}.json`);
+    writeFileSync(damaged, '{ "schema_version": 1, "ticket_id": "trunc', "utf8");
+
+    writeTickets([ticketOnDisk()], dir);
+
+    expect(readFileSync(damaged, "utf8")).toContain("trunc");
+    const reread = readTickets(dir);
+    expect(reread.tickets).toHaveLength(1);
+    expect(reread.unreadable).toHaveLength(1);
+  });
+
+  it("still removes a ticket the caller genuinely dropped", () => {
+    const dir = tempDir();
+    writeTickets([ticketOnDisk(), ticketOnDisk({ ticket_id: "1".repeat(16) })], dir);
+    expect(readTickets(dir).tickets).toHaveLength(2);
+    writeTickets([ticketOnDisk()], dir);
+    expect(readTickets(dir).tickets).toHaveLength(1);
+  });
+});
+
+describe("what kind of work a ticket is", () => {
+  const transcript = "line one\nline two\n";
+
+  function kindOf(interview: PlaytestSessionBody["exit_interview"]): string {
+    const store = tempDir();
+    writePlaytestSession(
+      store,
+      sealPlaytestSession(body({ exit_interview: interview })),
+      transcript,
+    );
+    const { tickets } = triagePlaytestCorpus({
+      sessions: listPlaytestSessions(store).entries.map((entry) => entry.record),
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+    });
+    expect(tickets).toHaveLength(1);
+    return tickets[0]!.kind;
+  }
+
+  // S1 is the exit interview's "minor" rung, and a player may file a BUG at it. Reading
+  // the kind off severity therefore routed every minor defect as experience work — and
+  // since `kind` is part of `ticketId`, that ticket also re-keyed itself into a second
+  // piece of work the first time an S2 report joined the same cluster.
+  it("routes a minor bug as a bug rather than as experience", () => {
+    expect(
+      kindOf({
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: "quest wolf_winter, room steading_yard",
+            severity: "S1" as const,
+            note: "The lantern's description still calls it lit after it burns out.",
+          },
+        ],
+      }),
+    ).toBe("bug");
+  });
+
+  it("still routes a bare confusion as experience work", () => {
+    expect(
+      kindOf({
+        ...INTERVIEW,
+        confusions: ["the dispatch board did not say which option commits"],
+        bugs: [],
+      }),
+    ).toBe("experience");
   });
 });
 

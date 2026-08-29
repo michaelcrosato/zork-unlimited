@@ -4,6 +4,7 @@ import {
   loadStartingSliceCausalMatrix,
   parseStartingSliceCausalMatrix,
 } from "../../src/starting_slice/causal_matrix.js";
+import { STARTING_SLICE_MAX_TYPICAL_FIRST_GOAL_DECISIONS } from "../../src/starting_slice/fleet_certifier.js";
 
 describe("starting-slice causal matrix", () => {
   it("is machine-readable, uniquely keyed, and counts only proven opening forks", () => {
@@ -100,6 +101,20 @@ describe("starting-slice causal matrix", () => {
     premature.forks[1]!.counts_toward_contract = false;
     expect(() => parseStartingSliceCausalMatrix(premature)).toThrow(
       /Certification requires 12 material forks/,
+    );
+  });
+
+  it("declares the same decision budget the fleet certifier gates on", () => {
+    // The slice contract lives here; the gate that enforces it lives in
+    // fleet_certifier.ts. They were two unlinked copies of one number — tightening the
+    // matrix's budget would have left the certifier passing runs at the old, looser
+    // bar with nothing to say so. Neither file is the source of truth for the other,
+    // so this pin is what makes a change to either a deliberate change to both
+    // (including the gate KEY, `completion_p50_at_most_45_decisions`, which spells the
+    // number out in the published certification JSON).
+    const matrix = loadStartingSliceCausalMatrix();
+    expect(matrix.contract.maximum_typical_first_goal_decisions).toBe(
+      STARTING_SLICE_MAX_TYPICAL_FIRST_GOAL_DECISIONS,
     );
   });
 });

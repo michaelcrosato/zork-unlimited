@@ -8,6 +8,20 @@ import { fileURLToPath } from "node:url";
  * one job. Keep only the material outliers here; ordinary and future files use
  * the measured residual-file baseline below and are still discovered at run
  * time.
+ *
+ * A sample is only an outlier for as long as the file it names still does the work
+ * that was measured. This table is a frozen one-shot snapshot with nothing that
+ * re-measures it, so an entry can outlive its file: the two ending-render proofs sat
+ * here at ~272s and ~271s each long after 303dc6b6 (2026-08-01) rewrote both into
+ * 28-line fast companion guards that now run in 1.2s of test body time TOGETHER. That
+ * was 543s of phantom cost in a 6,823s table — 8% — inflating the reported per-shard
+ * estimate from roughly 63 to 67.9 minutes, and the two entries only kept the split
+ * balanced because they happened to land one per shard. They are re-pinned below at
+ * the residual-file baseline: with the expensive traversal gone they are ordinary
+ * files, and that baseline is this table's own CI-measured price for an ordinary file.
+ * When rewriting a listed file, re-measure or re-baseline its entry in the same change —
+ * the dangerous direction is the reverse of this one, since a file that grows expensive
+ * carries no entry at all and is packed as if trivial.
  */
 export const MEASURED_TEST_COST_MS: Readonly<Record<string, number>> = {
   "tests/regression/rpg_metamorphic_observation_stream.test.ts": 1_592_521,
@@ -18,8 +32,6 @@ export const MEASURED_TEST_COST_MS: Readonly<Record<string, number>> = {
   "tests/regression/rpg_all_endings_reachable.test.ts": 315_297,
   "tests/regression/no_dead_pocket.test.ts": 303_808,
   "tests/regression/overworld_cli.test.ts": 285_798,
-  "tests/regression/nondeath_endings_render_cleanly.test.ts": 272_925,
-  "tests/regression/death_endings_render_cleanly.test.ts": 270_542,
   "tests/regression/mcp_pure_play_mode.test.ts": 167_316,
   "tests/acceptance/fleet_mock_pipeline.test.ts": 100_156,
   "tests/unit/crawl_quest_crawler.test.ts": 88_648,
@@ -33,6 +45,14 @@ export const MEASURED_TEST_COST_MS: Readonly<Record<string, number>> = {
   "tests/acceptance/crawler_fault_injection.test.ts": 41_269,
   "tests/regression/overworld_snapshot_integrity.test.ts": 37_362,
   "tests/starting_slice/cade_return_packet_counterfactual.test.ts": 35_416,
+  // Re-measured 2026-08-28, and no longer outliers: these two sat at 272_925 and
+  // 270_542 from the 2026-07-27 run until 303dc6b6 (2026-08-01) rewrote both into
+  // 28-line fast companion guards for the unified ending proof. They now run in 1.2s
+  // of body time TOGETHER. They stay listed at the residual-file baseline rather than
+  // being dropped, so the table keeps the record that they WERE outliers and are not
+  // any more; the scheduling result is identical either way.
+  "tests/regression/nondeath_endings_render_cleanly.test.ts": 3_000,
+  "tests/regression/death_endings_render_cleanly.test.ts": 3_000,
 };
 
 // The same run's unlisted files averaged about 3s of test body time. This is

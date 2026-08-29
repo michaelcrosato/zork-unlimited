@@ -1172,14 +1172,17 @@ describe("MCP pure play mode", () => {
       // +807 on 2026-08-28: inspect_overworld_session_story now publishes its ten
       // full-mode properties instead of an empty `{}`. Only the pure catalogue is
       // budget-capped; full mode is pinned to catch unintended drift, not to ration.
-      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_566);
+      // +8 on 2026-08-28: reveal_station_dispatch_support's full-mode description
+      // dropped an untrue "without changing state" claim — that path writes a durable
+      // reveal receipt into the snapshot and moves the hash — and says so instead.
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_574);
       expect(fullRead?.description).toBe(
         "Read current context without acting. Station support uses the exact board[5] id.",
       );
       expect(
         (fullRead?.inputSchema.properties as Record<string, { description?: string }> | undefined)
           ?.reveal_station_dispatch_support?.description,
-      ).toBe("Reveal Station support without changing state. Pass the exact board[5] id.");
+      ).toBe("Station board[5] reveal id. Records a durable receipt, so the snapshot hash moves.");
 
       const first = textPayload(await client.callTool({ name: "start_overworld", arguments: {} }));
       const second = textPayload(await client.callTool({ name: "start_overworld", arguments: {} }));

@@ -201,7 +201,7 @@ describe("current-goal passage", () => {
     });
   });
 
-  it("preserves a required road encounter when the passage lands on checkpoint 40", () => {
+  it("holds checkpoint 40 open until the road encounter the passage raised is resolved", () => {
     const session = sessionAtGallowmereGoal();
     while (session.journey().acceptedDecisions < 39) {
       const areaRoute = session.view().areaExits[0];
@@ -216,10 +216,14 @@ describe("current-goal passage", () => {
       stoppedAt: "Saratoga Springs city",
       legs: [{ edgeId: ALBANY_TO_SARATOGA }],
     });
+    // The passage stopped mid-scene, so decision 40 is not a safe break: the
+    // Continue/End choice waits rather than telling the player they reached one
+    // while the encounter still blocks every action they could take.
     expect(session.journey()).toMatchObject({
-      status: "awaiting_choice",
+      status: "active",
       acceptedDecisions: 40,
-      pendingChoice: { atDecision: 40, reasons: ["checkpoint"], checkpoint: 40 },
+      nextCheckpoint: 40,
+      pendingChoice: null,
       goalPassage: null,
     });
     expect(session.view().pendingRoadEncounter?.edgeId).toBe(ALBANY_TO_SARATOGA);
@@ -228,7 +232,25 @@ describe("current-goal passage", () => {
     const restored = OverworldSession.restore(WORLD, exported);
     expect(restored.snapshot()).toEqual(exported);
     expect(restored.snapshotHash()).toBe(session.snapshotHash());
+    const blockedHash = restored.snapshotHash();
+    expect(() => restored.followGoalPassage()).toThrow(/pending road encounter/i);
+    expect(restored.snapshotHash()).toBe(blockedHash);
+
+    // Resolving the encounter is the first genuinely safe boundary, so the
+    // overdue checkpoint surfaces there instead of being dropped.
+    restored.resolveRoadEncounter("press_on");
+    expect(restored.view().pendingRoadEncounter).toBeNull();
+    expect(restored.journey()).toMatchObject({
+      status: "awaiting_choice",
+      acceptedDecisions: 41,
+      nextCheckpoint: 40,
+      pendingChoice: { atDecision: 41, reasons: ["checkpoint"], checkpoint: 40 },
+    });
+
     const beforeContinue = restored.snapshot();
+    expect(OverworldSession.restore(WORLD, beforeContinue).snapshotHash()).toBe(
+      restored.snapshotHash(),
+    );
     restored.chooseJourney("continue");
     const afterContinue = restored.snapshot();
     expect(afterContinue).toMatchObject({
@@ -242,15 +264,9 @@ describe("current-goal passage", () => {
     });
     expect(restored.journey()).toMatchObject({
       status: "active",
-      acceptedDecisions: 40,
+      acceptedDecisions: 41,
       nextCheckpoint: 80,
-      goalPassage: null,
     });
-    const blockedHash = restored.snapshotHash();
-    expect(() => restored.followGoalPassage()).toThrow(/pending road encounter/i);
-    expect(restored.snapshotHash()).toBe(blockedHash);
-
-    restored.resolveRoadEncounter("press_on");
     expect(restored.journey().goalPassage).not.toBeNull();
   });
 

@@ -12,13 +12,16 @@
  *      first 6 tokens). Cheap and coarse: two issues land in the same bucket
  *      only when their tokenized fingerprints match exactly.
  *   3. Pass 2 — repeatedly merge any two buckets that share a locationKey and
- *      whose token sets are >= JACCARD_MERGE_THRESHOLD similar, iterating to
- *      a fixpoint. The merge direction (lexicographically-smaller key always
- *      folds into the larger) means the surviving key of any connected group
- *      is simply the max of that group's original bucket keys — independent
- *      of which pair got merged first. Combined with step 1, the whole
- *      pipeline is a pure function of the *set* of input issues, never their
- *      order (see the "input order never changes the clustering" test).
+ *      whose token sets are ALL pairwise >= JACCARD_MERGE_THRESHOLD similar,
+ *      iterating to a fixpoint. Every pair, not just the two clusters' blended
+ *      unions: comparing unions would make this single-link agglomeration, where
+ *      two issues that share nothing land in one cluster because a third sits
+ *      between them (see `everyMemberPairSimilar`). The merge direction
+ *      (lexicographically-smaller key always folds into the larger) means the
+ *      surviving key of any merged group is simply the max of that group's
+ *      original bucket keys. Combined with step 1, the whole pipeline is a pure
+ *      function of the *set* of input issues, never their order (see the "input
+ *      order never changes the clustering" test).
  */
 import type { PlaytestTier } from "../blind/providers.js";
 import type { CanonicalLocation, FeedbackSource } from "./schema.js";
@@ -267,6 +270,12 @@ type WorkingCluster = {
   locationKey: string;
   issues: IssueRecord[];
   tokens: string[];
+  /**
+   * The token set of each ORIGINAL pass-1 bucket folded into this cluster, kept
+   * separately from the growing `tokens` union so pass 2 can ask its question of
+   * every member rather than of the blend (see `everyMemberPairSimilar`).
+   */
+  members: string[][];
 };
 
 function finalizeCluster(cluster: WorkingCluster): IssueCluster {
@@ -322,6 +331,38 @@ function finalizeCluster(cluster: WorkingCluster): IssueCluster {
   };
 }
 
+/**
+ * Merge eligibility for pass 2: EVERY member of one cluster must clear the
+ * threshold against every member of the other.
+ *
+ * The comparison used to be a single Jaccard between the two clusters' growing token
+ * UNIONS, which made pass 2 single-link agglomeration: A merges with B, then B merges
+ * with C, and A and C end up in one cluster having never been compared. At the old 0.5
+ * threshold that rarely reached far; at 0.15 it chains routinely, and it chains across
+ * severity bands because pass 2 gates on location alone. Verified against the real
+ * code at one location: an S4 "Game crashed when I opened the door", an S1 "The door
+ * description confused me about which way it opens", and an S0 "The description of the
+ * music was confusing" collapsed into ONE cluster at count 3 and maxSeverity S4 —
+ * although jaccard(crash, music) is 0.000 — and the union of their tokens then routed
+ * the whole thing to `fix_layer: "hint_text"`. That is a blocking crash filed as prose
+ * polish, on a count that includes issues the cluster's own defect never matched.
+ *
+ * Requiring every pair keeps the calibration the threshold was measured against intact
+ * (the four real wordings of one blocked exit run 0.219-0.429 pairwise, so they still
+ * form one ticket) while making "similar to something in this cluster" mean "similar
+ * to everything in it". Members are the original pass-1 buckets, not individual
+ * issues: a bucket's issues already matched on the strictly tighter (location, band,
+ * first 6 tokens) fingerprint.
+ */
+function everyMemberPairSimilar(a: WorkingCluster, b: WorkingCluster): boolean {
+  for (const left of a.members) {
+    for (const right of b.members) {
+      if (jaccard(left, right) < JACCARD_MERGE_THRESHOLD) return false;
+    }
+  }
+  return true;
+}
+
 export function clusterIssues(issues: IssueRecord[]): IssueCluster[] {
   if (issues.length === 0) return [];
 
@@ -354,8 +395,17 @@ export function clusterIssues(issues: IssueRecord[]): IssueCluster[] {
     if (existing) {
       existing.issues.push(p.issue);
       existing.tokens = unionTokens(existing.tokens, p.tokens);
+      // One pass-1 bucket is one member: its issues already matched exactly on
+      // (location, band, first 6 tokens), which is a tighter test than pass 2's.
+      existing.members = [existing.tokens];
     } else {
-      buckets.set(fp, { key: fp, locationKey: p.locKey, issues: [p.issue], tokens: p.tokens });
+      buckets.set(fp, {
+        key: fp,
+        locationKey: p.locKey,
+        issues: [p.issue],
+        tokens: p.tokens,
+        members: [p.tokens],
+      });
     }
   }
 
@@ -364,8 +414,10 @@ export function clusterIssues(issues: IssueRecord[]): IssueCluster[] {
   // Pass 2: merge to fixpoint. On every pass, scan clusters in ascending-key
   // order and merge the first eligible pair found; the smaller key (earlier
   // in the scan) always folds into the larger one, so the surviving key of
-  // any connected group is that group's max original key regardless of
-  // which specific pair got merged first.
+  // any merged group is that group's max original key regardless of which
+  // specific pair got merged first. Scan order is a function of the bucket
+  // keys, which pass 1 derived from content alone, so the whole loop stays a
+  // pure function of the SET of input issues.
   for (;;) {
     let mergedAny = false;
     outer: for (let i = 0; i < clusters.length; i++) {
@@ -373,9 +425,10 @@ export function clusterIssues(issues: IssueRecord[]): IssueCluster[] {
         const smaller = clusters[i]!;
         const larger = clusters[j]!;
         if (smaller.locationKey !== larger.locationKey) continue;
-        if (jaccard(smaller.tokens, larger.tokens) < JACCARD_MERGE_THRESHOLD) continue;
+        if (!everyMemberPairSimilar(smaller, larger)) continue;
         larger.issues = [...larger.issues, ...smaller.issues];
         larger.tokens = unionTokens(larger.tokens, smaller.tokens);
+        larger.members = [...larger.members, ...smaller.members];
         clusters.splice(i, 1);
         mergedAny = true;
         break outer;

@@ -41,6 +41,40 @@ function assertFiniteVars(vars: Record<string, number> | undefined, label: strin
   }
 }
 
+/**
+ * Read a numeric var, with an unwritten name reading as 0 (§7.1) — the semantics
+ * every gate in the DSL and both validators' feasibility models are built on
+ * (PHANTOM_VAR, IMPOSSIBLE_GATE).
+ *
+ * The bracket read has to be own-property-checked because `vars` is a plain
+ * object and CONTENT controls the name: `set_var: { name: "__proto__" }` is
+ * schema-valid (effects.ts spells the name as `z.string().min(1)`), and on any
+ * vars object without an own `__proto__` key the plain read resolves the
+ * INHERITED Object.prototype accessor instead. That value is an object, so the
+ * usual `?? 0` fallback never fires: `inc_var` computed `prior + by` as the
+ * string "[object Object]5", `guardFinite` rejected it and wrote the prototype
+ * object back into a `Record<string, number>`, and the next `save()` died with
+ * SaveIntegrityError ("vars.__proto__ expected number, received object") — a hard
+ * crash for the MCP save path and the crawler's PERSIST oracle. Reading the same
+ * name through a gate was wrong in both directions at once: on a fresh state both
+ * `var_gte >= 1` and `var_lte <= 0` evaluated FALSE, which no unwritten var may do.
+ *
+ * Writes need no matching care: a COMPUTED key in an object literal
+ * (`{ ...vars, [name]: value }`) defines an own data property rather than
+ * invoking the legacy `__proto__` setter. So the numeric read path was the last
+ * unguarded corner of the reserved-name hardening core already does in
+ * `hash.ts` (bug_0247), `initState` and `cloneGameState`.
+ */
+export function readVar(vars: Record<string, number>, name: string): number {
+  if (!Object.prototype.hasOwnProperty.call(vars, name)) return 0;
+  const value = vars[name];
+  // The reducer cannot produce a non-numeric own value, but a state that arrived
+  // over the save boundary is only as trustworthy as the check that admitted it.
+  // Fall back to the same 0 so comparisons stay total instead of propagating a
+  // non-number through arithmetic.
+  return typeof value === "number" ? value : 0;
+}
+
 export type ObjectRuntime = {
   open?: boolean;
   locked?: boolean;

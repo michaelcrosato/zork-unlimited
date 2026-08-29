@@ -72,6 +72,12 @@ export const ContentPatchProposalSchema = z
 export type ContentPatchProposal = z.infer<typeof ContentPatchProposalSchema>;
 
 export type ApplyResult =
+  /**
+   * `applied` counts the ops that actually CHANGED a field, not the ops that were
+   * proposed. This tool is a repair's proof, so an op that set a field to the
+   * value it already held — or that named a field the clone silently refuses —
+   * must not be reported as a change that happened.
+   */
   | { ok: true; applied: number; pack: unknown; report: ValidationReport }
   | { ok: false; report: ValidationReport };
 
@@ -88,8 +94,10 @@ type AnyPack = {
 
 /**
  * Apply a proposal to a raw (schema-shaped) pack object. Deterministic; mutates
- * only a clone. Returns the re-validated pack, or a report explaining why the
- * patch was refused (unknown target, schema break, or a still-failing validation).
+ * only a clone. Returns the re-validated pack — with `applied` counting the ops
+ * that actually changed a field — or a report explaining why the patch was
+ * refused (unknown target, unsafe field name, schema break, or a still-failing
+ * validation).
  */
 export function applyContentPatch(rawPack: unknown, proposal: ContentPatchProposal): ApplyResult {
   const parsedProposal = ContentPatchProposalSchema.safeParse(proposal);
@@ -114,16 +122,38 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
     ]),
   });
 
+  // Ops that genuinely mutated the clone. A proposal is a claim about a repair;
+  // the count we report back is the evidence for that claim, so it counts writes,
+  // not intentions.
+  let applied = 0;
+
   for (const op of parsedProposal.data.ops) {
     switch (op.op) {
       case "set_meta": {
+        // `set_meta` is the one op with an open field name (`z.string()`), so it is
+        // also the one that can name a key JavaScript treats specially. Assigning
+        // "__proto__" on a plain object runs Object.prototype's setter, which
+        // silently DISCARDS a primitive: the op would report success having changed
+        // nothing. Refuse those names outright — a prototype key is never a content
+        // field, and failing closed is the §16 posture everywhere else here.
+        if (op.field === "__proto__" || op.field === "constructor" || op.field === "prototype") {
+          return fail(
+            "PATCH_UNSAFE_FIELD",
+            `meta field "${op.field}" is a JavaScript prototype key, not a content field.`,
+            [`meta.${op.field}`],
+          );
+        }
+        if (pack.meta[op.field] === op.value) break;
         pack.meta[op.field] = op.value;
+        applied += 1;
         break;
       }
       case "set_object_field": {
         const obj = pack.objects?.find((o) => o["id"] === op.id);
         if (!obj) return fail("PATCH_TARGET_MISSING", `no object "${op.id}".`, [`object:${op.id}`]);
+        if (obj[op.field] === op.value) break;
         obj[op.field] = op.value;
+        applied += 1;
         break;
       }
       case "add_room_journal_hint": {
@@ -131,6 +161,7 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
         if (!room)
           return fail("PATCH_TARGET_MISSING", `no room "${op.room}".`, [`room:${op.room}`]);
         (room.on_enter ??= []).push({ add_journal: op.text });
+        applied += 1;
         break;
       }
     }
@@ -148,7 +179,7 @@ export function applyContentPatch(rawPack: unknown, proposal: ContentPatchPropos
     return { ok: false, report: makeReport(String(pack.meta?.["id"] ?? "patch"), findings) };
   }
   const report = validateRpg(reparsed.data);
-  return { ok: report.ok, applied: parsedProposal.data.ops.length, pack: reparsed.data, report };
+  return { ok: report.ok, applied, pack: reparsed.data, report };
 }
 
 /**
@@ -181,7 +212,18 @@ export function proposeFix(diagnosis: Diagnosis, ctx: { location?: string }): Co
   };
 }
 
-/** A regression-test source stub asserting the diagnosed failure cannot recur (§15). */
+/**
+ * A regression-test source stub asserting the diagnosed failure cannot recur (§15).
+ *
+ * The stub must not be pasteable into a permanently-green test that asserts
+ * nothing. Two holes make that possible and both are closed here:
+ *   - `replayTrace` returns ok:true with "no expected final hash to assert" when
+ *     the trace omits `expected_final_hash` (a shape integrity.ts permits), so the
+ *     stub demands that hash is present and is the one replay reproduced;
+ *   - a trace replayed against content it was not recorded on proves nothing, so
+ *     the stub binds `content_hash` to the source the same way bin/replay,
+ *     bin/inspect and the MCP trace tools do before they step anything.
+ */
 export function regressionTestStub(
   bugId: string,
   replayPath: string,
@@ -202,8 +244,18 @@ describe("${bugId}", () => {
   it("replays the fixed trace to its expected final hash", () => {
     const trace = JSON.parse(readFileSync(${replayPathLiteral}, "utf8")) as Trace;
     const source = new RpgSourceRuntime(process.cwd()).requireWorldQuestPlayable(${worldQuestIdLiteral});
+
+    // Bind the trace to the build it was recorded against. Replaying against
+    // different content proves nothing about this bug.
+    expect(trace.content_hash).toBe(source.compiled.contentHash);
+    // A trace with no recorded final hash replays "ok" while asserting nothing,
+    // so demand the hash this regression exists to lock.
+    expect(trace.expected_final_hash).toBeDefined();
+
     const rules = buildRpgRules(indexRpgPack(source.compiled.pack));
-    expect(replayTrace(trace, rules).ok).toBe(true);
+    const result = replayTrace(trace, rules);
+    expect(result.ok).toBe(true);
+    expect(result.finalHash).toBe(trace.expected_final_hash);
   });
 });
 `;

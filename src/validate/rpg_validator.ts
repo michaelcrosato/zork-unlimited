@@ -25,7 +25,11 @@
  *    rolls, the promise is broken (`COMBAT_NOT_GUARANTEED`). For an enemy with authored
  *    maneuvers this upper bound checks ordinary ATTACK and every forced maneuver opening
  *    (temporary modifiers for the first exchange, ordinary rounds thereafter), taking
- *    the most damaging legal route. The gamble packs above do NOT set the flag and stay
+ *    the most damaging legal route. Unlike the lower bound it is measured against the
+ *    HP the player is GUARANTEED to have — reachable HP less any unavoidable opening
+ *    HP cost (a `dec_var`/`set_var` on hp in the start room's on_enter), because a
+ *    promise cannot be proved against health the pack itself takes away.
+ *    The gamble packs above do NOT set the flag and stay
  *    unflagged; this is the sound next-shape bug_0113 named,
  *    closing the player-experience gap every RPG playtest raises by making "this fight
  *    is fair" a DECLARED, AUDITED property instead of an unverifiable hope.
@@ -831,6 +835,54 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
   const playerAtk = statCeiling(ATTACK_VAR);
   const playerDef = statCeiling(DEFENSE_VAR);
 
+  // The fairness PROMISE needs a floor, not the ceiling above. `statCeiling` reads
+  // `inc_var` and nothing else, so an authored `dec_var` or `set_var` on hp is
+  // invisible to it. Over-crediting HP is the SOUND direction for COMBAT_UNWINNABLE
+  // (a route-EXISTENCE proof: too much HP can only withdraw a false "impossible"),
+  // but it is the UNSOUND direction for the `combat_guaranteed` promises below —
+  // there it grants a guarantee the runtime cannot keep. Measured before this guard:
+  // dawn_beacon (hp 26, cumulative worst-case gauntlet 21) with an unconditional
+  // `{dec_var: {name: hp, by: 20}}` — or `{set_var: {name: hp, value: 1}}`, the
+  // sharper case, since HP_VAR is already a normal set_var target for combat —
+  // pushed onto its START ROOM's on_enter validated ok with ZERO findings, certifying
+  // a fair-fight promise for a player who meets a 21-damage gauntlet with 6 HP (or 1).
+  //
+  // Which costs count: only the ones the "best-prepared player" these bounds are
+  // written against CANNOT refuse. A room they may walk around, an object they need
+  // not touch and a dialogue node they need not open are all avoidable, and charging
+  // the promise for them would reject legitimate content (a trap corridor a careful
+  // player skips) — that is the same reason the ceiling credits every buff. The start
+  // room's `on_enter` is the one effect list every playthrough runs, applied at init
+  // before the player has made a single choice (src/rpg/model.ts:228 hands it to
+  // initRuntimeState), so it is exactly the unavoidable set. Costs on any other path
+  // stay uncharged, deliberately: making THEM count needs per-fight reachability, not
+  // a ceiling tweak, and would change what content is legal.
+  //
+  // Buffs reachable AFTER the opening are still credited (a heal undoes an opening
+  // cost), and the result is capped at `playerHp` so this can only ever TIGHTEN the
+  // promise — an unavoidable `set_var` that RAISES hp must not buy a bigger guarantee
+  // than the declared stats and reachable buffs already prove.
+  const openingEffects =
+    pack.rooms.find((room) => room.id === pack.meta.start_room)?.on_enter ?? [];
+  const openingEffectSet = new Set<Effect>(openingEffects);
+  let openingHp = vi[HP_VAR] ?? 0;
+  for (const e of openingEffects) {
+    if ("set_var" in e && e.set_var.name === HP_VAR) openingHp = e.set_var.value;
+    else if ("inc_var" in e && e.inc_var.name === HP_VAR) openingHp += e.inc_var.by;
+    else if ("dec_var" in e && e.dec_var.name === HP_VAR) openingHp -= e.dec_var.by;
+  }
+  let recoverableHp = 0;
+  for (const e of buffEffects)
+    if ("inc_var" in e && e.inc_var.name === HP_VAR && !openingEffectSet.has(e))
+      recoverableHp += Math.max(0, e.inc_var.by);
+  const guaranteedHp = Math.min(playerHp, openingHp + recoverableHp);
+  // Packs with no unavoidable hp write (every shipped and generated pack today) get
+  // guaranteedHp === playerHp, so the diagnostics below stay byte-identical for them.
+  const guaranteedHpPhrase =
+    guaranteedHp === playerHp
+      ? `${playerHp} reachable HP`
+      : `${guaranteedHp} guaranteed HP (${playerHp} reachable, less ${playerHp - guaranteedHp} unavoidable opening cost)`;
+
   // ── Enemies ──────────────────────────────────────────────────────────────────
   // Cumulative worst-case damage across the whole opt-in `combat_guaranteed`
   // gauntlet (bug_0172). Only meaningful when the pack PROMISES fair fights: it
@@ -1289,13 +1341,13 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
           ) ?? standardRoute;
       }
       cumulativeWorstDamage += worstRoute.damageTaken;
-      if (worstRoute.damageTaken >= playerHp) {
+      if (worstRoute.damageTaken >= guaranteedHp) {
         if (worstRoute.maneuverId === null) {
           // Preserve the established no-maneuver diagnostic byte-for-byte.
           findings.push(
             err(
               "COMBAT_NOT_GUARANTEED",
-              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player on worst-case rolls (needs ${standardRoute.roundsToKill} rounds; would take up to ${standardRoute.damageTaken} damage vs ${playerHp} reachable HP). Make the fight winnable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player on worst-case rolls (needs ${standardRoute.roundsToKill} rounds; would take up to ${standardRoute.damageTaken} damage vs ${guaranteedHpPhrase}). Make the fight winnable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
               [`enemy:${enemy.id}`],
             ),
           );
@@ -1304,7 +1356,7 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
           findings.push(
             err(
               "COMBAT_NOT_GUARANTEED",
-              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player after maneuver sequence ${path.map((id) => `"${id}"`).join(" -> ")} on worst-case rolls (needs ${worstRoute.roundsToKill} rounds; would take up to ${worstRoute.damageTaken} damage vs ${playerHp} reachable HP). Make every forced maneuver sequence safe on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player after maneuver sequence ${path.map((id) => `"${id}"`).join(" -> ")} on worst-case rolls (needs ${worstRoute.roundsToKill} rounds; would take up to ${worstRoute.damageTaken} damage vs ${guaranteedHpPhrase}). Make every forced maneuver sequence safe on every roll, or drop the guarantee and let it stand as a declared gamble.`,
               [`enemy:${enemy.id}`, ...path.map((id) => `maneuver:${id}`)],
             ),
           );
@@ -1312,7 +1364,7 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
           findings.push(
             err(
               "COMBAT_NOT_GUARANTEED",
-              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player after opening with maneuver "${worstRoute.maneuverId}" on worst-case rolls (needs ${worstRoute.roundsToKill} rounds; would take up to ${worstRoute.damageTaken} damage vs ${playerHp} reachable HP). Make every forced maneuver opening safe on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player after opening with maneuver "${worstRoute.maneuverId}" on worst-case rolls (needs ${worstRoute.roundsToKill} rounds; would take up to ${worstRoute.damageTaken} damage vs ${guaranteedHpPhrase}). Make every forced maneuver opening safe on every roll, or drop the guarantee and let it stand as a declared gamble.`,
               [`enemy:${enemy.id}`, `maneuver:${worstRoute.maneuverId}`],
             ),
           );
@@ -1337,11 +1389,11 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
   // COMBAT_UNWINNABLE bound: that bound is a route-EXISTENCE proof (some roll
   // sequence wins), and summing it would forbid a legitimate gamble gauntlet a lucky
   // player CAN clear — i.e. it would be UNSOUND. Keep it post-loop and upper-only.
-  if (pack.meta.combat_guaranteed && cumulativeWorstDamage >= playerHp) {
+  if (pack.meta.combat_guaranteed && cumulativeWorstDamage >= guaranteedHp) {
     findings.push(
       err(
         "COMBAT_GAUNTLET_NOT_GUARANTEED",
-        `meta.combat_guaranteed is set, but the fights are not jointly survivable: across the gauntlet the player can take up to ${cumulativeWorstDamage} cumulative damage on worst-case rolls vs ${playerHp} reachable HP, so a best-prepared player can fall over the sequence even though each fight passes alone. Make the gauntlet survivable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+        `meta.combat_guaranteed is set, but the fights are not jointly survivable: across the gauntlet the player can take up to ${cumulativeWorstDamage} cumulative damage on worst-case rolls vs ${guaranteedHpPhrase}, so a best-prepared player can fall over the sequence even though each fight passes alone. Make the gauntlet survivable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
         ["meta:combat_guaranteed"],
       ),
     );

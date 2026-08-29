@@ -8,7 +8,7 @@ import { z } from "zod";
 import { ConditionSchema, evalConditions } from "./conditions.js";
 import { EffectSchema, type Effect } from "./effects.js";
 import { rngForStep, type Rng } from "./rng.js";
-import type { GameState } from "./state.js";
+import { readVar, type GameState } from "./state.js";
 import type { Resolution } from "./engine.js";
 
 const ConditionalSkillCheckEffectsSchema = z
@@ -45,10 +45,16 @@ export function resolveSkillCheck(
   rng: Rng = rngForStep(state.seed, state.step),
 ): Resolution {
   const roll = rng.int(1, 20);
-  const total = roll + (state.vars[check.skill] ?? 0);
+  // Read the modifier ONCE, through the own-property-checked accessor: `check.skill`
+  // is an authored name, and a plain `state.vars[name] ?? 0` resolves the inherited
+  // Object.prototype accessor for a skill literally named `__proto__` — which would
+  // make `total` the STRING "3[object Object]", compare it against the difficulty,
+  // and print it to the player (see readVar in core/state.ts).
+  const modifier = readVar(state.vars, check.skill);
+  const total = roll + modifier;
   const success = total >= check.difficulty;
   const lead: Effect = {
-    narrate: `${check.skill} check: d20 ${roll} + ${state.vars[check.skill] ?? 0} = ${total} vs ${check.difficulty} — ${success ? "success" : "failure"}.`,
+    narrate: `${check.skill} check: d20 ${roll} + ${modifier} = ${total} vs ${check.difficulty} — ${success ? "success" : "failure"}.`,
   };
   const conditionalFailureEffects = success
     ? []

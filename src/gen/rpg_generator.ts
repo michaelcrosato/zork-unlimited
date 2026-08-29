@@ -282,7 +282,20 @@ export function generateRpgPack(seed: number): RpgPack {
   // a d20 ceiling of 23, well above 14, so SKILL_CHECK_IMPOSSIBLE never fires.
   const difficulty = 10 + rng.int(5);
 
-  const id = `genrpg_${Math.abs(Math.trunc(seed))}_v1`;
+  // The id must separate the packs the seed separates. `makeRng` is keyed on the
+  // SIGNED seed, so seed and -seed draw different skill difficulties and different
+  // score awards — two structurally different packs — while `Math.abs` alone gave
+  // them one id (measured: 5 and -5 both minted `genrpg_5_v1`, max_score 70 vs 55,
+  // different content hashes). Negative seeds are legal (isGeneratedRpgSeed pins
+  // MIN_SAFE_INTEGER true) and reach here through MCP new_game / generate_rpg_pack,
+  // and meta.id is what every observation, transcript, corpus row and crawler or
+  // blind-tester artifact carries — so a collision makes two different packs
+  // indistinguishable in recorded evidence, and `bin/seal-corpus.ts` writes both to
+  // the same `corpus/rpg/<id>.yaml`. The `n` prefix keeps every NON-negative id
+  // byte-identical, so the sealed corpus window (seeds 0..3) and its committed
+  // content hashes are untouched.
+  const truncated = Math.trunc(seed);
+  const id = `genrpg_${truncated < 0 ? `n${Math.abs(truncated)}` : `${truncated}`}_v1`;
   const FOE_DOWN = "foe_down";
   const WARDEN_DOWN = "warden_down";
   const WARD_DONNED = "ward_donned";

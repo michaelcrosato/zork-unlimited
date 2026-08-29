@@ -7,7 +7,7 @@
  * contract; anything that does not parse is rejected before play.
  */
 import { z } from "zod";
-import type { GameState } from "./state.js";
+import { readVar, type GameState } from "./state.js";
 
 const VarCmp = z.object({ name: z.string().min(1), value: z.number() }).strict();
 
@@ -92,9 +92,9 @@ export function evalCondition(cond: Condition, state: GameState): boolean {
   if ("is_open" in cond) return state.objectState[cond.is_open]?.open === true;
   if ("is_explicitly_unlocked" in cond)
     return state.objectState[cond.is_explicitly_unlocked]?.locked === false;
-  if ("var_gte" in cond) return (state.vars[cond.var_gte.name] ?? 0) >= cond.var_gte.value;
-  if ("var_lte" in cond) return (state.vars[cond.var_lte.name] ?? 0) <= cond.var_lte.value;
-  if ("var_eq" in cond) return (state.vars[cond.var_eq.name] ?? 0) === cond.var_eq.value;
+  if ("var_gte" in cond) return readVar(state.vars, cond.var_gte.name) >= cond.var_gte.value;
+  if ("var_lte" in cond) return readVar(state.vars, cond.var_lte.name) <= cond.var_lte.value;
+  if ("var_eq" in cond) return readVar(state.vars, cond.var_eq.name) === cond.var_eq.value;
   if ("quest_stage" in cond)
     return state.questStage[cond.quest_stage.quest] === cond.quest_stage.stage;
   if ("all_of" in cond) return cond.all_of.every((c) => evalCondition(c, state));

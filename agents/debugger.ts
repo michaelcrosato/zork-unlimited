@@ -6,8 +6,16 @@
  * actions through `step`, inspects the terminal state and the legal-action set at
  * each turn, and classifies what went wrong (soft-lock, conversation trap, an
  * unrecoverable death, or a loop with no exit). The artifact it emits is the §15
- * format — exactly what `bin/replay` and a regression test consume so every bug
- * becomes reproducible forever.
+ * BUG record — pack identity, content hash, seed, initial state, and the exact
+ * action list, which is everything needed to reconstruct the run.
+ *
+ * A `BugArtifact` is NOT a `Trace`, and `bin/replay` will not read one: replay
+ * consumes the recorded-trace shape (`mode`, `source_ref`, `actions`,
+ * `expected_final_hash`) from JSON, while artifacts carry `trace`/`pack_id` and
+ * the committed corpus under `traces/bugs/` is YAML. Turning an artifact into a
+ * replayable regression means re-recording its actions with `recordTrace` against
+ * the pack named here; `regressionTestStub` (agents/fixer.ts) writes the test that
+ * then locks it.
  *
  * No LLM is required to *find* a structural failure; the engine's legal-action
  * set is ground truth. A model can still author the prose diagnosis, but the

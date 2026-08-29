@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { parseFeedbackArgs } from "../../bin/feedback.js";
+import { formatFeedbackStatusLine, parseFeedbackArgs } from "../../bin/feedback.js";
 import {
   upsertFeedbackAcceptanceStateText,
   type FeedbackAcceptanceState,
@@ -165,6 +165,59 @@ describe("feedback rebootstrap recovery CLI", () => {
       }
     ).scripts;
     expect(scripts["feedback:rebootstrap"]).toBe("tsx bin/feedback.ts --rebootstrap");
+  });
+
+  it("warns that a bootstrap consumes the verified reports it will never rank", () => {
+    // A bootstrap cohort is empty by construction, so every count on the status line is
+    // zero — while the compile it authorizes marks every verified identity on disk as
+    // seen forever. An operator following the documented recovery with reports sitting
+    // in blind-tester/reports had no signal that they were about to be swallowed.
+    const bootstrap = formatFeedbackStatusLine("bootstrap", {
+      cohortVerified: 0,
+      cohortActionable: 0,
+      cohortExcludedMocks: 0,
+      corpusVerified: 12,
+    });
+    expect(bootstrap).toContain("compile ready");
+    expect(bootstrap).toContain("marks all 12 verified reports on disk as already seen");
+    expect(bootstrap).toContain("no later delta compile can re-admit them");
+
+    // Nothing to lose, nothing to warn about.
+    expect(
+      formatFeedbackStatusLine("bootstrap", {
+        cohortVerified: 0,
+        cohortActionable: 0,
+        cohortExcludedMocks: 0,
+        corpusVerified: 0,
+      }),
+    ).toBe(
+      "feedback:status — bootstrap; 0 new verified reports, 0 actionable, 0 excluded mocks; compile ready.",
+    );
+  });
+
+  it("leaves the delta verdict byte-identical to what the loop has always printed", () => {
+    // Cycle records quote this line verbatim (traces/bugs/*.yaml), so the non-bootstrap
+    // wording is a contract, not a detail.
+    expect(
+      formatFeedbackStatusLine("delta", {
+        cohortVerified: 3,
+        cohortActionable: 3,
+        cohortExcludedMocks: 0,
+        corpusVerified: 41,
+      }),
+    ).toBe(
+      "feedback:status — delta; 3 new verified reports, 3 actionable, 0 excluded mocks; compile ready.",
+    );
+    expect(
+      formatFeedbackStatusLine("delta", {
+        cohortVerified: 1,
+        cohortActionable: 1,
+        cohortExcludedMocks: 0,
+        corpusVerified: 41,
+      }),
+    ).toBe(
+      "feedback:status — delta; 1 new verified reports, 1 actionable, 0 excluded mocks; 3 actionable reports required.",
+    );
   });
 
   it("refuses recovery without an accepted pointer or while its bundle remains valid", () => {

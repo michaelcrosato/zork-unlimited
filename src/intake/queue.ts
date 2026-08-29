@@ -23,6 +23,7 @@ import {
   compareSubmissions,
   DEFAULT_QUEUE_DIR,
   isOpenWork,
+  PRIORITY_RANK,
   SubmissionSchema,
   submissionFileName,
   type Submission,
@@ -80,6 +81,22 @@ export function upsertSubmission(
   submission: Submission,
   dir: string = DEFAULT_QUEUE_DIR,
 ): Submission {
+  // The read path is strict, so the write path has to be too. Without this the queue
+  // could persist a file it would never read back: `readQueue` parses with the same
+  // schema, so an off-schema submission lands on disk, is reported `unreadable` on every
+  // subsequent read, is invisible to `npm run work` and to the GitHub push loop, and —
+  // because nothing downstream ever saw it — is re-minted identically by whatever wrote
+  // it. A loud throw at the writer names the actual culprit; a quiet write blames the
+  // reader for the rest of the file's life.
+  const valid = SubmissionSchema.safeParse(submission);
+  if (!valid.success) {
+    throw new Error(
+      `refusing to write submission ${submission.id}: ${valid.error.issues
+        .map((issue) => `${issue.path.join(".") || "<root>"}: ${issue.message}`)
+        .join("; ")}`,
+    );
+  }
+
   const root = resolve(dir);
   mkdirSync(root, { recursive: true });
 
@@ -168,7 +185,14 @@ export function summarizeQueue(submissions: readonly Submission[]): QueueSummary
   };
 }
 
-/** The single item the dev loop should pick up, honouring optional filters. */
+/**
+ * The single item the dev loop should pick up, honouring optional filters.
+ *
+ * `maxPriority` is a FLOOR on urgency expressed as a ceiling on the label: "P1" means
+ * P0 and P1 are eligible and P2/P3 are not. It was declared in the signature but never
+ * applied, so a caller asking for "nothing below P1" was handed the whole queue and had
+ * no way to tell — the worst shape of no-op, because the answer looks plausible.
+ */
 export function nextWork(
   submissions: readonly Submission[],
   filters: { source?: SubmissionSource; maxPriority?: SubmissionPriority } = {},
@@ -176,6 +200,9 @@ export function nextWork(
   const eligible = submissions.filter((s) => {
     if (!isOpenWork(s)) return false;
     if (filters.source && s.source !== filters.source) return false;
+    if (filters.maxPriority && PRIORITY_RANK[s.priority] > PRIORITY_RANK[filters.maxPriority]) {
+      return false;
+    }
     return true;
   });
   return eligible[0] ?? null;

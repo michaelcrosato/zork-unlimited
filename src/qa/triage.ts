@@ -82,8 +82,9 @@ export type TriageInput = {
 function sessionIssueRecords(
   sessions: readonly PlaytestSessionRecord[],
   idx: LocationIndex,
-): IssueRecord[] {
+): { records: IssueRecord[]; confusionKeys: Set<string> } {
   const records: IssueRecord[] = [];
+  const confusionKeys = new Set<string>();
   for (const session of sessions) {
     const interview = session.exit_interview;
     // A session with no parseable interview is still kept in the corpus and still
@@ -113,9 +114,23 @@ function sessionIssueRecords(
         severity: CONFUSION_SEVERITY,
         text: confusion,
       });
+      confusionKeys.add(issueKey(session.record_id, confusion));
     }
   }
-  return records;
+  return { records, confusionKeys };
+}
+
+/**
+ * Identity of one reported issue within the corpus, used only to remember which records
+ * came from the interview's `confusions` list rather than its `bugs` list.
+ *
+ * Keyed on content (session id plus the reported text) rather than on object identity,
+ * because the records travel through `clusterIssues`, which is free to copy them. Two
+ * records can only collide when a player filed a bug note whose text is character-for-
+ * character their own confusion — in which case treating them alike is right anyway.
+ */
+function issueKey(ref: string, text: string): string {
+  return `${ref}\u0000${text}`;
 }
 
 /** Stable, human-readable location label for a ticket. */
@@ -124,12 +139,21 @@ function locationLabel(location: CanonicalLocation): string {
 }
 
 /**
- * A bug reported with a real severity is engine-shaped work; a bare confusion is
- * experience work. Mixed clusters take the stronger reading, because a cluster
- * containing an actual defect should route to whoever fixes defects.
+ * A reported bug is engine-shaped work; a bare confusion is experience work. Mixed
+ * clusters take the stronger reading, because a cluster containing an actual defect
+ * should route to whoever fixes defects.
+ *
+ * Which list a report came from is remembered from the interview rather than inferred
+ * from its severity. Inferring it (`severity !== CONFUSION_SEVERITY`) read every S1 bug
+ * as a confusion, and the exit interview lets a player file one — S1 is its "minor"
+ * rung. So a cluster of nothing but minor defects was routed as experience work, and
+ * because `kind` is part of `ticketId`, the ticket ALSO re-keyed itself into a second
+ * piece of work the moment one S2 report joined it.
  */
-function clusterKind(cluster: IssueCluster): TicketKind {
-  const anyRealBug = cluster.issues.some((issue) => issue.severity !== CONFUSION_SEVERITY);
+function clusterKind(cluster: IssueCluster, confusionKeys: ReadonlySet<string>): TicketKind {
+  const anyRealBug = cluster.issues.some(
+    (issue) => !confusionKeys.has(issueKey(issue.ref, issue.text)),
+  );
   return anyRealBug ? "bug" : "experience";
 }
 
@@ -199,12 +223,12 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
   const currentBuild = input.buildHistory[0] ?? null;
 
   const sessionById = new Map(input.sessions.map((s) => [s.record_id, s]));
-  const issues = sessionIssueRecords(input.sessions, idx);
+  const { records: issues, confusionKeys } = sessionIssueRecords(input.sessions, idx);
   const clusters = clusterIssues(issues);
 
   const tickets: QaTicket[] = [];
   for (const cluster of clusters) {
-    const kind = clusterKind(cluster);
+    const kind = clusterKind(cluster, confusionKeys);
     const location = locationLabel(cluster.location);
     const id = ticketId({ kind, location, fingerprint: cluster.key });
 
