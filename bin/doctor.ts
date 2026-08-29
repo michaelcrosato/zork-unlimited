@@ -26,8 +26,9 @@
  *   npm run doctor                       # uses the default corpus and queue
  *   npm run doctor -- --store /d/af-corpus
  */
-import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { delimiter, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PLAYTEST_PROVIDERS } from "../src/blind/providers.js";
 import { listPlaytestSessions, summarizePlaytestStore } from "../src/qa/session_store.js";
 import { DEFAULT_SESSION_STORE } from "../src/qa/session_store.js";
@@ -44,13 +45,38 @@ function arg(flag: string): string | null {
   return process.argv[index + 1] ?? null;
 }
 
-function onPath(binary: string): boolean {
-  try {
-    execFileSync("command", ["-v", binary], { stdio: "ignore", shell: true });
-    return true;
-  } catch {
-    return false;
+/**
+ * Is this executable resolvable from PATH?
+ *
+ * Resolved by walking PATH directly rather than shelling out. The previous
+ * implementation ran `command -v <bin>` with `shell: true`, which on Windows spawns
+ * cmd.exe — where `command` is not a builtin, so the call threw for EVERY binary and
+ * this function returned false unconditionally. That made the whole point of this
+ * command inverted on Windows: the one tool whose job is to tell an operator what they
+ * can launch reported that they could launch nothing, including when Codex was
+ * installed and logged in. It even reported `node` as absent, while running under node.
+ *
+ * PATHEXT matters: on Windows the npm shims are `codex.cmd` / `codex.ps1`, and a bare
+ * `codex` (the POSIX shim) is present too but is not executable by cmd. Accepting any
+ * PATHEXT match is what "can a launcher find it" actually means there.
+ */
+export function onPath(binary: string): boolean {
+  const entries = (process.env.PATH ?? "").split(delimiter).filter(Boolean);
+  const windows = process.platform === "win32";
+  const suffixes = windows
+    ? ["", ...(process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)]
+    : [""];
+  for (const dir of entries) {
+    // A malformed PATH entry (quotes, a stray delimiter) must not abort the scan.
+    for (const suffix of suffixes) {
+      try {
+        if (existsSync(join(dir.replace(/^"|"$/g, ""), binary + suffix))) return true;
+      } catch {
+        /* unreadable PATH entry — keep looking */
+      }
+    }
   }
+  return false;
 }
 
 /**
@@ -76,13 +102,25 @@ function main(): void {
   const ticketDir = arg("--tickets") ?? DEFAULT_TICKET_DIR;
 
   section("Dev loop");
-  const devAgent = DEV_AGENTS.find(onPath);
-  console.log(
-    devAgent
-      ? `  ✓ ${devAgent} is on PATH — \`./loop.sh\` will auto-detect it.`
-      : `  ✗ none of ${DEV_AGENTS.join(", ")} is on PATH.\n` +
-          `    Install one, or point AI_AGENT_CMD at any agent that reads STDIN.`,
-  );
+  // Report ALL of them, not just the auto-detected one. loop.sh takes the first match in
+  // DEV_AGENTS order, so an operator who wants a different installed agent has to know
+  // that AI_AGENT selects it — and that is invisible if only the winner is printed.
+  const devAgents = DEV_AGENTS.filter(onPath);
+  if (devAgents.length === 0) {
+    console.log(
+      `  ✗ none of ${DEV_AGENTS.join(", ")} is on PATH.\n` +
+        `    Install one, or point AI_AGENT_CMD at any agent that reads STDIN.`,
+    );
+  } else {
+    console.log(`  ✓ ${devAgents[0]} is on PATH — \`./loop.sh\` auto-detects it.`);
+    const alternatives = devAgents.slice(1);
+    if (alternatives.length > 0) {
+      console.log(
+        `    also installed: ${alternatives.join(", ")} — select one with ` +
+          `AI_AGENT=${alternatives[0]} ./loop.sh`,
+      );
+    }
+  }
 
   section("Playtest loop — what can launch here");
   for (const provider of PLAYTEST_PROVIDERS) {
@@ -193,4 +231,8 @@ function reportBlockers(
   }
 }
 
-main();
+// Guarded so the module can be imported (onPath is unit-tested directly). Same idiom as
+// scripts/verify-bug-traces.ts and bin/feedback.ts; `npm run doctor` still runs main().
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  main();
+}

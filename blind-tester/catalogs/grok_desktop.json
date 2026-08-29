@@ -2,16 +2,16 @@
   "provider": "grok_desktop",
   "models": [
     {
-      "id": "grok-4-fast",
+      "id": "grok-4.5",
       "tier": "volume",
       "settings": {},
-      "notes": "Operator-owned id: set this to the exact model your desktop client reports for the session. Sessions arrive via `npm run playtest:ingest` and are recorded as operator_attested."
+      "notes": "Operator-owned id: set this to the exact model your client reports for the session. Verified against grok CLI 1.0.5 on 2026-08-29, which offers exactly grok-4.6 and grok-4.5; the previous entries (grok-4-fast, grok-4) matched no model that client can select, so an ingest naming them recorded a model nobody played. Sessions arrive via `npm run playtest:ingest` and are recorded as operator_attested."
     },
     {
-      "id": "grok-4",
+      "id": "grok-4.6",
       "tier": "reference",
       "settings": {},
-      "notes": "Operator-owned id: set this to the exact model your desktop client reports for the session."
+      "notes": "Operator-owned id: the client's default and newest model, so it carries the reference tier. A reference-tier report is one of the two ways a single-vendor corpus can reach `corroborated` — the other being two distinct model families — which is why the tier assignment here is load-bearing rather than cosmetic."
     }
   ]
 }

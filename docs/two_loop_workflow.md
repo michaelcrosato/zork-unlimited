@@ -301,12 +301,36 @@ cycle, and a player mid-run would be playing a build that no longer exists.
 each its own worktree; they share the object store, so it is nearly free:
 
 ```bash
-cd /d/zork-unlimited
-git worktree add ../af-qa-a main
-git worktree add ../af-qa-b main
-git worktree add ../af-qa-c main
+cd /c/dev/zork-unlimited
+# NOT `git worktree add ../af-qa-a main` — that is refused, because main is already
+# checked out here. Each worktree needs its own branch off the same commit.
+git worktree add -b qa-a ../af-qa-a origin/main
+git worktree add -b qa-b ../af-qa-b origin/main
+git worktree add -b qa-c ../af-qa-c origin/main
 mkdir -p /d/af-corpus            # ONE shared session corpus, outside every worktree
 ```
+
+Two things to do before the first launch, both of which cost you a wave otherwise:
+
+- **Junction `node_modules` into each worktree.** `playtest-loop.sh` runs a full
+  `npm install` in any worktree that lacks one. From an elevated PowerShell:
+  `New-Item -ItemType Junction -Path C:\dev\af-qa-a\node_modules -Target C:\dev\zork-unlimited\node_modules`
+  (repeat per worktree).
+- **Exclude the corpus directory from Defender.** `writePlaytestSession` finalises a
+  session by renaming its staging directory, and on Windows that fails with `EPERM`
+  while any process holds a handle inside it — a real-time scan of the transcript is
+  exactly that. The recorder then prints one line and moves on, so the session is lost
+  from the corpus with no other trace. `C:\dev` is already excluded; a corpus on
+  another volume is not.
+
+The dev-loop refusal is worth understanding precisely, because it is weaker than it
+reads: it is a bare `-f ai-runs/loop.pid` existence test relative to the script's own
+checkout. `ai-runs/` is gitignored and therefore per-worktree, so a dev loop in one
+worktree is invisible to a playtest loop in another — the guard does not police
+worktrees, and it is not a multi-instance lock either. It also never clears itself if
+the dev loop is killed with `taskkill` or by closing the terminal: the file survives and
+that checkout then refuses every playtest loop forever. Clear it with
+`scripts/loop-stop.sh`, or `rm -f ai-runs/loop.pid`.
 
 ### Preflight, part one and a half: ask what this machine can actually do
 

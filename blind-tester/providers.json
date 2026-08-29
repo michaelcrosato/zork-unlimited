@@ -57,7 +57,7 @@
       "isolation": "operator_attested",
       "catalogPath": "blind-tester/catalogs/grok_desktop.json",
       "transportContract": "operator-attested-mcp-v1",
-      "notes": "No headless CLI ships today, so sessions are captured through the desktop client and ingested with `npm run playtest:ingest`. Kept as operator_attested until a CLI exists, at which point this becomes a headless_cli entry and its past sessions keep their original, honest label."
+      "notes": "A headless-capable Grok CLI DOES ship now (verified: grok 1.0.5 offers -p/--single, --output-format, --tools and an mcp subcommand), so the old 'no CLI exists' note was stale. This stays operator_attested and kind=desktop_client anyway, deliberately: `blind-tester/run.sh` can only PROVE blindness for codex, by reading Codex's own rollout logs, and flipping this to headless_cli would let a grok cohort past argument validation only to die inside the runner. Grok also takes its prompt as an argument rather than on STDIN, and has no --mcp-config flag, so it does not fit the launch contract either. Sessions are captured in the client and ingested with `npm run playtest:ingest`; revisit only when a rollout-log reader for this vendor exists."
     }
   ]
 }

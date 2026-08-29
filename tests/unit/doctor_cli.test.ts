@@ -11,9 +11,10 @@
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { onPath } from "../../bin/doctor.js";
 import { sealPlaytestSession, type PlaytestSessionBody } from "../../src/qa/session_record.js";
 import { sha256Hex, writePlaytestSession } from "../../src/qa/session_store.js";
 
@@ -172,5 +173,36 @@ describe("doctor", () => {
     ]);
     expect(output).toContain("No sessions yet");
     expect(output).not.toContain("Add a SECOND model family");
+  });
+});
+
+describe("onPath", () => {
+  /**
+   * This resolved NOTHING on Windows. onPath shelled `command -v <bin>` with
+   * `shell: true`, which spawns cmd.exe, where `command` is not a builtin — so the call
+   * threw for every binary and the function returned false unconditionally. The one
+   * command whose job is to say what an operator can launch reported that they could
+   * launch nothing, on the platform where that answer is hardest to check by hand.
+   *
+   * `node` is the honest probe: this suite is running under it, so it is on PATH by
+   * construction on every platform, and the old implementation still said it was not.
+   */
+  it("finds an executable that is definitely on PATH", () => {
+    expect(onPath("node")).toBe(true);
+  });
+
+  it("does not invent one that is not", () => {
+    expect(onPath("adventureforge-definitely-not-a-real-binary")).toBe(false);
+  });
+
+  it("survives a PATH containing empty and quoted entries", () => {
+    const original = process.env.PATH;
+    try {
+      process.env.PATH = `${original ?? ""}${delimiter}${delimiter}"${tmpdir()}"`;
+      expect(onPath("node")).toBe(true);
+      expect(onPath("adventureforge-definitely-not-a-real-binary")).toBe(false);
+    } finally {
+      process.env.PATH = original;
+    }
   });
 });

@@ -28,7 +28,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { basename, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_SESSION_STORE, listPlaytestSessions } from "../src/qa/session_store.js";
 
@@ -113,7 +113,13 @@ function main(): void {
 
     let added = 0;
     for (const entry of entries) {
-      const dirName = entry.dir.split("/").pop()!;
+      // basename, not split("/"): entry.dir is built with path.join (session_store.ts),
+      // so on Windows it is "D:\af-corpus\20260829__codex__…" with no forward slash at
+      // all. split("/").pop() then returned the ENTIRE absolute path as the "directory
+      // name", and `update-index --cacheinfo 100644,<blob>,D:\af-corpus\…` is rejected
+      // by git with rc=128 on the first session — so publishing the corpus, which is
+      // its only off-machine copy, failed outright on every Windows machine.
+      const dirName = basename(entry.dir);
       // Content-addressed names mean "already there" implies "byte-identical", so a
       // skip here can never drop a differing session on the floor.
       if (existing.has(dirName)) continue;
