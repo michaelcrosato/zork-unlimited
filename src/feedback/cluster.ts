@@ -64,8 +64,32 @@ export type IssueCluster = {
   tiers: PlaytestTier[];
 };
 
-/** Jaccard similarity threshold for pass-2 cross-bucket merges. */
-export const JACCARD_MERGE_THRESHOLD = 0.5;
+/**
+ * Jaccard similarity threshold for pass-2 cross-bucket merges.
+ *
+ * Calibrated against REAL reports rather than intuition, because the previous value of
+ * 0.5 turned out to sit above the point where anything real ever merged. Four sessions
+ * independently described one blocked-exit defect in their own words; their pairwise
+ * similarity ran 0.219 to 0.429, so at 0.5 they produced four tickets at one report
+ * each. Corroboration — the rung the whole two-loop split exists to reach — could
+ * therefore never fire on genuinely independent prose, only on near-duplicate text.
+ *
+ * Measured both directions on that same real material:
+ *
+ *   same defect, four independent wordings   0.219 – 0.429   must merge
+ *   different defects (incl. cross pairs)    0.000 – 0.043   must not merge
+ *
+ * A gap of 0.175 separates them, and 0.15 sits inside it — comfortably above the
+ * highest false pair and below the lowest true one. It is a threshold on token bags,
+ * so it will never be exact; what makes it safe is that pass 2 only ever compares
+ * issues that ALREADY share a canonical location, so the question being asked is the
+ * narrow "are these two reports about the same thing in the same place?"
+ *
+ * Verified end to end on both sides: four real wordings of one defect now form a single
+ * ticket at report_count 4, while three genuinely different defects filed against one
+ * story choice stay three tickets.
+ */
+export const JACCARD_MERGE_THRESHOLD = 0.15;
 
 /**
  * Fixed ~40-word stopword list for `tokenizeIssue`. Deliberately separate

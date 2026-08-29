@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { clusterIssues, jaccard, tokenizeIssue } from "../../src/feedback/cluster.js";
+import {
+  clusterIssues,
+  jaccard,
+  JACCARD_MERGE_THRESHOLD,
+  tokenizeIssue,
+} from "../../src/feedback/cluster.js";
 import type { IssueRecord } from "../../src/feedback/cluster.js";
 import type { CanonicalLocation } from "../../src/feedback/schema.js";
 
@@ -105,5 +110,80 @@ describe("clustering", () => {
     expect(cluster!.severityBand).toBe("severe");
     expect(cluster!.sources.sort()).toEqual(["crawler", "fleet"]);
     expect(cluster!.personas.sort()).toEqual(["casual", "skeptic"]);
+  });
+});
+
+describe("merging independently-authored reports of one defect", () => {
+  // Calibration cover. The threshold used to sit at 0.5, above the point where anything
+  // real merged: four sessions describing ONE blocked-exit defect in their own words
+  // scored 0.219-0.429 pairwise and produced four separate tickets. Corroboration could
+  // not fire on independent prose at all, only on near-duplicate text.
+  //
+  // These strings are verbatim from four real sessions. Keeping them verbatim is the
+  // point — paraphrasing them into something more similar is exactly the mistake that
+  // let the original threshold look adequate.
+  const ONE_DEFECT = [
+    "Blocked reason reads 'Choose the single approach named by Hayden's dispatch. You cannot descend while both approach routes are selected.' Exactly one approach was selected.",
+    "steading_yard north blocks with 'You cannot descend while both approach routes are selected.' Exactly one approach was selected each time. The stated condition is never true.",
+    "Copy bug. I launched with exactly one approach (albany:wolf_approach_exposed_ridge), and the flags confirm a single approach, but the blocked exit says both approach routes are selected.",
+    "The quest-launch blocked exit reads 'while both approach routes are selected' when exactly one was selected.",
+  ];
+
+  // Three genuinely DIFFERENT defects a single session filed against one story choice.
+  const THREE_DEFECTS = [
+    "A permanent background is committed at decision 2, triggered by talking to the only contact on screen, with no prerequisite and no warning beforehand.",
+    "The mechanical consequence that matters most is hidden from the summaries. 'In Wolf-Winter, Defense starts at 4 instead of 3' appears only under inspect.",
+    "Every option carries consequence as an empty string rather than omitting the field, in both story choices.",
+  ];
+
+  function issuesAt(location: CanonicalLocation, texts: readonly string[]): IssueRecord[] {
+    return texts.map((text, i) => ({
+      source: "fleet" as const,
+      ref: `session-${i}`,
+      location,
+      severity: "S3" as const,
+      text,
+      persona: null,
+      target: "quest:wolf_winter",
+    }));
+  }
+
+  const somewhere: CanonicalLocation = {
+    kind: "quest",
+    questId: "wolf_winter",
+    region: null,
+    node: null,
+    sceneId: "steading_yard",
+    raw: ["steading_yard"],
+  };
+
+  it("merges four independent wordings of one defect into a single cluster", () => {
+    const clusters = clusterIssues(issuesAt(somewhere, ONE_DEFECT));
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]!.issues).toHaveLength(4);
+  });
+
+  it("keeps genuinely different defects apart even when they share a location", () => {
+    // The safety half. A threshold low enough to merge independent prose must not also
+    // collapse distinct findings filed against the same place.
+    const clusters = clusterIssues(issuesAt(somewhere, THREE_DEFECTS));
+    expect(clusters).toHaveLength(3);
+  });
+
+  it("separates the two populations by a real margin, not by luck", () => {
+    const tok = (t: string) => tokenizeIssue(t);
+    const pairs = (texts: readonly string[]): number[] => {
+      const out: number[] = [];
+      for (let i = 0; i < texts.length; i++)
+        for (let j = i + 1; j < texts.length; j++)
+          out.push(jaccard(tok(texts[i]!), tok(texts[j]!)));
+      return out;
+    };
+    const same = pairs(ONE_DEFECT);
+    const different = pairs(THREE_DEFECTS);
+    // The threshold must sit strictly between the populations, or it is tuned to one
+    // example rather than to a separation that actually exists.
+    expect(Math.max(...different)).toBeLessThan(JACCARD_MERGE_THRESHOLD);
+    expect(Math.min(...same)).toBeGreaterThan(JACCARD_MERGE_THRESHOLD);
   });
 });
