@@ -291,6 +291,18 @@ git worktree add ../af-qa-c main
 mkdir -p /d/af-corpus            # ONE shared session corpus, outside every worktree
 ```
 
+### Preflight, part one and a half: ask what this machine can actually do
+
+```bash
+npm run doctor -- --store /d/af-corpus
+```
+
+It reports which agent the dev loop will pick, which vendors can run live here versus
+which must be hand-played and ingested, what shape the corpus is in, and — the part that
+matters — **why nothing is queued, when nothing is queued**. "Nothing promoted" is the
+correct outcome for a single-vendor corpus and also the symptom of a broken pipeline;
+those look identical from outside, and this names which one you have. Read-only.
+
 ### Preflight, part two: prove the wiring before you spend a cohort
 
 Every other way to find out whether a cohort string, a model pin or a store path is
@@ -380,6 +392,7 @@ from experience metrics.
 
 | Command                                | What it does                                         |
 | -------------------------------------- | ---------------------------------------------------- |
+| `npm run doctor`                       | what works here, and why nothing is queued           |
 | `./loop.sh`                            | dev loop; any installed agent                        |
 | `./playtest-loop.sh`                   | playtest loop; cohorts across providers and personas |
 | `npm run work`                         | the next thing to build                              |
