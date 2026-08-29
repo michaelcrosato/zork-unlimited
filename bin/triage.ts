@@ -14,7 +14,7 @@
  *   npm run qa:triage -- --store <dir>   triage a corpus somewhere else
  */
 import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { buildLocationIndex } from "../src/feedback/normalize.js";
 import { DEFAULT_QUEUE_DIR } from "../src/intake/submission.js";
 import { upsertSubmission } from "../src/intake/queue.js";
@@ -24,7 +24,7 @@ import { readTickets, summarizeBucket, writeTickets } from "../src/qa/ticket_sto
 import { DEFAULT_SESSION_STORE, listPlaytestSessions } from "../src/qa/session_store.js";
 import { triagePlaytestCorpus } from "../src/qa/triage.js";
 
-const REPO_ROOT = resolve(new URL("..", import.meta.url).pathname);
+const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 function argValue(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);

@@ -26,7 +26,8 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { hashState } from "../src/core/hash.js";
 import { JourneyExitReceiptSchema } from "../src/blind/exit_interview.js";
 import { verifyBlindReportText } from "../src/blind/report_verifier.js";
@@ -46,7 +47,7 @@ import {
 } from "../src/qa/session_record.js";
 import { DEFAULT_SESSION_STORE, sha256Hex, writePlaytestSession } from "../src/qa/session_store.js";
 
-const REPO_ROOT = resolve(new URL("..", import.meta.url).pathname);
+const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const WORLD_PATH = join(REPO_ROOT, "content/world/new_york_overworld.json");
 const PERSONA_DIR = join(REPO_ROOT, "blind-tester/personas");
 

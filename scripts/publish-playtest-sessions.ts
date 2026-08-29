@@ -28,10 +28,11 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DEFAULT_SESSION_STORE, listPlaytestSessions } from "../src/qa/session_store.js";
 
-const REPO_ROOT = resolve(new URL("..", import.meta.url).pathname);
+const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 function argValue(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);

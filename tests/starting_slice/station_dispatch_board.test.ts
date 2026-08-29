@@ -235,21 +235,28 @@ describe("Station dispatch board", () => {
     // Frozen first-contact accounting, all in UTF-8 bytes. The V1 pure reveal
     // contract tightens its catalogue and prompt without changing board V6.
     const promptBytes = readFileSync("blind-tester/prompt-overworld.md").byteLength;
-    const pureCatalogBytes = 16_773;
+    // Mirrors the catalogue this suite cannot measure without starting a server. The
+    // authoritative figure is asserted against a live `tools/list` in
+    // tests/regression/mcp_pure_play_mode.test.ts ("advertises only player tools…");
+    // change it there first, then here. It had drifted 35 bytes stale before 2026-08-28.
+    const pureCatalogBytes = 17_070;
     const freshContextBytes = Buffer.byteLength(
       JSON.stringify(new OverworldSession(WORLD).compactView()),
       "utf8",
     );
     const stationContextBytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
+    const freshAggregate = promptBytes + pureCatalogBytes + freshContextBytes;
     expect(promptBytes).toBe(15_720);
-    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(34_351);
-    expect(34_351).toBeLessThanOrEqual(34_868);
+    expect(freshAggregate).toBe(34_648);
+    // Assert the ceiling against the computed aggregate, not against the literal on
+    // the line above it — comparing two constants proves nothing about the build.
+    expect(freshAggregate).toBeLessThanOrEqual(34_868);
     const firstStationAggregate =
       promptBytes +
       pureCatalogBytes +
       stationContextBytes +
       Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
-    expect(firstStationAggregate).toBe(37_896);
+    expect(firstStationAggregate).toBe(38_193);
     expect(firstStationAggregate).toBeLessThanOrEqual(38_495);
 
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });

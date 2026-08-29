@@ -60,7 +60,7 @@ const CADE_HUNT_INSPECT_LABEL =
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
-  "Inspect a visible story choice without choosing it. Pass the parent session_id and exact story_choice_id from journey.storyChoice, Station ['inspect', id], or departure_interactions. Add option_id or reveal_id, not both. option_id returns one option's full detail. reveal_id unlocks staged options for this session and survives export or restore. Compact output omits repeated board and world data. Set compact_result:false for the full story.";
+  "Inspect a visible story choice without choosing it. Never changes state.";
 
 async function withPureServer<T>(
   evidencePath: string,
@@ -1169,7 +1169,10 @@ describe("MCP pure play mode", () => {
           Object.entries(tool.inputSchema).filter(([key]) => key !== "$schema"),
         ),
       }));
-      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(38_759);
+      // +807 on 2026-08-28: inspect_overworld_session_story now publishes its ten
+      // full-mode properties instead of an empty `{}`. Only the pure catalogue is
+      // budget-capped; full mode is pinned to catch unintended drift, not to ration.
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_566);
       expect(fullRead?.description).toBe(
         "Read current context without acting. Station support uses the exact board[5] id.",
       );
@@ -2269,9 +2272,21 @@ describe("MCP pure play mode", () => {
           ),
         }));
         const pureCatalogBytes = Buffer.byteLength(JSON.stringify(pureCatalogProjection), "utf8");
-        expect(pureCatalogBytes).toBe(16_738);
-        expect(pureCatalogBytes - 16_694).toBe(44);
-        expect(15_720 + 2_042 + pureCatalogBytes).toBe(34_500);
+        // Frozen first-contact accounting, in UTF-8 bytes: the prompt template, the
+        // fresh compact context, and this catalogue are everything a blind player is
+        // handed before its first action, and 34_868 is the ceiling that budget may
+        // not cross.
+        //
+        // 2026-08-28: inspect_overworld_session_story used to publish `{}` for its
+        // whole input schema — a `z.object().refine()` handed to registerTool where a
+        // ZodRawShape was expected — so it advertised no arguments at all. Publishing
+        // its five real properties costs 749 bytes; 371 came back by deleting the
+        // prose description that had been standing in for the missing schema, and the
+        // rest from two parameter descriptions the schema now states machine-readably
+        // (`not: {required: [option_id, reveal_id]}` replaces "not both"). Net +332,
+        // which is why the headroom below is 36 bytes rather than the old 368.
+        expect(pureCatalogBytes).toBe(17_070);
+        expect(15_720 + 2_042 + pureCatalogBytes).toBe(34_832);
         expect(15_720 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(34_868);
         for (const tool of listed.tools) {
           expect(

@@ -1462,6 +1462,60 @@ function requireOneOfArguments(
   return requireArgumentGroups(inputShape, [argumentNames]);
 }
 
+// Mutual exclusion, published rather than hidden. A bare `z.object(shape).refine(…)`
+// looks like the obvious way to say "not both of these", but it hands registerTool a
+// ZodEffects where a ZodRawShape is expected: zodToJsonSchema then finds no shape and
+// publishes `{"properties":{}}`, so the tool advertises NO arguments at all while its
+// description documents several. Clients that validate or strip against the advertised
+// schema send `{}` and the call fails at the handler. This mirrors requireArgumentGroups
+// above — same root pipe for field-level diagnostics, same toJSONSchema override so the
+// real properties still reach `tools/list`, plus a JSON-Schema `not/required` clause that
+// states the exclusion machine-readably instead of only in prose.
+function forbidArgumentCombination(
+  inputShape: ZodRawShape,
+  exclusiveNames: RequiredArgumentGroup,
+  message: string,
+): $ZodType {
+  const objectSchema = z.object(inputShape);
+  const schema = z4.pipe(
+    z4.custom((value) => value !== null && typeof value === "object", "Expected an object."),
+    z4.transform((value, context) => {
+      const parsed = objectSchema.safeParse(value);
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          context.issues.push({
+            code: "custom",
+            input: value,
+            path: issue.path,
+            message: issue.message,
+          });
+        }
+      }
+      const supplied = exclusiveNames.filter(
+        (argumentName) =>
+          Object.prototype.hasOwnProperty.call(value, argumentName) &&
+          (value as Record<string, unknown>)[argumentName] !== undefined,
+      );
+      if (supplied.length > 1) {
+        context.issues.push({
+          code: "custom",
+          input: value,
+          path: [exclusiveNames.at(-1)!],
+          message,
+        });
+      }
+      return parsed.success && context.issues.length === 0 ? parsed.data : z4.NEVER;
+    }),
+  );
+  const publishedSchema = {
+    ...toJsonSchemaCompat(objectSchema, { strictUnions: true, pipeStrategy: "input" }),
+    not: { required: [...exclusiveNames] },
+  };
+  Object.defineProperty(schema._zod.def, "shape", { value: {} });
+  schema._zod.toJSONSchema = () => publishedSchema;
+  return schema;
+}
+
 function requireAliasedArgument(
   inputShape: ZodRawShape,
   canonicalName: string,
@@ -2026,9 +2080,9 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect a visible story choice without choosing it. Pass the parent session_id and exact story_choice_id from journey.storyChoice, Station ['inspect', id], or departure_interactions. Add option_id or reveal_id, not both. option_id returns one option's full detail. reveal_id unlocks staged options for this session and survives export or restore. Compact output omits repeated board and world data. Set compact_result:false for the full story.",
-  z
-    .object({
+  "Inspect a visible story choice without choosing it. Never changes state.",
+  forbidArgumentCombination(
+    {
       ...OVERWORLD_SESSION,
       story_choice_id: z
         .string()
@@ -2038,21 +2092,18 @@ tool(
       option_id: z
         .string()
         .optional()
-        .describe(
-          "Exact id from story.options. Compact output returns that option's detail without changing state.",
-        ),
+        .describe("Exact id from story.options. Returns that option's full detail."),
       reveal_id: z
         .string()
         .optional()
         .describe(
-          "Exact revealOption id. Do not combine with option_id. The reveal applies only to this session and story.",
+          "Exact revealOption id. Unlocks staged options for this session; survives export or restore.",
         ),
       ...OVERWORLD_ACTION_CONTEXT,
-    })
-    .refine((args) => !(args.option_id !== undefined && args.reveal_id !== undefined), {
-      message: "option_id and reveal_id are mutually exclusive.",
-      path: ["reveal_id"],
-    }),
+    },
+    ["option_id", "reveal_id"],
+    "option_id and reveal_id are mutually exclusive.",
+  ),
   (a) => api.inspect_overworld_session_story(defaultCompactOverworld(a)),
 );
 tool(

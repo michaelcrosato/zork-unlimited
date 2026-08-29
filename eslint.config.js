@@ -43,6 +43,22 @@ export default tseslint.config(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
       ],
+      // `new URL(…, import.meta.url).pathname` is a Windows landmine, and it shipped
+      // four times in one PR before this rule existed. On win32 `pathname` is
+      // "/C:/dev/zork-unlimited/", which `resolve()` then anchors to the drive root
+      // as "C:\C:\dev\zork-unlimited" — a directory that cannot exist, so every
+      // readFileSync and every `cwd:` built from it throws ENOENT. The repo already
+      // had the correct idiom (`fileURLToPath`) in ten other files; CI runs
+      // ubuntu-latest only, so nothing upstream can catch the regression.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            'MemberExpression[property.name="pathname"][object.type="NewExpression"][object.callee.name="URL"]',
+          message:
+            "Use fileURLToPath(new URL(...)) instead of new URL(...).pathname — .pathname yields /C:/... on Windows and resolve() turns that into C:\\C:\\...",
+        },
+      ],
     },
   },
   {

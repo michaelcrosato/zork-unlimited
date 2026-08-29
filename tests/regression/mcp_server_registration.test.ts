@@ -12,7 +12,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { READ_ONLY_TOOLS, TOOL_REGISTRATIONS } from "../../src/mcp/server.js";
 
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
-  "Inspect a visible story choice without choosing it. Pass the parent session_id and exact story_choice_id from journey.storyChoice, Station ['inspect', id], or departure_interactions. Add option_id or reveal_id, not both. option_id returns one option's full detail. reveal_id unlocks staged options for this session and survives export or restore. Compact output omits repeated board and world data. Set compact_result:false for the full story.";
+  "Inspect a visible story choice without choosing it. Never changes state.";
 
 const RETIRED_STATIC_OVERWORLD_TOOLS = [
   "explore_overworld_area",
@@ -147,19 +147,23 @@ describe("MCP server registration", () => {
     );
     expect(registration?.description).toBe(PARENT_BOUND_STORY_INSPECTION_DESCRIPTION);
     expect(registration?.description).toContain("Inspect a visible story choice");
-    expect(registration?.description).toContain("Station ['inspect', id]");
-    expect(registration?.description).toContain("departure_interactions");
-    expect(registration?.description).toContain("one option's full detail");
-    expect(registration?.description).toContain("survives export or restore");
-    expect(registration?.description).toContain("omits repeated board and world data");
-    expect(registration?.description).toContain("compact_result:false for the full story");
+    expect(registration?.description).toContain("Never changes state");
 
+    // The argument contract used to live only in the prose above, because the tool
+    // published an empty input schema and prose was the only channel left. It now
+    // publishes real properties, so each fact is asserted where a client actually
+    // reads it. Keeping these as description substrings would re-reward the drift.
     const block = registeredToolBlock("inspect_overworld_session_story");
     expect(block).toContain("journey.storyChoice, Station ['inspect', id]");
+    expect(block).toContain("departure_interactions");
     expect(block).toContain("option_id: z");
-    expect(block).toContain("Compact output returns that option's detail without changing state");
+    expect(block).toContain("Returns that option's full detail");
+    expect(block).toContain("survives export or restore");
+    // Mutual exclusion is published as JSON Schema `not:{required:[…]}` by
+    // forbidArgumentCombination, not hidden behind a ZodEffects `.refine()`.
+    expect(block).toContain("forbidArgumentCombination");
     expect(block).toContain("option_id and reveal_id are mutually exclusive");
-    expect(block).toContain("reveal applies only to this session and story");
+    expect(block).not.toContain(".refine(");
     expect(
       TOOL_REGISTRATIONS.find((candidate) => candidate.name === "talk_overworld_session_contact")
         ?.description,
