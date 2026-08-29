@@ -242,6 +242,12 @@ function main(): void {
   console.log(
     `recorded ${record.outcome} ${provider.id}/${model.id} (${model.tier}) → ${dir.split("/").pop()}`,
   );
+  // A session with no interview is provenance, not evidence: it yields no issues, so no
+  // cluster and no ticket. Worth one line, because a whole cohort can look healthy in the
+  // wave log while contributing nothing triage can act on.
+  if (record.exit_interview === null) {
+    console.log(`  ! no exit interview — contributes no issues to triage`);
+  }
 }
 
 main();

@@ -235,6 +235,24 @@ function main(): void {
     `  isolation: ${record.provider.isolation}; outcome: ${record.outcome}; ` +
       `counts toward metrics: ${record.outcome === "completed" && record.provider.isolation === "runner_enforced"}`,
   );
+
+  // Say it plainly when the report did not verify.
+  //
+  // Keeping such a session is right — it is a real playthrough and often evidence of the
+  // very confusion it failed to describe cleanly — but reporting it as a plain success is
+  // not. Without an interview the record contributes NOTHING to triage: no issues, no
+  // cluster, no ticket. Someone who hand-played for an hour, saw "Ingested …", and walked
+  // away would never learn their evidence was inert, and this is the only path
+  // non-Codex vendors have, so it is the path that must not fail quietly.
+  if (record.exit_interview === null) {
+    console.log(
+      `\n  ! No exit interview was captured, so this session contributes no issues to\n` +
+        `    triage — it is stored as provenance only.\n` +
+        `    reason: ${record.failure_note ?? "no report supplied"}\n` +
+        `    Fix the report and re-run: the record is content-addressed, so re-ingesting\n` +
+        `    the corrected one adds it rather than duplicating this.`,
+    );
+  }
 }
 
 main();
