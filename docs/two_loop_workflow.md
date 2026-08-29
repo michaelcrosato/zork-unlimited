@@ -388,6 +388,47 @@ npm run playtest:ingest -- --provider grok_desktop --model grok-4-fast \
 That session is `operator_attested`: kept in full, counted toward corroboration, excluded
 from experience metrics.
 
+## Acceptance test: is the two-loop system actually working?
+
+Everything below the corpus can be verified locally; the one thing that cannot is whether
+two DIFFERENT vendors' prose describing one defect clusters together. Corroboration is
+the rung this whole split exists to reach, so it is worth proving once deliberately
+rather than inferring it from a quiet queue.
+
+```bash
+npm run doctor -- --store /d/af-corpus     # 1. what this machine can launch
+PLAYTEST_MOCK=1 PLAYTEST_COHORT="codex:2" PLAYTEST_STORE=/d/af-corpus \
+  ./playtest-loop.sh --once                # 2. wiring, zero tokens, records nothing
+PLAYTEST_COHORT="codex:2" PLAYTEST_STORE=/d/af-corpus ./playtest-loop.sh --once
+                                           # 3. two real Codex players
+# 4. play once in Gemini's own client, then:
+npx tsx bin/ingest-playtest-session.ts --provider gemini_cli --model <id> \
+  --attested-by "<you>" --method "desktop client, AdventureForge MCP only" \
+  --transcript run.jsonl --report report.md --store /d/af-corpus
+npm run doctor -- --store /d/af-corpus     # 5. the verdict
+```
+
+**Pass** is step 5 reporting `families: codex, gemini` and `The dev loop has work`, with
+the item visible in `npm run work -- --list`. That means a finding two independent
+vendors hit travelled the whole way to the dev loop on its own.
+
+**A stall is not automatically a failure.** If the doctor says `Add a SECOND model family`
+you only have one lineage in the corpus — step 4 did not land. If it says tickets exist
+but none is actionable while both families ARE present, the two vendors described
+different things, which is ordinary. If it reports many tickets across three or more
+sessions with nothing merged at all, that is the shape of a clustering fault and worth
+investigating rather than accepting.
+
+Two things that will bite if you skip the doctor:
+
+- **Only `codex` runs live.** Every other vendor fails at launch with `Could not resolve
+the existing Codex home`, because runner-enforced blindness is proved from Codex's own
+  rollout logs. The others are hand-played and ingested, and still count toward bug
+  corroboration.
+- **A report that does not verify is kept but contributes nothing.** The ingest command
+  now says so explicitly and names the reason; if you see that line, fix the report and
+  re-run rather than assuming the session landed as evidence.
+
 ## Commands
 
 | Command                                | What it does                                         |
