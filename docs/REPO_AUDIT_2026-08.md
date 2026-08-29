@@ -28,7 +28,7 @@ flowchart TB
     subgraph CONTENT["Content — data only, never code"]
         QUESTS["content/rpg/quests/*.yaml<br/>12 shipped quests"]
         WORLD["content/world/new_york_overworld.json<br/>247 nodes · 344 roads · 700 areas"]
-        FIXTURES["content/broken-fixtures/*.yaml<br/>34 negative fixtures"]
+        FIXTURES["content/broken-fixtures/*.yaml<br/>48 negative fixtures"]
         CORPUS["corpus/ + traces/<br/>sealed packs · 582 bug traces"]
     end
 
@@ -62,7 +62,7 @@ flowchart TB
     end
 
     subgraph VERIFY["Verification"]
-        T0["Tier 0 · vitest 461 files + 2 validators (84 finding codes)"]
+        T0["Tier 0 · vitest 461 files + 2 validators (75 finding codes)"]
         T1["Tier 1 · src/crawl · 9 zero-LLM oracles"]
         T2["Tier 2 · blind-tester · pure LLM playtest + exit receipt"]
         T3["Tier 3 · src/feedback · hot spots + retention"]
@@ -443,7 +443,7 @@ flowchart TB
     subgraph STATIC["Static validation — reject before play"]
         V1["rpg_validator.ts<br/>1,390 LOC"]
         V2["rpg_foundation_validator.ts<br/>2,489 LOC · 42 finding codes"]
-        NEG["content/broken-fixtures/*.yaml<br/>34 negative fixtures — one witness per rejection direction"]
+        NEG["content/broken-fixtures/*.yaml<br/>48 negative fixtures — one witness per rejection direction"]
         V1 & V2 --- NEG
     end
 
@@ -807,7 +807,7 @@ To keep the findings in proportion:
 - **Comments explain *why*, with evidence.** Almost every non-obvious line cites
   the bug that motivated it (`bug_0060`, `bug_0131`, `bug_0190`, `bug_0258`).
   582 bug traces with 2,194 verified path references, checked on every health run.
-- **Rejection directions have witnesses.** 34 negative fixtures, data-driven, one
+- **Rejection directions have witnesses.** 48 negative fixtures, data-driven, one
   per validator finding code — so "the validator would have caught it" is a test,
   not a claim.
 - **Evidence classes are never mixed.** Structural mocks, legacy reports, and

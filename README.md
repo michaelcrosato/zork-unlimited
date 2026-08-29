@@ -113,7 +113,12 @@ guard (`scripts/verify-integrity.ts`, which also forbids retired-runtime assets
 from reappearing), bug-trace parsing/identity/reference integrity, the compact
 opening's density ceilings, typecheck, ESLint, Prettier, the vitest suite, the UI
 typecheck (`npm run ui:typecheck`), and validation of every shipped quest. CI
-runs the same sequence and builds the UI. A separate scheduled/manual
+enforces the same checks but does not invoke `npm run health` itself: running it
+there would double-execute the whole pipeline, so `.github/workflows/ci.yml`
+splits it into a prerequisites job, two sharded test jobs, and a `crawl:smoke`
+job, then requires all three through the `verify` check. CI also builds the UI
+(`npm run ui:build`), which `health` does not, and `crawl:smoke` is required in
+CI while remaining deliberately outside `health`. A separate scheduled/manual
 [`Deep audit`](./.github/workflows/deep-audit.yml) runs the long crawl plus a
 standard-suite V8 coverage report without lengthening the PR critical path.
 
@@ -128,7 +133,7 @@ repo ships `.mcp.json`, so an MCP client opened here connects automatically.
 
 - **World catalog** (1): `list_overworld` — the overworld is both the world and
   the quest registry.
-- **Overworld sessions** (25): `start_overworld`, then travel, care, rest,
+- **Overworld sessions** (26): `start_overworld`, then travel, care, rest,
   resupply, route planning, POI scouting, contacts, events, jobs, area
   exploration, export/restore — and `start_overworld_session_quest` /
   `complete_overworld_session_quest` bridging a discovered lead into quest play,
@@ -195,14 +200,22 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   unit/property/regression suite, the validators, exhaustive shipped-pack proofs,
   bug-trace integrity, and the opening-density budget — all inside
   `npm run health`. Rejection-direction witnesses live in the
-  negative-fixture corpus (`content/broken-fixtures/`, mostly `foundation_*.yaml`),
-  a data-driven test proving each validator finding code actually fires.
+  negative-fixture corpus (`content/broken-fixtures/`, 48 files, mostly
+  `foundation_*.yaml`). For the foundation validator this is data-driven and
+  self-tightening: the test parses the emit sites out of the validator source and
+  requires a witness for every code, with the still-unwitnessed ones held in an
+  explicit, shrinking allowlist (3 today), so adding a code fails the suite until
+  it is fixtured or consciously listed.
 - **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure
   engine in-process across every shipped quest plus a full overworld sweep,
-  checking nine invariant oracles (crash, integrity, desync, persistence,
-  legality, softlock, render defects, world coverage) every step, emitting
-  deduped, zod-validated findings with minimized replayable repros.
-  `npm run crawl:smoke` is the loop's gate (every cycle, ~10s, deterministic);
+  checking nine finding codes every step — eight invariants (crash, integrity,
+  desync, persistence, legality, softlock, render defects, world coverage) plus
+  `ORPHAN`, which is coverage bookkeeping rather than a violation — and emitting
+  deduped, zod-validated findings. Repros are minimized and replayable for the
+  five codes `REPRODUCIBLE_CODES` admits (crash, integrity, render, persistence,
+  softlock); desync, legality, world and orphan findings carry an unminimized
+  repro. `npm run crawl:smoke` is the loop's gate (every cycle, deterministic,
+  ~35-85s wall depending on machine and load);
   `npm run crawl:deep` is a longer soak run nightly and on manual dispatch by
   `.github/workflows/deep-audit.yml`.
 - **Tier 2 — pure blind LLM playtest**: a fresh agent with NO repo access plays

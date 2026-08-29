@@ -17,8 +17,11 @@ _prove_ they're correct.
 ```
 loop.sh  (outer driver — orchestration + the bar)
 │
-├─ 0. QA BUCKET     npm run qa:bucket --summary  (tickets the playtest loop promoted;
-│     empty is normal and never stalls the cycle)
+├─ 0. QA BUCKET     npm run work -- --list  (the intake queue, which is what
+│     report_qa_bucket actually shells out to; `npm run qa:bucket -- --summary` is the
+│     operator-facing view of the ticket bucket behind it. Informational only: it can
+│     never fail the cycle, and an empty queue is normal — the assessor's own
+│     maintenance candidates carry the cycle)
 │
 ├─ 1. ASSESS        npm run ai:loop → src/ai-loop.ts (uses src/afk/assessor.ts)
 │     Deterministically scans every pack + repo signals and ranks
@@ -78,9 +81,6 @@ loop.sh  (outer driver — orchestration + the bar)
 │                                                      deleted/disabled tests, dropped
 │                                                      test count, or a re-pin with no
 │                                                      content change; legit re-pins warn)
-│       require_playtest_record    (pure V2 report + raw server evidence + sidecar
-│                                    must reproduce one another and bind the current
-│                                    world/build to exact provisional HEAD)
 │       require_final_ledger_only  (only AI_LOOP_STATE.md may differ after play)
 │       loop:seal-feedback         (reverify the exact pure run; atomically promote
 │                                    any compile manifest and queue this report)
@@ -219,10 +219,12 @@ fourth piece of the reviewer subagent contract — _objective · output format �
   mechanical defects with zero LLM cost; a reasoning agent playing the same
   game-native contract as a human measures the _experience_, including its real
   continue/end retention choice, and the feedback compiler
-  turns both crawler findings and blind reports into ranked hot spots. The loop
-  makes the blind playtest mandatory every cycle and the crawl gate mandatory
-  around every change — together they're the feedback that actually improves the
-  game.
+  turns both crawler findings and blind reports into ranked hot spots. The crawl
+  gate is mandatory around every change. The blind playtest is **not** a per-cycle
+  gate any more — that coupling is exactly what the two-loop split removed
+  (`docs/two_loop_workflow.md`); experience evidence is produced asynchronously by
+  the playtest loop and consumed as QA tickets at the START of a cycle, never
+  proven at the end of one.
 - **Externalized state + one change per cycle**: `AI_LOOP_STATE.md` is the durable
   history; `ai-runs/<id>/` holds ignored per-cycle evidence, playtest report, and any
   ultraplan fresh-agent handoff.

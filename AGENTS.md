@@ -112,10 +112,17 @@ ages findings out after `STALE_AFTER_BUILDS`; do not hand-wave past either.
 strict subsets of it — use them for fast iteration, not as an additional
 requirement on top of health.
 
-`npm run health` runs verifier integrity, typecheck, lint, format check, tests,
-UI typecheck, and pack validation. The UI typecheck means UI deps
+`npm run health` runs nine steps, in this order: verifier integrity, bug-trace
+integrity, the opening-density budget, typecheck, lint, format check, tests, UI
+typecheck, and pack validation. The UI typecheck means UI deps
 (`npm --prefix ui install`) are required for the bar, not just for running the
 UI server. Do not commit or merge red.
+
+Budget the wall clock: the vitest step dominates and the whole bar takes roughly
+50 minutes on a fast machine. Under load, a handful of subprocess-spawning CLI
+tests can exceed their 60s/120s timeouts and fail for reasons unrelated to the
+change under test — check what actually failed before assuming your work broke
+something.
 
 `npm run crawl:smoke` is the mechanical gate (docs/testing_pyramid.md); it is
 deliberately NOT part of `health`.
@@ -170,9 +177,14 @@ deliberately NOT part of `health`.
 - Commit in clear increments when asked to land work.
 - Branch policy: `main` is the only long-lived branch and the default. Work lands
   through short-lived feature branches merged into `main` via PR; the required
-  status check is `verify` (`.github/workflows/ci.yml`). A direct push to `main`
-  is rejected unless that commit already has a green `verify` run, so fresh work
-  always goes through a branch. Keep every landing green — the bar is
+  status check is `verify` (`.github/workflows/ci.yml`), with strict up-to-date
+  branches and force-pushes disabled. A direct push to `main` is rejected unless
+  that commit already has a green `verify` run, so fresh work always goes through a
+  branch — **for everyone except a repository admin**. `enforce_admins` is
+  currently disabled, so an admin push bypasses the required check entirely. Treat
+  the rule as binding on yourself regardless: the protection is not what stops you,
+  the charter is. (Enabling `enforce_admins` would make the two agree, at the cost
+  of removing the owner's manual override.) Keep every landing green — the bar is
   `npm run health`.
 - Never print or commit secrets. Use local env files only when a task explicitly needs
   credentials.

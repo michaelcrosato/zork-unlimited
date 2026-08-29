@@ -271,12 +271,20 @@ decay — a reproduction does not stop being true because nobody happened to hit
 
 ### Preflight, once
 
-`loop.sh` needs `/proc/<pid>/stat` for pid identity and **fails closed** without it. On
-Windows, run these under WSL:
+`loop.sh` needs `/proc/<pid>/stat` for pid identity and **fails closed** without it —
+a pid alone is not an identity, so it records the pid plus field 22 (the process start
+tick) and refuses to start where it cannot read both. Check with:
 
 ```bash
 cat /proc/$$/stat | head -c 40      # prints something? you're fine
 ```
+
+On Windows this does **not** require WSL: Git Bash (MSYS2/MINGW64) provides
+`/proc/<pid>/stat` with a field 22 that is stable for the life of a process and
+distinct between processes, which is exactly the property the guard depends on.
+Verify it on your own shell with the command above before reaching for WSL — and
+prefer Git Bash if the repo lives on the Windows filesystem, since driving `C:\dev`
+through `/mnt/c` from WSL is markedly slower.
 
 Four loops in one directory will fight — the dev loop hard-resets the tree on a failed
 cycle, and a player mid-run would be playing a build that no longer exists.

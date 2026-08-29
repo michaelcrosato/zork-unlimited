@@ -15,7 +15,9 @@ reference for what each tier does, when it runs, and its exact shapes.
   scoring, valid evidence references, and no test/schema/density regressions.
 - **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure
   engine in-process across every shipped quest plus a full overworld sweep,
-  checking nine invariant oracles every step. `crawl:smoke` runs every loop
+  checking nine finding codes every step — eight true invariants (CRASH,
+  INTEGRITY, DESYNC, PERSIST, LEGALITY, SOFTLOCK, RENDER, WORLD) plus ORPHAN,
+  which reports coverage rather than a violation. `crawl:smoke` runs every loop
   cycle (pre- and post-work gate); `crawl:deep` is a longer soak, nightly or
   manual.
 - **Tier 2 — pure blind LLM playtests** (`blind-tester/`, driven by the
