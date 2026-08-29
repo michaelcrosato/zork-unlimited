@@ -118,7 +118,12 @@ there would double-execute the whole pipeline, so `.github/workflows/ci.yml`
 splits it into a prerequisites job, two sharded test jobs, and a `crawl:smoke`
 job, then requires all three through the `verify` check. CI also builds the UI
 (`npm run ui:build`), which `health` does not, and `crawl:smoke` is required in
-CI while remaining deliberately outside `health`. A separate scheduled/manual
+CI while remaining deliberately outside `health`. A fifth job, `windows-smoke`,
+runs the static gates plus the path-sensitive CLI suites on `windows-latest`: the
+other jobs are ubuntu-only, and that blind spot is exactly how a repo-root bug that
+made `npm run health` red on Windows shipped and stayed green. It is advisory —
+outside `verify`'s `needs` — so a Windows-runner hiccup cannot block a merge. All
+five jobs carry a `timeout-minutes` ceiling. A separate scheduled/manual
 [`Deep audit`](./.github/workflows/deep-audit.yml) runs the long crawl plus a
 standard-suite V8 coverage report without lengthening the PR critical path.
 
@@ -201,11 +206,13 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   bug-trace integrity, and the opening-density budget — all inside
   `npm run health`. Rejection-direction witnesses live in the
   negative-fixture corpus (`content/broken-fixtures/`, 48 files, mostly
-  `foundation_*.yaml`). For the foundation validator this is data-driven and
-  self-tightening: the test parses the emit sites out of the validator source and
-  requires a witness for every code, with the still-unwitnessed ones held in an
-  explicit, shrinking allowlist (3 today), so adding a code fails the suite until
-  it is fixtured or consciously listed.
+  `foundation_*.yaml`). Both validators are held to the same data-driven,
+  self-tightening pin: each corpus test parses the emit sites out of its own
+  validator's source and requires a rejection witness for every code it finds, with
+  the exceptions in an explicit allowlist — 3 for the foundation validator, 25 for
+  `rpg_validator`, whose entries carry witnesses elsewhere in the suite. Adding a
+  finding code fails the suite until it is fixtured or consciously listed, so a new
+  code can no longer arrive unwitnessed and green.
 - **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure
   engine in-process across every shipped quest plus a full overworld sweep,
   checking nine finding codes every step — eight invariants (crash, integrity,

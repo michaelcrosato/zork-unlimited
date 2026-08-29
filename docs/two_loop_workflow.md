@@ -82,8 +82,17 @@ PLAYTEST_COHORT="codex:8" ./playtest-loop.sh
 
 **Only Codex can currently produce a `runner_enforced` session.** Every other vendor —
 `claude_code`, `gemini_cli`, Grok — must go through `npm run playtest:ingest` and lands
-`operator_attested`. Running them through `playtest-loop.sh` fails at launch with
-`Could not resolve the existing Codex home; pure run refused.`
+`operator_attested`. Running them through `playtest-loop.sh` is refused at launch:
+`Provider "<id>" cannot produce pure evidence: this runner can only launch "codex".`
+
+That refusal was added on 2026-08-29 and is worth knowing about, because the
+behaviour it replaced was worse than the documentation implied. The registry gate
+only asks whether a provider is a headless CLI, which `claude_code` and
+`gemini_cli` both are, so a pure run for either sailed through and eventually
+executed `codex exec --model <that vendor's model>` — a session played by Codex and
+recorded under another vendor's name. The error operators actually hit was the
+unrelated missing-`~/.codex` one, which never fires on a machine that has Codex
+installed, i.e. exactly the documented AFK-loop machine.
 
 This is structural, not an oversight. `runner_enforced` means the runner can PROVE the
 agent saw only the AdventureForge MCP tools, and that proof is read back out of Codex's
@@ -429,10 +438,10 @@ investigating rather than accepting.
 
 Two things that will bite if you skip the doctor:
 
-- **Only `codex` runs live.** Every other vendor fails at launch with `Could not resolve
-the existing Codex home`, because runner-enforced blindness is proved from Codex's own
-  rollout logs. The others are hand-played and ingested, and still count toward bug
-  corroboration.
+- **Only `codex` runs live.** Every other vendor is refused at launch with
+  `cannot produce pure evidence: this runner can only launch "codex"`, because
+  runner-enforced blindness is proved from Codex's own rollout logs. The others are
+  hand-played and ingested, and still count toward bug corroboration.
 - **A report that does not verify is kept but contributes nothing.** The ingest command
   now says so explicitly and names the reason; if you see that line, fix the report and
   re-run rather than assuming the session landed as evidence.

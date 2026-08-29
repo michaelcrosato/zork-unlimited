@@ -14,8 +14,14 @@
 > that verification is read back out of Codex's own rollout logs by
 > `blind-tester/codex-rollout.mjs` (plus `codex-process-anchor.mjs`,
 > `codex-pure-envelope.mjs`, `codex-strict-stream.mjs`). No equivalent reader
-> exists for another vendor, so `run.sh` refuses their pure runs — a non-Codex
-> live cohort fails with `Could not resolve the existing Codex home`. The
+> exists for another vendor, so `run.sh` refuses their pure runs outright:
+> `Provider "<id>" cannot produce pure evidence: this runner can only launch
+> "codex".` Until 2026-08-29 that refusal did not exist — a `claude_code` or
+> `gemini_cli` pure run passed the registry's `headless_cli` gate and then executed
+> `codex exec` under the other vendor's name. The only thing that stopped it was
+> the unrelated missing-`~/.codex` error, which does not fire on the documented AFK
+> machine at all. Structural `--smoke`/`--mock` runs are unaffected: they launch no
+> live client, so any provider may exercise the plumbing. The
 > Codex-specific sections below are therefore the only implemented hardened path,
 > not one worked example among several already available.
 >

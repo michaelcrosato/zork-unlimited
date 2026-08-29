@@ -4,6 +4,21 @@ Audit date: 2026-08-28 · Audited commit: `a485798` (`main`) · Method: full rea
 `src/`, `bin/`, `scripts/`, `agents/`, `tests/`, `blind-tester/`, `ui/`, plus one
 complete playthrough driven through the MCP server (`npm run mcp`).
 
+> **Partly superseded (2026-08-29).** A second audit at `5ff3d0d8` — the commit that
+> introduced this file along with the two-loop split, so the QA/intake subsystem was
+> never in scope here — confirmed 81 findings, and the fix pass that followed closed
+> 50 of them. Several findings below are now fixed: **F3** (tool-count drift; the
+> group breakdown summed to 42 and is now 26 for overworld sessions), **F8** (the
+> health bar's environment sensitivity is unchanged, but the five Windows failures
+> folded into it were a real repo-root defect, now fixed), and the negative-fixture
+> and finding-code counts, which were wrong in this document even at `a485798` and
+> have been corrected in place (48 fixtures, 75 codes). **F1**, **F2**, **F4**,
+> **F5**, **F6** and **F7** remain open.
+>
+> Measurements below are as-of `a485798` and are deliberately NOT restated: the
+> corpus is 482 files / 4,335 tests today. Read this as a snapshot, not as current
+> state.
+
 ---
 
 ## 0. What this repository is, in one paragraph
