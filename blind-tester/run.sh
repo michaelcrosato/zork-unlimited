@@ -30,7 +30,14 @@ if [[ -n "$PACK" ]]; then
   exit 2
 fi
 SEED=7
-PROVIDER="${BLIND_PROVIDER:-codex}"
+# The provider used when no --provider/BLIND_PROVIDER is given. It is `codex` because
+# codex is, today, the vendor this runner has a live launch path for — see the two pure
+# gates below, which decide that from the registry and from this file's own launch paths
+# rather than from this name. This is a DEFAULT, not a requirement, and it was previously
+# an unlabelled literal inside a parameter expansion, which is how a default quietly
+# becomes a requirement. Moving it is a one-line change here and nothing else.
+DEFAULT_PROVIDER="codex"
+PROVIDER="${BLIND_PROVIDER:-$DEFAULT_PROVIDER}"
 MODEL="${BLIND_MODEL:-}"
 OUT=""
 SMOKE=0
@@ -175,15 +182,45 @@ fi
 # What is still refused, exactly as before, is an ALIAS. A model id must appear verbatim
 # in its provider's catalog: aliases resolve differently over time, so a run labelled
 # with one would silently stop meaning what its record says it means.
-if ! PROVIDER_INFO="$("$NODE_CMD" "$SCRIPT_DIR/resolve-provider.mjs" "$PROVIDER" "$MODEL" 2>&1)"; then
-  echo "$PROVIDER_INFO" >&2
+#
+# The resolver is asked for RECORDS rather than the historical four columns: columns
+# cannot carry an argv array, and every later gate here needs a field the columns never
+# had — the derived isolation and its reason, the client's own state root, the launch
+# executable and its override env var. Unknown keys are ignored on purpose, so the
+# resolver can grow a field without this loop needing to learn about it first.
+if ! PROVIDER_RECORDS="$("$NODE_CMD" "$SCRIPT_DIR/resolve-provider.mjs" --records "$PROVIDER" "$MODEL" 2>&1)"; then
+  echo "$PROVIDER_RECORDS" >&2
   exit 2
 fi
-# kind<TAB>isolation<TAB>model<TAB>tier
-PROVIDER_KIND="$(printf '%s' "$PROVIDER_INFO" | cut -f1)"
-PROVIDER_ISOLATION="$(printf '%s' "$PROVIDER_INFO" | cut -f2)"
-MODEL="$(printf '%s' "$PROVIDER_INFO" | cut -f3)"
-MODEL_TIER="$(printf '%s' "$PROVIDER_INFO" | cut -f4)"
+PROVIDER_KIND=""
+PROVIDER_ISOLATION=""
+PROVIDER_ISOLATION_REASON=""
+PROVIDER_CAPTURE_READER=""
+PROVIDER_SESSION_LOG_ROOT_ENV=""
+PROVIDER_SESSION_LOG_ROOT_DEFAULT=""
+PROVIDER_LAUNCH_EXECUTABLE=""
+PROVIDER_LAUNCH_BINARY_ENV=""
+MODEL=""
+MODEL_TIER=""
+while IFS=$'\t' read -r provider_record_key provider_record_value; do
+  case "$provider_record_key" in
+    kind)                       PROVIDER_KIND="$provider_record_value" ;;
+    isolation)                  PROVIDER_ISOLATION="$provider_record_value" ;;
+    isolation_reason)           PROVIDER_ISOLATION_REASON="$provider_record_value" ;;
+    capture_reader_module)      PROVIDER_CAPTURE_READER="$provider_record_value" ;;
+    session_log_root_env)       PROVIDER_SESSION_LOG_ROOT_ENV="$provider_record_value" ;;
+    session_log_root_default)   PROVIDER_SESSION_LOG_ROOT_DEFAULT="$provider_record_value" ;;
+    launch_executable)          PROVIDER_LAUNCH_EXECUTABLE="$provider_record_value" ;;
+    launch_binary_override_env) PROVIDER_LAUNCH_BINARY_ENV="$provider_record_value" ;;
+    model)                      MODEL="$provider_record_value" ;;
+    model_tier)                 MODEL_TIER="$provider_record_value" ;;
+    *) ;;
+  esac
+done <<< "$PROVIDER_RECORDS"
+if [[ -z "$PROVIDER_KIND" || -z "$PROVIDER_ISOLATION" || -z "$MODEL" || -z "$MODEL_TIER" ]]; then
+  echo "resolve-provider.mjs returned an incomplete record set for provider \"$PROVIDER\"." >&2
+  exit 2
+fi
 
 if [[ "$PROVIDER_KIND" != "headless_cli" ]]; then
   echo "Provider \"$PROVIDER\" is $PROVIDER_KIND: this runner cannot launch it." >&2
@@ -268,33 +305,90 @@ if [[ "$PLAY_MODE" == "pure" && -n "${BLIND_AGENT_CMD:-}" ]]; then
   exit 2
 fi
 
-# The pure path below is Codex-specific from end to end, and it must say so HERE.
+# Which providers may produce PURE evidence is DERIVED, never listed here.
 #
-# `runner_enforced` blindness is proved by reading Codex's own rollout logs
-# (blind-tester/codex-rollout.mjs and friends); no equivalent reader exists for any
-# other vendor, and every later step — the Codex home requirement, the transport
-# contract chosen by exact Codex model string, the `codex` client preflight, the
-# hardened strict-stream launch — is built around that one client. The registry
-# `kind` gate above only asks whether a provider is a headless CLI at all, which
-# `claude_code` and `gemini_cli` both are, so without this check a pure run for
+# The old form of this gate was `PURE_LAUNCHABLE_PROVIDER="codex"`, and the literal was
+# the problem: it said WHO instead of WHY, so it stayed true only for as long as nobody
+# taught the harness a second vendor, and it could not be checked against anything.
+# `resolve-provider.mjs` now hands us the registry's DERIVED isolation — `runner_enforced`
+# iff the runner spawns the client AND the registry says where that client writes its
+# private session log AND the module that reads that log exists in this checkout (see
+# `derivePlaytestIsolation` in src/blind/providers.ts, which is the authority). That is
+# precisely the question "can anything here witness a session of this vendor", which is
+# precisely the question a pure run has to answer before it spends a token.
+#
+# The registry `kind` gate above only asks whether a provider is a headless CLI at all,
+# which `claude_code` and `gemini_cli` both are, so without this check a pure run for
 # either vendor sails past argument validation and eventually executes
-# `codex exec --model <that vendor's model>`: a burned launch whose failure names
-# the wrong cause. The refusal the protocol docs have always attributed to this
-# runner was in fact only the missing-`~/.codex` error, which does not fire at all
-# on the documented AFK-loop machine (Codex installed and logged in).
+# `codex exec --model <that vendor's model>`: a burned launch whose failure names the
+# wrong cause. The refusal the protocol docs have always attributed to this runner was in
+# fact only the missing-`~/.codex` error, which does not fire at all on the documented
+# AFK-loop machine (Codex installed and logged in).
 #
-# Structural --smoke/--mock runs are unaffected: they never launch a live client,
-# so any provider may be used to exercise the plumbing. Non-Codex vendors remain
-# first-class evidence through `npm run playtest:ingest`, which stamps them
-# `operator_attested` — the honest label for a session no runner witnessed.
-PURE_LAUNCHABLE_PROVIDER="codex"
-if [[ "$PLAY_MODE" == "pure" && "$PROVIDER" != "$PURE_LAUNCHABLE_PROVIDER" ]]; then
-  echo "Provider \"$PROVIDER\" cannot produce pure evidence: this runner can only launch \"$PURE_LAUNCHABLE_PROVIDER\"." >&2
-  echo "runner_enforced blindness is read out of Codex's own rollout logs; no other vendor has an equivalent reader yet." >&2
+# Structural --smoke/--mock runs are unaffected: they never launch a live client, so any
+# provider may be used to exercise the plumbing. Vendors this checkout cannot witness
+# remain first-class evidence through `npm run playtest:ingest`, which stamps them
+# `operator_attested` — the honest label for a session no runner watched.
+if [[ "$PLAY_MODE" == "pure" && "$PROVIDER_ISOLATION" != "runner_enforced" ]]; then
+  echo "Provider \"$PROVIDER\" cannot produce pure evidence: only a runner_enforced provider can, because pure evidence is read back out of the client's own session log." >&2
+  echo "Derived from this checkout: $PROVIDER_ISOLATION_REASON." >&2
   echo "Play it in its own client, then record the session with:" >&2
   echo "  npm run playtest:ingest -- --provider $PROVIDER --model $MODEL ..." >&2
   echo "Structural plumbing checks for any provider remain available via --smoke or --mock." >&2
   exit 2
+fi
+
+# Deriving isolation answers "can this checkout READ that vendor's session log". It does
+# NOT answer "can this script DRIVE that vendor", and those are two different facts that
+# one derived flag would silently fuse. Everything after this point — the transport
+# contract chosen by exact model string, the client preflight and authority pin, the
+# hardened strict-stream launch, the rollout capture — is one concrete launch path
+# written against one concrete reader.
+#
+# So this list is not a vendor allowlist wearing a new name: it names the capture readers
+# this file actually has a launch path for. A second vendor becomes launchable by adding
+# its launch path here and its reader to this list — one line each — not by landing a
+# reader elsewhere and hoping. Without the check, a reader landing for another vendor
+# would open the derived gate above onto the Codex launch below and run
+# `codex exec --model <that vendor's model>`: the burned launch under the wrong vendor's
+# name that both gates exist to prevent.
+# Read from blind-tester/implemented-launch-paths.json rather than listed here, so that
+# bin/doctor.ts reads the SAME list. Doctor's table would otherwise advertise a live lane
+# this script refuses — which is exactly what happened when the claude_code reader landed:
+# the derived gate opened, doctor said "live via playtest-loop.sh", and run.sh (correctly)
+# said no. One file, two readers, no drift.
+mapfile -t RUNNER_IMPLEMENTED_CAPTURE_READERS < <(
+  "$NODE_CMD" -e '
+    const { readFileSync } = require("node:fs");
+    const path = process.argv[1];
+    const parsed = JSON.parse(readFileSync(path, "utf8"));
+    const readers = parsed.implementedCaptureReaders;
+    if (!Array.isArray(readers) || readers.some((r) => typeof r !== "string" || r === "")) {
+      console.error("implemented-launch-paths.json: implementedCaptureReaders must be a string[]");
+      process.exit(1);
+    }
+    for (const reader of readers) console.log(reader);
+  ' "$(node_path_arg "$SCRIPT_DIR/implemented-launch-paths.json")"
+) || {
+  echo "Could not read blind-tester/implemented-launch-paths.json; refusing to guess which vendors this runner can launch." >&2
+  exit 4
+}
+if [[ "$PLAY_MODE" == "pure" ]]; then
+  RUNNER_CAN_DRIVE_CAPTURE_READER=0
+  for implemented_capture_reader in "${RUNNER_IMPLEMENTED_CAPTURE_READERS[@]}"; do
+    if [[ "$PROVIDER_CAPTURE_READER" == "$implemented_capture_reader" ]]; then
+      RUNNER_CAN_DRIVE_CAPTURE_READER=1
+      break
+    fi
+  done
+  if [[ "$RUNNER_CAN_DRIVE_CAPTURE_READER" != "1" ]]; then
+    echo "Provider \"$PROVIDER\" cannot produce pure evidence here: its sessions are read by \"$PROVIDER_CAPTURE_READER\", and this runner has no launch path written against that reader." >&2
+    echo "Implemented launch paths: ${RUNNER_IMPLEMENTED_CAPTURE_READERS[*]}" >&2
+    echo "Add a launch path for that reader here, or play it in its own client and record the session with:" >&2
+    echo "  npm run playtest:ingest -- --provider $PROVIDER --model $MODEL ..." >&2
+    echo "Structural plumbing checks for any provider remain available via --smoke or --mock." >&2
+    exit 2
+  fi
 fi
 
 case "$TIMEOUT" in
@@ -403,28 +497,60 @@ assert_launch_provenance_unchanged() {
   fi
 }
 
-ACTIVE_CODEX_HOME=""
-ACTIVE_CODEX_HOME_ARG=""
-RAW_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+# The SELECTED provider's own login/state home — the directory that client owns and
+# writes its credentials and session logs into.
+#
+# This used to be `${CODEX_HOME:-$HOME/.codex}` unconditionally, gated only on
+# PREFLIGHT_ONLY, so `--provider gemini_cli --mock` resolved a Codex home it would never
+# touch and could die on a Codex-shaped failure. The location now comes from the chosen
+# provider's registry `capture.sessionLog` root, which is the one directory the registry
+# actually knows a vendor owns. A provider that declares no such root (no capture block)
+# has no home here to find, and the run simply does not look for one.
+#
+# For codex this resolves to exactly what it always did: rootEnv=CODEX_HOME,
+# rootDefault={HOME}/.codex, i.e. "${CODEX_HOME:-$HOME/.codex}".
+ACTIVE_CLIENT_HOME=""
+ACTIVE_CLIENT_HOME_ARG=""
+RAW_CLIENT_HOME=""
+if [[ -n "$PROVIDER_SESSION_LOG_ROOT_DEFAULT" ]]; then
+  RAW_CLIENT_HOME="${PROVIDER_SESSION_LOG_ROOT_DEFAULT//\{HOME\}/"$HOME"}"
+  # An env-var NAME out of the registry reaches indirect expansion, so it must look like
+  # an identifier before it does. The registry is tracked and provenance-gated, but a
+  # name is one of the few registry values that becomes shell semantics rather than data.
+  if [[ -n "$PROVIDER_SESSION_LOG_ROOT_ENV" ]]; then
+    if [[ ! "$PROVIDER_SESSION_LOG_ROOT_ENV" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+      echo "Provider \"$PROVIDER\" declares an unusable session-log root env var name." >&2
+      exit 2
+    fi
+    if [[ -n "${!PROVIDER_SESSION_LOG_ROOT_ENV:-}" ]]; then
+      RAW_CLIENT_HOME="${!PROVIDER_SESSION_LOG_ROOT_ENV}"
+    fi
+  fi
+fi
 # Pure play requires an existing CLI-owned home. Structural runs need no login
 # home, but when one already exists they enforce the same report-output boundary.
 # The executable-only fleet gate does not need or inspect the home at all.
-if [[ "$PREFLIGHT_ONLY" != "1" ]]; then
-  RAW_CODEX_HOME_ARG="$(node_path_arg "$RAW_CODEX_HOME")"
-  if ! ACTIVE_CODEX_HOME="$(
+if [[ "$PREFLIGHT_ONLY" != "1" && -n "$RAW_CLIENT_HOME" ]]; then
+  RAW_CLIENT_HOME_ARG="$(node_path_arg "$RAW_CLIENT_HOME")"
+  if ! ACTIVE_CLIENT_HOME="$(
     cd "$GAME_DIR" &&
-      "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" resolve-home-if-present --home "$RAW_CODEX_HOME_ARG"
+      "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" resolve-home-if-present --home "$RAW_CLIENT_HOME_ARG"
   )"; then
-    echo "Could not safely resolve the configured Codex home; run refused." >&2
+    echo "Could not safely resolve the configured $PROVIDER client home; run refused." >&2
     exit 4
   fi
-  if [[ "$PLAY_MODE" == "pure" && -z "$ACTIVE_CODEX_HOME" ]]; then
-    echo "Could not resolve the existing Codex home; pure run refused." >&2
-    exit 4
+  if [[ -n "$ACTIVE_CLIENT_HOME" ]]; then
+    ACTIVE_CLIENT_HOME_ARG="$(node_path_arg "$ACTIVE_CLIENT_HOME")"
   fi
-  if [[ -n "$ACTIVE_CODEX_HOME" ]]; then
-    ACTIVE_CODEX_HOME_ARG="$(node_path_arg "$ACTIVE_CODEX_HOME")"
-  fi
+fi
+# A pure run reads its proof out of that home, so it cannot proceed without one. The
+# earlier gates make this unreachable for a provider with no declared root — pure demands
+# runner_enforced, which demands a capture block, which demands a session-log root — but
+# it stays a hard refusal rather than an assumption, because the alternative is handing
+# the capture step an empty --home.
+if [[ "$PREFLIGHT_ONLY" != "1" && "$PLAY_MODE" == "pure" && -z "$ACTIVE_CLIENT_HOME" ]]; then
+  echo "Could not resolve the existing $PROVIDER client home; pure run refused." >&2
+  exit 4
 fi
 
 # The live mode is always the default CORE-GAME test (start the open world from
@@ -457,9 +583,20 @@ else
 fi
 
 # Resolve and validate the report prefix before creating any runner temp or
-# report artifact. Any run with an existing Codex home rejects canonical
-# destinations within it, including paths reached through links. The shared
-# executable-only gate has no output and skips this unrelated filesystem work.
+# report artifact.
+#
+# THE RULE IS VENDOR-NEUTRAL: never write evidence inside the client's own login home.
+# Evidence that lives inside the directory the client owns is evidence the client can
+# rewrite, and a report prefix that lands there can also clobber a login. That is true of
+# every vendor, so the boundary is enforced against whichever home the SELECTED provider
+# declared above, not against `~/.codex` for everybody. A run with no resolved client
+# home has no such boundary to enforce and skips the check, exactly as a machine with no
+# `~/.codex` always did. The shared executable-only gate has no output at all and skips
+# this unrelated filesystem work.
+#
+# The validator still lives in the Codex reader module and still says "Codex home" in its
+# refusals — the check itself is pure path lexing plus a containment test, but moving it
+# to a vendor-neutral module is a separate change to a file this one does not own.
 if [[ "$PREFLIGHT_ONLY" != "1" ]]; then
   if [[ -z "$OUT" ]]; then
     STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -467,11 +604,11 @@ if [[ "$PREFLIGHT_ONLY" != "1" ]]; then
   elif ! is_absolute_output_prefix "$OUT"; then
     OUT="$GAME_DIR/$OUT"
   fi
-  if [[ -n "$ACTIVE_CODEX_HOME" ]]; then
+  if [[ -n "$ACTIVE_CLIENT_HOME" ]]; then
     OUT_VALIDATION_ARG="$(node_path_arg "$OUT")"
     GAME_DIR_VALIDATION_ARG="$(node_path_arg "$GAME_DIR")"
     if ! CANONICAL_OUT="$("$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" validate-output \
-      --home "$ACTIVE_CODEX_HOME_ARG" --out "$OUT_VALIDATION_ARG" \
+      --home "$ACTIVE_CLIENT_HOME_ARG" --out "$OUT_VALIDATION_ARG" \
       --base "$GAME_DIR_VALIDATION_ARG")"; then
       echo "Report output prefix is unsafe; no run artifacts were created." >&2
       exit 4
@@ -545,11 +682,25 @@ if [[ "$PLAY_MODE" == "pure" ]]; then
     echo "Codex client preflight requires expected authority and version together." >&2
     exit "$CODEX_PREFLIGHT_EXIT"
   fi
-  if [[ -n "${BLIND_CODEX_BIN+x}" ]]; then
-    CODEX_BIN_REQUEST="$BLIND_CODEX_BIN"
+  # WHICH executable, and which env var pins it, come from the provider's registry
+  # `launch` block rather than from literals here. They used to be the strings
+  # `BLIND_CODEX_BIN` and `codex` spelled out in this file, which made the registry's
+  # launch block dead data describing a launch nobody performed — the classic way a
+  # config file drifts from the code it claims to configure. For codex the registry
+  # declares exactly those two values, so every message below renders byte-identically.
+  if [[ -z "$PROVIDER_LAUNCH_EXECUTABLE" || -z "$PROVIDER_LAUNCH_BINARY_ENV" ]]; then
+    echo "Provider \"$PROVIDER\" declares no launch executable or binary-override env var." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ ! "$PROVIDER_LAUNCH_BINARY_ENV" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    echo "Provider \"$PROVIDER\" declares an unusable binary-override env var name." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ -n "${!PROVIDER_LAUNCH_BINARY_ENV+x}" ]]; then
+    CODEX_BIN_REQUEST="${!PROVIDER_LAUNCH_BINARY_ENV}"
     if [[ -z "$CODEX_BIN_REQUEST" || "$CODEX_BIN_REQUEST" == *$'\n'* || \
           "$CODEX_BIN_REQUEST" == *$'\r'* ]] || ! is_absolute_output_prefix "$CODEX_BIN_REQUEST"; then
-      echo "BLIND_CODEX_BIN must name exactly one absolute Codex executable path (no arguments or aliases)." >&2
+      echo "$PROVIDER_LAUNCH_BINARY_ENV must name exactly one absolute Codex executable path (no arguments or aliases)." >&2
       echo "The runner will not evaluate it, search for a substitute, or fall back to another provider." >&2
       exit "$CODEX_PREFLIGHT_EXIT"
     fi
@@ -557,9 +708,9 @@ if [[ "$PLAY_MODE" == "pure" ]]; then
     # Resolve the literal default once with Bash's external-file-only lookup.
     # `type -P` ignores aliases/functions and preserves Git Bash's extensionless
     # npm shim; Node's native spawn cannot reliably select that same file.
-    if ! CODEX_BIN_REQUEST="$(type -P codex)" || [[ -z "$CODEX_BIN_REQUEST" ]]; then
-      echo "Codex client preflight failed: the literal default executable \"codex\" was not found." >&2
-      echo "Set BLIND_CODEX_BIN to the one intended absolute Codex executable path; no fallback was attempted." >&2
+    if ! CODEX_BIN_REQUEST="$(type -P "$PROVIDER_LAUNCH_EXECUTABLE")" || [[ -z "$CODEX_BIN_REQUEST" ]]; then
+      echo "Codex client preflight failed: the literal default executable \"$PROVIDER_LAUNCH_EXECUTABLE\" was not found." >&2
+      echo "Set $PROVIDER_LAUNCH_BINARY_ENV to the one intended absolute Codex executable path; no fallback was attempted." >&2
       exit "$CODEX_PREFLIGHT_EXIT"
     fi
   fi
@@ -620,7 +771,10 @@ preflight_codex_client() {
     if [[ "$PREFLIGHT_ONLY" == "1" ]]; then
       timeout -k 1 "$CODEX_VERSION_TIMEOUT_SECONDS" "$SELECTED_CODEX_BIN" --version 2>&1
     else
-      CODEX_HOME="$ACTIVE_CODEX_HOME_ARG" \
+      # `CODEX_HOME` is the literal env var this ONE client reads; the value is the
+      # generically-resolved home of whichever provider was selected, which the pure
+      # gates above have already restricted to the vendor this launch path drives.
+      CODEX_HOME="$ACTIVE_CLIENT_HOME_ARG" \
         timeout -k 1 "$CODEX_VERSION_TIMEOUT_SECONDS" "$SELECTED_CODEX_BIN" --version 2>&1
     fi \
       | head -c "$((CODEX_VERSION_MAX_BYTES + 1))"
@@ -639,7 +793,7 @@ preflight_codex_client() {
     if [[ -n "$version_output" ]]; then
       printf '%s\n' "$version_output" >&2
     fi
-    echo "Set BLIND_CODEX_BIN to the one intended Codex executable path; no retry, fallback, or provider substitution was attempted." >&2
+    echo "Set $PROVIDER_LAUNCH_BINARY_ENV to the one intended Codex executable path; no retry, fallback, or provider substitution was attempted." >&2
     return "$CODEX_PREFLIGHT_EXIT"
   fi
   if ! version="$(
@@ -664,7 +818,7 @@ preflight_codex_client() {
           "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ) && \
         "$version" != "$DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION" ]]; then
     echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": $CODEX_TRANSPORT_CONTRACT requires exact codex-cli $DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION but observed cli=$version." >&2
-    echo "Set BLIND_CODEX_BIN to one absolute codex-cli $DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION executable path; no provider was launched." >&2
+    echo "Set $PROVIDER_LAUNCH_BINARY_ENV to one absolute codex-cli $DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION executable path; no provider was launched." >&2
     return "$CODEX_PREFLIGHT_EXIT"
   fi
   CODEX_CLI_VERSION="$version"
@@ -1082,7 +1236,7 @@ set +e
   printf "%s" "$PROMPT" | "$NODE_CMD" "$CODEX_STRICT_STREAM_SCRIPT" \
     --binary "$SELECTED_CODEX_BIN" \
     --cwd "$CODEX_PLAYER_CWD_ARG" \
-    --home "$ACTIVE_CODEX_HOME_ARG" \
+    --home "$ACTIVE_CLIENT_HOME_ARG" \
     --events "$CODEX_EVENTS_ARG" \
     --provider-stderr "$CODEX_PROVIDER_LOG_ARG" \
     --model "$MODEL" \
@@ -1150,7 +1304,7 @@ set +e
   fi
   if [[ "$STATUS" -eq 0 ]]; then
     "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" capture \
-      --home "$ACTIVE_CODEX_HOME_ARG" --events "$CODEX_EVENTS_ARG" \
+      --home "$ACTIVE_CLIENT_HOME_ARG" --events "$CODEX_EVENTS_ARG" \
       --out "$CODEX_ROLLOUT_ARG" \
       --receipt "$CODEX_CAPTURE_ARG" \
       --transport-contract "$CODEX_TRANSPORT_CONTRACT" \

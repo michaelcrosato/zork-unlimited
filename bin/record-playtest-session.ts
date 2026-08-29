@@ -37,6 +37,7 @@ import {
   findPlaytestProvider,
   parsePlaytestCatalog,
   playtestProviderIds,
+  runnerCanDriveProvider,
 } from "../src/blind/providers.js";
 import { parseOverworldManifest } from "../src/world/overworld.js";
 import {
@@ -204,6 +205,14 @@ function main(): void {
     world_hash: hashState(world),
   };
 
+  const drivable = runnerCanDriveProvider(provider);
+  const runnerIsolation = drivable.drivable ? provider.isolation : "operator_attested";
+  if (provider.isolation === "runner_enforced" && !drivable.drivable) {
+    console.error(
+      `! sealing ${provider.id} as operator_attested rather than runner_enforced: ${drivable.reason}`,
+    );
+  }
+
   const transcript = evidenceText ?? reportText ?? "";
   const body: PlaytestSessionBody = {
     schema_version: 1,
@@ -215,7 +224,15 @@ function main(): void {
       id: provider.id,
       vendor: provider.vendor,
       family: provider.family,
-      isolation: provider.isolation,
+      // The registry's label says what this vendor's evidence COULD be; this says what it
+      // can actually be here. They came apart the moment a capture reader landed for a
+      // vendor run.sh has no launch path for: the registry reads `runner_enforced`, yet
+      // no runner in this checkout can have enforced anything, because it cannot launch
+      // that client at all. Sealing the stronger label onto such a record would be the
+      // precise contamination src/blind/providers.ts calls the worst error available —
+      // an unverifiable session wearing the label that lets it move experience metrics.
+      // Downgrade, and say so, rather than trusting a field that is describing potential.
+      isolation: runnerIsolation,
       transport_contract: provider.transportContract,
     },
     model: { id: model.id, tier: model.tier, settings: model.settings },

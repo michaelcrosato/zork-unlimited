@@ -1,8 +1,8 @@
 /**
- * The autonomous loop's shell driver is a safety boundary, not just glue: it must
- * run the verification bar before committing and must refuse commits without the
- * mandatory blind-playtest report. Blind game agents cannot observe this layer, so
- * the test suite has to lock it directly.
+ * The autonomous loop's shell driver is a safety boundary, not just glue: it must run
+ * the verification bar before committing, and — since the two loops split — it must do
+ * that WITHOUT depending on a playtest of its own. Blind game agents cannot observe this
+ * layer, so the test suite has to lock it directly.
  */
 import { describe, expect, it } from "vitest";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -465,5 +465,21 @@ describe("the dev loop does not gate on a playtest", () => {
     expect(driver).toContain('_reject_cycle "health"');
     expect(driver).toContain('_reject_cycle "integrity"');
     expect(driver).toContain('_reject_cycle "crawl-post"');
+  });
+
+  it("never launches a player, and its commit path carries no playtest dependency", () => {
+    // The last hard playtest requirement in commit mode was not visible in loop.sh at
+    // all: it lived inside `loop:seal-feedback`, which demanded ai-runs/<runId>/playtest.*
+    // plus a pure V2 sidecar bound to the provisional commit. A cycle that skipped the
+    // run therefore passed every gate named above and was hard-reset at the seal — and
+    // since only one vendor could mint that sidecar, this is also what kept a
+    // Claude-driven dev loop needing Codex installed. The seal now treats those
+    // artifacts as optional (tests/unit/seal_feedback_acceptance.test.ts), so what has
+    // to stay true here is that the commit path never re-acquires the dependency.
+    expect(driver).not.toContain("npm run blind");
+    expect(driver).not.toContain("run --silent blind");
+    const commit = `${sectionBetween("safe_commit_if_enabled() {", "\n}\n")}\n}`;
+    expect(commit).toContain("loop:seal-feedback");
+    expect(commit).not.toMatch(/playtest\.(?:md|run\.json|evidence\.jsonl)/u);
   });
 });

@@ -82,37 +82,113 @@ if [[ ! -d node_modules ]]; then npm install; fi
 
 # Refuse a cohort this runner cannot actually launch, BEFORE dispatching anyone.
 #
-# `runner_enforced` blindness is proved by reading Codex's own rollout logs
-# (blind-tester/codex-rollout.mjs and friends); no equivalent reader exists for any
-# other vendor, so run.sh refuses a non-Codex pure run with "Could not resolve the
-# existing Codex home". Without this check every player in the wave dies that way and
-# the recorder — which cannot tell a launch refusal from a genuine mid-play crash —
-# files each one as a `failed` session, seeding the corpus with fake data points that
-# carry a real vendor family and say nothing whatsoever about the game.
+# WHY THE GATE EXISTS AT ALL. A provider the runner cannot witness makes run.sh refuse
+# the pure run, and the recorder — which cannot tell a launch refusal from a genuine
+# mid-play crash — then files each dead player as a `failed` session. That seeds the
+# corpus with fake data points carrying a real vendor family which say nothing whatsoever
+# about the game. Catching it here, once, before dispatch, is the difference between a
+# one-line refusal and a wave of poisoned evidence.
 #
-# Non-Codex vendors are still first-class evidence; they just arrive through
+# WHY IT NO LONGER SAYS "codex". This block used to BE the policy: `[[ "$provider" !=
+# "codex" ]]`, a third hand-written copy of a rule also written out in bin/doctor.ts and
+# blind-tester/run.sh. A rule with three copies has three chances to disagree, and this
+# copy was load-bearing in the worst direction — it would keep refusing a vendor whose
+# capture reader had already landed, so the reward for doing the work to make a second
+# vendor provable was a runner that still would not launch it.
+#
+# src/blind/providers.ts is the single authority: `derivePlaytestIsolation` returns
+# `runner_enforced` only for a headless CLI that declares a complete `capture` block whose
+# reader module exists in THIS checkout. A shell cannot import TypeScript, so it ASKS that
+# rule instead of re-deriving it: `blind-tester/resolve-provider.mjs --records <id>` is the
+# dependency-free mirror written for shell callers, and it refuses outright when its answer
+# and the registry's stored literal disagree. Either way the cohort is judged by a
+# derivation, never by a vendor name spelled out here.
+#
+# Vendors that do not qualify are still first-class evidence; they arrive through
 # `npm run playtest:ingest` as `operator_attested`. See docs/two_loop_workflow.md.
-if [[ "$MOCK" != "1" ]]; then
-  unsupported=()
-  IFS=',' read -ra preflight_groups <<< "$COHORT"
-  for group in "${preflight_groups[@]}"; do
-    provider="${group%%:*}"
-    [[ "$provider" != "codex" ]] && unsupported+=("$provider")
+
+# The one seam between this shell and the registry, kept as its own function so the
+# regression test can substitute a stub for it. Everything below is refusal COPY — the
+# part an operator reads at 2am — and it has to be exercisable on its own, because the
+# suite may run this file under a bash whose `node` is not this checkout's.
+#
+# --records is the resolver's shell format: `key<TAB>value` lines, guaranteed free of
+# embedded tabs and newlines, absent fields omitted. The keys read here are `isolation`
+# and `isolation_reason`.
+provider_isolation() {
+  node blind-tester/resolve-provider.mjs --records "$1"
+}
+
+preflight_cohort() {
+  local groups=() group id seen="" records blocked=() entry key value isolation reason drivable drivable_reason
+  IFS=',' read -ra groups <<< "$COHORT"
+  for group in "${groups[@]}"; do
+    id="${group%%:*}"
+    [[ -z "$id" ]] && continue
+    # Ask about each distinct provider once, however many players the cohort wants from
+    # it: the answer is a fact about the provider, and repeating it per requested player
+    # would bury a second blocked vendor under the first one's copies.
+    case ",$seen," in *",$id,"*) continue ;; esac
+    seen="$seen,$id"
+
+    # stderr is folded in deliberately. A resolver failure here is never noise: it is an
+    # unregistered id, a broken catalog, or the registry's stored isolation disagreeing
+    # with what this checkout derives — and that last one is the exact failure the whole
+    # derivation exists to catch, so it must reach the operator word for word.
+    if ! records="$(provider_isolation "$id" 2>&1)"; then
+      blocked+=("$id — could not be resolved, so it certainly cannot be proved blind:"$'\n'"$records")
+      continue
+    fi
+
+    isolation=""
+    reason=""
+    while IFS=$'\t' read -r key value; do
+      case "$key" in
+        isolation) isolation="$value" ;;
+        isolation_reason) reason="$value" ;;
+        drivable) drivable="$value" ;;
+        drivable_reason) drivable_reason="$value" ;;
+      esac
+    done <<< "$records"
+
+    # Two conditions, not one. `isolation` says this vendor's blindness is PROVABLE here
+    # (a capture reader exists); `drivable` says blind-tester/run.sh actually knows how to
+    # LAUNCH it. Gating on isolation alone dispatched a whole wave of players that run.sh
+    # then refused one by one — which burns the wave's wall clock and reports as a cohort
+    # of failures rather than as the one configuration fact it is.
+    [[ "$isolation" == "runner_enforced" && "$drivable" == "1" ]] && continue
+    blocked+=("$id — ${drivable_reason:-${reason:-the resolver reported isolation \"${isolation:-unknown}\" and no reason}}")
   done
-  if (( ${#unsupported[@]} > 0 )); then
-    echo "This runner can only launch 'codex' for a live playtest; refusing the cohort."
-    echo "  unsupported in COHORT: ${unsupported[*]}"
-    echo
-    echo "Only Codex can produce a runner_enforced session: that class means the runner"
-    echo "PROVED the agent saw nothing but the AdventureForge MCP tools, and the proof is"
-    echo "read out of Codex's rollout logs. No other vendor has an equivalent reader yet."
-    echo
-    echo "Play those vendors in their own client and ingest the result instead:"
-    echo "  npx tsx bin/ingest-playtest-session.ts --provider <id> --attested-by <you> ..."
-    echo "They land operator_attested — still counted for bug corroboration, excluded from"
-    echo "experience metrics. Set PLAYTEST_MOCK=1 to dry-run the wiring for any provider."
-    exit 1
-  fi
+
+  if (( ${#blocked[@]} == 0 )); then return 0; fi
+
+  echo "Refusing the cohort: this runner cannot prove blindness for part of it."
+  # First line carries the mark, continuation lines are indented under it, so a
+  # multi-line resolver message stays visibly attached to the provider it is about.
+  for entry in "${blocked[@]}"; do
+    printf '%s\n' "$entry" | sed '1s/^/  ✗ /; 2,$s/^/      /'
+  done
+  echo
+  echo "A live run needs runner_enforced blindness: the runner PROVED the agent saw"
+  echo "nothing but the AdventureForge MCP tools, by reading that client's own session"
+  echo "log. Which vendors qualify is DERIVED from what this checkout contains, so it"
+  echo "changes as capture readers land — \`npm run doctor\` prints the current table"
+  echo "with the reason for every provider."
+  echo
+  echo "Play those vendors in their own client and ingest the result instead:"
+  echo "  npx tsx bin/ingest-playtest-session.ts --provider <id> --attested-by <you> ..."
+  echo "They land operator_attested — still counted for bug corroboration, excluded from"
+  echo "experience metrics. Set PLAYTEST_MOCK=1 to dry-run the wiring for any provider."
+  return 1
+}
+
+if [[ "$MOCK" != "1" ]]; then
+  preflight_cohort || exit 1
+else
+  # A wiring check drives run.sh's bundled scripted agent, so no vendor client is
+  # launched and there is nothing to prove blind. Gating it would make the one free way
+  # to test this loop's plumbing unavailable for exactly the vendors that most need it.
+  echo "PLAYTEST_MOCK=1 — cohort launchability gate skipped; no vendor client is launched."
 fi
 
 # Model pin lookup: PLAYTEST_MODELS="codex=gpt-5.6-terra,gemini_cli=gemini-2.5-pro".

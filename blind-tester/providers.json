@@ -12,9 +12,21 @@
         "argv": ["-a", "never", "exec", "--sandbox", "read-only", "--cd", "{CWD}", "-"],
         "binaryOverrideEnv": "BLIND_CODEX_BIN"
       },
+      "capture": {
+        "sessionId": {
+          "source": "discovered",
+          "locator": "thread.started.thread_id, first row of the public JSONL event stream the runner captures from the client"
+        },
+        "sessionLog": {
+          "rootEnv": "CODEX_HOME",
+          "rootDefault": "{HOME}/.codex",
+          "pathTemplate": "sessions/**/rollout-*-{SESSION_ID}.jsonl"
+        },
+        "readerModule": "blind-tester/codex-rollout.mjs"
+      },
       "catalogPath": "blind-tester/catalogs/codex.json",
       "transportContract": "game-direct-mcp-v1",
-      "notes": "Strongest at driving the dev loop as well. Historical strict-code-mode and direct-MCP receipts remain readable through src/blind/receipt_binding.ts."
+      "notes": "The only vendor with a capture reader, so the only one the derivation stamps runner_enforced. The session id is announced rather than pinned, so the rollout must be searched for under the sessions root and matched to the public thread.started id — codex-rollout.mjs does that walk and rejects anything outside the root. Strongest at driving the dev loop as well. Historical strict-code-mode and direct-MCP receipts remain readable through src/blind/receipt_binding.ts."
     },
     {
       "id": "claude_code",
@@ -22,15 +34,43 @@
       "vendor": "anthropic",
       "family": "claude",
       "kind": "headless_cli",
-      "isolation": "operator_attested",
+      "isolation": "runner_enforced",
       "launch": {
         "executable": "claude",
-        "argv": ["-p", "--permission-mode", "plan", "--add-dir", "{CWD}"],
+        "argv": [
+          "--print",
+          "--model",
+          "{MODEL}",
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--strict-mcp-config",
+          "--mcp-config",
+          "{MCP_CONFIG}",
+          "--tools",
+          "",
+          "--setting-sources",
+          "",
+          "--disable-slash-commands",
+          "--permission-mode",
+          "bypassPermissions"
+        ],
         "binaryOverrideEnv": "BLIND_CLAUDE_BIN"
+      },
+      "capture": {
+        "sessionId": {
+          "source": "runner_pinned",
+          "locator": "--session-id <uuid>, appended by the runner at launch. It is NOT in launch.argv because PlaytestLaunchSchema substitutes only {MODEL}, {CWD} and {MCP_CONFIG}; a {SESSION_ID} token would let the flag live here, and until one exists the runner must append the pair itself."
+        },
+        "sessionLog": {
+          "rootDefault": "{HOME}/.claude",
+          "pathTemplate": "projects/{CWD_SLUG}/{SESSION_ID}.jsonl"
+        },
+        "readerModule": "blind-tester/claude-session.mjs"
       },
       "catalogPath": "blind-tester/catalogs/claude_code.json",
       "transportContract": "game-direct-mcp-v1",
-      "notes": "Also a strong dev-loop driver. Ships a CLI, but blind-tester/run.sh has no launch branch for it and there is no reader for its session logs, so nothing here can PROVE what tools it saw: its sessions are hand-played and ingested, which is what operator_attested means. This becomes runner_enforced the day the runner can launch and audit it, and its earlier sessions keep their original, honest label."
+      "notes": "The second vendor the derivation stamps runner_enforced, and the one that proves the seam is a seam rather than a Codex-shaped hole. Stronger to capture than codex: --session-id PINS the id, so the log path is exact BEFORE launch and the reader never has to pick the newest file in a directory and hope no other Claude Code was running. No rootEnv is declared — CLAUDE_CONFIG_DIR exists, but this checkout has not verified that it relocates the per-session log, and naming an env var on faith is exactly the lie this file exists to prevent; the pinned id already keeps concurrent cohort members apart under one shared root. The old argv here was decorative and wrong in two ways: --permission-mode plan REFUSES the game's state-mutating tools, so every session would have died on the first step_action, and --add-dir {CWD} handed the player filesystem access it must never have. The replacement is the flag set verified live against claude 2.1.251: --tools \"\" removes every built-in tool, --strict-mcp-config plus --mcp-config admits only the adventureforge server, --setting-sources \"\" and --disable-slash-commands drop settings, skills and hooks, and the init event on the stream reports the resulting surface back so blind-tester/claude-session.mjs can audit what was OFFERED, not merely what was called."
     },
     {
       "id": "gemini_cli",
@@ -46,7 +86,7 @@
       },
       "catalogPath": "blind-tester/catalogs/gemini_cli.json",
       "transportContract": "game-direct-mcp-v1",
-      "notes": "Well suited to cheap mass-parallel volume cohorts. Ships a CLI, but blind-tester/run.sh has no launch branch for it and there is no reader for its session logs, so its sessions are hand-played and ingested as operator_attested until one exists."
+      "notes": "Well suited to cheap mass-parallel volume cohorts. Ships a CLI, but declares no capture block — nothing here can locate or read its session logs — so the registry DERIVES operator_attested and its sessions are hand-played and ingested until a reader module exists."
     },
     {
       "id": "grok_desktop",
@@ -57,7 +97,7 @@
       "isolation": "operator_attested",
       "catalogPath": "blind-tester/catalogs/grok_desktop.json",
       "transportContract": "operator-attested-mcp-v1",
-      "notes": "A headless-capable Grok CLI DOES ship now (verified: grok 1.0.5 offers -p/--single, --output-format, --tools and an mcp subcommand), so the old 'no CLI exists' note was stale. This stays operator_attested and kind=desktop_client anyway, deliberately: `blind-tester/run.sh` can only PROVE blindness for codex, by reading Codex's own rollout logs, and flipping this to headless_cli would let a grok cohort past argument validation only to die inside the runner. Grok also takes its prompt as an argument rather than on STDIN, and has no --mcp-config flag, so it does not fit the launch contract either. Sessions are captured in the client and ingested with `npm run playtest:ingest`; revisit only when a rollout-log reader for this vendor exists."
+      "notes": "kind=desktop_client, so the derivation can never reach runner_enforced for this entry no matter what else is written here. A headless-capable Grok CLI DOES ship now (verified: grok 1.0.5 offers -p/--single, --output-format, --tools and an mcp subcommand), so the old 'no CLI exists' note was stale. This stays operator_attested and kind=desktop_client anyway, deliberately: `blind-tester/run.sh` can only PROVE blindness for codex, by reading Codex's own rollout logs, and flipping this to headless_cli would let a grok cohort past argument validation only to die inside the runner. Grok also takes its prompt as an argument rather than on STDIN, and has no --mcp-config flag, so it does not fit the launch contract either. Sessions are captured in the client and ingested with `npm run playtest:ingest`; revisit only when a rollout-log reader for this vendor exists."
     }
   ]
 }

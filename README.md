@@ -305,12 +305,12 @@ Full reference: [`docs/two_loop_workflow.md`](./docs/two_loop_workflow.md).
 own candidates; an empty bucket is normal and never stalls the loop), **work**
 (one focused change), **verify** (`crawl:smoke`, the health bar, and an integrity
 check against the pre-cycle ref so the verifier itself can't be weakened). It
-is meant to stop playing the game — removing the per-cycle playtest gate is what
-un-blocks the throughput the old single loop spent waiting on. That migration is
-**half done**: the gate is gone from `loop.sh`, but `loop:seal-feedback` still
-requires the cycle's own pure playtest artifacts before the final ledger commit in
-commit-mode, and the generated cycle prompt still asks for them. See `AGENTS.md`
-step 5 before running a cycle without one.
+does **not** play the game: there is no per-cycle playtest gate, which is what
+un-blocked the throughput the old single loop spent waiting on. The seal still
+verifies a cycle playtest in full if one was published — it simply no longer
+requires that one exists. A cycle is therefore vendor-neutral end to end: any agent
+that reads STDIN, edits files and exits nonzero can drive it, with no second vendor
+needed to land the work.
 
 **Playtest loop** (`playtest-loop.sh`): runs independently and in parallel,
 plays the most recently published build with as many cheap players as your
@@ -327,15 +327,28 @@ anywhere.
 `claude`, `gemini`; `AI_AGENT` selects, `AI_AGENT_CMD` overrides anything), and
 asking for an absent one fails loudly rather than silently substituting a vendor.
 
-**The playtest loop is any-model in what it RECORDS, but not in what it can
-launch.** Only `codex` can run a live blind cohort today, because
-`runner_enforced` blindness is proved by reading Codex's own rollout logs
-(`blind-tester/codex-rollout.mjs` and companions) and no equivalent reader exists
-for another vendor — `blind-tester/run.sh` refuses a non-Codex pure run. Every
-other vendor is played in its own client and ingested with
-`npm run playtest:ingest`, landing `operator_attested`: counted toward bug
-corroboration, excluded from experience metrics. So headline experience numbers
-are currently a measurement of Codex specifically, not of players in general.
+**The playtest loop's vendor privilege is derived, not declared.** Nothing in the
+gate names a vendor. A provider may produce a `runner_enforced` session only when
+this checkout can both PROVE its blindness (it declares a `capture` block whose
+reader module exists) and LAUNCH it (`blind-tester/run.sh` has a launch path for
+that reader, listed in `blind-tester/implemented-launch-paths.json`).
+`derivePlaytestIsolation` and `runnerCanDriveProvider` in `src/blind/providers.ts`
+are the single authority; the runner, `playtest-loop.sh`, `bin/doctor.ts` and the
+resolver all read it, so none can promise a lane another refuses. The registry's
+stored `isolation` is kept only as a second witness — disagree with the derivation
+and the registry fails to parse, so no vendor can be talked into the strong label by
+editing JSON. `bin/record-playtest-session.ts` likewise downgrades to
+`operator_attested`, loudly, rather than sealing a label this checkout cannot back.
+
+Adding a vendor is five mechanical steps and no gate edit: registry entry, capture
+block, reader module, launch branch, one line in the implemented list. Today Codex
+is live; Claude Code is provable (`blind-tester/claude-session.mjs`) and awaiting a
+launch branch; Gemini and Grok are ingest-only. Vendors without a live lane are
+played in their own client and recorded with `npm run playtest:ingest`, landing
+`operator_attested`: counted toward bug corroboration, excluded from experience
+metrics. Arbitrary `BLIND_AGENT_CMD` overrides are still rejected for pure runs
+because their blindness cannot be verified.
+
 `npm run doctor` reports which vendors a given machine can actually launch.
 
 Agent errors fail a dev cycle; a bounded durable failure ledger is shown by

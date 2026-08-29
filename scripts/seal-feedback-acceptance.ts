@@ -51,7 +51,16 @@ const MIN_ACTIONABLE_REPORTS = 3;
 const CycleMetadataSchema = z
   .object({
     runId: z.string().regex(CYCLE_RUN_ID_RE),
-    playtestRecord: z.string().min(1),
+    /**
+     * Where a cycle playtest WOULD land — never a claim that one happened.
+     *
+     * The dev loop no longer plays the game (loop.sh dropped require_playtest_record;
+     * the playtest loop owns experience evidence now), so this slot is routinely empty
+     * and the field itself is optional for callers that stop emitting it. Presence of
+     * the ARTIFACT decides whether a playtest is verified below; presence of this
+     * string never could, because it is written by the cycle before anything happens.
+     */
+    playtestRecord: z.string().min(1).optional(),
     recommendationId: z.string().min(1).nullable(),
   })
   .passthrough();
@@ -79,10 +88,27 @@ export type SealFeedbackAcceptanceOptions = {
 
 export type SealFeedbackAcceptanceResult = {
   runId: string;
-  reportId: string;
+  /** The sealed pure report identity, or null when the cycle published no playtest. */
+  reportId: string | null;
   promotedManifestPath: string | null;
   consumedRecommendation: boolean;
   pendingReports: number;
+};
+
+/**
+ * Everything a VERIFIED cycle playtest contributes to the seal.
+ *
+ * Built only when `ai-runs/<runId>/playtest.md` actually exists, and only after the
+ * full verifyCyclePlaytest transaction has passed. Null in its place means the cycle
+ * played nothing — never that a playtest was accepted on weaker terms.
+ */
+type SealedCyclePlaytest = {
+  reportId: string;
+  reportBytes: Buffer;
+  evidenceBytes: Buffer;
+  sidecarBytes: Buffer;
+  /** (ref, bytes, label) triples re-read at each checkpoint to prove nothing moved. */
+  stableArtifacts: readonly (readonly [string, Buffer, string])[];
 };
 
 function fail(message: string): never {
@@ -306,6 +332,12 @@ function atomicWriteLoopState(path: string, expectedText: string, nextText: stri
  * Seal the ignored evidence from one successful loop cycle into the sole
  * tracked authority marker. The caller must run this after every outer gate
  * and before staging AI_LOOP_STATE.md for the final ledger commit.
+ *
+ * A cycle playtest is an OPTIONAL input here, not a precondition. The dev loop stopped
+ * playing the game when the two loops split, so most cycles arrive with an empty
+ * `ai-runs/<runId>/` playtest slot and seal the acceptance marker on its own. When the
+ * slot IS full the evidence is verified exactly as it always was — nothing about the
+ * accepting path was relaxed to make the empty path possible.
  */
 export function sealFeedbackAcceptance(
   options: SealFeedbackAcceptanceOptions,
@@ -336,50 +368,86 @@ export function sealFeedbackAcceptance(
   const metadataBefore = readCycleMetadata(root, metadataRef);
   const runId = metadataBefore.metadata.runId;
   const expectedRecord = `ai-runs/${runId}/playtest.md`;
-  if (metadataBefore.metadata.playtestRecord.replaceAll("\\", "/") !== expectedRecord) {
+  const evidenceRef = `ai-runs/${runId}/playtest.evidence.jsonl`;
+  const sidecarRef = `ai-runs/${runId}/playtest.run.json`;
+  const declaredRecord = metadataBefore.metadata.playtestRecord?.replaceAll("\\", "/");
+  if (declaredRecord !== undefined && declaredRecord !== expectedRecord) {
     fail(`cycle metadata playtestRecord must be ${expectedRecord}`);
   }
-  const reportBytes = readContainedRegularBytes(root, expectedRecord, "cycle playtest report");
-  const evidenceRef = `ai-runs/${runId}/playtest.evidence.jsonl`;
-  const evidenceBytes = readContainedRegularBytes(root, evidenceRef, "cycle raw run evidence");
-  const sidecarRef = `ai-runs/${runId}/playtest.run.json`;
-  const sidecarBytes = readContainedRegularBytes(root, sidecarRef, "cycle playtest sidecar");
 
-  const verification = verifyCyclePlaytest({
-    root,
-    worldRoot,
-    metadataPath: metadataRef,
-    expectedCommit: options.expectedCommit,
-  });
-  if (!verification.ok) fail(verification.reason);
-  if (verification.runId !== runId || verification.reportPath !== expectedRecord) {
-    fail("cycle metadata changed while its pure playtest was being verified");
-  }
-  const metadataAfter = readCycleMetadata(root, metadataRef);
-  if (sha256Bytes(metadataAfter.bytes) !== sha256Bytes(metadataBefore.bytes)) {
-    fail("cycle metadata changed while its pure playtest was being verified");
-  }
-  const stableArtifacts = [
-    [expectedRecord, reportBytes, "cycle playtest report"],
-    [evidenceRef, evidenceBytes, "cycle raw run evidence"],
-    [sidecarRef, sidecarBytes, "cycle playtest sidecar"],
-  ] as const;
-  for (const [ref, before, label] of stableArtifacts) {
-    if (sha256Bytes(readContainedRegularBytes(root, ref, label)) !== sha256Bytes(before)) {
-      fail(`${label} changed while the pure playtest was being verified`);
+  // OPTIONAL EVIDENCE, NEVER UNVERIFIED EVIDENCE.
+  //
+  // A dev cycle is no longer required to play the game, so the common case is that
+  // this slot is empty and the seal records the acceptance marker alone. What must not
+  // change is what happens when the slot is FULL: an existing report goes through the
+  // identical verifyCyclePlaytest transaction, byte-stability checks and pure-V2
+  // sidecar binding it always did. The two cases are separated by the artifact on
+  // disk rather than by anything the cycle asserts about itself, because the seal is
+  // the last place a claim can still be tested — a flag saying "I did not play" would
+  // be exactly the unverifiable self-report this whole file exists to refuse.
+  let playtest: SealedCyclePlaytest | null = null;
+  if (existsSync(join(root, expectedRecord))) {
+    const reportBytes = readContainedRegularBytes(root, expectedRecord, "cycle playtest report");
+    const evidenceBytes = readContainedRegularBytes(root, evidenceRef, "cycle raw run evidence");
+    const sidecarBytes = readContainedRegularBytes(root, sidecarRef, "cycle playtest sidecar");
+
+    const verification = verifyCyclePlaytest({
+      root,
+      worldRoot,
+      metadataPath: metadataRef,
+      expectedCommit: options.expectedCommit,
+    });
+    if (!verification.ok) fail(verification.reason);
+    if (verification.runId !== runId || verification.reportPath !== expectedRecord) {
+      fail("cycle metadata changed while its pure playtest was being verified");
+    }
+    const metadataAfter = readCycleMetadata(root, metadataRef);
+    if (sha256Bytes(metadataAfter.bytes) !== sha256Bytes(metadataBefore.bytes)) {
+      fail("cycle metadata changed while its pure playtest was being verified");
+    }
+    const stableArtifacts = [
+      [expectedRecord, reportBytes, "cycle playtest report"],
+      [evidenceRef, evidenceBytes, "cycle raw run evidence"],
+      [sidecarRef, sidecarBytes, "cycle playtest sidecar"],
+    ] as const;
+    for (const [ref, before, label] of stableArtifacts) {
+      if (sha256Bytes(readContainedRegularBytes(root, ref, label)) !== sha256Bytes(before)) {
+        fail(`${label} changed while the pure playtest was being verified`);
+      }
+    }
+
+    const parsedSidecar = parseBlindRunSidecar(sidecarBytes.toString("utf8"));
+    if (!parsedSidecar.ok) fail(`cycle playtest sidecar is invalid: ${parsedSidecar.reason}`);
+    if (
+      parsedSidecar.sidecar.schema_version !== 2 ||
+      parsedSidecar.sidecar.play_mode !== "pure" ||
+      parsedSidecar.sidecar.build.git_commit !== options.expectedCommit
+    ) {
+      fail("cycle playtest sidecar is not pure V2 evidence for the provisional commit");
+    }
+    playtest = {
+      reportId: `pure:${hashState(parsedSidecar.sidecar)}`,
+      reportBytes,
+      evidenceBytes,
+      sidecarBytes,
+      stableArtifacts,
+    };
+  } else {
+    // A half-published transaction is not the same thing as "this cycle played
+    // nothing". The runner publishes the report FIRST, so raw evidence or a sidecar
+    // with no report beside it means either a publication that broke midway or a
+    // report deleted after the fact. Treating that as the deliberate no-playtest case
+    // would let the weakest state in the system — orphaned evidence nobody verifies —
+    // pass as the strongest-looking one, so it stays fail-closed.
+    for (const orphan of [evidenceRef, sidecarRef]) {
+      if (existsSync(join(root, orphan))) {
+        fail(
+          `${orphan} exists without ${expectedRecord}; the cycle playtest publication is incomplete`,
+        );
+      }
     }
   }
-
-  const parsedSidecar = parseBlindRunSidecar(sidecarBytes.toString("utf8"));
-  if (!parsedSidecar.ok) fail(`cycle playtest sidecar is invalid: ${parsedSidecar.reason}`);
-  if (
-    parsedSidecar.sidecar.schema_version !== 2 ||
-    parsedSidecar.sidecar.play_mode !== "pure" ||
-    parsedSidecar.sidecar.build.git_commit !== options.expectedCommit
-  ) {
-    fail("cycle playtest sidecar is not pure V2 evidence for the provisional commit");
-  }
-  const reportId = `pure:${hashState(parsedSidecar.sidecar)}`;
+  const stableArtifacts = playtest?.stableArtifacts ?? [];
 
   const committed = readCommittedFeedbackAcceptanceState(root);
   if (!committed.ok) fail(committed.reason);
@@ -526,7 +594,7 @@ export function sealFeedbackAcceptance(
     );
 
     const seen = new Set(manifest.corpus.seen_report_ids);
-    if (seen.has(reportId)) {
+    if (playtest && seen.has(playtest.reportId)) {
       fail("the current cycle report cannot be consumed before its outer-gate acceptance");
     }
     const validPendingRefs = new Set(
@@ -562,20 +630,26 @@ export function sealFeedbackAcceptance(
     promotedManifestPath = pointer.manifest_path;
   }
 
-  if (pending.some((entry) => entry.run_id === runId)) {
-    fail(`cycle ${runId} is already pending in the committed acceptance state`);
+  // A cycle that played nothing queues nothing. It still owns the rest of the seal —
+  // the acceptance marker, an accompanying compile promotion, the frozen selection —
+  // so the pending ledger simply keeps whatever the committed state already carried.
+  if (playtest) {
+    const sealed = playtest;
+    if (pending.some((entry) => entry.run_id === runId)) {
+      fail(`cycle ${runId} is already pending in the committed acceptance state`);
+    }
+    if (pending.some((entry) => entry.report_id === sealed.reportId)) {
+      fail(`cycle report identity ${sealed.reportId} is already pending under another run`);
+    }
+    pending.push({
+      run_id: runId,
+      tested_commit: options.expectedCommit,
+      report_id: sealed.reportId,
+      report_sha256: sha256Bytes(sealed.reportBytes),
+      evidence_sha256: sha256Bytes(sealed.evidenceBytes),
+      sidecar_sha256: sha256Bytes(sealed.sidecarBytes),
+    });
   }
-  if (pending.some((entry) => entry.report_id === reportId)) {
-    fail(`cycle report identity ${reportId} is already pending under another run`);
-  }
-  pending.push({
-    run_id: runId,
-    tested_commit: options.expectedCommit,
-    report_id: reportId,
-    report_sha256: sha256Bytes(reportBytes),
-    evidence_sha256: sha256Bytes(evidenceBytes),
-    sidecar_sha256: sha256Bytes(sidecarBytes),
-  });
   pending.sort(
     (a, b) => a.run_id.localeCompare(b.run_id) || a.report_id.localeCompare(b.report_id),
   );
@@ -605,7 +679,7 @@ export function sealFeedbackAcceptance(
 
   return {
     runId,
-    reportId,
+    reportId: playtest?.reportId ?? null,
     promotedManifestPath,
     consumedRecommendation,
     pendingReports: pending.length,
@@ -655,6 +729,11 @@ function main(): void {
     console.log(
       `✓ sealed feedback acceptance for ${result.runId}: ${result.pendingReports} pending report${result.pendingReports === 1 ? "" : "s"}`,
     );
+    if (result.reportId === null) {
+      // Say it out loud. An empty playtest slot is a normal state now, but a silent
+      // seal would read identically to one that quietly dropped real evidence.
+      console.log("  (no cycle playtest artifacts — sealed the acceptance marker alone)");
+    }
     if (result.promotedManifestPath) {
       console.log(`✓ promoted feedback compile: ${result.promotedManifestPath}`);
     }

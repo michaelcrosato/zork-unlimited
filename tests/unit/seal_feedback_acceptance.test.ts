@@ -345,6 +345,12 @@ function initCycle(
   recommendationId: string | null,
   selectedRecommendationId: string | null = null,
   includeSelection = true,
+  /**
+   * False builds the shape a migrated dev cycle actually produces: no playtest.md, no
+   * raw evidence, no sidecar. The evidence fixture is still returned so a caller can
+   * assert on the identity that WOULD have been sealed had anything been published.
+   */
+  withPlaytest = true,
 ): {
   root: string;
   startRef: string;
@@ -376,9 +382,11 @@ function initCycle(
   const evidence = cycleEvidence(head);
   const runDir = join(root, "ai-runs", RUN_ID);
   mkdirSync(runDir, { recursive: true });
-  writeFileSync(join(runDir, "playtest.md"), evidence.report);
-  writeFileSync(join(runDir, "playtest.evidence.jsonl"), evidence.evidence);
-  writeFileSync(join(runDir, "playtest.run.json"), evidence.sidecar);
+  if (withPlaytest) {
+    writeFileSync(join(runDir, "playtest.md"), evidence.report);
+    writeFileSync(join(runDir, "playtest.evidence.jsonl"), evidence.evidence);
+    writeFileSync(join(runDir, "playtest.run.json"), evidence.sidecar);
+  }
   writeFileSync(
     join(root, "ai-runs", "latest-cycle.json"),
     JSON.stringify({
@@ -394,7 +402,7 @@ function initCycle(
   return { root, startRef, head, evidence };
 }
 
-function initRotatingCycle(): {
+function initRotatingCycle(withPlaytest = true): {
   root: string;
   statePath: string;
   startRef: string;
@@ -437,9 +445,11 @@ function initRotatingCycle(): {
   const evidence = cycleEvidence(head, "o-feedback-seal-rotation", 23);
   const runDir = join(root, "ai-runs", RUN_ID);
   mkdirSync(runDir, { recursive: true });
-  writeFileSync(join(runDir, "playtest.md"), evidence.report);
-  writeFileSync(join(runDir, "playtest.evidence.jsonl"), evidence.evidence);
-  writeFileSync(join(runDir, "playtest.run.json"), evidence.sidecar);
+  if (withPlaytest) {
+    writeFileSync(join(runDir, "playtest.md"), evidence.report);
+    writeFileSync(join(runDir, "playtest.evidence.jsonl"), evidence.evidence);
+    writeFileSync(join(runDir, "playtest.run.json"), evidence.sidecar);
+  }
   writeFileSync(
     join(root, "ai-runs", "latest-cycle.json"),
     JSON.stringify({
@@ -1017,5 +1027,579 @@ describe("feedback acceptance cycle seal", () => {
         startRef: removed.startRef,
       }),
     ).toThrow(/no frozen actual-selection attestation/u);
+  });
+});
+
+/**
+ * The same seal, for the cycle shape the migrated dev loop actually produces.
+ *
+ * loop.sh dropped require_playtest_record when the two loops split, but this seal kept
+ * demanding ai-runs/<runId>/playtest.{md,evidence.jsonl,run.json} plus a pure V2 sidecar
+ * bound to the provisional commit — so a cycle that played nothing passed every gate and
+ * was then hard-reset here, and only one vendor could mint that sidecar. Every case below
+ * mirrors one above with the artifacts simply not written.
+ *
+ * What must NOT follow from that is a weaker accepting path. The artifacts-present suite
+ * above is unchanged and still asserts the full verification; these cases only establish
+ * that ABSENCE is permitted, and that absence is distinguishable from a broken or partial
+ * publication.
+ */
+describe("feedback acceptance cycle seal without cycle playtest artifacts", () => {
+  it("seals the acceptance marker alone and queues no report", () => {
+    const { root, startRef, head } = initCycle(EMPTY_STATE, null, null, true, false);
+    const result = sealFeedbackAcceptance({
+      root,
+      worldRoot: REPO_ROOT,
+      expectedCommit: head,
+      startRef,
+    });
+    const state = parseState(root);
+
+    expect(result).toMatchObject({
+      runId: RUN_ID,
+      reportId: null,
+      promotedManifestPath: null,
+      consumedRecommendation: false,
+      pendingReports: 0,
+    });
+    expect(state.accepted_compile).toBeNull();
+    expect(state.pending_cycle_reports).toEqual([]);
+    // The rest of the seal's job is untouched: the frozen selection marker still goes.
+    expect(readFileSync(join(root, "AI_LOOP_STATE.md"), "utf8")).not.toContain(
+      "feedback_cycle_selection",
+    );
+  });
+
+  it("seals a cycle whose metadata omits playtestRecord altogether", () => {
+    // The field is now a location, not an obligation, so a caller that stops emitting
+    // it must not be rejected by the schema.
+    const { root, startRef, head } = initCycle(EMPTY_STATE, null, null, true, false);
+    writeFileSync(
+      join(root, "ai-runs", "latest-cycle.json"),
+      JSON.stringify({ runId: RUN_ID, recommendationId: null }),
+    );
+
+    expect(
+      sealFeedbackAcceptance({ root, worldRoot: REPO_ROOT, expectedCommit: head, startRef }),
+    ).toMatchObject({ runId: RUN_ID, reportId: null, pendingReports: 0 });
+  });
+
+  it("still rejects a playtestRecord that points somewhere other than this run", () => {
+    const { root, startRef, head } = initCycle(EMPTY_STATE, null, null, true, false);
+    writeFileSync(
+      join(root, "ai-runs", "latest-cycle.json"),
+      JSON.stringify({
+        runId: RUN_ID,
+        playtestRecord: "ai-runs/2026-01-01T00-00-00-000Z/playtest.md",
+        recommendationId: null,
+      }),
+    );
+
+    expect(() =>
+      sealFeedbackAcceptance({ root, worldRoot: REPO_ROOT, expectedCommit: head, startRef }),
+    ).toThrow(/playtestRecord must be/u);
+  });
+
+  it.each([
+    ["playtest.evidence.jsonl", "raw run evidence"],
+    ["playtest.run.json", "a sidecar"],
+  ] as const)("refuses %s left behind with no report (%s)", (orphan, _label) => {
+    // The runner publishes the report first, so this is a broken publication or a
+    // report deleted after the fact — not the deliberate no-playtest cycle. Letting it
+    // through would make orphaned, unverifiable evidence indistinguishable from none.
+    const { root, startRef, head, evidence } = initCycle(EMPTY_STATE, null, null, true, false);
+    writeFileSync(
+      join(root, "ai-runs", RUN_ID, orphan),
+      orphan.endsWith(".jsonl") ? evidence.evidence : evidence.sidecar,
+    );
+
+    expect(() =>
+      sealFeedbackAcceptance({ root, worldRoot: REPO_ROOT, expectedCommit: head, startRef }),
+    ).toThrow(/publication is incomplete/u);
+    expect(parseState(root).pending_cycle_reports).toEqual([]);
+  });
+
+  it("keeps a full live ledger sealable through rotation with nothing played", () => {
+    const { root, statePath, startRef, head, selection, provisional } = initRotatingCycle(false);
+    writeFileSync(statePath, prependFinalCycleResult(provisional, "rotated_no_playtest"));
+    expect(rotateLoopState(root)).toBe(1);
+    expect(readFileSync(statePath, "utf8")).toContain(selection);
+
+    const result = sealFeedbackAcceptance({
+      root,
+      worldRoot: REPO_ROOT,
+      expectedCommit: head,
+      startRef,
+    });
+    expect(result).toMatchObject({ runId: RUN_ID, reportId: null, pendingReports: 0 });
+    const sealed = readFileSync(statePath, "utf8");
+    expect(sealed).toContain("### Cycle result - rotated_no_playtest");
+    expect(sealed).not.toContain("feedback_cycle_selection");
+    expect(countCycleEntries(sealed)).toBe(15);
+    expect(historicalCycleCount(sealed)).toBe(701);
+  });
+
+  it("keeps noncanonical tail selection material fatal", () => {
+    const { root, statePath, startRef, head, selection, provisional } = initRotatingCycle(false);
+    const noncanonicalSelection = `  ${selection}`;
+    writeFileSync(
+      statePath,
+      prependFinalCycleResult(
+        provisional.replace(`${selection}\n`, `${selection}\n${noncanonicalSelection}\n`),
+        "rotated_no_playtest_malformed",
+      ),
+    );
+    expect(rotateLoopState(root)).toBe(1);
+
+    const beforeSeal = readFileSync(statePath, "utf8");
+    expect(() =>
+      sealFeedbackAcceptance({ root, worldRoot: REPO_ROOT, expectedCommit: head, startRef }),
+    ).toThrow(/malformed feedback cycle selection/u);
+    expect(readFileSync(statePath, "utf8")).toBe(beforeSeal);
+  });
+
+  it("consumes an accepted recommendation only for the exact assessed hotspot", () => {
+    // Recommendation consumption is bookkeeping about what the cycle CHOSE, which has
+    // never depended on whether the cycle also played the game.
+    const root = tempRoot("feedback-seal-noplay-prior-");
+    const oldId = `report:${"a".repeat(64)}`;
+    const prior = writeBundle(root, "20260808T210000Z", {
+      kind: "initial",
+      commit: "1".repeat(40),
+      verifiedIds: [oldId],
+      actionableIds: [oldId],
+      seenIds: [oldId],
+      cohortIds: [oldId],
+      recommendationId: "accepted-hotspot",
+    });
+    const acceptedState = {
+      schema_version: 1 as const,
+      accepted_compile: {
+        manifest_path: prior.manifestRef,
+        manifest_sha256: prior.manifestDigest,
+        hotspots_path: prior.hotspotsRef,
+        hotspots_sha256: prior.manifest.outputs.hotspots_sha256,
+        consumed_by_run_id: null,
+      },
+      pending_cycle_reports: [],
+    };
+    for (const [selectedRecommendationId, expectedConsumption] of [
+      ["hotspot-accepted-hotspot", true],
+      ["repo-different", false],
+      [null, false],
+    ] as const) {
+      const initialized = initCycle(
+        acceptedState,
+        "hotspot-accepted-hotspot",
+        selectedRecommendationId,
+        true,
+        false,
+      );
+      const acceptedDir = join(initialized.root, "ai-runs", "feedback", "20260808T210000Z");
+      mkdirSync(acceptedDir, { recursive: true });
+      for (const file of [
+        "report-manifest.json",
+        "hotspots.json",
+        "retention.json",
+        "hotspots.md",
+      ]) {
+        writeFileSync(
+          join(acceptedDir, file),
+          readFileSync(join(root, "ai-runs", "feedback", "20260808T210000Z", file)),
+        );
+      }
+
+      const result = sealFeedbackAcceptance({
+        root: initialized.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: initialized.head,
+        startRef: initialized.startRef,
+      });
+      expect(result.reportId).toBeNull();
+      expect(result.consumedRecommendation).toBe(expectedConsumption);
+      expect(parseState(initialized.root).accepted_compile?.consumed_by_run_id).toBe(
+        expectedConsumption ? RUN_ID : null,
+      );
+    }
+  });
+
+  it("still promotes a rebuilt chained delta while queueing nothing", () => {
+    const fixtureRoot = tempRoot("feedback-seal-noplay-chain-source-");
+    const oldSeen = `report:${"1".repeat(64)}`;
+    const prior = writeBundle(fixtureRoot, "20260808T200000Z", {
+      kind: "initial",
+      commit: "1".repeat(40),
+      verifiedIds: [oldSeen],
+      actionableIds: [oldSeen],
+      seenIds: [oldSeen],
+      cohortIds: [oldSeen],
+      recommendationId: "old-unselected",
+    });
+    const acceptedState = {
+      schema_version: 1 as const,
+      accepted_compile: {
+        manifest_path: prior.manifestRef,
+        manifest_sha256: prior.manifestDigest,
+        hotspots_path: prior.hotspotsRef,
+        hotspots_sha256: prior.manifest.outputs.hotspots_sha256,
+        consumed_by_run_id: null,
+      },
+      pending_cycle_reports: [],
+    };
+    const initialized = initCycle(acceptedState, null, null, true, false);
+    const target = join(initialized.root, "ai-runs", "feedback", "20260808T200000Z");
+    mkdirSync(target, { recursive: true });
+    for (const file of ["report-manifest.json", "hotspots.json", "retention.json", "hotspots.md"]) {
+      writeFileSync(
+        join(target, file),
+        readFileSync(join(fixtureRoot, "ai-runs", "feedback", "20260808T200000Z", file)),
+      );
+    }
+    // The compiler is NOT starved by the missing cycle report: blind-tester/reports is
+    // still its first-precedence input, and it is what the playtest loop's corroborated
+    // ledger feeds. Three actionable reports there clear the threshold on their own.
+    const ledger = join(initialized.root, "blind-tester", "reports");
+    for (const [index, note] of [
+      "the station sign omits its platform number",
+      "the route prompt reverses the destination",
+      "the board repeats a completed objective",
+    ].entries()) {
+      writeFileSync(
+        join(ledger, `20260808T23000${index}Z_overworld_seed${index + 1}.md`),
+        legacyFeedbackReport(note).text,
+      );
+    }
+    const priorBundle = loadAcceptedFeedbackBundle(initialized.root, acceptedState);
+    expect(priorBundle).not.toBeNull();
+    expect(collectInputs(initialized.root, ["blind-tester/reports"])).toMatchObject({
+      verified: 3,
+      rejected: 0,
+    });
+    const current = compileFeedback({
+      root: initialized.root,
+      worldRoot: REPO_ROOT,
+      inputs: ["blind-tester/reports"],
+      outDir: join(initialized.root, "ai-runs", "feedback", "20260808T230500Z"),
+      topK: 10,
+      llmLabels: false,
+      prevDir: null,
+      cohortPolicy: {
+        kind: "delta",
+        previousManifest: priorBundle!.manifest,
+        previousManifestSha256: prior.manifestDigest,
+        previousHotspots: priorBundle!.hotspots,
+        previousEvidence: priorBundle!.evidence,
+      },
+      commit: initialized.head,
+    });
+    const pointer = FeedbackCompilePointerSchema.parse({
+      schema_version: 1,
+      run_id: RUN_ID,
+      manifest_path: "ai-runs/feedback/20260808T230500Z/report-manifest.json",
+      manifest_sha256: current.manifestSha256,
+    });
+    writeFileSync(
+      join(initialized.root, "ai-runs", RUN_ID, "feedback-compile.json"),
+      `${canonicalize(pointer)}\n`,
+    );
+
+    const result = sealFeedbackAcceptance({
+      root: initialized.root,
+      worldRoot: REPO_ROOT,
+      expectedCommit: initialized.head,
+      startRef: initialized.startRef,
+    });
+    const state = parseState(initialized.root);
+    expect(result.reportId).toBeNull();
+    expect(result.promotedManifestPath).toBe(pointer.manifest_path);
+    expect(state.accepted_compile).toMatchObject({
+      manifest_path: pointer.manifest_path,
+      manifest_sha256: current.manifestSha256,
+      consumed_by_run_id: null,
+    });
+    expect(state.pending_cycle_reports).toEqual([]);
+  });
+
+  it("still rejects a dirty authority marker and hash-mismatched promoted output", () => {
+    const dirty = initCycle(EMPTY_STATE, null, null, true, false);
+    const dirtyState = {
+      schema_version: 1 as const,
+      accepted_compile: null,
+      pending_cycle_reports: [
+        {
+          run_id: "2026-08-07T20-00-00-000Z",
+          tested_commit: "a".repeat(40),
+          report_id: `pure:${"a".repeat(64)}`,
+          report_sha256: "a".repeat(64),
+          evidence_sha256: "a".repeat(64),
+          sidecar_sha256: "a".repeat(64),
+        },
+      ],
+    };
+    const dirtyPath = join(dirty.root, "AI_LOOP_STATE.md");
+    writeFileSync(
+      dirtyPath,
+      upsertFeedbackAcceptanceStateText(readFileSync(dirtyPath, "utf8"), dirtyState),
+    );
+    expect(() =>
+      sealFeedbackAcceptance({
+        root: dirty.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: dirty.head,
+        startRef: dirty.startRef,
+      }),
+    ).toThrow(/marker diverges from committed HEAD/u);
+
+    const tampered = initCycle(EMPTY_STATE, null, null, true, false);
+    const bundle = writeBundle(tampered.root, "20260808T231000Z", {
+      kind: "bootstrap",
+      commit: tampered.head,
+      verifiedIds: [],
+      actionableIds: [],
+      seenIds: [],
+      cohortIds: [],
+    });
+    const pointer = FeedbackCompilePointerSchema.parse({
+      schema_version: 1,
+      run_id: RUN_ID,
+      manifest_path: bundle.manifestRef,
+      manifest_sha256: bundle.manifestDigest,
+    });
+    writeFileSync(
+      join(tampered.root, "ai-runs", RUN_ID, "feedback-compile.json"),
+      `${canonicalize(pointer)}\n`,
+    );
+    writeFileSync(join(tampered.root, bundle.hotspotsRef), "{}\n");
+    expect(() =>
+      sealFeedbackAcceptance({
+        root: tampered.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: tampered.head,
+        startRef: tampered.startRef,
+      }),
+    ).toThrow(/deterministic output|hash-mismatched/u);
+    expect(parseState(tampered.root).pending_cycle_reports).toEqual([]);
+  });
+
+  it("still rejects authority changed inside the provisional commit or a non-HEAD commit", () => {
+    const changed = initCycle(EMPTY_STATE, null, null, true, false);
+    const changedState: FeedbackAcceptanceState = {
+      schema_version: 1,
+      accepted_compile: null,
+      pending_cycle_reports: [
+        {
+          run_id: "2026-08-07T20-00-00-000Z",
+          tested_commit: "a".repeat(40),
+          report_id: `pure:${"a".repeat(64)}`,
+          report_sha256: "a".repeat(64),
+          evidence_sha256: "a".repeat(64),
+          sidecar_sha256: "a".repeat(64),
+        },
+      ],
+    };
+    const statePath = join(changed.root, "AI_LOOP_STATE.md");
+    writeFileSync(
+      statePath,
+      upsertFeedbackAcceptanceStateText(readFileSync(statePath, "utf8"), changedState),
+    );
+    runGit(changed.root, ["add", "AI_LOOP_STATE.md"]);
+    runGit(changed.root, ["commit", "--amend", "-qm", "provisional with altered authority"]);
+    const changedHead = runGit(changed.root, ["rev-parse", "HEAD"]);
+
+    expect(() =>
+      sealFeedbackAcceptance({
+        root: changed.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: changedHead,
+        startRef: changed.startRef,
+      }),
+    ).toThrow(/changed feedback acceptance authority from the cycle start/u);
+
+    const stale = initCycle(EMPTY_STATE, null, null, true, false);
+    expect(() =>
+      sealFeedbackAcceptance({
+        root: stale.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: stale.startRef,
+        startRef: stale.startRef,
+      }),
+    ).toThrow(/is not current HEAD/u);
+  });
+
+  it("still rejects a digest-valid bundle whose report identities were invented", () => {
+    const fabricated = initCycle(EMPTY_STATE, null, null, true, false);
+    const inventedId = `report:${"f".repeat(64)}`;
+    const bundle = writeBundle(fabricated.root, "20260808T231500Z", {
+      kind: "bootstrap",
+      commit: fabricated.head,
+      verifiedIds: [inventedId],
+      actionableIds: [inventedId],
+      seenIds: [inventedId],
+      cohortIds: [],
+    });
+    writeFileSync(
+      join(fabricated.root, "ai-runs", RUN_ID, "feedback-compile.json"),
+      `${canonicalize(
+        FeedbackCompilePointerSchema.parse({
+          schema_version: 1,
+          run_id: RUN_ID,
+          manifest_path: bundle.manifestRef,
+          manifest_sha256: bundle.manifestDigest,
+        }),
+      )}\n`,
+    );
+
+    expect(() =>
+      sealFeedbackAcceptance({
+        root: fabricated.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: fabricated.head,
+        startRef: fabricated.startRef,
+      }),
+    ).toThrow(/deterministic output/u);
+  });
+
+  it("keeps cycles sealable with a missing predecessor and promotes only a rebuilt bootstrap", () => {
+    const missingState: FeedbackAcceptanceState = {
+      schema_version: 1,
+      accepted_compile: {
+        manifest_path: "ai-runs/feedback/20260808T190000Z/report-manifest.json",
+        manifest_sha256: "a".repeat(64),
+        hotspots_path: "ai-runs/feedback/20260808T190000Z/hotspots.json",
+        hotspots_sha256: "b".repeat(64),
+        consumed_by_run_id: null,
+      },
+      pending_cycle_reports: [],
+    };
+    const preserved = initCycle(missingState, null, null, true, false);
+    const preservedResult = sealFeedbackAcceptance({
+      root: preserved.root,
+      worldRoot: REPO_ROOT,
+      expectedCommit: preserved.head,
+      startRef: preserved.startRef,
+    });
+    expect(preservedResult.promotedManifestPath).toBeNull();
+    expect(parseState(preserved.root).accepted_compile).toEqual(missingState.accepted_compile);
+
+    const recovered = initCycle(missingState, null, null, true, false);
+    const bootstrap = compileFeedback({
+      root: recovered.root,
+      worldRoot: REPO_ROOT,
+      inputs: ["blind-tester/reports"],
+      outDir: join(recovered.root, "ai-runs", "feedback", "20260808T232000Z"),
+      topK: 10,
+      llmLabels: false,
+      prevDir: null,
+      cohortPolicy: { kind: "bootstrap" },
+      commit: recovered.head,
+    });
+    const pointer = FeedbackCompilePointerSchema.parse({
+      schema_version: 1,
+      run_id: RUN_ID,
+      manifest_path: "ai-runs/feedback/20260808T232000Z/report-manifest.json",
+      manifest_sha256: bootstrap.manifestSha256,
+    });
+    writeFileSync(
+      join(recovered.root, "ai-runs", RUN_ID, "feedback-compile.json"),
+      `${canonicalize(pointer)}\n`,
+    );
+    const recoveredResult = sealFeedbackAcceptance({
+      root: recovered.root,
+      worldRoot: REPO_ROOT,
+      expectedCommit: recovered.head,
+      startRef: recovered.startRef,
+    });
+    expect(recoveredResult.promotedManifestPath).toBe(pointer.manifest_path);
+    expect(parseState(recovered.root).accepted_compile).toMatchObject({
+      manifest_path: pointer.manifest_path,
+      manifest_sha256: bootstrap.manifestSha256,
+    });
+  });
+
+  it("still requires the committed selection marker to remain frozen in the worktree", () => {
+    const missingCommitted = initCycle(EMPTY_STATE, null, null, false, false);
+    expect(() =>
+      sealFeedbackAcceptance({
+        root: missingCommitted.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: missingCommitted.head,
+        startRef: missingCommitted.startRef,
+      }),
+    ).toThrow(/no actual-selection attestation/u);
+
+    const changed = initCycle(EMPTY_STATE, "hotspot-offered", "hotspot-offered", true, false);
+    const statePath = join(changed.root, "AI_LOOP_STATE.md");
+    writeFileSync(
+      statePath,
+      readFileSync(statePath, "utf8").replace(
+        formatFeedbackCycleSelectionMarker(RUN_ID, "hotspot-offered"),
+        formatFeedbackCycleSelectionMarker(RUN_ID, null),
+      ),
+    );
+    expect(() =>
+      sealFeedbackAcceptance({
+        root: changed.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: changed.head,
+        startRef: changed.startRef,
+      }),
+    ).toThrow(/selection diverges from the provisional commit/u);
+
+    const removed = initCycle(EMPTY_STATE, "hotspot-offered", "hotspot-offered", true, false);
+    const removedPath = join(removed.root, "AI_LOOP_STATE.md");
+    writeFileSync(
+      removedPath,
+      readFileSync(removedPath, "utf8").replace(
+        `${formatFeedbackCycleSelectionMarker(RUN_ID, "hotspot-offered")}\n`,
+        "",
+      ),
+    );
+    expect(() =>
+      sealFeedbackAcceptance({
+        root: removed.root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: removed.head,
+        startRef: removed.startRef,
+      }),
+    ).toThrow(/no frozen actual-selection attestation/u);
+  });
+});
+
+/**
+ * The crux of making the artifacts optional: a playtest that IS published is verified on
+ * exactly the terms it always was. If any of these stopped failing, "optional" would have
+ * quietly become "unchecked", which is the one outcome worse than requiring Codex.
+ */
+describe("a published cycle playtest is still verified in full", () => {
+  it("rejects a sidecar bound to a commit other than the provisional one", () => {
+    const { root, startRef, head } = initCycle(EMPTY_STATE, null);
+    const stale = cycleEvidence("9".repeat(40));
+    const runDir = join(root, "ai-runs", RUN_ID);
+    writeFileSync(join(runDir, "playtest.md"), stale.report);
+    writeFileSync(join(runDir, "playtest.evidence.jsonl"), stale.evidence);
+    writeFileSync(join(runDir, "playtest.run.json"), stale.sidecar);
+
+    expect(() =>
+      sealFeedbackAcceptance({ root, worldRoot: REPO_ROOT, expectedCommit: head, startRef }),
+    ).toThrow(/exercised 9{40}, expected/u);
+    expect(parseState(root).pending_cycle_reports).toEqual([]);
+  });
+
+  it("rejects a report whose raw evidence does not reproduce the adjacent sidecar", () => {
+    const { root, startRef, head, evidence } = initCycle(EMPTY_STATE, null);
+    // Same run, different session identity: the sidecar no longer replays from the raw
+    // evidence, which is the check that makes a hand-written sidecar worthless.
+    writeFileSync(
+      join(root, "ai-runs", RUN_ID, "playtest.run.json"),
+      cycleEvidence(head, "o-somebody-elses-session", 99).sidecar,
+    );
+    expect(evidence.sidecar).not.toBe(
+      readFileSync(join(root, "ai-runs", RUN_ID, "playtest.run.json"), "utf8"),
+    );
+
+    expect(() =>
+      sealFeedbackAcceptance({ root, worldRoot: REPO_ROOT, expectedCommit: head, startRef }),
+    ).toThrow(/does not reproduce the adjacent playtest sidecar/u);
+    expect(parseState(root).pending_cycle_reports).toEqual([]);
   });
 });

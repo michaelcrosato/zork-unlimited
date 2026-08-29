@@ -144,6 +144,38 @@ export function findNewestCrawlFindings(root: string): string | null {
  * then outer-gate-accepted pending cycle reports from committed loop state.
  * Merely complete ignored cycle bundles and unaccepted crawler outputs are not
  * default authority; either remains available through explicit `--in`.
+ *
+ * WHERE THE CORPUS COMES FROM NOW THAT THE DEV LOOP NO LONGER PLAYS
+ *
+ * The second default — `pendingAcceptedCycleReportPaths` — was always ADDITIVE, and a
+ * migrated dev cycle publishes no playtest, so it is now usually empty. That narrows the
+ * corpus; it does not starve it. `blind-tester/reports` is still the first-precedence
+ * input and still the destination every ad-hoc and corroboration run lands in by default:
+ * `npm run blind` (blind-tester/run.sh) and `npm run fleet` (blind-tester/fleet.mjs) both
+ * resolve an omitted `--out` to exactly this directory. An empty ledger is a real state,
+ * but it is the "nobody has played recently" state, which `feedback:status` reports as
+ * not-ready and the loop records as a skip — not a broken wiring.
+ *
+ * What is NOT wired here, deliberately, is the playtest loop's own corpus. Under the
+ * two-loop design (docs/two_loop_workflow.md) a cohort writes run artifacts to
+ * `ai-runs/playtest/runs/` and content-addressed session records to the session store
+ * (src/qa/session_store.ts), and reaches the dev loop through TRIAGE into `intake/queue`
+ * rather than through this compiler. Pointing the compiler at either one is a bigger
+ * change than it looks:
+ *
+ *   - the session store holds `session.json` + a transcript, not the `<report>.md` +
+ *     adjacent `.run.json` pair collectInputs reads, so it needs a real adapter in
+ *     src/feedback/compile.ts before it can be named here at all; and
+ *   - `ai-runs/playtest/runs/` uses ONE unstamped prefix per (provider, seed, persona),
+ *     so a later run overwrites the earlier report at the same path. Manifests record
+ *     evidence by ref, so admitting that directory would mint refs that silently stop
+ *     meaning what they said — precisely what the ledger's stamped filenames prevent.
+ *
+ * Both are fixable, and neither is fixable safely from this function alone. Until then
+ * the honest statement is: the compiler's live default corpus is the report ledger, and
+ * the fleet reaches the dev loop through the intake queue, not through here.
+ *
+ * The first-default invariant is pinned by tests/regression/feedback_cycle_input_discovery.test.ts.
  */
 export function resolveFeedbackInputs(
   root: string,

@@ -732,6 +732,97 @@ printf 'codex-cli 0.144.1\\n'
     }
   }, 30_000);
 
+  it("applies the login-home output boundary to the provider that owns the home, not to all", () => {
+    // "Never write evidence inside the client's own login home" is a vendor-neutral rule
+    // that used to be enforced with a vendor-specific home: every provider's output was
+    // checked against `${CODEX_HOME:-$HOME/.codex}`, so a `--provider gemini_cli --mock`
+    // run resolved and could die on a Codex home it would never touch. The rule survives;
+    // the accident does not. Both halves are asserted together because either one alone
+    // could be satisfied by deleting the check.
+    const dir = mkdtempSync(join(tmpdir(), "af-client-home-boundary-"));
+    const home = join(dir, "codex-home");
+    const auth = join(home, CODEX_LOGIN_FILENAME);
+    const authBytes = '{"sentinel":"per-provider-guard"}\n';
+    mkdirSync(home);
+    writeFileSync(auth, authBytes);
+    try {
+      // codex OWNS this home, so its evidence may not land inside it.
+      const owner = spawnSync(
+        process.execPath,
+        [
+          "blind-tester/blind-launch.mjs",
+          "--mock",
+          "--provider",
+          "codex",
+          "--out",
+          join(home, "reports", "owner"),
+        ],
+        {
+          cwd: cleanGit.path,
+          encoding: "utf8",
+          env: { ...process.env, CODEX_HOME: home },
+          timeout: 120_000,
+        },
+      );
+      const ownerOutput = `${owner.stdout ?? ""}\n${owner.stderr ?? ""}\n${owner.error?.message ?? ""}`;
+      expect(owner.status, ownerOutput).toBe(4);
+      expect(ownerOutput).toContain("Report output prefix must remain outside the Codex home");
+      expect(readdirSync(home)).toEqual([CODEX_LOGIN_FILENAME]);
+
+      // gemini_cli does not own it, declares no state root of its own, and must not be
+      // measured against another vendor's login directory.
+      const stranger = spawnSync(
+        process.execPath,
+        [
+          "blind-tester/blind-launch.mjs",
+          "--mock",
+          "--provider",
+          "gemini_cli",
+          "--out",
+          join(home, "reports", "stranger"),
+        ],
+        {
+          cwd: cleanGit.path,
+          encoding: "utf8",
+          env: { ...process.env, CODEX_HOME: home },
+          timeout: 120_000,
+        },
+      );
+      const strangerOutput = `${stranger.stdout ?? ""}\n${stranger.stderr ?? ""}\n${stranger.error?.message ?? ""}`;
+      expect(stranger.status, strangerOutput).toBe(0);
+      expect(strangerOutput).not.toContain("Report output prefix");
+      expect(existsSync(join(home, "reports", "stranger.md"))).toBe(true);
+      expect(readFileSync(auth, "utf8")).toBe(authBytes);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 240_000);
+
+  it("takes the pure client's executable and override env var from the registry", () => {
+    // `BLIND_CODEX_BIN` and the literal `codex` used to be spelled out here, which made
+    // the registry's launch block dead data — it described a launch nobody performed. The
+    // runner reads both from the resolved provider now, and the registry still declares
+    // exactly those two values, so every message and every lookup renders identically.
+    // The live preflight tripwire tests in this file all set BLIND_CODEX_BIN and reach
+    // the selection, so they only pass while the indirect lookup resolves that name.
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    const registry = JSON.parse(
+      readFileSync(join(process.cwd(), "blind-tester", "providers.json"), "utf8"),
+    ) as { providers: Array<{ id: string; launch?: Record<string, unknown> }> };
+    const codexLaunch = registry.providers.find((p) => p.id === "codex")?.launch;
+    expect(codexLaunch?.executable).toBe("codex");
+    expect(codexLaunch?.binaryOverrideEnv).toBe("BLIND_CODEX_BIN");
+
+    expect(runner).toContain('if [[ -n "${!PROVIDER_LAUNCH_BINARY_ENV+x}" ]]; then');
+    expect(runner).toContain('CODEX_BIN_REQUEST="${!PROVIDER_LAUNCH_BINARY_ENV}"');
+    expect(runner).toContain('type -P "$PROVIDER_LAUNCH_EXECUTABLE"');
+    // An env var NAME out of a data file reaches indirect expansion, so it is checked
+    // against an identifier shape first.
+    expect(runner).toContain('"$PROVIDER_LAUNCH_BINARY_ENV" =~ ^[A-Za-z_][A-Za-z0-9_]*$');
+    expect(runner).not.toContain('"${BLIND_CODEX_BIN+x}"');
+    expect(runner).not.toContain("type -P codex");
+  });
+
   it("rejects directory and dot-segment output forms before suffixes can enter CODEX_HOME", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-codex-output-lexical-boundary-"));
     const home = join(dir, "codex-home");
@@ -855,7 +946,7 @@ printf 'codex-cli 0.144.1\\n'
       'if [[ "$PLAY_MODE" == "pure" && "$TRACKED_WORKTREE_CLEAN" != "true" ]]',
     );
     expect(initialGuard).toBeGreaterThan(0);
-    expect(initialGuard).toBeLessThan(runner.indexOf('ACTIVE_CODEX_HOME=""'));
+    expect(initialGuard).toBeLessThan(runner.indexOf('ACTIVE_CLIENT_HOME=""'));
     expect(initialGuard).toBeLessThan(runner.indexOf('SELECTED_CODEX_BIN=""'));
 
     const gameplaySpawn = runner.indexOf('printf "%s" "$PROMPT" | "$NODE_CMD"');
@@ -1281,7 +1372,11 @@ printf 'codex-cli 0.144.1\\n'
       "utf8",
     );
 
-    expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-codex}"');
+    // The default provider is a named constant with a stated reason, not an accident of
+    // parameter expansion. It is still `codex`, and it is still only a DEFAULT: the pure
+    // gate asks the registry what the chosen provider can prove, never what it is called.
+    expect(runner).toContain('DEFAULT_PROVIDER="codex"');
+    expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-$DEFAULT_PROVIDER}"');
     expect(runner).toContain("--provider)");
     // Provider and model are validated through the registry, never against a vendor
     // list embedded here: a runner that has to be edited to gain a vendor is a runner
@@ -1306,7 +1401,7 @@ printf 'codex-cli 0.144.1\\n'
     expect(strictStream).toContain("CODEX_HOME: codexHome");
     expect(strictStream).toContain('spawnSync("taskkill.exe"');
     expect(codexLaunch).toContain('CODEX_ROLLOUT="$OUT.codex-rollout.jsonl"');
-    expect(codexLaunch).toContain('--home "$ACTIVE_CODEX_HOME_ARG"');
+    expect(codexLaunch).toContain('--home "$ACTIVE_CLIENT_HOME_ARG"');
     expect(codexLaunch).toContain('--events "$CODEX_EVENTS_ARG"');
     expect(codexLaunch).toContain('--rollout "$CODEX_ROLLOUT_ARG"');
     expect(codexLaunch).toContain('CODEX_CAPTURE="$OUT.codex-capture.json"');
@@ -1584,9 +1679,26 @@ exit 93
       "utf8",
     );
 
-    expect(runner).toContain('RAW_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"');
+    // Codex login state stays CLI-owned in the operator's EXISTING home — unchanged.
+    // What changed is where that home's location comes from. It used to be the literal
+    // `${CODEX_HOME:-$HOME/.codex}`, applied to every provider, so `--provider gemini_cli
+    // --mock` resolved a Codex home it would never touch and could die on it. The runner
+    // now reads the SELECTED provider's own state root out of the registry, which for
+    // codex is exactly the same two values — asserted here against the registry itself,
+    // so this stays a check on behaviour rather than on a string.
+    const registry = JSON.parse(
+      readFileSync(join(process.cwd(), "blind-tester", "providers.json"), "utf8"),
+    ) as { providers: Array<{ id: string; capture?: { sessionLog: Record<string, string> } }> };
+    const codexSessionLog = registry.providers.find((p) => p.id === "codex")?.capture?.sessionLog;
+    expect(codexSessionLog?.rootEnv).toBe("CODEX_HOME");
+    expect(codexSessionLog?.rootDefault).toBe("{HOME}/.codex");
+    expect(runner).not.toContain("RAW_CODEX_HOME");
+    expect(runner).toContain(
+      'RAW_CLIENT_HOME="${PROVIDER_SESSION_LOG_ROOT_DEFAULT//\\{HOME\\}/"$HOME"}"',
+    );
+    expect(runner).toContain('RAW_CLIENT_HOME="${!PROVIDER_SESSION_LOG_ROOT_ENV}"');
     expect(runner).toContain("resolve-home-if-present --home");
-    expect(runner).toContain('ACTIVE_CODEX_HOME_ARG="$(node_path_arg "$ACTIVE_CODEX_HOME")"');
+    expect(runner).toContain('ACTIVE_CLIENT_HOME_ARG="$(node_path_arg "$ACTIVE_CLIENT_HOME")"');
     expect(runner).toContain("validate-output");
     expect(runner.indexOf("validate-output")).toBeLessThan(runner.indexOf('WORK="$(mktemp -d)"'));
     expect(runner.indexOf("validate-output")).toBeLessThan(

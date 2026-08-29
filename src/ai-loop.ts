@@ -5,22 +5,23 @@
  * tooling (not the engine): it
  *   1. ASSESSES the whole project (src/afk/assessor.ts) to distinguish strategic
  *      recommendations from routine maintenance rotation across content / engine / repo;
- *   2. fixes the live playtest launch target to the CORE GAME — the overworld
- *      from a fresh start — independently of which quest/code target the
- *      assessor recommends, matching the default `npm run blind`;
+ *   2. records the CORE GAME — the overworld from a fresh start — as the launch
+ *      contract for this build, independently of which quest/code target the
+ *      assessor recommends;
  *   3. writes the cycle artifacts to an ignored ai-runs/<id>/ dir, including the
- *      exact path where the operating agent must drop its MANDATORY LLM playtest
- *      report; and
- *   4. emits a cycle prompt that keeps pure-play evidence on an exact-clean
- *      revision: commit-enabled cycles make ONE focused improvement, create a
- *      local provisional commit, then play; evidence-only cycles play the clean
- *      baseline before making uncommitted changes.
+ *      exact path a playtest of this revision would occupy if one is published; and
+ *   4. emits a cycle prompt: commit-enabled cycles make ONE focused improvement and
+ *      freeze it in a local provisional commit; evidence-only cycles make the same
+ *      one improvement without committing it.
  *
- * The driver does the deterministic *evaluation*; the per-cycle *quality* signal
- * comes from the agent's blind LLM playtest (docs/afk_loop.md, docs/blind_playtest_protocol.md).
- * loop.sh enforces the playtest as mandatory (it refuses to commit a cycle that
- * produced no playtest record) and runs health + the integrity drift gate before
- * committing. See docs/afk_loop.md for the whole picture.
+ * THE CYCLE NO LONGER PLAYS THE GAME. That coupling is what the two-loop split
+ * removed (docs/two_loop_workflow.md): experience evidence is an INPUT to a dev cycle,
+ * produced asynchronously by the playtest loop and its fleet, never a condition on
+ * landing one. loop.sh has no playtest gate left (require_playtest_record is gone) and
+ * the feedback acceptance seal treats ai-runs/<id>/playtest.{md,evidence.jsonl,run.json}
+ * as OPTIONAL — verified in full when present, absent without penalty when not. What
+ * still gates a cycle is mechanical and vendor-neutral: post-crawl, `npm run health`,
+ * and the integrity drift check. See docs/afk_loop.md for the whole picture.
  */
 import { mkdirSync, writeFileSync, appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -85,10 +86,12 @@ function cycleStamp(): string {
 }
 
 function requirePlayableWorldQuest(quests: readonly { playable: boolean }[]): void {
-  // The overworld baseline run discovers and bridges into shipped quests, so the
-  // loop still needs at least one playable quest in the overworld registry.
+  // The overworld discovers and bridges into shipped quests, so a build worth handing
+  // to the playtest loop still needs at least one playable quest in the world registry.
+  // The dev cycle no longer plays it itself, but shipping a world nobody CAN play would
+  // starve the other loop of anything to report on.
   if (!quests.some((quest) => quest.playable)) {
-    throw new Error("AFK loop requires at least one shipped RPG quest to blind-playtest.");
+    throw new Error("AFK loop requires at least one shipped RPG quest in the overworld registry.");
   }
 }
 
@@ -98,9 +101,9 @@ export function isOverworldPlaytestTarget(target: string | null | undefined): bo
 }
 
 /**
- * The mandatory live playtest always launches the CORE GAME from a fresh
- * overworld start. The assessor's recommendation remains independent: it may
- * still name a quest to inspect or edit, but it never becomes a drop-in launch.
+ * Any live playtest of this build launches the CORE GAME from a fresh overworld
+ * start. The assessor's recommendation remains independent: it may still name a
+ * quest to inspect or edit, but it never becomes a drop-in launch.
  */
 export function playtestTarget(
   _top: ImprovementCandidate | null,
@@ -174,8 +177,8 @@ function main(): void {
   const root = process.cwd();
   const commitEnabled = process.env.AI_LOOP_COMMIT === "1";
   // Keep the loop log token-small: archive all but the most recent cycles before we
-  // assess and hand the prompt to the agent. Evidence-only cycles must leave the
-  // tracked tree untouched until their clean-baseline playtest has finished.
+  // assess and hand the prompt to the agent. Evidence-only cycles leave the tracked
+  // tree untouched, so their rotation happens at the end of the cycle instead.
   if (commitEnabled) rotateLoopState(root);
   const stamp = cycleStamp();
   const runDir = join("ai-runs", stamp);
@@ -197,13 +200,8 @@ function main(): void {
     : null;
 
   const prompt = ultraplan
-    ? buildUltraplanPrompt({
-        a,
-        playtestRecord,
-        currentPlanRecord: currentPlanRecord!,
-        commitEnabled,
-      })
-    : buildPrompt({ a, top, playtestRecord, commitEnabled });
+    ? buildUltraplanPrompt({ a, currentPlanRecord: currentPlanRecord!, commitEnabled })
+    : buildPrompt({ a, top, commitEnabled });
 
   // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
   // quest authoring) both need more than the lean routine default; loop.sh reads this
@@ -218,8 +216,11 @@ function main(): void {
   writeFileSync(join(runDir, "assessment.md"), formatAssessment(a));
   writeFileSync(join(runDir, "assessment.json"), JSON.stringify(a, null, 2));
   writeFileSync(join(runDir, "prompt.md"), prompt);
-  // Stable pointer loop.sh reads to enforce the mandatory playtest AND to pick up a
-  // per-cycle agent timeout (ultraplan cycles get a larger budget).
+  // Stable pointer loop.sh and the feedback seal read for this cycle's run id, its
+  // per-cycle agent timeout (ultraplan cycles get a larger budget), and the slot a
+  // playtest of this exact revision would occupy. The slot is a location, not an
+  // obligation: the seal verifies it in full if something lands there and seals the
+  // acceptance marker alone if nothing does.
   writeFileSync(
     join("ai-runs", "latest-cycle.json"),
     JSON.stringify(
@@ -241,9 +242,9 @@ function main(): void {
     SATURATION_STATE_FILE,
     JSON.stringify({ saturated, cyclesSinceUltraplan: ultraplan ? 0 : cyclesSince + 1 }, null, 2),
   );
-  // In commit-enabled mode this scaffold is included in the provisional commit,
-  // then completed after play as the final ledger-only commit. Evidence-only mode
-  // must begin with an exact-clean tree, so its agent appends the entry after play.
+  // In commit-enabled mode this scaffold is included in the provisional commit, then
+  // completed after the outer gates as the final ledger-only commit. Evidence-only mode
+  // must begin with an exact-clean tree, so its agent appends the entry at the end.
   if (commitEnabled) {
     appendFileSync(
       "AI_LOOP_STATE.md",
@@ -254,7 +255,7 @@ function main(): void {
   console.log(`AFK cycle ${stamp}${ultraplan ? "  [ULTRAPLAN MODE — assessor saturated]" : ""}`);
   console.log(`  assessment: ${runDir}/assessment.md`);
   console.log(`  prompt:     ${runDir}/prompt.md`);
-  console.log(`  playtest record required at: ${playtestRecord}`);
+  console.log(`  playtest slot (optional, unused by this loop): ${playtestRecord}`);
   if (ultraplan) console.log(`  ⟳ saturation re-aim → ultraplan; handoff → ${currentPlanRecord}`);
   console.log(formatRecommendationConsoleLine(a));
 }
@@ -272,14 +273,11 @@ export function formatRecommendationConsoleLine(a: Assessment): string {
 export function buildPrompt(ctx: {
   a: Assessment;
   top: ImprovementCandidate | null;
-  playtestRecord: string;
   commitEnabled?: boolean;
 }): string {
-  const { a, playtestRecord, commitEnabled = false } = ctx;
+  const { a, commitEnabled = false } = ctx;
   const top = a.top;
   const recommendationKind = assessmentRecommendationKind(a);
-  const playtestPrefix = playtestRecord.replace(/\.md$/, "");
-  const playtestSidecar = `${playtestPrefix}.run.json`;
   const ranked = a.candidates
     .slice(0, 6)
     .map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
@@ -342,27 +340,13 @@ export function buildPrompt(ctx: {
     "- FIX THE CLASS, NOT THE INSTANCE. If recent cycles keep surfacing the same class",
     "  of finding, prefer a class-level validator/lint fix when that is the higher-value move.",
   ];
-  const blindInstructions = [
-    "Game context: AdventureForge is a fictional, deterministic text-based TTRPG.",
-    "Start as a new player and use only the game surface; keep development work inside this repo.",
-    "",
-    "Start the CORE GAME — the open-world overworld from a FRESH start.",
-    "",
-    `- Run \`npm run blind -- --out ${playtestPrefix}\` with its default`,
-    "  `play_mode: pure`, neutral persona, and one `start_surface: fresh_overworld` session.",
-    "- Do not pass `--quest`, a quest id, a persona overlay, or a saved session. Do not add",
-    "  coverage tasks, routes, solutions, content targets, or a call-count stopping rule.",
-    "  The game supplies the goal and continue/end checkpoints; interview only after exit.",
-    `- The runner must publish ${playtestRecord} and then its verified adjacent`,
-    `  V2 build/receipt sidecar ${playtestSidecar}. loop.sh validates both against`,
-    "  the exact provisional commit before the final commit in commit-enabled cycles.",
-  ];
   const feedbackInstructions = [
     "- Run `npm run feedback:status`; it verifies unseen ledger reports plus exact pending",
     "  cycle evidence from committed loop state. Run `npm run feedback:compile` only when status says ready",
     "  (including a one-time bootstrap); otherwise record the reported skip count.",
     "  Deterministic structural mocks never satisfy the three-actionable-report threshold.",
-    "  This cycle's pure report becomes eligible only after outer-gate finalization.",
+    "  This cycle plays nothing and contributes no report of its own; the corpus belongs to",
+    "  the playtest loop, and an empty one is a normal state rather than a failure.",
   ];
   const workflow = commitEnabled
     ? [
@@ -375,28 +359,20 @@ export function buildPrompt(ctx: {
         "- In one or two lines, judge whether the change raises player-facing quality or",
         "  closes a real defect. If it is busywork, replace it with the higher-value move.",
         "- Run the focused tests/validation appropriate to the change. loop.sh runs the",
-        "  post-crawl, full health, integrity-drift, and report gates after you return.",
+        "  post-crawl, full health, and integrity-drift gates after you return.",
         "- Commit every tracked implementation change locally as a PROVISIONAL commit.",
         "  Never push. The outer loop will hard-reset this commit if any later gate fails.",
         "- Before that commit, set `selected_recommendation_id` in this cycle's",
         "  `feedback_cycle_selection` marker to the exact candidate id you implemented;",
         "  leave it null only for an off-list choice. Never change it after the freeze.",
         "- Do not finalize the current AI_LOOP_STATE.md scaffold yet. Include it in the",
-        "  provisional commit, then complete that same entry only after the blind run.",
-        "- Immediately before pure play, `git status --porcelain` must be exactly empty.",
-        "  If it is not, do not launch the player; cleanly finish the provisional commit first.",
+        "  provisional commit, then complete that same entry once the gates have run.",
         "",
-        "## STEP 3 — Play the provisional revision from a fresh overworld",
-        "",
-        ...blindInstructions,
-        "- Do not edit source after play. Put any new finding in the next-focus ledger line",
-        "  so this report remains evidence for the exact provisional revision it exercised.",
-        "",
-        "## STEP 4 — Compile only at the real threshold, then finish the ledger",
+        "## STEP 3 — Compile only at the real threshold, then finish the ledger",
         "",
         ...feedbackInstructions,
-        "- Complete AI_LOOP_STATE.md TERSELY (≤8 lines): what you playtested + clarity/",
-        "  enjoyment, what changed + why, self-critique, evidence, and next focus.",
+        "- Complete AI_LOOP_STATE.md TERSELY (≤8 lines): what changed + why,",
+        "  self-critique, evidence, and next focus.",
         "- Keep the frozen `feedback_cycle_selection` marker unchanged; the post-gate seal",
         "  removes it after using the committed actual-selection attestation.",
         "- AI_LOOP_STATE.md must be the only tracked change after the provisional commit.",
@@ -404,24 +380,20 @@ export function buildPrompt(ctx: {
         "  commit; only after that may its separately enabled push step run.",
       ]
     : [
-        "## STEP 1 — Capture a clean evidence-only baseline BEFORE any edit",
+        "## STEP 1 — Make ONE uncommitted improvement",
         "",
         "- This run has AI_LOOP_COMMIT disabled. First require `git status --porcelain` to",
-        "  be exactly empty. If it is not empty, STOP: do not claim a pure run and do not",
-        "  make uncommitted changes on top of an unknown revision.",
-        ...blindInstructions,
-        "- Let the baseline findings inform the one improvement below.",
-        "",
-        "## STEP 2 — Make ONE uncommitted improvement",
-        "",
+        "  be exactly empty: loop.sh measures this cycle against its clean starting ref, so",
+        "  uncommitted changes on top of an unknown revision are not attributable evidence.",
+        "  If it is not empty, STOP without editing anything.",
         ...improvementInstructions,
         "",
-        "## STEP 3 — Self-critique, run focused checks, and record evidence",
+        "## STEP 2 — Self-critique, run focused checks, and record evidence",
         "",
         "- Judge the change against player value and run its focused tests/validation.",
         ...feedbackInstructions,
-        "- Append a TERSE AI_LOOP_STATE.md entry (≤8 lines) with the baseline finding,",
-        "  change, self-critique, evidence, and next focus.",
+        "- Append a TERSE AI_LOOP_STATE.md entry (≤8 lines) with the change,",
+        "  self-critique, evidence, and next focus.",
         "- Do not commit or push: this is explicitly an evidence-only run. loop.sh still",
         "  runs post-crawl, health, and integrity drift against the clean starting ref.",
       ];
@@ -458,7 +430,13 @@ export function formatLoopStateAppend(
   currentPlanRecord: string | null = null,
 ): string {
   const top = a.top;
-  const targetSummary = playtestTargetSummary(target);
+  // The scaffold states the cycle's CONTRACT, and it is committed, so every line here
+  // has to stay true of a cycle that plays nothing. The old entry advertised a per-cycle
+  // playtest target and a blind-report guard; both were retired with the two-loop split,
+  // and a ledger line asserting evidence nobody produced is the exact failure this
+  // subsystem exists to prevent. `target` stays in the signature because latest-cycle.json
+  // still records the launch contract (via playtestTargetSummary/playtestTargetMetadata)
+  // for whoever DOES play this build — the cycle just no longer claims to be that player.
   const text = [
     "",
     `## AFK Cycle ${stamp}${ultraplan ? " — ULTRAPLAN (saturation re-aim)" : ""}`,
@@ -469,8 +447,7 @@ export function formatLoopStateAppend(
     ultraplan
       ? `- Mode: ultraplan re-aim; handoff ${currentPlanRecord ?? `ai-runs/${stamp}/current-plan.md`}.`
       : "",
-    `- Playtest: ${targetSummary}.`,
-    "- Guard: blind report + health + verify:integrity before commit.",
+    "- Guard: health + verify:integrity before commit.",
     "",
   ]
     .filter((l) => l !== "")
@@ -482,16 +459,15 @@ export function formatLoopStateAppend(
  * The ULTRAPLAN-mode prompt, emitted only when the assessor is saturated (and off
  * cooldown). It tells the cycle's agent to RE-AIM the project with a bounded
  * multi-agent ultraplan, persist the per-cycle handoff under ignored ai-runs/, then
- * implement the chosen move in a FRESH context — keeping the same exact-clean
- * mandatory-playtest + green-bar discipline as a standard cycle.
+ * implement the chosen move in a FRESH context — keeping the same green-bar discipline
+ * as a standard cycle, and, like a standard cycle, playing nothing itself.
  */
 export function buildUltraplanPrompt(ctx: {
   a: Assessment;
-  playtestRecord: string;
-  currentPlanRecord?: string;
+  currentPlanRecord: string;
   commitEnabled?: boolean;
 }): string {
-  const { a, playtestRecord, commitEnabled = false } = ctx;
+  const { a, currentPlanRecord, commitEnabled = false } = ctx;
   const recommendationKind = assessmentRecommendationKind(a);
   if (recommendationKind === "strategic") {
     throw new Error("Ultraplan mode requires a saturated assessment, not strategic direction.");
@@ -508,53 +484,32 @@ export function buildUltraplanPrompt(ctx: {
           "## Assessor status — no candidate and no strategic recommendation",
           "The bounded repo review below independently selects and justifies the structural re-aim.",
         ];
-  const playtestPrefix = playtestRecord.replace(/\.md$/, "");
-  const playtestSidecar = `${playtestPrefix}.run.json`;
-  const currentPlanRecord =
-    ctx.currentPlanRecord ?? playtestRecord.replace(/playtest\.md$/, "current-plan.md");
-  const blindInstructions = [
-    "- Play the CORE GAME — the overworld from a FRESH start — with",
-    `  \`npm run blind -- --out ${playtestPrefix}\` and the default neutral-player setup.`,
-    "- Do not pass `--quest`, a quest id, a persona overlay, or a saved session; every",
-    "  live blind player must discover and enter quests only through normal overworld play.",
-    "  Add no coverage route, solution, content target, or call-count stopping rule; the",
-    "  game's goal/checkpoint choice governs exit, and the interview happens only afterward.",
-    `- Require the runner to publish ${playtestRecord}, followed by its verified`,
-    `  V2 build/receipt sidecar ${playtestSidecar}; loop.sh binds both to provisional HEAD.`,
-  ];
   const evidenceOnlyPrelude = commitEnabled
     ? []
     : [
-        "## STEP -1 — Capture a clean evidence-only baseline before any plan or code edit",
-        "- AI_LOOP_COMMIT is disabled. Require `git status --porcelain` to be exactly empty",
-        "  before launching pure play. If it is not empty, STOP without playing or editing.",
-        ...blindInstructions,
-        "- This baseline report may guide the re-aim, but it does not claim to exercise the",
-        "  later uncommitted implementation.",
+        "## STEP -1 — Start from an exactly clean tree, before any plan or code edit",
+        "- AI_LOOP_COMMIT is disabled, so this cycle's evidence is a diff against its clean",
+        "  starting ref. Require `git status --porcelain` to be exactly empty before editing",
+        "  anything. If it is not empty, STOP without editing.",
         "",
       ];
   const finish = commitEnabled
     ? [
         "## STEP 4 — Run focused checks and create the LOCAL provisional commit",
         "- Self-critique the move, then run its focused tests/validation. The outer loop",
-        "  runs post-crawl, full health, integrity drift, and report gates after you return.",
+        "  runs post-crawl, full health, and integrity drift after you return.",
         "- Commit every tracked implementation/decision-log change locally as a PROVISIONAL",
         "  commit. Include the unfinished AI_LOOP_STATE.md scaffold. Never push.",
         "- Before that commit, set `selected_recommendation_id` in this cycle's",
         "  `feedback_cycle_selection` marker to the exact candidate id you implemented;",
         "  leave it null only for the ultraplan's off-list choice. Freeze it with the revision.",
-        "- Immediately before pure play, `git status --porcelain` must be exactly empty.",
         "",
-        "## STEP 5 — Play the exact provisional revision",
-        ...blindInstructions,
-        "- Do not edit source after play; record new findings only as next focus.",
-        "",
-        "## STEP 6 — Compile only at the real threshold, then finish the ledger",
+        "## STEP 5 — Compile only at the real threshold, then finish the ledger",
         "- Run `npm run feedback:status`; compile only when it reports ready (including a",
-        "  one-time bootstrap). The current pure report enters a later accepted cohort only",
-        "  after outer-gate finalization; deterministic structural mocks never meet the threshold.",
-        "- Complete AI_LOOP_STATE.md TERSELY (≤8 lines): ultraplan choice, play evidence,",
-        "  self-critique, and next focus. It must be the ONLY tracked post-provisional change.",
+        "  one-time bootstrap). Deterministic structural mocks never meet the threshold, and",
+        "  this cycle adds no report of its own — the playtest loop owns that corpus.",
+        "- Complete AI_LOOP_STATE.md TERSELY (≤8 lines): ultraplan choice, self-critique,",
+        "  evidence, and next focus. It must be the ONLY tracked post-provisional change.",
         "- Keep the frozen `feedback_cycle_selection` marker unchanged; the post-gate seal",
         "  removes it after checking the committed selection.",
         "- Do not commit the ledger edit. loop.sh runs the outer gates and makes the final",
@@ -565,7 +520,7 @@ export function buildUltraplanPrompt(ctx: {
         "- Run the focused tests/validation, then `npm run feedback:status`. Compile only",
         "  when status reports ready. Evidence-only runs cannot make the provisional compile",
         "  authoritative because they do not execute the final tracked-state seal.",
-        "- Append a TERSE AI_LOOP_STATE.md entry (≤8 lines): baseline play, ultraplan choice,",
+        "- Append a TERSE AI_LOOP_STATE.md entry (≤8 lines): ultraplan choice,",
         "  self-critique, evidence, and next focus.",
         "- Do not commit or push. loop.sh still runs post-crawl, health, and integrity drift",
         "  against the clean starting ref, leaving evidence-only changes uncommitted.",

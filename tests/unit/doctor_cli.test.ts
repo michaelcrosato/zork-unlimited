@@ -9,12 +9,17 @@
  * says the same thing in both states is worse than none — it teaches you to ignore it.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { onPath } from "../../bin/doctor.js";
+import {
+  derivePlaytestIsolation,
+  PLAYTEST_PROVIDERS,
+  type PlaytestIsolationReasonCode,
+} from "../../src/blind/providers.js";
 import { sealPlaytestSession, type PlaytestSessionBody } from "../../src/qa/session_record.js";
 import { sha256Hex, writePlaytestSession } from "../../src/qa/session_store.js";
 
@@ -141,6 +146,79 @@ describe("doctor", () => {
     expect(output).toContain("playtest:ingest");
   });
 
+  /**
+   * The table used to be driven by `const LIVE_LAUNCHABLE_PROVIDER = "codex"` — a
+   * hand-written second copy of a rule src/blind/providers.ts already derives. Two
+   * failures came out of that, and these three tests pin both shut.
+   *
+   * The first is drift: the constant could not notice a capture reader landing, so the
+   * day a second vendor became provable this command would have gone on telling the
+   * operator to hand-play it. The second is flattening: every non-Codex provider got the
+   * SAME sentence, which turned four different situations into one unhelpful one.
+   */
+  it("prints each provider's derived reason verbatim, and no two providers share one", () => {
+    const output = run("bin/doctor.ts", ["--store", temp("af-doc-empty-")]);
+    const reasons = PLAYTEST_PROVIDERS.map((provider) => derivePlaytestIsolation(provider).reason);
+    for (const reason of reasons) expect(output).toContain(reason);
+    // Distinctness is the half that matters. Asserting only "each reason appears" would
+    // stay green if the derivation started answering every provider with one shared
+    // house sentence, which is precisely the state this replaced.
+    expect(new Set(reasons).size).toBe(reasons.length);
+  });
+
+  it("gives each provider the sentence for ITS OWN reason class", () => {
+    // Written out as literals rather than recomputed from derivePlaytestIsolation. A test
+    // that builds its expectation with the same function the CLI calls cannot distinguish
+    // "every provider printed its own answer" from "every provider printed one shared
+    // answer", and that distinction is the entire point: two vendors can miss
+    // `runner_enforced` for facts that imply completely different work. No capture block
+    // means someone can go and write the reader; `desktop_client` means the runner never
+    // sees the process at all, so no reader would help while it is registered that way.
+    // The old `LIVE_LAUNCHABLE_PROVIDER` said "not codex" to both, which is neither.
+    //
+    // Keyed by reason CODE rather than by vendor id on purpose. Which vendor sits in
+    // which class is a fact about this checkout that changes the day a reader lands —
+    // that is the whole design — so pinning vendor names here would make doing the work
+    // break the test that guards it.
+    const phrases: Record<PlaytestIsolationReasonCode, string> = {
+      runner_captures_this_vendor: "is a headless CLI whose session log is read by",
+      kind_is_not_headless_cli: "which the runner never spawns",
+      no_capture_block: "declares no capture block",
+      capture_reader_module_missing: "does not exist in this checkout",
+    };
+    const output = run("bin/doctor.ts", ["--store", temp("af-doc-empty-")]);
+    const codes = new Set<PlaytestIsolationReasonCode>();
+    for (const provider of PLAYTEST_PROVIDERS) {
+      const derived = derivePlaytestIsolation(provider);
+      codes.add(derived.code);
+      expect(derived.reason, `${provider.id} is in class ${derived.code}`).toContain(
+        phrases[derived.code],
+      );
+      expect(output, `${provider.id} (${derived.code})`).toContain(derived.reason);
+    }
+    // And the table really is saying more than one thing today, so the assertions above
+    // are not all checking the same sentence four times over.
+    expect(codes.size, "the registry no longer exercises two isolation classes").toBeGreaterThan(1);
+  });
+
+  it("names each trusted vendor's OWN witness, never one shared claim", () => {
+    // "Why is this one enforced?" is the same question as "why is that one not", and the
+    // honest answer is a file path. A `runner_enforced` label with no witness named is
+    // the exact failure src/blind/providers.ts exists to prevent, so the diagnostic
+    // prints the module doing the witnessing — a different one per vendor, because they
+    // are trusted on separate evidence rather than on one house policy.
+    const output = run("bin/doctor.ts", ["--store", temp("af-doc-empty-")]);
+    const enforced = PLAYTEST_PROVIDERS.map((provider) => derivePlaytestIsolation(provider)).filter(
+      (derived) => derived.isolation === "runner_enforced",
+    );
+    expect(enforced.length).toBeGreaterThan(0);
+    for (const derived of enforced) {
+      expect(derived.readerModule).not.toBeNull();
+      expect(output).toContain(derived.readerModule);
+    }
+    expect(new Set(enforced.map((derived) => derived.readerModule)).size).toBe(enforced.length);
+  });
+
   it("says a single-family stall is correct, and what would actually change it", () => {
     const output = diagnose(corpusOf([CLAUDE, CLAUDE, CLAUDE]));
     // The distinction that matters: this is the rule working, not a fault.
@@ -204,5 +282,231 @@ describe("onPath", () => {
     } finally {
       process.env.PATH = original;
     }
+  });
+});
+
+/**
+ * The cohort preflight in playtest-loop.sh was the THIRD hand-written copy of the
+ * launchability policy — `[[ "$provider" != "codex" ]]` — and it is pinned in THIS file
+ * because it is now the same derived fact `npm run doctor` reports. One rule with two
+ * consumers, pinned in one place, is what stops it quietly becoming two rules again.
+ *
+ * The shell is exercised the way tests/regression/loop_driver_gates.test.ts exercises
+ * loop.sh: the real text is cut out of the shipped file and run under `bash -s`, with a
+ * stub substituted for the one function that shells out. Running playtest-loop.sh itself
+ * is not an option — one step past this gate it dispatches a live, paid cohort.
+ */
+const LOOP_SH = readFileSync(join(ROOT, "playtest-loop.sh"), "utf8");
+const GATE_ANCHOR = 'if [[ "$MOCK" != "1" ]]; then';
+
+/** The exact shipped text between two anchors, so the test can never drift from the file. */
+function loopSection(start: string, end: string): string {
+  const from = LOOP_SH.indexOf(start);
+  expect(from, `playtest-loop.sh no longer contains: ${start}`).toBeGreaterThanOrEqual(0);
+  const to = LOOP_SH.indexOf(end, from);
+  expect(to, `playtest-loop.sh no longer contains: ${end}`).toBeGreaterThan(from);
+  return LOOP_SH.slice(from, to);
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
+/**
+ * One provider's `--records` answer, in the keys the shell actually reads.
+ *
+ * FOUR keys, not two, because launchability is two independent facts. `isolation` says
+ * this vendor's blindness is PROVABLE here (a capture reader exists); `drivable` says
+ * blind-tester/run.sh actually has a launch path for that reader. Gating on the first
+ * alone dispatched a full wave of claude_code players the moment its reader landed, every
+ * one of which run.sh then refused — a burned wave reported as a cohort of failures
+ * rather than as the single configuration fact it was.
+ */
+function records(
+  isolation: string,
+  reason: string,
+  drivable: "0" | "1" = "1",
+  drivableReason: string = reason,
+): string {
+  return (
+    `id\tstub\nisolation\t${isolation}\nisolation_reason\t${reason}\n` +
+    `drivable\t${drivable}\ndrivable_reason\t${drivableReason}\n`
+  );
+}
+
+/**
+ * A bash stand-in for `provider_isolation`, the single point where the shell shells out.
+ *
+ * `null` means the resolver REFUSED this id — an unregistered provider, a broken catalog,
+ * or the registry's stored isolation disagreeing with what this checkout derives. That
+ * last one is the failure the whole derivation exists to catch, so the gate has to
+ * survive it rather than read an unanswered question as a yes.
+ */
+function stubResolver(table: Record<string, string | null>): string {
+  const arms = Object.entries(table).map(([id, answer]) =>
+    answer === null
+      ? `    ${id}) echo 'resolver refused ${id}' >&2; return 2 ;;`
+      : `    ${id}) printf '%s' ${shellQuote(answer)} ;;`,
+  );
+  return [
+    "provider_isolation() {",
+    '  case "$1" in',
+    ...arms,
+    '    *) echo "the stub was asked about an unexpected id: $1" >&2; return 2 ;;',
+    "  esac",
+    "}",
+  ].join("\n");
+}
+
+function runPreflight(
+  cohort: string,
+  stub: string,
+  mock = "0",
+): { status: number | null; output: string } {
+  const script = [
+    "set -uo pipefail",
+    `COHORT=${shellQuote(cohort)}`,
+    `MOCK=${shellQuote(mock)}`,
+    // The real functions, then the stub overriding the one seam, then the real gate that
+    // calls them. Order matters: the stub has to land after the definition it replaces
+    // and before the caller.
+    loopSection("provider_isolation() {", GATE_ANCHOR),
+    stub,
+    loopSection(GATE_ANCHOR, "# Model pin lookup:"),
+  ].join("\n");
+  const result = spawnSync("bash", ["-s"], {
+    cwd: ROOT,
+    input: script,
+    encoding: "utf8",
+    timeout: 120_000,
+  });
+  return {
+    status: result.status,
+    output: `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`,
+  };
+}
+
+const WITNESSED = records("runner_enforced", "the stub vendor's log is read by a stub reader");
+/** A reason no file in this repo contains, so quoting it can only mean pass-through. */
+const SENTINEL_REASON =
+  'provider "stub_cli" names capture reader "blind-tester/nobody-wrote-this.mjs", which ' +
+  "does not exist in this checkout, so no session of it can be witnessed";
+
+describe("playtest-loop.sh cohort preflight", () => {
+  it("is syntactically valid bash", () => {
+    const result = spawnSync("bash", ["-n", "playtest-loop.sh"], { cwd: ROOT, encoding: "utf8" });
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+  });
+
+  it("no longer decides launchability by comparing against a vendor name", () => {
+    // The exact shape of the old gate. It could not notice a capture reader landing, so
+    // it would have gone on refusing a vendor that had just become provable — making the
+    // work of becoming provable pointless, which is the opposite of the intended incentive.
+    expect(LOOP_SH).not.toContain('!= "codex"');
+  });
+
+  it("dispatches when every requested provider is one the runner can witness", () => {
+    const result = runPreflight("stub_cli:4", stubResolver({ stub_cli: WITNESSED }));
+    expect(result.status, result.output).toBe(0);
+    expect(result.output).not.toContain("Refusing the cohort");
+  });
+
+  it("refuses a provable vendor the runner still has no launch path for", () => {
+    // The second gate. This is the state claude_code was actually in the moment its
+    // capture reader landed: blindness genuinely provable, no way to spawn it. Dispatching
+    // here would launch players run.sh refuses one by one, and — worse — any session
+    // assembled by another route would be sealed with the stronger evidence label.
+    const NOT_DRIVABLE =
+      'provider "stub_cli" has a capture reader (blind-tester/stub-reader.mjs) but ' +
+      "blind-tester/run.sh has no launch path written against it yet";
+    const result = runPreflight(
+      "stub_cli:3",
+      stubResolver({
+        stub_cli: records("runner_enforced", "provable by the stub reader", "0", NOT_DRIVABLE),
+      }),
+    );
+    expect(result.status, result.output).toBe(1);
+    expect(result.output).toContain(NOT_DRIVABLE);
+  });
+
+  it("refuses on the derivation's answer, and quotes its reason verbatim", () => {
+    const result = runPreflight(
+      "stub_cli:2",
+      stubResolver({ stub_cli: records("operator_attested", SENTINEL_REASON) }),
+    );
+    expect(result.status, result.output).toBe(1);
+    expect(result.output).toContain(SENTINEL_REASON);
+    // And it stays as actionable as the sentence it replaced: where this evidence goes
+    // instead, the free way to test the wiring with no vendor at all, and where to read
+    // the current per-provider table rather than a copy of it pasted in here.
+    expect(result.output).toContain("bin/ingest-playtest-session.ts");
+    expect(result.output).toContain("PLAYTEST_MOCK=1");
+    expect(result.output).toContain("npm run doctor");
+  });
+
+  it("refuses a provider it cannot resolve, surfacing the resolver's own words", () => {
+    // An unanswered launchability question is not a yes. Continuing here would dispatch a
+    // wave whose every player dies at launch, and the recorder cannot tell that from a
+    // mid-play crash — so it would file each one as a `failed` session carrying a real
+    // vendor family, seeding the corpus with evidence about nothing at all.
+    const result = runPreflight("mystery:1", stubResolver({ mystery: null }));
+    expect(result.status, result.output).toBe(1);
+    expect(result.output).toContain("resolver refused mystery");
+    expect(result.output).toContain("could not be resolved");
+  });
+
+  it("names every blocked provider, once each, however many players were asked for", () => {
+    const result = runPreflight(
+      "stub_cli:3,stub_cli:2,other_cli:1,witness_cli:1",
+      stubResolver({
+        stub_cli: records("operator_attested", SENTINEL_REASON),
+        other_cli: records("operator_attested", "other_cli has no capture block either"),
+        witness_cli: WITNESSED,
+      }),
+    );
+    expect(result.status, result.output).toBe(1);
+    // Repeating one provider's reason per requested player would bury the second blocked
+    // vendor under the first one's copies.
+    expect(result.output.split(SENTINEL_REASON).length - 1).toBe(1);
+    expect(result.output).toContain("other_cli has no capture block either");
+  });
+
+  it("still lets PLAYTEST_MOCK=1 past the gate — a wiring check launches no vendor", () => {
+    // The mock wave drives run.sh's bundled scripted agent, so there is no client whose
+    // blindness could be proved or doubted. Gating it would take the one free way to test
+    // this loop's plumbing away from exactly the vendors that most need hand-play.
+    const result = runPreflight(
+      "stub_cli:8",
+      stubResolver({ stub_cli: records("operator_attested", SENTINEL_REASON) }),
+      "1",
+    );
+    expect(result.status, result.output).toBe(0);
+    expect(result.output).not.toContain("Refusing the cohort");
+  });
+
+  it("reads keys the shipped resolver actually emits", () => {
+    // The shell above is only honest if `--records` really carries these two keys, and
+    // carries the same answer the typed authority gives. That seam runs between files
+    // owned by different changes, so it gets its own pin instead of being assumed by the
+    // stubs — a stub agreeing with itself proves nothing.
+    const provider = PLAYTEST_PROVIDERS.find(
+      (candidate) => derivePlaytestIsolation(candidate).isolation === "operator_attested",
+    );
+    expect(provider, "no operator_attested provider left to check the seam with").toBeDefined();
+    const result = spawnSync(
+      process.execPath,
+      ["blind-tester/resolve-provider.mjs", "--records", provider!.id],
+      { cwd: ROOT, encoding: "utf8", timeout: 120_000 },
+    );
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+    const rows = new Map(
+      (result.stdout ?? "")
+        .split(/\r?\n/u)
+        .filter((line) => line.includes("\t"))
+        .map((line) => line.split("\t") as [string, string]),
+    );
+    const derived = derivePlaytestIsolation(provider!);
+    expect(rows.get("isolation")).toBe(derived.isolation);
+    expect(rows.get("isolation_reason")).toBe(derived.reason);
   });
 });

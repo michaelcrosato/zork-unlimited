@@ -1,0 +1,24 @@
+{
+  "comment": [
+    "Which capture readers blind-tester/run.sh has an actual LAUNCH PATH written against.",
+    "",
+    "This is deliberately separate from the registry's `capture` block, because they answer",
+    "two different questions and both have to be true before a vendor can play live:",
+    "",
+    "  registry capture block -> 'a reader exists that can PROVE this vendor's blindness'",
+    "  this file              -> 'run.sh knows how to SPAWN this vendor in the first place'",
+    "",
+    "Landing a reader without a launch path is the dangerous half. The derived gate would",
+    "open, and run.sh would fall through to the Codex launch and execute",
+    "`codex exec --model <the other vendor's model>` — a burned launch recorded under the",
+    "wrong vendor's name. That is why run.sh checks this list too, and why the list names",
+    "READER MODULES rather than provider ids: the launch path is written against a reader's",
+    "requirements (where its log lives, how the session id is obtained), not against a brand.",
+    "",
+    "bin/doctor.ts reads this same file so its table cannot promise a live lane that run.sh",
+    "would refuse. Adding a vendor is: registry entry + capture block + reader module +",
+    "a launch branch in run.sh + one line here. The first three make the evidence honest;",
+    "the last two make it runnable."
+  ],
+  "implementedCaptureReaders": ["blind-tester/codex-rollout.mjs"]
+}

@@ -29,7 +29,11 @@
 import { existsSync } from "node:fs";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PLAYTEST_PROVIDERS } from "../src/blind/providers.js";
+import {
+  derivePlaytestIsolation,
+  PLAYTEST_PROVIDERS,
+  runnerCanDriveProvider,
+} from "../src/blind/providers.js";
 import { listPlaytestSessions, summarizePlaytestStore } from "../src/qa/session_store.js";
 import { DEFAULT_SESSION_STORE } from "../src/qa/session_store.js";
 import { readQueue, summarizeQueue } from "../src/intake/queue.js";
@@ -79,16 +83,24 @@ export function onPath(binary: string): boolean {
   return false;
 }
 
-/**
- * The one vendor whose blindness this runner can prove.
+/*
+ * There is deliberately NO `LIVE_LAUNCHABLE_PROVIDER` constant here any more.
  *
- * `runner_enforced` means the runner verified the agent saw nothing but the
- * AdventureForge MCP tools, and that proof is read back out of Codex's own rollout logs
- * by blind-tester/codex-rollout.mjs and its companions. No equivalent reader exists for
- * any other vendor, so run.sh refuses their pure runs — which is a fact about the
- * capture machinery, not about the vendors.
+ * There used to be one — `const LIVE_LAUNCHABLE_PROVIDER = "codex"` — and it was the
+ * second of three hand-written copies of the same policy (the others being
+ * blind-tester/run.sh and playtest-loop.sh's cohort preflight). Three copies of a rule
+ * is three chances to disagree, and this copy was the one an operator READS: it decided
+ * both the ✓/· marks below and the paragraph explaining them, so the day a second
+ * vendor's capture reader lands, this file would have gone on telling the operator that
+ * vendor must be hand-played. A diagnostic that is confidently wrong is worse than no
+ * diagnostic, because it is believed.
+ *
+ * `derivePlaytestIsolation` in src/blind/providers.ts is now the single authority, and
+ * it answers from facts rather than a name: the provider's `kind`, whether it declares a
+ * complete `capture` block, and whether that block's reader module exists in THIS
+ * checkout. So this command reports what the machine can actually do today, and it
+ * changes the moment the checkout does — no edit here required.
  */
-const LIVE_LAUNCHABLE_PROVIDER = "codex";
 
 const DEV_AGENTS = ["codex", "claude", "gemini"] as const;
 
@@ -123,23 +135,51 @@ function main(): void {
   }
 
   section("Playtest loop — what can launch here");
+  // Two independent facts, and BOTH must hold before this table may promise a live lane.
+  // `derivePlaytestIsolation` answers "can this vendor's blindness be proven here" (a
+  // capture reader exists). implemented-launch-paths.json answers "does run.sh know how
+  // to spawn it at all". They genuinely came apart: the moment the claude_code reader
+  // landed, the derived gate opened and this table said "live via playtest-loop.sh" while
+  // run.sh refused the very same run. Reading run.sh's own list is what stops that.
+  const liveIds: string[] = [];
   for (const provider of PLAYTEST_PROVIDERS) {
+    const derived = derivePlaytestIsolation(provider);
     const binary = provider.launch?.executable ?? null;
     const installed = binary !== null && onPath(binary);
-    const canRunLive = provider.id === LIVE_LAUNCHABLE_PROVIDER;
+    const proven = derived.isolation === "runner_enforced";
+    const canRunLive = runnerCanDriveProvider(provider).drivable;
+    if (canRunLive) liveIds.push(provider.id);
     const mark = canRunLive && installed ? "✓" : "·";
     const how = canRunLive
       ? installed
         ? "live via playtest-loop.sh, runner_enforced"
         : `live-capable, but '${binary ?? "?"}' is not on PATH`
-      : "hand-play in its own client, then npm run playtest:ingest (operator_attested)";
+      : proven
+        ? // Provable but not yet drivable: the honest middle state, and the one worth
+          // naming loudly because it is one launch branch away from working.
+          `blindness is provable, but run.sh has no launch path for ${derived.readerModule} yet — ` +
+          `hand-play and npm run playtest:ingest until it does`
+        : "hand-play in its own client, then npm run playtest:ingest (operator_attested)";
     console.log(`  ${mark} ${provider.id.padEnd(14)} ${provider.family.padEnd(8)} ${how}`);
+    // The derivation's own sentence, printed VERBATIM and per provider — never a shared
+    // house summary. Two vendors can miss `runner_enforced` for completely different
+    // reasons (claude_code ships a CLI and simply has no capture reader written yet;
+    // grok_desktop is a desktop client the runner never spawns at all), and those two
+    // facts imply different work: one is "write the reader", the other is "this will
+    // never be enforceable as registered". The old single sentence flattened both into
+    // "not codex", which told an operator nothing they could act on. It is printed for
+    // the qualifying vendor too, because "why is THIS one trusted" is the same question
+    // and the answer names the module doing the trusting.
+    console.log(`      ${derived.reason}`);
   }
   console.log(
-    `\n  Only '${LIVE_LAUNCHABLE_PROVIDER}' can produce runner_enforced sessions: that class means the\n` +
-      `  runner PROVED the agent saw nothing but the game's MCP tools, and the proof is read\n` +
-      `  from Codex's rollout logs. Ingested sessions still count toward bug corroboration;\n` +
-      `  they are excluded from experience metrics only.\n` +
+    `\n  runner_enforced means the runner PROVED the agent saw nothing but the game's MCP\n` +
+      `  tools, by reading that client's own session log with the reader module named above.\n` +
+      `  In this checkout that holds for: ${liveIds.join(", ") || "no provider at all"}.\n` +
+      `  That is a fact about which capture readers exist here today, not a ranking of\n` +
+      `  vendors — it flips for a vendor the moment its reader lands. Ingested sessions\n` +
+      `  still count toward bug corroboration; they are excluded from experience metrics\n` +
+      `  only.\n` +
       `  PLAYTEST_MOCK=1 dry-runs the wiring for any provider, free, recording nothing.`,
   );
 

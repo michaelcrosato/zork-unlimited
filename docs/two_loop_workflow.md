@@ -78,38 +78,62 @@ AI_AGENT=claude ./loop.sh                   # dev loop on Claude Code
 PLAYTEST_COHORT="codex:8" ./playtest-loop.sh
 ```
 
-### The one place a vendor IS privileged: runner-enforced blindness
+### Vendor privilege is now derived, not declared
 
-**Only Codex can currently produce a `runner_enforced` session.** Every other vendor —
-`claude_code`, `gemini_cli`, Grok — must go through `npm run playtest:ingest` and lands
-`operator_attested`. Running them through `playtest-loop.sh` is refused at launch:
-`Provider "<id>" cannot produce pure evidence: this runner can only launch "codex".`
+**No vendor is named anywhere in the gate.** Whether a provider may produce a
+`runner_enforced` session is computed, per provider, from two facts about this checkout:
 
-That refusal was added on 2026-08-29 and is worth knowing about, because the
-behaviour it replaced was worse than the documentation implied. The registry gate
-only asks whether a provider is a headless CLI, which `claude_code` and
-`gemini_cli` both are, so a pure run for either sailed through and eventually
-executed `codex exec --model <that vendor's model>` — a session played by Codex and
-recorded under another vendor's name. The error operators actually hit was the
-unrelated missing-`~/.codex` one, which never fires on a machine that has Codex
-installed, i.e. exactly the documented AFK-loop machine.
+| Question | Answered by | Where it lives |
+| --- | --- | --- |
+| Can this vendor's blindness be **proven** here? | it declares a `capture` block whose reader module exists | `blind-tester/providers.json` + the reader |
+| Can `run.sh` actually **launch** it? | its reader is in the implemented list | `blind-tester/implemented-launch-paths.json` |
 
-This is structural, not an oversight. `runner_enforced` means the runner can PROVE the
-agent saw only the AdventureForge MCP tools, and that proof is read back out of Codex's
-own rollout logs by `blind-tester/codex-rollout.mjs` (1,566 lines) plus
+Both must hold. `derivePlaytestIsolation()` in `src/blind/providers.ts` answers the first
+and `runnerCanDriveProvider()` combines them; `blind-tester/run.sh`, `bin/doctor.ts`,
+`playtest-loop.sh` and `blind-tester/resolve-provider.mjs` all read those same two
+answers, so none of them can advertise a lane another one refuses. The registry's stored
+`isolation` literal survives only as a second witness: if it disagrees with what the
+checkout derives, the registry **fails to parse**. A vendor cannot be talked into the
+strong label by editing JSON.
+
+That matters more than it sounds. `bin/record-playtest-session.ts` seals the isolation
+label onto a corpus record, and the ranking layer lets `runner_enforced` sessions move
+experience metrics. A provider stamped with a label the runner cannot back is the
+contamination `src/blind/providers.ts` calls the worst error available in that file —
+so the recorder now downgrades to `operator_attested`, loudly, for any provider this
+checkout cannot actually drive.
+
+Adding a vendor is therefore five mechanical steps, none of which is "edit a gate":
+a registry entry, a `capture` block, a reader module, a launch branch in `run.sh`, and
+one line in `implemented-launch-paths.json`. The first three make its evidence honest;
+the last two make it runnable. `npm run doctor` prints exactly which of the five are
+missing, per provider, in this checkout.
+
+**Today that yields: codex live; claude_code provable but not yet launchable
+(`blind-tester/claude-session.mjs` exists, no launch branch); gemini_cli and grok
+ingest-only.** Claude Code was verified this session to be genuinely provable —
+`--strict-mcp-config` plus `--tools ""` plus `--setting-sources ""` yields a process whose
+entire callable surface is the one declared MCP server, with a runner-pinned
+`--session-id` naming the transcript path before launch.
+
+The remaining asymmetry is capability, not policy. `runner_enforced` means the runner
+PROVED the agent saw only the AdventureForge MCP tools, and for Codex that proof is read
+out of its own rollout logs by `blind-tester/codex-rollout.mjs` (1,566 lines) plus
 `codex-process-anchor.mjs`, `codex-pure-envelope.mjs` and `codex-strict-stream.mjs`.
-No equivalent reader exists for any other vendor, so there is nothing to verify against.
+Writing the equivalent for another vendor is now a contained job — the seam takes it —
+rather than a change to five files and a gate.
 
-What this does and does not cost you:
+What this does and does not cost you while a vendor still lacks a launch path:
 
-- Multi-vendor **bug corroboration still works**. `operator_attested` sessions count
+- Multi-vendor **bug corroboration works today**. `operator_attested` sessions count
   toward it, and corroboration across families is the promotion rung that matters.
 - Multi-vendor **experience metrics do not**. Retention and clarity numbers take
-  `runner_enforced` sessions only, so today those are a Codex-only measurement.
+  `runner_enforced` sessions only, so headline experience numbers remain a measurement
+  of whichever vendors are live in this checkout — currently Codex alone.
 
-So a mixed fleet is worth running — just drive the non-Codex vendors through their own
-client and ingest them, exactly as the Grok path already describes, and read headline
-experience numbers as Codex's alone until per-vendor capture exists.
+So a mixed fleet is worth running now: drive the not-yet-launchable vendors through their
+own client and ingest them, and read headline experience numbers as belonging to the live
+vendors specifically until the others' launch paths land.
 
 ### Cheap by default, expensive on purpose
 
