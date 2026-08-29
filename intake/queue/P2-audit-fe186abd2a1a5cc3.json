@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "fe186abd2a1a5cc3",
+  "title": "PROTECTED_FILES does not guard src/validate/rpg_foundation_validator.ts, tests/regression/rpg_foundation_negative_corpus.test.ts or content/broken-fix",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nThe fix belongs in scripts/verify-integrity.ts, outside my ownership. The finding reads correct: the guard's own 'guard both or guarding either is theatre' comment applies verbatim, since a cycle could weaken a foundation check and edit the matching foundation_*.yaml fixture with no VERIFIER_TOUCHED and unchanged case/assertion counts. Whoever owns scripts/ should add all three entries.",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "scripts/verify-integrity.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-29T07:18:00.830Z",
+  "updated_at": "2026-08-29T07:18:00.830Z",
+  "external": null
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "247a4e033fb3a1bc",
+  "title": "ticket_id is not stable as evidence accumulates (src/qa/triage.ts:209)",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nThe volatile half of the identity is cluster.key, whose token component is built in src/feedback/cluster.ts — outside my ownership — and every stable-identity scheme I considered is a cross-subsystem design decision, not a bug fix. Keying on `locationKey|severityBand` alone collides two genuinely different clusters at one location onto one ticket_id (writeTickets would then drop one of them). Carrying an id forward from an overlapping prior ticket works, but it makes triage's output a function of the existing bucket as well as the corpus, which contradicts the purity property triage.ts:11-15 states and the whole loop leans on. This wants an owner decision. Two notes for whoever takes it: (a) the `kind` half of the instability IS fixed above — an S1-only bug cluster no longer flips kind when an S2 report arrives; (b) the tautological guard at tests/unit/qa_playtest_pipeline.test.ts:304 (`ticketId(identity) === ticketId({...identity})`) is still there. I left it rather than replace it, because a meaningful version of that assertion fails today and I am not permitted to land a failing test.",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [],
+  "area": "src/qa/triage.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-29T07:17:59.241Z",
+  "updated_at": "2026-08-29T07:17:59.241Z",
+  "external": null
+}

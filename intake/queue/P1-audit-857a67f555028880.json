@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "857a67f555028880",
+  "title": "Rolls keyed on (seed, step) alone — a free INVENTORY no-op rerolls any check",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nOwner product decision, not a code slip. The verifier's own correction says the (seed, step) keying is documented intent (src/core/rng.ts:4-7) and that the finding is a design consequence with no compensating mitigation. Every candidate fix is architectural: mixing the action or a state digest into the stream re-keys every recorded trace, every per-step hash, every pinned save digest and the RNG known-answer vector (tests/regression/rng_known_answer_vector.test.ts), and the cheaper mitigations (making INVENTORY not advance `step`, or a per-check counter) are game-design calls about the difficulty economy that belong to the repo owner and reach well outside src/core. Not something to decide unilaterally mid-audit.",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [],
+  "area": "src/core/rng.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-29T07:17:58.975Z",
+  "updated_at": "2026-08-29T07:17:58.975Z",
+  "external": null
+}

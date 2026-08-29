@@ -60,7 +60,7 @@ const CADE_HUNT_INSPECT_LABEL =
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
-  "Inspect a visible story choice without choosing it. Never changes state.";
+  "Inspect a visible story choice without choosing it. Only reveal_id changes state.";
 
 async function withPureServer<T>(
   evidencePath: string,
@@ -1175,7 +1175,7 @@ describe("MCP pure play mode", () => {
       // +8 on 2026-08-28: reveal_station_dispatch_support's full-mode description
       // dropped an untrue "without changing state" claim — that path writes a durable
       // reveal receipt into the snapshot and moves the hash — and says so instead.
-      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_574);
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_583);
       expect(fullRead?.description).toBe(
         "Read current context without acting. Station support uses the exact board[5] id.",
       );
@@ -2288,8 +2288,8 @@ describe("MCP pure play mode", () => {
         // rest from two parameter descriptions the schema now states machine-readably
         // (`not: {required: [option_id, reveal_id]}` replaces "not both"). Net +332,
         // which is why the headroom below is 36 bytes rather than the old 368.
-        expect(pureCatalogBytes).toBe(17_070);
-        expect(15_720 + 2_042 + pureCatalogBytes).toBe(34_832);
+        expect(pureCatalogBytes).toBe(17_079);
+        expect(15_720 + 2_042 + pureCatalogBytes).toBe(34_841);
         expect(15_720 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(34_868);
         for (const tool of listed.tools) {
           expect(

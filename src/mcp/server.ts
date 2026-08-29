@@ -2094,7 +2094,7 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect a visible story choice without choosing it. Never changes state.",
+  "Inspect a visible story choice without choosing it. Only reveal_id changes state.",
   forbidArgumentCombination(
     {
       ...OVERWORLD_SESSION,

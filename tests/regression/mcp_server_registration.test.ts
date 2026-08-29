@@ -12,7 +12,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { READ_ONLY_TOOLS, TOOL_REGISTRATIONS } from "../../src/mcp/server.js";
 
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
-  "Inspect a visible story choice without choosing it. Never changes state.";
+  "Inspect a visible story choice without choosing it. Only reveal_id changes state.";
 
 const RETIRED_STATIC_OVERWORLD_TOOLS = [
   "explore_overworld_area",
@@ -147,7 +147,10 @@ describe("MCP server registration", () => {
     );
     expect(registration?.description).toBe(PARENT_BOUND_STORY_INSPECTION_DESCRIPTION);
     expect(registration?.description).toContain("Inspect a visible story choice");
-    expect(registration?.description).toContain("Never changes state");
+    // Not "never changes state": reveal_id writes inspectedStoryReveals
+    // (src/world/session.ts:1393), which is snapshotted and restored, so it moves the
+    // session's snapshot hash. option_id inspection really is side-effect free.
+    expect(registration?.description).toContain("Only reveal_id changes state");
 
     // The argument contract used to live only in the prose above, because the tool
     // published an empty input schema and prose was the only channel left. It now

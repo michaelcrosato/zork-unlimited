@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "61a10a4ba12a99d1",
+  "title": "`npm run health` runs the verifier in STATIC mode only, so the count ratchet is absent from the bar AGENTS.md names as THE bar (and from direct pushes",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nThe remedy is in package.json:23/29 (add a drift invocation) or .github/workflows/ci.yml (drop the pull_request-only condition on the drift step) — both hard exclusions for me. Worth noting the slack it leaves is now materially smaller after the floor re-raise above.",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "package.json",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-29T07:18:00.567Z",
+  "updated_at": "2026-08-29T07:18:00.567Z",
+  "external": null
+}

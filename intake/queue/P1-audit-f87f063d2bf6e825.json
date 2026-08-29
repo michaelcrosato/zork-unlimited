@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "f87f063d2bf6e825",
+  "title": "Multi-vendor families/tiers ranking is unreachable from feedback:compile (compile.ts buildManifestIndex drops provider/model)",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nNeeds an owner decision on evidence authority, not a one-line plumbing change. The only provider identity available at compile time is either (a) the `ai-runs/fleet/<label>/manifest.jsonl` row, joined on report BASENAME — a join key compile.ts's own comment already calls weak, in a gitignored directory with no receipt — or (b) the authenticated pure-sidecar gate `validateAdjacentPureProviderAuthority`, which yields \"codex\"/\"claude\"/\"legacy\" plus a certified model but has NO mapping to a registry `family` or a catalog `tier`. Wiring the tier multipliers (x2 / x1.5 / x0.5) off (a) would let an unauthenticated manifest row double or halve a hotspot's score and change `recommended_next_fix`; doing it properly off (b) means first defining certified-model -> PlaytestTier and PureFleetProvider -> family mappings, which is a design decision about which blind-fleet models count as the reference cohort. Second-order trap to fix at the same time, in compile.ts:864 (mine): hotspots.md recovers `diversity` as score/(count*sevWeight), arithmetic that is exact only under the legacy branch, so any provider-aware score would silently print a fractional \"diversity\" with no test failing.",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [],
+  "area": "src/feedback/compile.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-29T07:18:00.299Z",
+  "updated_at": "2026-08-29T07:18:00.299Z",
+  "external": null
+}

@@ -239,7 +239,7 @@ describe("Station dispatch board", () => {
     // authoritative figure is asserted against a live `tools/list` in
     // tests/regression/mcp_pure_play_mode.test.ts ("advertises only player tools…");
     // change it there first, then here. It had drifted 35 bytes stale before 2026-08-28.
-    const pureCatalogBytes = 17_070;
+    const pureCatalogBytes = 17_079;
     const freshContextBytes = Buffer.byteLength(
       JSON.stringify(new OverworldSession(WORLD).compactView()),
       "utf8",
@@ -247,7 +247,7 @@ describe("Station dispatch board", () => {
     const stationContextBytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
     const freshAggregate = promptBytes + pureCatalogBytes + freshContextBytes;
     expect(promptBytes).toBe(15_720);
-    expect(freshAggregate).toBe(34_648);
+    expect(freshAggregate).toBe(34_657);
     // Assert the ceiling against the computed aggregate, not against the literal on
     // the line above it — comparing two constants proves nothing about the build.
     expect(freshAggregate).toBeLessThanOrEqual(34_868);
@@ -256,7 +256,7 @@ describe("Station dispatch board", () => {
       pureCatalogBytes +
       stationContextBytes +
       Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
-    expect(firstStationAggregate).toBe(38_193);
+    expect(firstStationAggregate).toBe(38_202);
     expect(firstStationAggregate).toBeLessThanOrEqual(38_495);
 
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });

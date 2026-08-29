@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "2e30dedafc15a472",
+  "title": "Spectate feed and pure run-evidence file are placed with a bare resolve() rather than safeResolve",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nI agree with the VERIFIER CORRECTION: neither AF_SPECTATE nor --run-evidence crosses the MCP trust boundary — both are read once at import from argv/env by whoever spawns `npm run mcp`, and that actor already executes arbitrary repo code and controls argv directly. It is not an escalation, so hardening it would be defence-in-depth with no threat behind it. What actually remains is a README sentence that overstates a guarantee covering only client-argument paths, and README.md is excluded.",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [],
+  "area": "src/mcp/server.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-29T07:18:02.922Z",
+  "updated_at": "2026-08-29T07:18:02.922Z",
+  "external": null
+}

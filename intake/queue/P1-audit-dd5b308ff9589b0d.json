@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "dd5b308ff9589b0d",
+  "title": "Schema-v1 pure sidecars enter retention with sidecar-only authority (src/blind/pure_artifact_gate.ts:91)",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nThe gate file is mine, but no restriction can land without editing tests/unit/feedback_compile.test.ts (src/feedback subsystem), whose `pureReportAndSidecar()` helper emits a schema_version-1 sidecar and is the dominant acceptance fixture across roughly ten tests that write only report.md + report.run.json with no adjacent evidence. Which restriction is also a product call: drop v1 entirely (breaks any archived operator evidence — blind-tester/reports is gitignored, so I cannot see whether any exists off-tree), bind v1 to its adjacent .evidence.jsonl by re-deriving the sidecar through parseRunEvidenceJsonl (my preferred fix — scripts/verify-blind-report.ts shows the v1 sidecar IS exactly that derivation, so genuine bundles satisfy it by construction), or allowlist archived evidence explicitly. Needs the feedback owner and one decision from the repo owner.",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [],
+  "area": "src/blind/pure_artifact_gate.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-29T07:17:59.762Z",
+  "updated_at": "2026-08-29T07:17:59.762Z",
+  "external": null
+}

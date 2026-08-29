@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "1416a00d7a57baf5",
+  "title": "take_effects re-fire after any non-DROP inventory removal (HIGH) — fix written and proven, but it re-pins a guarded trace digest",
+  "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nThe fix is small and I built it: TAKE emits `place_object: { id, room: here, takenBy: \"player\" }` alongside `add_item` whenever take_effects actually fire, making the one-shot an engine invariant instead of the content convention it is today (DROP's place_object is the ONLY writer of `takenBy`, so an authored `remove_item` / hand-over / maneuver resource cost lets `locateObject` fall back to the home room and TAKE re-award without bound; score then exceeds meta.max_score and `assertRpgStateReferences` refuses to restore the save). I reverted it because it necessarily changes persisted state on the barrow's circlet pickup and therefore diverges `traces/rpg/barrow_victory.json`: final hash becomes 9ff7f3dbbc11c6b526b991f8c4b6103247242f1a9e7068f23703a094a9e47521, expected is 6d76b07fb943f37ec249a23bf589ffcaf5a7b7bf57a7cf8738efd7dbd801d02d. That file is in `HASH_PIN_FILES` (scripts/verify-integrity.ts:152) and its only auto-justifying content source is content/rpg/quests/sunken_barrow.yaml, which this fix does not touch — so re-pinning it raises a hard `HASH_PIN_UNACCOMPANIED` error downgradable only with an explicit `AI_LOOP_ALLOW_VERIFIER_EDITS=1` acknowledgment. That is an owner decision, and imposing an unresolvable integrity error on eleven agents' shared tree is not mine to make. The trace file is also outside my ownership. The verifier's own correction confirms shipped content is not currently exposed (the four re-firing add_journal take_effects are `not_visited: paling_gap`-gated, and rpg_score_economy_sound proves max reachable score == max_score by exhaustive BFS for every shipped pack), so the live exposure is generated / AI-authored / patched packs. To land it: add the claim mark in the TAKE case of src/rpg/legal_actions.ts, update expected_final_hash in traces/rpg/barrow_victory.json to the value above, and run with the acknowledgment set. I left a comment at the TAKE case documenting the guard's real scope so the next reader does not assume the invariant holds.",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [],
+  "area": "src/rpg/legal_actions.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-29T07:18:02.128Z",
+  "updated_at": "2026-08-29T07:18:02.128Z",
+  "external": null
+}
