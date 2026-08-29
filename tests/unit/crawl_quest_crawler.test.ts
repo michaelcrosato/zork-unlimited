@@ -293,4 +293,29 @@ describe("quest crawler", () => {
     // resolve calls; fixed stays a small multiple of maxSteps.
     expect(resolveCalls).toBeLessThan(maxSteps * 10);
   });
+
+  // Regression: a first step that ALWAYS fails used to hang the crawl. `totalSteps`
+  // advances only in the step loop's update clause, which `break` skips, so an
+  // episode that breaks at s === 0 costs zero steps; the outer
+  // `while (totalSteps < opts.maxSteps)` then re-entered forever while the repeated
+  // finding deduped away and `episodes` grew without bound. That turns crawl:smoke —
+  // the dev loop's mandatory pre/post gate — into a hang-and-OOM instead of a clean
+  // exit 1 with the CRASH it exists to report. The shipped fault-injection suite
+  // misses it because its bomb only throws on TAKE, so most first actions still
+  // advance. Unfixed, this test does not finish.
+  it("terminates when every episode's first step throws", () => {
+    const prepared = preparePack(generateRpgPack(3), {
+      wrapRules: (rules) => ({
+        ...rules,
+        resolve: () => {
+          throw new Error("fault: resolve always explodes");
+        },
+      }),
+    });
+    const r = crawlQuest(prepared, { ...OPTS, maxSteps: 400 });
+    expect(r.steps).toBe(0);
+    // Bounded by MAX_CONSECUTIVE_ZERO_PROGRESS_EPISODES, not by maxSteps.
+    expect(r.episodes.length).toBeLessThanOrEqual(32);
+    expect(r.findings.some((f) => f.code === "CRASH")).toBe(true);
+  });
 });

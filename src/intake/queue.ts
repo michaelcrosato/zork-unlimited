@@ -18,6 +18,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { canonicalize } from "../core/hash.js";
 import {
   compareSubmissions,
   DEFAULT_QUEUE_DIR,
@@ -62,6 +63,18 @@ export function readQueue(dir: string = DEFAULT_QUEUE_DIR): {
  * loop re-triaging every wave must not reset an item a dev agent already marked
  * `in_progress`, or drop the issue number it was synced to. `created_at` is likewise
  * first-filing, not latest-filing.
+ *
+ * A re-file that changes nothing is a NO-OP, down to the bytes on disk. These files are
+ * tracked, and `loop.sh` runs `qa:triage` (which upserts every actionable ticket) inside
+ * the dev cycle AFTER the cycle-start cleanliness check — so an unconditional
+ * `updated_at` bump manufactured a tracked-file diff out of an unchanged corpus and left
+ * every cycle with a dirty tree it never intended to produce. "Re-filing is safe and
+ * expected" (docs/two_loop_workflow.md) has to mean byte-identical when nothing moved.
+ *
+ * `external` is the one lifecycle field a caller MAY supply: `intake:sync` calls this
+ * immediately after creating an issue, precisely to record where it landed. Keeping
+ * `existing.external` unconditionally discarded that every time, so the number was never
+ * stored and each sync re-searched by marker instead of being the no-op it claims to be.
  */
 export function upsertSubmission(
   submission: Submission,
@@ -71,15 +84,21 @@ export function upsertSubmission(
   mkdirSync(root, { recursive: true });
 
   const existing = readQueue(dir).submissions.find((s) => s.id === submission.id);
-  const merged: Submission = existing
-    ? {
-        ...submission,
-        status: existing.status === "stale" ? "open" : existing.status,
-        external: existing.external,
-        created_at: existing.created_at,
-        updated_at: new Date().toISOString(),
-      }
-    : submission;
+  let merged: Submission;
+  if (existing) {
+    const carried: Submission = {
+      ...submission,
+      status: existing.status === "stale" ? "open" : existing.status,
+      external: submission.external ?? existing.external,
+      created_at: existing.created_at,
+      // Carried, not stamped, so the comparison below sees only real changes.
+      updated_at: existing.updated_at,
+    };
+    if (canonicalize(carried) === canonicalize(existing)) return existing;
+    merged = { ...carried, updated_at: new Date().toISOString() };
+  } else {
+    merged = submission;
+  }
 
   // The filename encodes priority, so a re-file at a new priority must remove the old
   // file or the queue would hold the same id twice under two names.

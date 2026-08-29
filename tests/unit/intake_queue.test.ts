@@ -5,7 +5,7 @@
  * survivable — stable identity, idempotent re-filing, lifecycle state the sources cannot
  * stomp, and an ordering that a loud source cannot hijack.
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -168,6 +168,56 @@ describe("queue persistence", () => {
     setSubmissionStatus(filed.id, "stale", dir);
     upsertSubmission(filed, dir);
     expect(readQueue(dir).submissions[0]!.status).toBe("open");
+  });
+
+  // These files are tracked, and loop.sh runs `qa:triage` — which upserts every
+  // actionable ticket — inside the dev cycle, after the cycle-start cleanliness check.
+  // An unconditional `updated_at` bump therefore manufactured a tracked-file diff out
+  // of a corpus where nothing had moved, leaving every cycle with a dirty tree.
+  it("re-filing an unchanged submission leaves the bytes on disk untouched", () => {
+    const dir = tempQueue();
+    const filed = make({ title: "idempotent" });
+    upsertSubmission(filed, dir);
+    const name = readdirSync(dir)[0]!;
+    const before = readFileSync(join(dir, name), "utf8");
+
+    const returned = upsertSubmission(filed, dir);
+
+    expect(readdirSync(dir)).toEqual([name]);
+    expect(readFileSync(join(dir, name), "utf8")).toBe(before);
+    expect(returned.updated_at).toBe(filed.updated_at);
+  });
+
+  it("still stamps updated_at when a re-file genuinely changes something", () => {
+    const dir = tempQueue();
+    const filed = make({ title: "moved" });
+    upsertSubmission(filed, dir);
+    upsertSubmission({ ...filed, body: "new evidence arrived" }, dir);
+    const stored = readQueue(dir).submissions[0]!;
+    expect(stored.body).toBe("new evidence arrived");
+    expect(stored.updated_at).not.toBe(filed.updated_at);
+  });
+
+  // intake:sync calls upsert immediately after creating the issue, precisely to record
+  // where it landed ("so the next sync is a no-op rather than a search"). Keeping
+  // existing.external unconditionally discarded that, so the number was never stored.
+  it("records an external mirror supplied by the sync", () => {
+    const dir = tempQueue();
+    const filed = make({ title: "mirrored" });
+    upsertSubmission(filed, dir);
+    upsertSubmission(
+      {
+        ...filed,
+        external: {
+          provider: "github",
+          number: 7,
+          url: "https://github.com/o/r/issues/7",
+          synced_status: "open",
+        },
+      },
+      dir,
+    );
+    expect(readQueue(dir).submissions[0]!.external).toMatchObject({ number: 7 });
   });
 
   it("never holds one id twice when its priority changes", () => {

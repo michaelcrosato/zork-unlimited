@@ -248,7 +248,26 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
     );
   };
 
+  // `totalSteps` advances only in the step loop's update clause (`s++, totalSteps++`),
+  // which `break` skips. Five break sites can fire at s === 0 — enumerate threw, an
+  // already-ended initial state, a crashed step oracle, a fatal INTEGRITY/render
+  // outcome, and a first action that ends the game — and each costs the episode zero
+  // steps. The zero-legal-actions case is guarded below by `initialSoftlockFired`,
+  // but the other four were not: with a deterministic first-step failure the outer
+  // loop re-enters forever, the repeated finding dedupes away so nothing new is
+  // recorded, and `episodes` grows without bound. crawl:smoke — the loop's mandatory
+  // pre/post gate — then hangs and OOMs instead of exiting 1 with the CRASH finding
+  // it exists to report.
+  //
+  // Bounding CONSECUTIVE zero-progress episodes rather than breaking on the first one
+  // keeps the legitimate case alive: a small quest whose first action can end the run
+  // will produce scattered zero-step episodes under the mixed policy and must still
+  // be crawled. Only an unbroken run of them means the crawl genuinely cannot advance.
+  const MAX_CONSECUTIVE_ZERO_PROGRESS_EPISODES = 32;
+  let consecutiveZeroProgressEpisodes = 0;
+
   while (totalSteps < opts.maxSteps) {
+    const stepsBeforeEpisode = totalSteps;
     newFindingIndices = [];
     const eSeed = episodeSeed(opts.seed, episodeN++);
     const rng = mulberry32(eSeed);
@@ -532,6 +551,11 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
       }
     }
     if (initialSoftlockFired) break;
+    if (totalSteps === stepsBeforeEpisode) {
+      if (++consecutiveZeroProgressEpisodes >= MAX_CONSECUTIVE_ZERO_PROGRESS_EPISODES) break;
+    } else {
+      consecutiveZeroProgressEpisodes = 0;
+    }
   }
 
   return {
