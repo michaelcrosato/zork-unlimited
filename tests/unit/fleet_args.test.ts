@@ -950,17 +950,40 @@ describe("fleet planning", () => {
     expect(new Set(runs.map((r: { persona: string }) => r.persona)).size).toBe(5);
   });
 
-  it("rejects persona-directed live fleets", () => {
-    expect(() => parseFleetArgs(["--personas", "mixed"])).toThrow(/pure live runs/i);
-    expect(() => parseFleetArgs(["--personas", "breaker"])).toThrow(/structural mode/i);
-    expect(parseFleetArgs(["--mock", "--personas", "breaker"]).personas).toBe("breaker");
+  it("allows named personas on live fleets but refuses unrecorded sampling", () => {
+    // A persona is a segment to read, not a contamination: every session record carries
+    // its persona id and the persona file's content hash, and retention already groups
+    // by persona. What is still refused is "mixed", where the harness picks per member
+    // and the cohort's composition is not stated up front.
+    expect(parseFleetArgs(["--personas", "breaker"]).personas).toBe("breaker");
+    expect(parseFleetArgs(["--personas", "cynical_veteran"]).personas).toBe("cynical_veteran");
+    expect(() => parseFleetArgs(["--personas", "mixed"])).toThrow(/structural sampling mode/i);
+    expect(parseFleetArgs(["--mock", "--personas", "mixed"]).personas).toBe("mixed");
   });
-  it("retires current Claude plans while retaining structural Codex mocks", () => {
-    expect(() => parseFleetArgs(["--provider", "claude"])).toThrow(/retired/i);
+  it("refuses an unregistered provider id and names the real ones", () => {
+    // "claude" is a near-miss for the registered `claude_code`. A near-miss must be
+    // refused outright rather than resolved to whichever entry looks closest, and the
+    // message has to name the actual ids so the operator can fix it in one step.
+    expect(() => parseFleetArgs(["--provider", "claude"])).toThrow(/is not registered/i);
+    expect(() => parseFleetArgs(["--provider", "claude"])).toThrow(/claude_code/);
     expect(() =>
       planFleetRuns({ ...parseFleetArgs(["--count", "1"]), provider: "claude" }),
-    ).toThrow(/retired/i);
+    ).toThrow(/claude/i);
     expect(parseFleetArgs(["--mock", "--model", "synthetic"]).model).toBe("synthetic");
+  });
+
+  it("refuses to launch a provider the fleet cannot own the process of", () => {
+    // Grok ships no headless CLI, so the fleet cannot prove its tool boundary. It must
+    // point at the ingest path instead of pretending it launched something.
+    expect(() => parseFleetArgs(["--provider", "grok_desktop"])).toThrow(/desktop_client/);
+    expect(() => parseFleetArgs(["--provider", "grok_desktop"])).toThrow(/playtest:ingest/);
+  });
+
+  it("accepts any registered headless provider, not one privileged vendor", () => {
+    expect(parseFleetArgs(["--provider", "gemini_cli"]).provider).toBe("gemini_cli");
+    expect(parseFleetArgs(["--provider", "claude_code"]).provider).toBe("claude_code");
+    // Each defaults to its own catalog's cheap tier — the fleet's job is throughput.
+    expect(parseFleetArgs(["--provider", "gemini_cli"]).model).toBe("gemini-2.5-flash");
   });
   it("pins Codex fleets to exact provider/model pairs without mix, aliases, or fallback", () => {
     for (const model of [
@@ -976,7 +999,11 @@ describe("fleet planning", () => {
       ]);
     }
     expect(parseFleetArgs([]).model).toBe("gpt-5.3-codex-spark");
-    expect(() => parseFleetArgs(["--provider", "codex", "--model", "sol"])).toThrow(/aliases/i);
+    // An alias is refused because it resolves to different weights over time, so a
+    // session recorded under one stops meaning what its record says it means.
+    expect(() => parseFleetArgs(["--provider", "codex", "--model", "sol"])).toThrow(
+      /not in the codex catalog/i,
+    );
     expect(() => parseFleetArgs(["--provider", "codex", "--model", "mix"])).toThrow(/mix/i);
   });
   it("explicit mock quest targets parse and reach the structural plan", () => {

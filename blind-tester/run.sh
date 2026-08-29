@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 #
 # blind-tester/run.sh — drive a BLIND playtest through the AdventureForge MCP
-# server, using the runner-owned Codex subscription CLI provider. The
+# server, using any runner-owned subscription CLI provider in the registry
+# (src/blind/providers.ts). The
 # agent runs from an isolated temp dir and is restricted to the
 # `mcp__adventureforge__*` tools, so it can only experience the game through the same
 # structured surface a real player would — never the source, the YAML, or the repo's
 # own CLAUDE.md.
 #
 # Usage:
-#   blind-tester/run.sh [--provider codex] [--seed <n>] [--model <id>] [--out <prefix>]   # CORE GAME
+#   blind-tester/run.sh [--provider <id>] [--seed <n>] [--model <id>] [--out <prefix>]   # CORE GAME
 #   blind-tester/run.sh --quest <id> --mock [--seed <n>] ...              # structural targeted test, no LLM
 #   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # structural MCP smoke, no LLM
 #   ... [--persona <name>]  # play-style overlay; see blind-tester/personas/*.md (default: "default", a no-op)
@@ -166,23 +167,31 @@ if [[ ${#POSITIONAL[@]} -gt 3 ]]; then
   exit 2
 fi
 
-case "$PROVIDER" in
-  codex) ;;
-  claude)
-    echo "The live Claude blind provider is retired; use --provider codex with an exact supported Codex model." >&2
-    exit 2
-    ;;
-  *) echo "--provider must be exactly codex." >&2; exit 2 ;;
-esac
-if [[ -z "$MODEL" ]]; then
-  MODEL="gpt-5.3-codex-spark"
+# Provider and model are validated against blind-tester/providers.json and the
+# operator-owned catalogs beside it — never against a list hard-coded here. That
+# indirection is the whole point: adding a vendor must not require editing this runner,
+# because a runner nobody wants to edit is a runner that stays single-vendor.
+#
+# What is still refused, exactly as before, is an ALIAS. A model id must appear verbatim
+# in its provider's catalog: aliases resolve differently over time, so a run labelled
+# with one would silently stop meaning what its record says it means.
+if ! PROVIDER_INFO="$("$NODE_CMD" "$SCRIPT_DIR/resolve-provider.mjs" "$PROVIDER" "$MODEL" 2>&1)"; then
+  echo "$PROVIDER_INFO" >&2
+  exit 2
 fi
-if [[ "$MOCK" == "0" && "$SMOKE" == "0" ]]; then
-  case "$MODEL" in
-    gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|gpt-5.3-codex-spark) ;;
-    *) echo "Codex pure runs require exact model gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, or gpt-5.3-codex-spark; aliases and fallbacks are forbidden." >&2; exit 2 ;;
-  esac
+# kind<TAB>isolation<TAB>model<TAB>tier
+PROVIDER_KIND="$(printf '%s' "$PROVIDER_INFO" | cut -f1)"
+PROVIDER_ISOLATION="$(printf '%s' "$PROVIDER_INFO" | cut -f2)"
+MODEL="$(printf '%s' "$PROVIDER_INFO" | cut -f3)"
+MODEL_TIER="$(printf '%s' "$PROVIDER_INFO" | cut -f4)"
+
+if [[ "$PROVIDER_KIND" != "headless_cli" ]]; then
+  echo "Provider \"$PROVIDER\" is $PROVIDER_KIND: this runner cannot launch it." >&2
+  echo "Play it through its own client, then record the session with:" >&2
+  echo "  npm run playtest:ingest -- --provider $PROVIDER --model $MODEL ..." >&2
+  exit 2
 fi
+export PROVIDER_ISOLATION MODEL_TIER
 
 # The seed becomes private MCP server argv in pure mode, so canonicalize it
 # before any shell/JSON interpolation and reject values the deterministic engine

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "4806c6f8ade14c0b",
+  "title": "Room prose names verbs the action surface rejects",
+  "body": "PARTLY FIXED. The larger half — the missing inline action ids — is resolved; the\nnarration half remains open.\n\nWHAT WAS WRONG\n\n`defaultCompactRpg` and `defaultCompactOverworldAndRpg` in src/mcp/server.ts set\n`include_actions: true` only when PLAY_MODE === \"pure\". Every other caller — a person, a\ndev-loop agent, a hand-driven MCP session like the three playtest leads in the live run —\nreceived observations with no legal action ids and had to call `list_legal_actions`\nbefore nearly every step. One lead measured roughly a third of its tool calls as that\noverhead rather than play.\n\nIt was not a considered trade-off, which the numbers settle. Measured on a fresh session:\n\n  include_actions inline        +48 chars on an observation (+16%), no extra round trip\n  separate list_legal_actions    89 chars, PLUS a whole round trip\n\nInline is about half the payload AND saves a turn. There was no case for the asymmetry;\npure play simply got the fix and nobody else did.\n\nBoth defaults now set it for non-pure callers, with an explicit `include_actions` from\nthe caller still winning. Verified through the live MCP server: `get_observation` with no\narguments returns `\"actions\":[\"go_down\",\"look_around\",\"inventory\"]` in its context.\n\nWHAT IS STILL OPEN\n\nThe other half of the original finding is untouched: room prose names actions in a\nvocabulary the action surface does not accept. A lead found the Store-Shed saying \"DON\npadded byre-jerkin\" when the only legal action is `take_byre_jerkin`; following the text\nproduces a flat rejection. Inline ids make that recoverable rather than fatal — the\ncorrect id is now on screen — but a player who reads carefully and types what the prose\ntold them still gets refused, which is a comprehension defect in its own right.\n\nTwo directions, both still open:\n  - Bring narration verbs and action ids into one vocabulary, so following the prose\n    works.\n  - Or have a rejected near-miss name the closest legal id in its message, turning a\n    wasted call into a correction.\n\nMEASUREMENT\n\nRecomputable from stored transcripts: the share of tool calls in a session that are\n`list_legal_actions` or `get_observation` versus state-advancing actions. Worth running\nagainst the corpus before and after, so the improvement is a number rather than an\nimpression. No corpus predating this change has been kept, so the baseline to compare\nagainst is the next live cohort.",
+  "source": "playtest",
+  "kind": "experience",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "src/mcp/server.ts",
+  "evidence": {
+    "summary": "Inline action ids fixed (measured: half the payload, one fewer round trip); the prose/action vocabulary mismatch is still open.",
+    "refs": [
+      "src/mcp/server.ts"
+    ],
+    "lineages": [
+      "claude"
+    ],
+    "observations": 2
+  },
+  "created_at": "2026-08-28T23:36:07.942Z",
+  "updated_at": "2026-08-28T23:51:22.668Z",
+  "external": null
+}

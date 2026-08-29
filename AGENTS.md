@@ -1,7 +1,14 @@
 # Agent Charter
 
 This is the entry point every coding agent (Codex, Claude, Gemini, …) reads
-first. This project runs on **trust, but verify**.
+first, and the single source of truth for how work happens here. Codex loads this
+file by convention; [`CLAUDE.md`](./CLAUDE.md) and [`GEMINI.md`](./GEMINI.md) are
+one-line pointers back to it so the other vendors land here too, because the dev
+loop runs on whichever agent a machine has installed and a charter only one vendor
+auto-loads is a charter the rest silently skip. Those pointers are deliberately not
+copies: duplicated rules drift, and a stale copy is worse than none.
+
+This project runs on **trust, but verify**.
 
 ## What this is
 
@@ -17,13 +24,39 @@ improvement loop, and this charter orients the agent driving it.
 - If a required service is unavailable, note it briefly and stop or continue with
   repo-local work as appropriate. Do not inspect personal application state.
 
-## The loop (one cycle)
+## Two loops
+
+Development and playtesting are **separate loops that run in parallel**, and
+**any model can drive either one**. The full reference is
+`docs/two_loop_workflow.md`.
+
+- **Dev loop** — `loop.sh`. Makes changes and lands them against a mechanical
+  bar. It does NOT play the game.
+- **Playtest loop** — `playtest-loop.sh`. Plays the published build over and
+  over, across as many vendors and personas as the operator's quota allows, and
+  promotes corroborated findings into the intake queue.
+
+Other teams are optional and use the same intake: an audit agent, a research or
+design agent, the crawler, or a person. **Playtest feedback is not the only way
+the game changes.** Everything files a submission into `intake/queue/` with
+`npm run submit`, and the dev loop reads only that queue.
+
+The dev loop reads it at the start of a cycle; it never waits for it. An empty
+queue is normal and means the assessor's own candidates carry the cycle (set
+`AI_LOOP_IDLE_WHEN_EMPTY=1` to wait instead).
+
+## The dev loop (one cycle)
 
 `loop.sh` is the repository's reference driver for this protocol;
 `docs/afk_loop.md` is the full protocol; the three-tier testing pyramid (on its
 always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
 
-1. **Assess** — `npm run ai:loop` ranks the next-best improvement (compiled hot spots, when present, are a primary input).
+1. **Assess** — read the intake queue first (`npm run work`): a queued
+   submission is somebody's actual request, and a `verified` or `corroborated`
+   playtest item is the strongest evidence available. Claim it with
+   `npm run work -- --claim <id>` and close it with `--done <id>`. Then
+   `npm run ai:loop` ranks the next-best improvement when the queue is empty —
+   which is normal, not a stall.
 2. **Crawl gate (pre)** — `npm run crawl:smoke` must be green before touching anything.
 3. **One change** — make a single focused improvement (engine, content, or tooling).
 4. **Freeze the revision** — run focused checks, then make a local provisional
@@ -32,17 +65,10 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    null only for off-list work); this is what can consume an accepted feedback
    recommendation. Never push the provisional commit. Pure evidence starts only
    when `git status --porcelain` is exactly empty; a later red gate resets it.
-5. **Blind playtest** — one fresh blind reasoning agent per normal cycle uses the
-   canonical `pure` mode (protocol: docs/blind_playtest_protocol.md). It starts a
-   brand-new overworld game and receives only the tutorial, goal, state, legal
-   choices, turn/checkpoint information, and consequences available to a human.
-   The game presents continue/end choices at its goal-completion/checkpoint
-   boundaries; the harness interviews only after the player ends the journey.
-   There is no test-only route, coverage target, or call-count stopping rule.
-   Direct quest starts and crawler/smoke/mock modes are explicit structural QA
-   instruments and never pure retention evidence. Milestone or feedback-harvest
-   cycles (every ~10 cycles, or when the ledger's open questions outgrow single
-   reports) run `npm run fleet -- --count 100` instead.
+5. **No playtest gate** — the dev loop does not play the game. Experience
+   evidence is produced asynchronously by the playtest loop and consumed as QA
+   tickets at the START of a cycle, not proven at the end of one. `loop.sh`
+   prints the bucket for the cycle log; it can never fail the cycle.
 6. **Compile feedback (prompted-agent step)** — run `npm run feedback:status`.
    It verifies the local report ledger plus hash-bound pending cycle reports against
    the last accepted report manifest. Run `npm run feedback:compile` only when status
@@ -53,20 +79,23 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    intentionally eligible for a later compile. `loop.sh` does not invoke the compiler.
    Crawler findings require explicit `--in` until crawler artifacts gain an equivalent
    tracked acceptance receipt; the mandatory pre/post crawl gates remain unchanged.
-7. **Outer gates** — `npm run crawl:smoke` again, then `npm run health`, integrity
-   drift against the cycle-start ref, and the playtest gate (schema-valid pure V2
-   report + receipt sidecar bound to the clean provisional HEAD). A new crawl
+7. **Outer gates** — `npm run crawl:smoke` again, then `npm run health`, and
+   integrity drift against the cycle-start ref. That is the whole bar. A new crawl
    finding is YOUR regression; any red gate resets the provisional commit.
-8. **Finalize** — after every gate is green, the driver seals the exact pure report
-   and any provisional feedback manifest into the machine-owned acceptance marker in
-   `AI_LOOP_STATE.md`, then commits that ledger-only update. Optional push happens only
-   afterward. Missing or digest-mismatched ignored feedback artifacts fail closed.
+8. **Finalize** — after every gate is green, the driver seals any provisional
+   feedback manifest into the machine-owned acceptance marker in `AI_LOOP_STATE.md`,
+   then commits that ledger-only update. Optional push happens only afterward, and
+   publishing the build is what the playtest loop picks up. Missing or
+   digest-mismatched ignored feedback artifacts fail closed.
 
-With `AI_LOOP_COMMIT=0`, no provisional commit is allowed. The safe evidence-only
-ordering is instead clean-baseline pure play first, then uncommitted work and focused
-checks; never claim an uncommitted build was the revision the baseline exercised.
-The driver rechecks cleanliness at every cycle boundary and stops continuous mode
-after a successful evidence-only cycle leaves pending work.
+With `AI_LOOP_COMMIT=0`, no provisional commit is allowed: the cycle runs its
+checks and leaves the work uncommitted. The driver rechecks cleanliness at every
+cycle boundary and stops continuous mode after a successful evidence-only cycle
+leaves pending work.
+
+Never claim a build was exercised by evidence that was produced against a
+different one. Session records carry the exact commit they played, and triage
+ages findings out after `STALE_AFTER_BUILDS`; do not hand-wave past either.
 
 ## Authority
 
@@ -105,14 +134,25 @@ deliberately NOT part of `health`.
 - Install root deps with `npm install`.
 - Install UI deps with `npm --prefix ui install` (required for `npm run health`).
 - Optional UI server: `npm run ui:dev` at `http://localhost:5173`.
-- Codex agents: the repo-local `.codex/config.toml` registers the engine MCP
-  server, but Codex loads project config **only when the project is trusted**
-  (trust does not cascade from a parent dir — trust this exact repo path). Most
-  robust for the autonomous loop: register the server once at the user level so
-  it works regardless of project trust —
+- Any supported coding agent can run the dev loop. `loop.sh` auto-detects the
+  first installed one (`codex`, `claude`, `gemini`); `AI_AGENT=<id>` selects one
+  explicitly and `AI_AGENT_CMD` overrides the command entirely. The only contract
+  is: read the prompt from STDIN, edit files in `$PWD`, run non-interactively,
+  and exit nonzero on failure.
+- Connecting to the engine MCP server. The repo ships `.mcp.json`, which any
+  client reading the standard project MCP config — Claude Code among them — picks
+  up automatically with no setup. A client that keeps its own registry instead
+  needs the server added there once; the command is always
+  `npm --silent run mcp` from the repo root.
+- Codex needs one extra step, and it fails silently without it. `.codex/config.toml`
+  registers the same server, but Codex loads project config **only when the project
+  is trusted**, and trust does not cascade from a parent directory — trust this exact
+  repo path. Untrusted, the server is simply absent and a headless `codex exec` runs
+  with no engine tools rather than erroring. Most robust for the autonomous loop is to
+  register it at the user level so project trust stops mattering:
   `codex mcp add adventureforge -- npm --silent run mcp`.
 - CLI RPG play requires no server: `npm run play`.
-- MCP and live LLM playtests are optional; CI uses deterministic mocks.
+- MCP and live LLM playtests are optional and belong to the playtest loop; CI uses deterministic mocks.
 
 ## Token Economy
 

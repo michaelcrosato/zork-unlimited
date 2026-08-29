@@ -1,0 +1,17 @@
+{
+  "provider": "grok_desktop",
+  "models": [
+    {
+      "id": "grok-4-fast",
+      "tier": "volume",
+      "settings": {},
+      "notes": "Operator-owned id: set this to the exact model your desktop client reports for the session. Sessions arrive via `npm run playtest:ingest` and are recorded as operator_attested."
+    },
+    {
+      "id": "grok-4",
+      "tier": "reference",
+      "settings": {},
+      "notes": "Operator-owned id: set this to the exact model your desktop client reports for the session."
+    }
+  ]
+}

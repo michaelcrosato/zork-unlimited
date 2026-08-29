@@ -1,0 +1,29 @@
+{
+  "provider": "claude_code",
+  "models": [
+    {
+      "id": "claude-haiku-4-5-20251001",
+      "tier": "volume",
+      "settings": { "thinking": "off" },
+      "notes": "Cheap, fast volume player."
+    },
+    {
+      "id": "claude-fable-5",
+      "tier": "volume",
+      "settings": { "thinking": "off" },
+      "notes": "Fast volume player. Confirm availability against your subscription."
+    },
+    {
+      "id": "claude-sonnet-5",
+      "tier": "volume",
+      "settings": { "thinking": "off" },
+      "notes": "Mid volume player."
+    },
+    {
+      "id": "claude-opus-5",
+      "tier": "reference",
+      "settings": { "thinking": "on" },
+      "notes": "Calibration instrument."
+    }
+  ]
+}

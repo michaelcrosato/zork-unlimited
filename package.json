@@ -43,6 +43,15 @@
     "blind:smoke": "node blind-tester/smoke.mjs",
     "blind:feedback": "tsx scripts/update-blind-feedback-ledger.ts",
     "blind:telemetry": "node blind-tester/telemetry.mjs summary",
+    "qa:bucket": "tsx bin/qa.ts",
+    "qa:triage": "tsx bin/triage.ts",
+    "qa:publish": "tsx scripts/publish-playtest-sessions.ts",
+    "playtest:loop": "bash playtest-loop.sh",
+    "playtest:ingest": "tsx bin/ingest-playtest-session.ts",
+    "playtest:record": "tsx bin/record-playtest-session.ts",
+    "submit": "tsx bin/submit.ts",
+    "work": "tsx bin/work.ts",
+    "intake:sync": "tsx scripts/sync-intake-github.ts",
     "fleet": "node blind-tester/fleet.mjs",
     "fleet:mock": "node blind-tester/fleet.mjs --mock",
     "starting-slice:pilot": "tsx bin/check-starting-slice-pilot.ts",
@@ -61,7 +70,8 @@
     "loop:failures": "tsx scripts/loop-failure-ledger.ts",
     "loop:status": "bash scripts/loop-status.sh",
     "loop:stop": "bash scripts/loop-stop.sh",
-    "ui:typecheck": "tsc -p ui/tsconfig.json --noEmit && tsc -p ui/tsconfig.tests.json --noEmit"
+    "ui:typecheck": "tsc -p ui/tsconfig.json --noEmit && tsc -p ui/tsconfig.tests.json --noEmit",
+    "doctor": "tsx bin/doctor.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

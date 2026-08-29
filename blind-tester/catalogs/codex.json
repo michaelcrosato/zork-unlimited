@@ -1,0 +1,29 @@
+{
+  "provider": "codex",
+  "models": [
+    {
+      "id": "gpt-5.3-codex-spark",
+      "tier": "volume",
+      "settings": { "reasoning_effort": "xhigh", "reasoning_summary": "none" },
+      "notes": "Cheap, fast, the default volume player. Uses the spark direct-MCP catalog."
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "tier": "reference",
+      "settings": { "reasoning_effort": "xhigh", "reasoning_summary": "none" },
+      "notes": "Calibration instrument. Pins a disabled multi-agent topology."
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "tier": "reference",
+      "settings": { "reasoning_effort": "xhigh" },
+      "notes": "Calibration instrument."
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "tier": "reference",
+      "settings": { "reasoning_effort": "xhigh" },
+      "notes": "Calibration instrument."
+    }
+  ]
+}

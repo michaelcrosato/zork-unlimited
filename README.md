@@ -3,7 +3,9 @@
 An **AI-coded, AI-playtested** text RPG: one deterministic engine, one
 persistent world, and a feedback flywheel — dev agent → verification bar →
 blind playtest → structured exit interview — that compounds quality every
-cycle. The why lives in [`docs/VISION.md`](./docs/VISION.md); what's next in
+cycle. Development and playtesting run as **two independent loops**, either of
+which any model can drive
+([`docs/two_loop_workflow.md`](./docs/two_loop_workflow.md)). The why lives in [`docs/VISION.md`](./docs/VISION.md); what's next in
 [`docs/ROADMAP.md`](./docs/ROADMAP.md); the standing architecture contract is
 [`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md). Process choices
 made while closing the external review are recorded in
@@ -122,7 +124,7 @@ any agent harness (Claude Code, Codex, Gemini CLI, …) plays via native tool
 calls over the structured observation/action loop — never a raw parser. The
 repo ships `.mcp.json`, so an MCP client opened here connects automatically.
 
-**42 tools**, in four groups:
+**43 tools**, in four groups:
 
 - **World catalog** (1): `list_overworld` — the overworld is both the world and
   the quest registry.
@@ -208,7 +210,8 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   protocol in
   [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)).
   `npm run blind` and every live `npm run fleet` member default to
-  `play_mode: pure` and `start_surface: fresh_overworld`: the game supplies the
+  `play_mode: pure` and `start_surface: fresh_overworld`, on whichever provider
+  the registry resolves: the game supplies the
   tutorial, goals, state, legal and authored story choices,
   decision/checkpoint rhythm, and consequences; the harness supplies transport
   syntax only. It interviews
@@ -254,11 +257,15 @@ npm run fleet:mock -- --count 2                   # structural zero-token CI lan
 npm run feedback:compile                          # Tier 3: hot spots + pure retention summary
 ```
 
-The blind harness drives the external Codex CLI on the operator's subscription
-(default model `gpt-5.3-codex-spark`) through a runner-enforced no-file,
-no-shell, no-web tool boundary. Historical Claude artifacts remain readable,
-but the live Claude provider is retired. Arbitrary `BLIND_AGENT_CMD` overrides
-are rejected for pure runs because their blindness cannot be verified. Live play is
+The blind harness drives whichever subscription CLI the provider registry
+(`src/blind/providers.ts`) names, through a runner-enforced no-file, no-shell,
+no-web tool boundary — no vendor is privileged, and adding one is a registry
+entry plus an operator-owned model catalog under `blind-tester/catalogs/`.
+Vendors that ship no CLI are played through their own client and recorded with
+`npm run playtest:ingest`; those sessions are stamped `operator_attested`, count
+toward bug corroboration, and are excluded from experience metrics. Arbitrary
+`BLIND_AGENT_CMD` overrides are still rejected for pure runs because their
+blindness cannot be verified. Live play is
 NOT part of CI or the health bar (a structural mock fleet run is — see
 [`docs/testing_pyramid.md`](./docs/testing_pyramid.md)). Separately, the
 authoring/repair agents (`bin/author.ts`, the debugger/fixer) run against a
@@ -268,18 +275,45 @@ for every premise; what CI exercises is the real adapter → validator → revis
 loop, not open-ended prose generation. This is a public, no-runtime-LLM repo:
 there are no third-party LLM API keys or key-based provider backends in it.
 
-## The flywheel — AFK loop
+## The flywheel — two independent loops
 
-`loop.sh` is the repository's reference unattended driver for the autonomous
-improvement cycle
-([`docs/afk_loop.md`](./docs/afk_loop.md)): **assess** (`npm run ai:loop` —
-`src/afk/assessor.ts` consumes compiled hotspots when available and otherwise
-offers maintenance candidates; it is an advisory preview, not independent
-evidence), **work** (one focused change plus a mandatory
-blind playtest), **verify** (the health bar, plus an integrity check against
-the pre-cycle ref so the verifier itself can't be weakened, plus a schema-valid
-pure report and runner sidecar bound to the exact clean provisional commit).
-Agent errors fail the cycle; a bounded durable failure ledger is shown by
+Full reference: [`docs/two_loop_workflow.md`](./docs/two_loop_workflow.md).
+
+**Dev loop** (`loop.sh`, protocol in [`docs/afk_loop.md`](./docs/afk_loop.md)):
+**assess** (`npm run ai:loop` — the QA bucket first, then `src/afk/assessor.ts`'s
+own candidates; an empty bucket is normal and never stalls the loop), **work**
+(one focused change), **verify** (`crawl:smoke`, the health bar, and an integrity
+check against the pre-cycle ref so the verifier itself can't be weakened). It
+does **not** play the game: there is no per-cycle playtest gate, which is what
+un-blocked the throughput the old single loop spent waiting.
+
+**Playtest loop** (`playtest-loop.sh`): runs independently and in parallel,
+plays the most recently published build with as many cheap players as your
+quota allows plus a small expensive reference cohort, records every playthrough,
+and promotes corroborated or reproduced findings into the intake queue.
+
+**Intake** (`intake/queue/`, `npm run work` / `npm run submit`): the dev loop's
+one inbox. Playtest triage is a source, not the only one — an audit agent, a
+research proposal, the crawler, or a person all file the same submission, and
+`npm run intake:sync` mirrors the queue to GitHub Issues so people can file from
+anywhere.
+
+**The dev loop runs on any model.** It auto-detects an installed agent (`codex`,
+`claude`, `gemini`; `AI_AGENT` selects, `AI_AGENT_CMD` overrides anything), and
+asking for an absent one fails loudly rather than silently substituting a vendor.
+
+**The playtest loop is any-model in what it RECORDS, but not in what it can
+launch.** Only `codex` can run a live blind cohort today, because
+`runner_enforced` blindness is proved by reading Codex's own rollout logs
+(`blind-tester/codex-rollout.mjs` and companions) and no equivalent reader exists
+for another vendor — `blind-tester/run.sh` refuses a non-Codex pure run. Every
+other vendor is played in its own client and ingested with
+`npm run playtest:ingest`, landing `operator_attested`: counted toward bug
+corroboration, excluded from experience metrics. So headline experience numbers
+are currently a measurement of Codex specifically, not of players in general.
+`npm run doctor` reports which vendors a given machine can actually launch.
+
+Agent errors fail a dev cycle; a bounded durable failure ledger is shown by
 `npm run loop:status`. `npm run loop:status` / `npm run loop:stop` manage a
 running loop; `npm run assess` previews the ranking.
 

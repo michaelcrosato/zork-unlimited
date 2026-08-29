@@ -289,20 +289,42 @@ describe("loop status/stop process helpers", () => {
     expect(loopScript).not.toContain('echo "$$" > "$LOOP_PID_FILE"');
   });
 
-  it("fails the cycle on agent errors and requires build-bound playtest evidence", () => {
+  it("fails the cycle on agent errors", () => {
     expect(loopScript).toContain('return "$rc"');
     expect(loopScript).toContain("agent_rc=$?");
     expect(loopScript).not.toContain("agent step reported an error — continuing to verify");
-    expect(loopScript).toContain("loop:verify-playtest");
     expect(loopScript).toContain("loop:seal-feedback");
-    expect(loopScript).toContain('--expected-commit "$current_ref"');
     expect(packageScripts["loop:seal-feedback"]).toBe("tsx scripts/seal-feedback-acceptance.ts");
+  });
+
+  it("reads the intake queue instead of verifying a per-cycle playtest", () => {
+    // The dev loop no longer plays the game: experience evidence is an INPUT, produced
+    // asynchronously by the playtest loop, never a condition on landing a change. And
+    // the queue it reads is source-agnostic — playtest triage is one filer among
+    // several, so an audit finding or a human request reaches the loop the same way.
+    expect(loopScript).not.toContain("loop:verify-playtest");
+    expect(loopScript).toContain("report_qa_bucket");
+    expect(loopScript).toContain("run --silent work");
+    expect(packageScripts["work"]).toBe("tsx bin/work.ts");
+    expect(packageScripts["submit"]).toBe("tsx bin/submit.ts");
+    expect(packageScripts["qa:triage"]).toBe("tsx bin/triage.ts");
+  });
+
+  it("can idle for queued work instead of inventing it", () => {
+    expect(loopScript).toContain("AI_LOOP_IDLE_WHEN_EMPTY");
+    expect(loopScript).toContain("await_queued_work");
+    // Opt-in: the default must still fall through to assessor candidates, or an empty
+    // queue would silently stall a loop nobody is watching.
+    expect(loopScript).toContain('"${AI_LOOP_IDLE_WHEN_EMPTY:-0}" == "1"');
   });
 
   it("persists classified failures and exposes them through loop status", () => {
     expect(loopScript).toContain("failure-ledger.json");
     expect(loopScript).toContain("record_cycle_failure");
-    expect(loopScript).toContain('_reject_cycle "playtest"');
+    // The classified gates that remain after the playtest gate was removed.
+    expect(loopScript).toContain('_reject_cycle "health"');
+    expect(loopScript).toContain('_reject_cycle "integrity"');
+    expect(loopScript).not.toContain('_reject_cycle "playtest"');
     expect(statusScript).toContain("--- durable failure ledger ---");
     expect(statusScript).toContain("loop:failures -- summary");
   });

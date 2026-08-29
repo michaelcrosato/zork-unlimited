@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "4ccaf8b0bba934b2",
+  "title": "Bug severity runs backwards from convention, so the queue sorts backwards",
+  "body": "The bug-severity scale runs ASCENDING — S0 mildest, S4 most severe — which is the reverse\nof the convention nearly every reporter arrives with, where S1 is critical and S4 is\ncosmetic. Nothing at the point of entry said so: the exit-interview schema carried a bare\n`z.enum([\"S0\",\"S1\",\"S2\",\"S3\",\"S4\"])` with no description.\n\nBecause `SEVERITY_WEIGHT` doubles at every step (S0 1, S1 2, S2 4, S3 8, S4 16), an\ninverted report does not merely misrank by a little. A cosmetic nit filed as S4 outranks a\ngenuine defect filed as S2 by four times, so the dev loop's queue comes out close to\nbackwards while every individual report still reads as reasonable. Nothing anywhere\nflags it.\n\nEVIDENCE THAT IT ACTUALLY MISLEADS\n\nI inverted it myself, in a reference-tier session, having already read this repo's audit\nand its source. I filed \"every option carries consequence as an empty string\" — a\ncosmetic data smell — as S4, and \"a permanent background is committed at decision 2,\nbefore the vocabulary its tradeoffs are written in has been taught\" as S2. Triage then\nsorted exactly as told: the empty-string nit came out top of the queue, ahead of the\nfinding about irreversible commitments.\n\nThe live two-loop run looks like it happened there too. One lead filed the MCP\nempty-schema defect as S2 while calling it \"the one genuinely broken tool\", and filed a\nsilently-set flag with no narration as S4. Under the real scale the silent flag outranks\nthe broken tool 16 to 4, which is the opposite of that lead's own stated emphasis.\n\nDONE ALREADY\n\nThe enum now carries a description naming the direction and warning that it reverses the\nusual scale, so the next reporter reads it at the moment of filing rather than inferring\nit from ranking behaviour afterwards.\n\nSTILL WORTH DECIDING\n\nA description helps a careful reader and does nothing for a hurried one. Two options,\nand this is a judgement call rather than an obvious fix:\n\n  - Flip the scale to match convention (S1 critical … S4 cosmetic). Honest and permanent,\n    but it silently reinterprets every severity already stored in the corpus, so it needs\n    a migration or a schema version, not just an edit.\n  - Or rename the values to something with no established opposite meaning — `trivial`,\n    `minor`, `moderate`, `serious`, `severe` — which cannot be inverted because the words\n    carry their own order. More churn, no ambiguity left afterwards.\n\nThe second is likelier right: the problem is that \"S2\" looks like it means something the\nreader already knows, and no amount of documentation fully beats that.\n\nWorth re-reading the corpus before acting either way — if most existing reports are\ninverted, the stored severities are already unreliable and a migration cannot simply\ntrust them.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [],
+  "area": "src/blind/exit_interview.ts",
+  "evidence": {
+    "summary": "S4 is most severe here but cosmetic everywhere else; a reference-tier session and at least one live-test lead both inverted it.",
+    "refs": [
+      "src/blind/exit_interview.ts",
+      "src/feedback/rank.ts"
+    ],
+    "lineages": [
+      "claude"
+    ],
+    "observations": 2
+  },
+  "created_at": "2026-08-29T00:17:20.797Z",
+  "updated_at": "2026-08-29T00:17:20.797Z",
+  "external": null
+}

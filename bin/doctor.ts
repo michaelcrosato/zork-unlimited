@@ -1,0 +1,196 @@
+#!/usr/bin/env -S npx tsx
+/**
+ * Report ground truth about what this machine can actually run, and why the corpus is
+ * or is not producing work.
+ *
+ * This exists because of a specific failure. The documentation asserted "nothing in this
+ * repo privileges a vendor" and offered a worked cohort in which most players could not
+ * launch at all; separately, a whole two-loop exercise produced 55 findings and promoted
+ * none of them, for reasons no command would tell you. Both were discoverable only by
+ * running the thing and reading source afterwards. An operator planning a cohort should
+ * not have to do that.
+ *
+ * So this answers three questions, in the order they bite:
+ *
+ *   1. Which vendors can I actually launch here, and which must be hand-played?
+ *   2. What is in the corpus, and is it the SHAPE that can promote?
+ *   3. If nothing is queued, why not — and what specifically would change it?
+ *
+ * Question 3 is the one that matters. "Nothing promoted" is the correct outcome for a
+ * single-vendor corpus and also the symptom of a broken pipeline, and those look
+ * identical from outside. This names which one you are looking at.
+ *
+ * Read-only: it never writes to the corpus, the bucket, or the queue.
+ *
+ * Usage:
+ *   npm run doctor                       # uses the default corpus and queue
+ *   npm run doctor -- --store /d/af-corpus
+ */
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { PLAYTEST_PROVIDERS } from "../src/blind/providers.js";
+import { listPlaytestSessions, summarizePlaytestStore } from "../src/qa/session_store.js";
+import { DEFAULT_SESSION_STORE } from "../src/qa/session_store.js";
+import { readQueue, summarizeQueue } from "../src/intake/queue.js";
+import { DEFAULT_QUEUE_DIR } from "../src/intake/submission.js";
+import { readTickets } from "../src/qa/ticket_store.js";
+import { DEFAULT_TICKET_DIR } from "../src/qa/ticket.js";
+
+process.stdout.on("error", () => process.exit(0));
+
+function arg(flag: string): string | null {
+  const index = process.argv.indexOf(flag);
+  if (index === -1) return null;
+  return process.argv[index + 1] ?? null;
+}
+
+function onPath(binary: string): boolean {
+  try {
+    execFileSync("command", ["-v", binary], { stdio: "ignore", shell: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The one vendor whose blindness this runner can prove.
+ *
+ * `runner_enforced` means the runner verified the agent saw nothing but the
+ * AdventureForge MCP tools, and that proof is read back out of Codex's own rollout logs
+ * by blind-tester/codex-rollout.mjs and its companions. No equivalent reader exists for
+ * any other vendor, so run.sh refuses their pure runs — which is a fact about the
+ * capture machinery, not about the vendors.
+ */
+const LIVE_LAUNCHABLE_PROVIDER = "codex";
+
+const DEV_AGENTS = ["codex", "claude", "gemini"] as const;
+
+function section(title: string): void {
+  console.log(`\n${title}\n${"─".repeat(title.length)}`);
+}
+
+function main(): void {
+  const store = arg("--store") ?? process.env.PLAYTEST_STORE ?? DEFAULT_SESSION_STORE;
+  const queueDir = arg("--queue") ?? DEFAULT_QUEUE_DIR;
+  const ticketDir = arg("--tickets") ?? DEFAULT_TICKET_DIR;
+
+  section("Dev loop");
+  const devAgent = DEV_AGENTS.find(onPath);
+  console.log(
+    devAgent
+      ? `  ✓ ${devAgent} is on PATH — \`./loop.sh\` will auto-detect it.`
+      : `  ✗ none of ${DEV_AGENTS.join(", ")} is on PATH.\n` +
+          `    Install one, or point AI_AGENT_CMD at any agent that reads STDIN.`,
+  );
+
+  section("Playtest loop — what can launch here");
+  for (const provider of PLAYTEST_PROVIDERS) {
+    const binary = provider.launch?.executable ?? null;
+    const installed = binary !== null && onPath(binary);
+    const canRunLive = provider.id === LIVE_LAUNCHABLE_PROVIDER;
+    const mark = canRunLive && installed ? "✓" : "·";
+    const how = canRunLive
+      ? installed
+        ? "live via playtest-loop.sh, runner_enforced"
+        : `live-capable, but '${binary ?? "?"}' is not on PATH`
+      : "hand-play in its own client, then npm run playtest:ingest (operator_attested)";
+    console.log(`  ${mark} ${provider.id.padEnd(14)} ${provider.family.padEnd(8)} ${how}`);
+  }
+  console.log(
+    `\n  Only '${LIVE_LAUNCHABLE_PROVIDER}' can produce runner_enforced sessions: that class means the\n` +
+      `  runner PROVED the agent saw nothing but the game's MCP tools, and the proof is read\n` +
+      `  from Codex's rollout logs. Ingested sessions still count toward bug corroboration;\n` +
+      `  they are excluded from experience metrics only.\n` +
+      `  PLAYTEST_MOCK=1 dry-runs the wiring for any provider, free, recording nothing.`,
+  );
+
+  section(`Corpus (${store})`);
+  if (!existsSync(store)) {
+    console.log(`  empty — no sessions yet. Nothing to triage, which is not an error.`);
+    reportBlockers(0, [], queueDir, ticketDir);
+    return;
+  }
+  const { entries, unreadable } = listPlaytestSessions(store);
+  for (const bad of unreadable) console.log(`  ! unreadable: ${bad.dir} — ${bad.reason}`);
+  const summary = summarizePlaytestStore(entries);
+  console.log(`  ${summary.total} session(s); metrics-eligible ${summary.metricsEligible}`);
+  console.log(`  families:   ${summary.families.join(", ") || "none"}`);
+  console.log(`  tiers:      ${describe(summary.byTier)}`);
+  console.log(`  isolation:  ${describe(summary.byIsolation)}`);
+  console.log(`  outcomes:   ${describe(summary.byOutcome)}`);
+
+  reportBlockers(summary.total, summary.families, queueDir, ticketDir, summary.byTier);
+}
+
+function describe(table: Record<string, number>): string {
+  const parts = Object.entries(table).map(([k, v]) => `${k} ${v}`);
+  return parts.length > 0 ? parts.join(", ") : "none";
+}
+
+/**
+ * Why is nothing queued?
+ *
+ * A promotion needs a cluster carrying either two distinct model families or one
+ * reference-tier report. Both "we have not sampled enough vendors yet" and "the pipeline
+ * is broken" present as an empty queue, so say which, and say what would change it.
+ */
+function reportBlockers(
+  sessions: number,
+  families: readonly string[],
+  queueDir: string,
+  ticketDir: string,
+  byTier: Record<string, number> = {},
+): void {
+  const { tickets } = readTickets(ticketDir);
+  const actionable = tickets.filter(
+    (t) => t.promotion === "verified" || t.promotion === "corroborated",
+  );
+  const queue = summarizeQueue(readQueue(queueDir).submissions);
+
+  section("Can anything reach the dev loop?");
+  console.log(`  tickets ${tickets.length} (${actionable.length} actionable)`);
+  console.log(`  queue   ${queue.total} (${queue.open} open)`);
+
+  if (queue.open > 0) {
+    console.log(`\n  ✓ The dev loop has work. \`npm run work -- --list\` shows it.`);
+    return;
+  }
+  if (sessions === 0) {
+    console.log(`\n  No sessions yet, so nothing can promote. Run a cohort, or file work`);
+    console.log(`  directly: npm run submit -- --source human --kind feature --title "..."`);
+    return;
+  }
+  if (tickets.length === 0) {
+    console.log(`\n  ${sessions} session(s) produced no tickets. Either no session carried an`);
+    console.log(`  exit interview, or triage has not run: npm run qa:triage -- --store <path>`);
+    return;
+  }
+  if (actionable.length === 0) {
+    const hasReference = (byTier.reference ?? 0) > 0;
+    console.log(`\n  ${tickets.length} ticket(s), none actionable yet. That is a real state, not`);
+    console.log(`  a fault: promotion needs corroboration, and this corpus has neither rung.`);
+    console.log(`\n  families so far: ${families.join(", ") || "none"}`);
+    if (families.length < 2 && !hasReference) {
+      console.log(`\n  → Add a SECOND model family, or one reference-tier session. One vendor`);
+      console.log(`    sampled many times is one instrument, not many witnesses, so more runs`);
+      console.log(`    of ${families[0] ?? "the same vendor"} will never promote anything.`);
+    }
+    // Total non-merging across MANY sessions is the fingerprint of a clustering fault —
+    // it is what a live run looked like when 55 findings produced 55 tickets. Needs at
+    // least three sessions to mean anything: with one session every ticket has exactly
+    // one report by construction, so warning there would be pure noise. Even above that
+    // it stays a prompt to look rather than a verdict, since a genuinely diverse corpus
+    // can honestly produce singletons.
+    const biggest = tickets.map((t) => t.evidence.report_count).reduce((a, b) => Math.max(a, b), 0);
+    if (biggest === 1 && sessions >= 3 && tickets.length >= sessions * 2) {
+      console.log(`\n  ! No ticket has more than one report — ${tickets.length} tickets from`);
+      console.log(`    ${sessions} sessions, nothing merged at all. Worth a look: independent`);
+      console.log(`    reports of one defect should cluster. If two sessions clearly described`);
+      console.log(`    the same thing and still produced two tickets, that is a triage bug,`);
+      console.log(`    not a shortage of evidence.`);
+    }
+  }
+}
+
+main();

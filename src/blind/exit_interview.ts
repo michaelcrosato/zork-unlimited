@@ -27,7 +27,22 @@ const ExitInterviewFields = {
       z
         .object({
           where: z.string().min(1),
-          severity: z.enum(["S0", "S1", "S2", "S3", "S4"]),
+          /**
+           * ASCENDING: S0 is the mildest and S4 the most severe.
+           *
+           * Spelled out because this runs OPPOSITE to the common convention, where S1 is
+           * the critical one and S4 cosmetic, and an undocumented enum leaves a reporter
+           * to assume the convention they already know. They then invert the scale, and
+           * because `SEVERITY_WEIGHT` doubles at every step (S0 1 → S4 16) a cosmetic nit
+           * filed as S4 outranks a real defect filed as S2 by four times — so the dev
+           * queue comes out backwards while every individual report looks reasonable.
+           */
+          severity: z
+            .enum(["S0", "S1", "S2", "S3", "S4"])
+            .describe(
+              "Ascending severity: S0 trivial, S1 minor, S2 moderate, S3 serious, " +
+                "S4 most severe. Note this is the reverse of the usual S1-is-critical scale.",
+            ),
           note: z.string().min(1),
         })
         .strict(),

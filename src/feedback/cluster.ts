@@ -20,6 +20,7 @@
  *      pipeline is a pure function of the *set* of input issues, never their
  *      order (see the "input order never changes the clustering" test).
  */
+import type { PlaytestTier } from "../blind/providers.js";
 import type { CanonicalLocation, FeedbackSource } from "./schema.js";
 
 export type IssueSeverity = "S0" | "S1" | "S2" | "S3" | "S4";
@@ -33,6 +34,19 @@ export type IssueRecord = {
   text: string;
   persona: string | null;
   target: string; // "overworld" | "quest:<id>"
+  /**
+   * Which model lineage reported this, and at which cost tier. Both are optional
+   * because crawler findings have no model behind them at all, and because evidence
+   * predating the multi-vendor playtest loop carries neither — a cluster with no
+   * provider metadata is scored by the original count×severity rule (see
+   * `scoreCluster`), so historical rankings are unchanged.
+   *
+   * When present they are what stops a mass-parallel fleet from fooling the ranking:
+   * forty reports from one cheap model are one instrument sampled forty times, and
+   * `familyOf` is how the ranking tells that apart from four vendors agreeing.
+   */
+  providerFamily?: string | null;
+  tier?: PlaytestTier | null;
 };
 
 export type IssueCluster = {
@@ -44,10 +58,38 @@ export type IssueCluster = {
   severityBand: SeverityBand;
   sources: FeedbackSource[];
   personas: string[];
+  /** Distinct model lineages that reported this cluster, sorted. Empty when unknown. */
+  families: string[];
+  /** Distinct cost tiers that reported it, sorted. Empty when unknown. */
+  tiers: PlaytestTier[];
 };
 
-/** Jaccard similarity threshold for pass-2 cross-bucket merges. */
-export const JACCARD_MERGE_THRESHOLD = 0.5;
+/**
+ * Jaccard similarity threshold for pass-2 cross-bucket merges.
+ *
+ * Calibrated against REAL reports rather than intuition, because the previous value of
+ * 0.5 turned out to sit above the point where anything real ever merged. Four sessions
+ * independently described one blocked-exit defect in their own words; their pairwise
+ * similarity ran 0.219 to 0.429, so at 0.5 they produced four tickets at one report
+ * each. Corroboration — the rung the whole two-loop split exists to reach — could
+ * therefore never fire on genuinely independent prose, only on near-duplicate text.
+ *
+ * Measured both directions on that same real material:
+ *
+ *   same defect, four independent wordings   0.219 – 0.429   must merge
+ *   different defects (incl. cross pairs)    0.000 – 0.043   must not merge
+ *
+ * A gap of 0.175 separates them, and 0.15 sits inside it — comfortably above the
+ * highest false pair and below the lowest true one. It is a threshold on token bags,
+ * so it will never be exact; what makes it safe is that pass 2 only ever compares
+ * issues that ALREADY share a canonical location, so the question being asked is the
+ * narrow "are these two reports about the same thing in the same place?"
+ *
+ * Verified end to end on both sides: four real wordings of one defect now form a single
+ * ticket at report_count 4, while three genuinely different defects filed against one
+ * story choice stay three tickets.
+ */
+export const JACCARD_MERGE_THRESHOLD = 0.15;
 
 /**
  * Fixed ~40-word stopword list for `tokenizeIssue`. Deliberately separate
@@ -247,6 +289,22 @@ function finalizeCluster(cluster: WorkingCluster): IssueCluster {
     ),
   ].sort();
 
+  const families = [
+    ...new Set(
+      sortedIssues
+        .map((issue) => issue.providerFamily)
+        .filter((family): family is string => typeof family === "string" && family.length > 0),
+    ),
+  ].sort();
+
+  const tierOrder: readonly PlaytestTier[] = ["reference", "volume"];
+  const tiersPresent = new Set(
+    sortedIssues
+      .map((issue) => issue.tier)
+      .filter((tier): tier is PlaytestTier => tier === "volume" || tier === "reference"),
+  );
+  const tiers = tierOrder.filter((tier) => tiersPresent.has(tier));
+
   const rawUnion = [...new Set(sortedIssues.flatMap((issue) => issue.location.raw))].sort();
   const location: CanonicalLocation = { ...first.location, raw: rawUnion };
 
@@ -259,6 +317,8 @@ function finalizeCluster(cluster: WorkingCluster): IssueCluster {
     severityBand: severityBand(maxSeverity),
     sources,
     personas,
+    families,
+    tiers,
   };
 }
 
