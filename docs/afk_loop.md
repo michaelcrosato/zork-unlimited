@@ -34,7 +34,8 @@ loop.sh  (outer driver — orchestration + the bar)
 │     Must be green before the agent touches anything; red here means the
 │     world was already broken, so the cycle halts and reverts (loop.sh).
 │
-├─ 3. WORK          the operating agent (installed Codex CLI / explicit agent command)
+├─ 3. WORK          the operating agent (first installed of codex/claude/gemini,
+│     or AI_AGENT / AI_AGENT_CMD)
 │     Reads the cycle prompt and:
 │       a. ONE improvement — content edit / apply_content_patch, or an engine/repo
 │          change (full authority; new mechanics need no §14 ceremony, but stay
@@ -185,7 +186,8 @@ at most once per N cycles. Ultraplan cycles also get a larger agent budget
 `agentTimeoutSeconds` that `ai-loop.ts` writes into `latest-cycle.json`.
 
 The fresh-context-per-phase shape is free here: each cycle's automatic agent is a new
-`codex exec` process, and Step 3's implementer is a fresh subagent — so the plan is
+agent process (`codex exec`, `claude -p`, `gemini`, or whatever `AI_AGENT_CMD` names),
+and Step 3's implementer is a fresh subagent — so the plan is
 handed off as a _document_, not a context window.
 
 ### The decision log (durable memory of settled questions)
@@ -258,9 +260,13 @@ contention; ordinary standard tests retain their 60-second fail-fast ceiling.
 Key env (loop.sh's header comment is the authoritative reference): `AI_LOOP_COMMIT=1`
 to enable the local provisional and final-ledger commits, `AI_LOOP_PUSH=1` to push
 (rejected against protected main — see the cycle
-diagram), `AI_LOOP_DELAY_SECONDS` between cycles (default 10), `AI_AGENT_CMD` to set
-an explicit agent command — otherwise the default is the installed `codex exec` CLI;
-the outer loop does not inspect local credential files or choose a fallback provider —
+diagram), `AI_LOOP_DELAY_SECONDS` between cycles (default 10), `AI_AGENT=<id>` to pick a dev
+agent (`codex`, `claude`, `gemini`) and `AI_AGENT_CMD` to set an explicit command for
+anything else — otherwise the loop auto-detects the FIRST of those ids that is
+installed, so the same checkout runs under whichever vendor a machine happens to have.
+Asking for an agent that is absent fails loudly rather than silently substituting
+another vendor, which would make the ledger claim work an agent never did. The outer
+loop does not inspect local credential files or choose a fallback provider —
 `AI_AGENT_TIMEOUT_SECONDS` (default 2400)
 to hang-kill a stuck turn, `AI_LOOP_MAX_CONSECUTIVE_FAILURES` / `AI_LOOP_MAX_TOTAL_FAILURES`
 for the circuit breakers, and `AI_LOOP_ALLOW_VERIFIER_EDITS=1` to acknowledge a

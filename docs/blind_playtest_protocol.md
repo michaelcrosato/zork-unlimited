@@ -1,17 +1,35 @@
 # Blind playtest protocol
 
-> **Any model can be a blind playtester.** Providers are declared in
-> `src/blind/providers.ts` and their playable models in operator-owned catalogs
-> under `blind-tester/catalogs/`; the runner validates against that registry
-> rather than against any hard-coded vendor. The Codex-specific sections below
-> describe ONE provider's hardened launch path — they are the worked example of
-> a `runner_enforced` transport, not a statement that Codex is required.
+> **Any model can be a blind playtester. Only Codex can currently be PROVEN
+> blind.** Those are different claims and the difference decides how you run a
+> cohort.
 >
-> Vendors with no headless CLI (Grok today) are played through their own client
-> and recorded with `npm run playtest:ingest`. Those sessions are stamped
-> `operator_attested`: they are kept in full and count toward bug corroboration,
-> but are excluded from experience metrics because no code here watched the
-> client. See [`two_loop_workflow.md`](./two_loop_workflow.md).
+> Providers are declared in `src/blind/providers.ts` with their playable models in
+> operator-owned catalogs under `blind-tester/catalogs/`, and the corpus, triage,
+> ranking and intake layers know no vendor names at all — a session from any
+> vendor is first-class evidence there.
+>
+> The launch path is where the asymmetry lives. `runner_enforced` means this
+> repo VERIFIED that the agent saw nothing but the AdventureForge MCP tools, and
+> that verification is read back out of Codex's own rollout logs by
+> `blind-tester/codex-rollout.mjs` (plus `codex-process-anchor.mjs`,
+> `codex-pure-envelope.mjs`, `codex-strict-stream.mjs`). No equivalent reader
+> exists for another vendor, so `run.sh` refuses their pure runs — a non-Codex
+> live cohort fails with `Could not resolve the existing Codex home`. The
+> Codex-specific sections below are therefore the only implemented hardened path,
+> not one worked example among several already available.
+>
+> Every other vendor — Grok, which ships no headless CLI, and today also
+> `claude_code` and `gemini_cli`, which have one the runner cannot yet audit — is
+> played through its own client and recorded with `npm run playtest:ingest`.
+> Those sessions are stamped `operator_attested`: kept in full and counted toward
+> bug corroboration, but excluded from experience metrics, because no code here
+> watched the client. One consequence is worth stating plainly: every headline
+> retention and clarity number in this repo is a measurement of Codex
+> specifically rather than of players in general.
+>
+> `npm run doctor` reports what a given machine can actually launch. See
+> [`two_loop_workflow.md`](./two_loop_workflow.md).
 
 Blind playtests measure the experience a new player actually receives. They are
 Tier 2 of `docs/testing_pyramid.md`: a fresh reasoning agent has no repository,

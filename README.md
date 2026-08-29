@@ -298,9 +298,20 @@ research proposal, the crawler, or a person all file the same submission, and
 `npm run intake:sync` mirrors the queue to GitHub Issues so people can file from
 anywhere.
 
-Either loop runs on any model. The dev loop auto-detects an installed agent
-(`codex`, `claude`, `gemini`; `AI_AGENT` selects, `AI_AGENT_CMD` overrides), and
-the playtest loop reads its providers from the registry.
+**The dev loop runs on any model.** It auto-detects an installed agent (`codex`,
+`claude`, `gemini`; `AI_AGENT` selects, `AI_AGENT_CMD` overrides anything), and
+asking for an absent one fails loudly rather than silently substituting a vendor.
+
+**The playtest loop is any-model in what it RECORDS, but not in what it can
+launch.** Only `codex` can run a live blind cohort today, because
+`runner_enforced` blindness is proved by reading Codex's own rollout logs
+(`blind-tester/codex-rollout.mjs` and companions) and no equivalent reader exists
+for another vendor — `blind-tester/run.sh` refuses a non-Codex pure run. Every
+other vendor is played in its own client and ingested with
+`npm run playtest:ingest`, landing `operator_attested`: counted toward bug
+corroboration, excluded from experience metrics. So headline experience numbers
+are currently a measurement of Codex specifically, not of players in general.
+`npm run doctor` reports which vendors a given machine can actually launch.
 
 Agent errors fail a dev cycle; a bounded durable failure ledger is shown by
 `npm run loop:status`. `npm run loop:status` / `npm run loop:stop` manage a

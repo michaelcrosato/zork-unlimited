@@ -1,7 +1,14 @@
 # Agent Charter
 
 This is the entry point every coding agent (Codex, Claude, Gemini, …) reads
-first. This project runs on **trust, but verify**.
+first, and the single source of truth for how work happens here. Codex loads this
+file by convention; [`CLAUDE.md`](./CLAUDE.md) and [`GEMINI.md`](./GEMINI.md) are
+one-line pointers back to it so the other vendors land here too, because the dev
+loop runs on whichever agent a machine has installed and a charter only one vendor
+auto-loads is a charter the rest silently skip. Those pointers are deliberately not
+copies: duplicated rules drift, and a stale copy is worse than none.
+
+This project runs on **trust, but verify**.
 
 ## What this is
 
@@ -132,11 +139,17 @@ deliberately NOT part of `health`.
   explicitly and `AI_AGENT_CMD` overrides the command entirely. The only contract
   is: read the prompt from STDIN, edit files in `$PWD`, run non-interactively,
   and exit nonzero on failure.
-- Codex specifics: the repo-local `.codex/config.toml` registers the engine MCP
-  server, but Codex loads project config **only when the project is trusted**
-  (trust does not cascade from a parent dir — trust this exact repo path). Most
-  robust for the autonomous loop: register the server once at the user level so
-  it works regardless of project trust —
+- Connecting to the engine MCP server. The repo ships `.mcp.json`, which any
+  client reading the standard project MCP config — Claude Code among them — picks
+  up automatically with no setup. A client that keeps its own registry instead
+  needs the server added there once; the command is always
+  `npm --silent run mcp` from the repo root.
+- Codex needs one extra step, and it fails silently without it. `.codex/config.toml`
+  registers the same server, but Codex loads project config **only when the project
+  is trusted**, and trust does not cascade from a parent directory — trust this exact
+  repo path. Untrusted, the server is simply absent and a headless `codex exec` runs
+  with no engine tools rather than erroring. Most robust for the autonomous loop is to
+  register it at the user level so project trust stops mattering:
   `codex mcp add adventureforge -- npm --silent run mcp`.
 - CLI RPG play requires no server: `npm run play`.
 - MCP and live LLM playtests are optional and belong to the playtest loop; CI uses deterministic mocks.
