@@ -37,7 +37,9 @@
  * else; every other byte, including the bookkeeping row types Claude Code interleaves, is
  * as the client wrote it.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -58,6 +60,7 @@ const {
   auditClaudeInitEvent,
   auditClaudeToolCalls,
   auditClaudeTranscriptBinding,
+  buildClaudeEnvelope,
   captureClaudeSession,
   claudeProjectSlug,
   claudeSessionLogPath,
@@ -533,5 +536,251 @@ describe("the init event is the only proof of what the player was OFFERED", () =
     ]);
     expect(audited.permission_mode).toBe("bypassPermissions");
     expect(audited.client_version).toBe("2.1.251");
+  });
+});
+
+/**
+ * The final `result` event on the same stream, in the shape `--output-format stream-json`
+ * emits it (a field subset; every field asserted below is one the client writes). The
+ * fixture is synthetic where the transcript rows above are verbatim, because the recorded
+ * probe predates the launch branch — the shape is pinned against claude 2.1.251's stream.
+ */
+function resultEvent(over: Partial<Row> = {}): Row {
+  return {
+    type: "result",
+    subtype: "success",
+    is_error: false,
+    duration_ms: 6042,
+    duration_api_ms: 5310,
+    num_turns: 3,
+    result: "## Playthrough log\n\n…the player's report…",
+    session_id: RECORDED_SESSION_ID,
+    total_cost_usd: 0.0123,
+    usage: { input_tokens: 9, output_tokens: 85 },
+    ...over,
+  };
+}
+
+describe("the launch envelope run.sh publishes as <out>.json", () => {
+  /** A receipt for the pinned fixture session, captured end to end off disk. */
+  function fixtureReceipt(): { receipt: Row; player: string } {
+    const laid = layDownSession({});
+    return {
+      receipt: captureClaudeSession({
+        home: laid.home,
+        cwd: laid.player,
+        sessionId: laid.sessionId,
+        streamPath: laid.streamPath,
+      }) as Row,
+      player: laid.player,
+    };
+  }
+
+  function streamRows(rows: readonly Row[]): Row[] {
+    return parseClaudeJsonl(jsonl(rows), "stream") as Row[];
+  }
+
+  it("carries the client's own result event on top of the audited receipt", () => {
+    // The envelope exists so the generic tail of run.sh — `.result` extraction,
+    // telemetry, receipt binding — reads one artifact per run regardless of vendor.
+    // Every telemetry field it forwards is the client's own report of the run.
+    const { receipt, player } = fixtureReceipt();
+    const envelope = buildClaudeEnvelope({
+      receipt,
+      streamRows: streamRows([
+        initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID }),
+        resultEvent(),
+      ]),
+      model: "claude-haiku-4-5-20251001",
+      cliVersion: "2.1.251",
+      transportContract: "game-direct-mcp-v1",
+    });
+    expect(envelope.provider).toBe("claude_code");
+    expect(envelope.transport_contract).toBe("game-direct-mcp-v1");
+    expect(envelope.model).toBe("claude-haiku-4-5-20251001");
+    expect(envelope.session_id).toBe(RECORDED_SESSION_ID);
+    expect(envelope.is_error).toBe(false);
+    expect(envelope.result).toBe("## Playthrough log\n\n…the player's report…");
+    expect(envelope.duration_ms).toBe(6042);
+    expect(envelope.num_turns).toBe(3);
+    expect(envelope.total_cost_usd).toBe(0.0123);
+    expect(envelope.usage).toEqual({ input_tokens: 9, output_tokens: 85 });
+    // The receipt travels whole, so the envelope is self-contained evidence.
+    expect(envelope.capture).toEqual(receipt);
+    // And like the receipt, it states facts, never the isolation verdict.
+    expect(Object.keys(envelope)).not.toContain("isolation");
+  });
+
+  it("refuses a stream with no result event, or with two", () => {
+    const { receipt, player } = fixtureReceipt();
+    const init = initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID });
+    const build = (rows: readonly Row[]) =>
+      buildClaudeEnvelope({
+        receipt,
+        streamRows: streamRows(rows),
+        model: "claude-haiku-4-5-20251001",
+        cliVersion: "2.1.251",
+        transportContract: "game-direct-mcp-v1",
+      });
+    expect(() => build([init])).toThrow(/carries 0 result events/);
+    expect(() => build([init, resultEvent(), resultEvent()])).toThrow(/carries 2 result events/);
+  });
+
+  it("refuses an errored, unsuccessful, or textless result", () => {
+    // An is_error result is a run that did not finish as one playtest; publishing its
+    // partial text as a report would be the quiet version of accepting a timeout.
+    const { receipt, player } = fixtureReceipt();
+    const init = initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID });
+    const build = (over: Partial<Row>) =>
+      buildClaudeEnvelope({
+        receipt,
+        streamRows: streamRows([init, resultEvent(over)]),
+        model: "claude-haiku-4-5-20251001",
+        cliVersion: "2.1.251",
+        transportContract: "game-direct-mcp-v1",
+      });
+    expect(() => build({ is_error: true })).toThrow(/did not end in one successful result/);
+    expect(() => build({ subtype: "error_during_execution" })).toThrow(
+      /did not end in one successful result/,
+    );
+    expect(() => build({ result: "" })).toThrow(/carries no report text/);
+    expect(() => build({ result: 7 })).toThrow(/carries no report text/);
+  });
+
+  it("refuses a result event belonging to some other session", () => {
+    // A clean result for a different session must not vouch for this receipt — the same
+    // splice the transcript- and init-binding checks refuse, closed on the third artifact.
+    const { receipt, player } = fixtureReceipt();
+    expect(() =>
+      buildClaudeEnvelope({
+        receipt,
+        streamRows: streamRows([
+          initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID }),
+          resultEvent({ session_id: "22222222-3333-4444-8555-666666666666" }),
+        ]),
+        model: "claude-haiku-4-5-20251001",
+        cliVersion: "2.1.251",
+        transportContract: "game-direct-mcp-v1",
+      }),
+    ).toThrow(/not the runner's/);
+  });
+
+  it("refuses a session answered by a model other than the one requested", () => {
+    // The catalog refuses aliases so a run means what its record says; the envelope is
+    // where that promise is checked against what the transcript actually recorded.
+    const { receipt, player } = fixtureReceipt();
+    expect(() =>
+      buildClaudeEnvelope({
+        receipt,
+        streamRows: streamRows([
+          initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID }),
+          resultEvent(),
+        ]),
+        model: "claude-opus-5",
+        cliVersion: "2.1.251",
+        transportContract: "game-direct-mcp-v1",
+      }),
+    ).toThrow(/model/);
+  });
+
+  it("copies the audited transcript out of the client-owned home, exactly and exclusively", () => {
+    // Evidence inside the directory the client owns is evidence the client can rewrite,
+    // so the codex lane copies its rollout beside the report and the claude lane must do
+    // the same. The copy is the exact bytes the audits ran over — written by the capture
+    // itself, so byte identity with the receipt's sha256 holds by construction.
+    const laid = layDownSession({});
+    const copyPath = join(temp("af-cc-copy-"), "session-copy.jsonl");
+    const receipt = captureClaudeSession({
+      home: laid.home,
+      cwd: laid.player,
+      sessionId: laid.sessionId,
+      streamPath: laid.streamPath,
+      transcriptOut: copyPath,
+    });
+    const copied = readFileSync(copyPath);
+    expect(createHash("sha256").update(copied).digest("hex")).toBe(receipt.transcript.sha256);
+    expect(copied.byteLength).toBe(receipt.transcript.bytes);
+    // Exclusive: a pre-existing file at the destination is refused, never clobbered.
+    expect(() =>
+      captureClaudeSession({
+        home: laid.home,
+        cwd: laid.player,
+        sessionId: laid.sessionId,
+        streamPath: laid.streamPath,
+        transcriptOut: copyPath,
+      }),
+    ).toThrow();
+  });
+
+  it("wires resolve-log, capture --transcript-out and envelope through the CLI run.sh calls", () => {
+    // The flag surface is what run.sh actually drives, so it is exercised as a process
+    // rather than trusted to match the exported functions.
+    const laid = layDownSession({});
+    const streamWithResult = join(temp("af-cc-cli-"), "stream.jsonl");
+    writeFileSync(
+      streamWithResult,
+      jsonl([initEvent({ cwd: laid.player, sessionId: laid.sessionId }), resultEvent()]),
+    );
+    const reader = join(process.cwd(), "blind-tester", "claude-session.mjs");
+    const run = (args: readonly string[]) => {
+      const result = spawnSync(process.execPath, [reader, ...args], {
+        encoding: "utf8",
+        timeout: 30_000,
+      });
+      expect(result.status, `${args[0]}: ${result.stderr}`).toBe(0);
+      return result.stdout;
+    };
+
+    const resolved = run([
+      "resolve-log",
+      "--home",
+      laid.home,
+      "--cwd",
+      laid.player,
+      "--session-id",
+      laid.sessionId,
+    ]).trim();
+    expect(resolved).toBe(
+      claudeSessionLogPath({ home: laid.home, cwd: laid.player, sessionId: laid.sessionId }),
+    );
+
+    const copyPath = join(temp("af-cc-cli-copy-"), "copy.jsonl");
+    const receipt = JSON.parse(
+      run([
+        "capture",
+        "--home",
+        laid.home,
+        "--cwd",
+        laid.player,
+        "--session-id",
+        laid.sessionId,
+        "--stream",
+        streamWithResult,
+        "--transcript-out",
+        copyPath,
+      ]),
+    ) as Row;
+    expect(receipt.provider).toBe("claude_code");
+    expect(existsSync(copyPath)).toBe(true);
+
+    const receiptPath = join(temp("af-cc-cli-receipt-"), "capture.json");
+    writeFileSync(receiptPath, JSON.stringify(receipt));
+    const envelope = JSON.parse(
+      run([
+        "envelope",
+        "--receipt",
+        receiptPath,
+        "--stream",
+        streamWithResult,
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--cli-version",
+        "2.1.251",
+        "--transport-contract",
+        "game-direct-mcp-v1",
+      ]),
+    ) as Row;
+    expect(envelope.result).toBe("## Playthrough log\n\n…the player's report…");
+    expect(envelope.capture).toEqual(receipt);
   });
 });

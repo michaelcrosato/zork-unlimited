@@ -1934,15 +1934,39 @@ exit 93
     }
   }, 30_000);
 
-  it("contains no current Claude runtime or direct credential handling", () => {
+  it("launches Claude Code only via the pinned preflighted binary, never touching credentials", () => {
+    // This test used to assert run.sh contained NO Claude runtime at all — the honest
+    // state after the retired direct-Claude harness was removed and before the
+    // claude-session launch branch landed. The branch exists now, so the pins changed
+    // job: what must stay true is everything that made the retired harness dangerous,
+    // not the absence of the vendor.
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
 
     expect(existsSync(join(process.cwd(), "blind-tester", "loadtest.sh"))).toBe(false);
     expect(existsSync(join(process.cwd(), "blind-tester", "loadtest-fleet.sh"))).toBe(false);
+
+    // The launch branch is keyed on the capture READER, exactly like the implemented
+    // list itself, and drives the runner_pinned session-id contract end to end: pin the
+    // id, resolve the one log that id may write BEFORE launch, capture it afterwards
+    // with the same module, and audit the client's own result event into the envelope.
+    expect(runner).toContain('CLAUDE_SESSION_READER_MODULE="blind-tester/claude-session.mjs"');
+    expect(runner).toContain('"$CLAUDE_SESSION_SCRIPT" resolve-log');
+    expect(runner).toContain('--session-id "$CLAUDE_SESSION_ID"');
+    expect(runner).toContain('"$CLAUDE_SESSION_SCRIPT" capture');
+    expect(runner).toContain('"$CLAUDE_SESSION_SCRIPT" envelope');
+    // The argv comes from the registry template records, so the surface-closing flags
+    // live in providers.json once rather than being re-spelled here — which is also why
+    // the retired-flag pin below can stay meaningful.
+    expect(runner).toContain('PROVIDER_LAUNCH_ARGV+=("$provider_record_value")');
+
+    // What must stay true from the retirement: no state-root relocation on faith, no
+    // credential file handling, no report-recovery turn, and never a PATH-resolved
+    // literal client under the gameplay timeout — only the preflighted selected binary.
     expect(runner).not.toContain("CLAUDE_CONFIG_DIR");
     expect(runner).not.toContain(RETIRED_CLAUDE_LOGIN_FILENAME);
     expect(runner).not.toContain(RETIRED_CLAUDE_OAUTH_FIELD);
     expect(runner).not.toMatch(/\btimeout\b[^\n]*\bclaude\b/u);
+    expect(runner).toContain('timeout -k 10 "$TIMEOUT" "$SELECTED_CLAUDE_BIN"');
     expect(runner).not.toContain("scripts/blind-report-recovery.ts");
   });
 

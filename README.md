@@ -353,9 +353,9 @@ writing if either is absent.
 
 Adding a generic live provider is five mechanical steps and no gate edit: registry
 entry, capture block, reader module, launch branch, one line in the implemented
-list. Today Codex is live there; Claude Code is provable
-(`blind-tester/claude-session.mjs`) and awaiting a launch branch; Gemini remains
-ingest-only. Grok Build instead has a dedicated headless wave that isolates the
+list. Today Codex and Claude Code are both live there (the Claude Code lane pins
+its own `--session-id`, so `blind-tester/claude-session.mjs` reads exactly the one
+transcript the runner launched); Gemini remains ingest-only. Grok Build instead has a dedicated headless wave that isolates the
 pure game server and verifies its receipt/provenance while conservatively keeping
 the client `operator_attested`. Vendors without either lane are played in their own
 client and recorded with `npm run playtest:ingest`. Arbitrary `BLIND_AGENT_CMD`

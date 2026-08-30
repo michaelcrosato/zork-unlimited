@@ -10,23 +10,27 @@
 > vendor is first-class evidence there.
 >
 > The launch path is where the asymmetry lives. `runner_enforced` means this
-> repo VERIFIED that the agent saw nothing but the AdventureForge MCP tools, and
-> that verification is read back out of Codex's own rollout logs by
+> repo VERIFIED that the agent saw nothing but the AdventureForge MCP tools. For
+> Codex that verification is read back out of its own rollout logs by
 > `blind-tester/codex-rollout.mjs` (plus `codex-process-anchor.mjs`,
-> `codex-pure-envelope.mjs`, `codex-strict-stream.mjs`). No equivalent reader
-> exists for another vendor, so `run.sh` refuses their pure runs outright:
-> `Provider "<id>" cannot produce pure evidence: this runner can only launch
-"codex".` Until 2026-08-29 that refusal did not exist — a `claude_code` or
+> `codex-pure-envelope.mjs`, `codex-strict-stream.mjs`); for Claude Code it is
+> read out of the transcript the runner-pinned `--session-id` names before launch,
+> plus the client's own init event, by `blind-tester/claude-session.mjs`. A vendor
+> with no such reader-plus-launch-branch pair is refused outright:
+> `Provider "<id>" cannot produce pure evidence …`. Until 2026-08-29 that refusal
+> did not exist — a `claude_code` or
 > `gemini_cli` pure run passed the registry's `headless_cli` gate and then executed
 > `codex exec` under the other vendor's name. The only thing that stopped it was
 > the unrelated missing-`~/.codex` error, which does not fire on the documented AFK
 > machine at all. Structural `--smoke`/`--mock` runs are unaffected: they launch no
-> live client, so any provider may exercise the plumbing. The
-> Codex-specific sections below are therefore the only implemented hardened path,
-> not one worked example among several already available.
+> live client, so any provider may exercise the plumbing. The Codex-specific
+> sections below describe the deepest of the implemented hardened paths; the
+> Claude Code branch mirrors their order (preflight, spawn, capture, envelope,
+> verification, publication) with the pinned session id doing the work the rollout
+> walk does for Codex.
 >
-> `claude_code` and `gemini_cli` are played through their own client and recorded
-> with `npm run playtest:ingest` until the generic runner can audit and launch them.
+> `gemini_cli` is played through its own client and recorded
+> with `npm run playtest:ingest` until the generic runner can audit and launch it.
 > Grok Build now has a separate headless `playtest:grok-wave` lane: it verifies a
 > private pure server's session, seed, build, world, and receipt, but no reader here
 > audits Grok's complete offered client tool surface. All three therefore remain
