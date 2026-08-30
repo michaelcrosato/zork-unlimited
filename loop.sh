@@ -106,6 +106,25 @@ cleanup_pid_records() {
   rm -f "$LOOP_PID_FILE" "$AGENT_PID_FILE" 2>/dev/null || true
 }
 
+# A second loop in the same checkout is destructive, not merely confusing: a failed
+# cycle hard-resets tracked work and cleans cycle-created untracked paths, so loop B
+# would revert loop A's provisional commit mid-flight. The pid record carries the
+# start tick precisely so this check can tell a LIVE holder from a stale file left
+# by a crash (dead pid, or pid reused by an unrelated process) — stale records are
+# overwritten as before; only an authenticated live holder refuses startup.
+refuse_if_live_loop() {
+  local path="$1" pid recorded_start start rest
+  [[ -f "$path" ]] || return 0
+  read -r pid recorded_start rest < "$path" 2>/dev/null || return 0
+  [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 0
+  start="$(process_start_time "$pid")" || return 0
+  [[ "$start" == "$recorded_start" ]] || return 0
+  echo "Refusing to start: $path names a live loop (pid $pid, start tick $start)."
+  echo "Two dev loops in one checkout destroy each other's cycles. Stop the running"
+  echo "one with 'npm run loop:stop', or run this lane in its own git worktree."
+  return 1
+}
+
 on_loop_signal() {
   local status="$1"
   cleanup_pid_records
@@ -114,6 +133,7 @@ on_loop_signal() {
 }
 
 mkdir -p ai-runs
+refuse_if_live_loop "$LOOP_PID_FILE" || exit 1
 if ! write_process_record "$LOOP_PID_FILE" "$$"; then
   rm -f "$LOOP_PID_FILE" 2>/dev/null || true
   echo "Refusing to start: cannot authenticate this process through /proc/<pid>/stat."
