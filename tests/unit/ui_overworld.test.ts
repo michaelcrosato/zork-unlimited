@@ -250,7 +250,7 @@ describe("OverworldSession", () => {
     expect(session.journey()).toMatchObject({
       status: "active",
       goal: {
-        text: "Find one local lead in Albany and see it through.",
+        text: "Complete Wolf-Winter in Albany.",
         status: "active",
       },
       acceptedDecisions: 0,
@@ -345,7 +345,7 @@ describe("OverworldSession", () => {
     expect(openingText).toContain("Rowan Quill is Albany's records clerk");
     expect(openingText).toContain("Explore it to find official work, regional leads");
     expect(openingText).toContain("Rowan handles registration, emergency authority");
-    expect(openingText).toContain("Choose how Albany records winter-relief household claims");
+    expect(openingText).toContain("Optional civic filing. It does not complete Wolf-Winter.");
     expect(openingText).not.toMatch(
       /concrete local lead point|local problems|hidden count|tutorial|command/i,
     );
@@ -428,7 +428,7 @@ describe("OverworldSession", () => {
     expect(restored.snapshot()).toEqual(snapshot);
     expect(restored.journey()).toMatchObject({
       goal: {
-        text: "Find one local lead in Albany and see it through.",
+        text: "Complete Wolf-Winter in Albany.",
         status: "active",
       },
       goalGuidance: INITIAL_JOURNEY_GOAL_GUIDANCE,

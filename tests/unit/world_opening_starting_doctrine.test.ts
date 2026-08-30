@@ -28,7 +28,7 @@ describe("opening starting doctrines", () => {
         profile_id: "albany:ironhands_repairer",
         relief_oath_option_id: "albany:oath_full_compact_duty",
         lead_source_option_id: "albany:source_rowan_civic_docket",
-        trigger_category: "Repair 4; first public-seal FORTIFY check is 2 DC easier.",
+        trigger_category: "Repair 4; first public-seal FORTIFY Repair is DC 12 instead of 14.",
         immediate_cost: "10 minutes and $0",
       },
       {
@@ -37,9 +37,9 @@ describe("opening starting doctrines", () => {
         relief_oath_option_id: "albany:oath_limited_aid_only",
         lead_source_option_id: "albany:source_hayden_frost_report",
         trigger_category:
-          "Defense starts at 4. A clean first LURE feed prevents the final +1 cattle alarm. A split rail can help HUNT.",
+          "Defense 4. First LURE LAY still +1; last feed skips +1 if that LAY succeeded. Split rail can help HUNT.",
         preview:
-          "Defense starts at 4 instead of 3. If the first LURE feed succeeds, cattle alarm rises one less at the end. Hayden's report can unlock a HUNT brace after a rail splits. Cost: 10 minutes and $0.",
+          "Defense starts at 4 instead of 3. The first successful LURE LAY still raises cattle alarm as listed; Aid-Only then skips the last feed's +1, not the first. Hayden's report can unlock a HUNT brace after a rail splits. Cost: 10 minutes and $0.",
         consequence: "Specialist preparation, the wagon, June, and both roads remain available.",
         immediate_cost: "10 minutes and $0",
       },
@@ -71,7 +71,7 @@ describe("opening starting doctrines", () => {
   it("keeps Road-Warden mechanics inspectable while its confirmation stays branch-neutral", () => {
     const doctrines = shippedDoctrines(SHIPPED_WORLD);
 
-    expect(doctrines[1]!.trigger_category).toContain("Defense starts at 4");
+    expect(doctrines[1]!.trigger_category).toContain("Defense 4");
     expect(doctrines[1]!.summary).toContain("Aid-Only");
     expect(doctrines[1]!.trigger_category).toContain("LURE");
     expect(doctrines[1]!.trigger_category).toContain("HUNT");

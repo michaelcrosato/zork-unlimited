@@ -746,6 +746,7 @@ export function compactOverworldBlockedEventLeads(
   for (const event of values.slice(0, limit)) {
     const scene = event.authored_scene;
     if (!scene || liveEventIds.has(event.id)) continue;
+    if (scene.advertise_blocked_lead === false) continue;
 
     const scoutedPoi = context.journalEntryIds.has(`scout:${scene.required_poi_id}`);
     const contactPrefix = `talk:${scene.required_contact_id}`;

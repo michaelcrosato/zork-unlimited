@@ -382,7 +382,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(roadWardenPacket.summary?.tradeoff).toBe("Other promise/report pairs close.");
     expect(roadWardenPacket.consequence).toContain("Tradeoff: Other promise/report pairs close.");
     expect(roadWardenPacket.consequence).toContain(
-      "Benefit: Defense starts at 4. A clean first LURE feed prevents the final +1 cattle alarm. A split rail can help HUNT.",
+      "Benefit: Defense 4. First LURE LAY still +1; last feed skips +1 if that LAY succeeded. Split rail can help HUNT.",
     );
     expect(JSON.stringify(roadWardenPacket.summary)).not.toMatch(
       /\b(?:DEF|DC|import|fieldTrigger)\b/i,

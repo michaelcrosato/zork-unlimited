@@ -1056,7 +1056,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
     // NPC display-name tuples add a small amount of actionable orientation;
     // the ceiling below remains the real transport budget.
-    expect(compactLaunchBytes).toBe(6_638);
+    expect(compactLaunchBytes).toBe(6_658);
     expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
     const fieldHandoff = a.step_action({
       session_id: compactStartedQuest.rpg_session_id,
@@ -1078,7 +1078,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(fieldHandoff.journey).not.toHaveProperty("decisionProof");
     expect(fieldHandoff.journey.pendingChoice).toBeNull();
     const compactFieldTurnBytes = Buffer.byteLength(JSON.stringify(fieldHandoff));
-    expect(compactFieldTurnBytes).toBe(2_151);
+    expect(compactFieldTurnBytes).toBe(2_284);
     expect(compactFieldTurnBytes).toBeLessThanOrEqual(3_500);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,

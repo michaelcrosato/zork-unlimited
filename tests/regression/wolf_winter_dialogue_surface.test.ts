@@ -201,7 +201,7 @@ describe("Wolf-Winter dialogue surface", () => {
     if (!fullCompactSupport.ok) throw new Error("unreachable");
     fullCompactState = fullCompactSupport.state;
     const fullCompactText = narrations(fullCompactSupport.events).join("\n");
-    expect(fullCompactText).toContain("Full Compact lowers");
+    expect(fullCompactText).toContain("Full Compact makes");
     expect(fullCompactText).toContain(
       "The Works packet sets the first FORTIFY Repair check to DC 12",
     );

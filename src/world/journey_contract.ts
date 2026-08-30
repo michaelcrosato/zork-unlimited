@@ -9,14 +9,14 @@ export const JOURNEY_EXIT_REASON = "player_ended_at_choice" as const;
 export const INITIAL_JOURNEY_GOAL = Object.freeze({
   version: 1,
   id: "albany_local_lead",
-  text: "Find one local lead in Albany and see it through.",
+  text: "Complete Wolf-Winter in Albany.",
 } as const);
 
 export const OPENING_CHAPTER_HORIZON =
   "Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter." as const;
 
 export const INITIAL_JOURNEY_GOAL_GUIDANCE =
-  `Complete Wolf-Winter. Jobs, events, and sites can help you find it, but they do not complete this goal. ${OPENING_CHAPTER_HORIZON}` as const;
+  `Finish The Wolf-Winter to complete this opening. ${OPENING_CHAPTER_HORIZON}` as const;
 
 export type JourneyChoice = "continue" | "end";
 export type JourneyChoiceReason = "checkpoint" | "goal_completed" | "character_died";

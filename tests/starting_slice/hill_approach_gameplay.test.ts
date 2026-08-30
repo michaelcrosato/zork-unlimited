@@ -246,7 +246,7 @@ describe("SS-F07 — Wolf-Winter hill-approach gameplay", () => {
       expect(arrival.description).toMatch(
         route === "ridge"
           ? /exposed ridge[^]*smoke[^]*wolf breath[^]*crosswind/i
-          : /sheltered stockway[^]*hedges keep the herd calm[^]*hide the smoke and crosswind/i,
+          : /sheltered stockway[^]*hedges keep the herd calm[^]*still Fieldcraft DC 12/i,
       );
       expect(arrival.available_actions.map((candidate) => candidate.id)).toContain(spec.action);
 

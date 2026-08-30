@@ -14,8 +14,8 @@ import { buildRpgRules, enumerateRpgActions, indexRpgPack } from "../../src/rpg/
 import type { GameState } from "../../src/core/state.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 
-const NORTH_PENDING_GUIDANCE =
-  "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
+const NORTH_LURE_PENDING_GUIDANCE =
+  "North is blocked. Finish the shown LURE action first. Feed is west; the hatch is west then up.";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
@@ -266,7 +266,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     expect(
       afterUncommittedCrossing.available_actions.find((action) => action.id === "ask_leave")
         ?.command,
-    ).toBe("ask: LEAVE — Exit without choosing a plan.");
+    ).toBe("ask: LEAVE — Return to the yard.");
     expect(enumerateRpgActions(index, uncommitted).map((action) => action.id)).not.toEqual(
       expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify", "ask_commit_lure"]),
     );
@@ -297,10 +297,8 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const pendingNorth = committedPickup.blocked_exits.find(
       (exit) => exit.direction === "north",
     )?.message;
-    expect(pendingNorth).toBe(NORTH_PENDING_GUIDANCE);
-    expect(pendingNorth).toMatch(
-      /During LURE[^]*shown CALL or feed action[^]*feed is west[^]*hatch is west then up/i,
-    );
+    expect(pendingNorth).toBe(NORTH_LURE_PENDING_GUIDANCE);
+    expect(pendingNorth).toMatch(/Finish the shown LURE action first[^]*Feed is west/i);
     const compactPickup = compactRpgObservation(
       committedPickup,
       committedPickup.available_actions.map((action) => action.id),
@@ -310,7 +308,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       /go west[^]*TAKE Cade's winter-feed sack[^]*go east[^]*go north/i,
     );
     expect(compactPickup.actions).toContain("go_west");
-    expect(compactPickup.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+    expect(compactPickup.blocked).toContainEqual(["north", NORTH_LURE_PENDING_GUIDANCE]);
     expect(compactPickup.blocked?.find(([direction]) => direction === "north")?.[1]).not.toMatch(
       TRUNCATION_MARKER,
     );
@@ -352,7 +350,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     );
     expect(docketYard.blocked_exits).toContainEqual({
       direction: "north",
-      message: NORTH_PENDING_GUIDANCE,
+      message: NORTH_LURE_PENDING_GUIDANCE,
     });
     const compactDocketYard = compactRpgObservation(
       docketYard,
@@ -363,8 +361,8 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       /CALL Jamie's sealed relief protocol[^]*used once here[^]*carry the feed west/i,
     );
     expect(compactDocketYard.actions).toContain("use_relief_protocol_docket");
-    expect(compactDocketYard.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
-    expect(NORTH_PENDING_GUIDANCE).toMatch(/During LURE[^]*shown CALL or feed action/i);
+    expect(compactDocketYard.blocked).toContainEqual(["north", NORTH_LURE_PENDING_GUIDANCE]);
+    expect(NORTH_LURE_PENDING_GUIDANCE).toMatch(/Finish the shown LURE action first/i);
 
     committed = act(committed, "go_south");
     committed = act(committed, "talk_houndsman");
@@ -377,6 +375,6 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     );
     expect(
       afterCommittedCrossing.available_actions.find((action) => action.id === "ask_leave")?.command,
-    ).toBe("ask: LEAVE — Exit without choosing a plan.");
+    ).toBe("ask: LEAVE — Return to the yard.");
   });
 });

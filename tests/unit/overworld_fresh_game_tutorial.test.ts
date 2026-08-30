@@ -26,7 +26,7 @@ describe("fresh-game tutorial", () => {
       ...FRESH_GAME_TUTORIAL.steps.flatMap((step) => [step.title, step.text]),
     ].join(" ");
     expect(copy.length).toBeLessThanOrEqual(720);
-    expect(copy).toMatch(/local lead.*Albany/is);
+    expect(copy).toMatch(/Wolf-Winter.*Albany/is);
     expect(copy).toMatch(/supplies.*fatigue/is);
     expect(copy).toMatch(/scout.*talk.*investigate.*explore/is);
     expect(copy).toMatch(/lead's area.*Road cost.*rest.*resupply/is);

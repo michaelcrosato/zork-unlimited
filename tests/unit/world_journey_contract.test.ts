@@ -86,7 +86,7 @@ describe("journey contract v3 goals", () => {
     const view = journeyPresentation(state);
 
     expect(INITIAL_JOURNEY_GOAL_GUIDANCE).toBe(
-      "Complete Wolf-Winter. Jobs, events, and sites can help you find it, but they do not complete this goal. Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter.",
+      "Finish The Wolf-Winter to complete this opening. Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter.",
     );
     expect(OPENING_CHAPTER_HORIZON).toBe(
       "Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter.",

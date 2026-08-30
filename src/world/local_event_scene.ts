@@ -80,6 +80,7 @@ export const LocalEventSceneSchema = z
       .min(1)
       .max(LOCAL_EVENT_SCENE_MAX_REQUIREMENTS)
       .optional(),
+    advertise_blocked_lead: z.boolean().optional(),
     options: z
       .array(LocalEventSceneOptionSchema)
       .min(LOCAL_EVENT_SCENE_MIN_OPTIONS)

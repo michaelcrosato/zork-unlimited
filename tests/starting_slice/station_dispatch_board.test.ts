@@ -247,7 +247,7 @@ describe("Station dispatch board", () => {
     const stationContextBytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
     const freshAggregate = promptBytes + pureCatalogBytes + freshContextBytes;
     expect(promptBytes).toBe(15_720);
-    expect(freshAggregate).toBe(34_657);
+    expect(freshAggregate).toBe(34_488);
     // Assert the ceiling against the computed aggregate, not against the literal on
     // the line above it — comparing two constants proves nothing about the build.
     expect(freshAggregate).toBeLessThanOrEqual(34_868);

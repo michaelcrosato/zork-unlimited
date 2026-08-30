@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   compactOverworldEventScenes,
-  compactOverworldView,
   OVERWORLD_COMPACT_VIEW_VERSION,
 } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -16,15 +15,7 @@ import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_
 
 const WORLD = loadOverworldManifest(process.cwd());
 const EVENT_ID = "albany_city__civic_core__event";
-const EVENT_PAUSED_MESSAGE = "No authored choice is currently available in this journey state.";
-const EVENT_INVESTIGATE_MESSAGE = "Required first: investigate this event.";
 const STORY_ACTION_BLOCKED_MESSAGE = "Choose the open story option before taking another action.";
-
-function expectEventLeadParity(session: OverworldSession, message: string): void {
-  const compact = session.compactView();
-  expect(compact).toEqual(compactOverworldView(session.view()));
-  expect(compact.event_leads?.[0]?.[2]).toBe(message);
-}
 
 function expectInvestigationRejectedWithoutMutation(
   session: OverworldSession,
@@ -79,9 +70,8 @@ describe("progressive authored-event disclosure", () => {
 
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.events).toContainEqual([EVENT_ID, event.title]);
-    expect(compact.event_leads).toEqual([
-      [EVENT_ID, event.summary, "Required first: scout Albany Civic Center Notice Board."],
-    ]);
+    expect(event.authored_scene.advertise_blocked_lead).toBe(false);
+    expect(compact.event_leads).toBeUndefined();
     expect(compact.event_scenes).toBeUndefined();
     expect(JSON.stringify(compact)).not.toContain(event.authored_scene.prompt);
     for (const option of event.authored_scene.options) {
@@ -99,14 +89,10 @@ describe("progressive authored-event disclosure", () => {
     if (!event?.authored_scene) throw new Error("Expected Albany's authored Civic event.");
 
     session.scoutPoi("albany_city__civic_core__poi");
-    expect(session.compactView().event_leads?.[0]?.[2]).toBe(
-      "Required first: talk to Rowan Quill.",
-    );
+    expect(session.compactView().event_leads).toBeUndefined();
     session.talkToCharacter("albany_city__civic_core__contact");
     settleAlbanyOpening(session);
-    expect(session.compactView().event_leads?.[0]?.[2]).toBe(
-      "Required first: investigate this event.",
-    );
+    expect(session.compactView().event_leads).toBeUndefined();
     expect(session.compactView().event_scenes).toBeUndefined();
 
     session.investigateEvent(EVENT_ID);
@@ -120,38 +106,38 @@ describe("progressive authored-event disclosure", () => {
 
   it("advertises only executable event prerequisites through every Albany opening choice", () => {
     const session = new OverworldSession(WORLD);
-    expectEventLeadParity(session, "Required first: scout Albany Civic Center Notice Board.");
+    expect(session.compactView().event_leads).toBeUndefined();
 
     const beforeScout = session.snapshotHash();
     session.scoutPoi("albany_city__civic_core__poi");
     expect(session.snapshotHash()).not.toBe(beforeScout);
     expect(session.journey().storyChoice).toBeNull();
-    expectEventLeadParity(session, "Required first: talk to Rowan Quill.");
+    expect(session.compactView().event_leads).toBeUndefined();
 
     const beforeTalk = session.snapshotHash();
     session.talkToCharacter("albany_city__civic_core__contact");
     expect(session.snapshotHash()).not.toBe(beforeTalk);
     expect(session.journey().storyChoice?.id).toBe(WORLD.opening_registration!.id);
-    expectEventLeadParity(session, EVENT_PAUSED_MESSAGE);
+    expect(session.compactView().event_leads).toBeUndefined();
     expect(session.compactView().service_actions).toBeUndefined();
     expectInvestigationRejectedWithoutMutation(session, STORY_ACTION_BLOCKED_MESSAGE);
 
     session.chooseJourneyStory("albany:ledger_advocate");
     revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
     expect(session.journey().storyChoice?.id).toBe(WORLD.opening_relief_oath!.id);
-    expectEventLeadParity(session, EVENT_PAUSED_MESSAGE);
+    expect(session.compactView().event_leads).toBeUndefined();
     expect(session.compactView().service_actions).toBeUndefined();
     expectInvestigationRejectedWithoutMutation(session, STORY_ACTION_BLOCKED_MESSAGE);
 
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     expect(session.journey().storyChoice?.id).toBe(WORLD.opening_lead_source!.id);
-    expectEventLeadParity(session, EVENT_PAUSED_MESSAGE);
+    expect(session.compactView().event_leads).toBeUndefined();
     expect(session.compactView().service_actions).toBeUndefined();
     expectInvestigationRejectedWithoutMutation(session, STORY_ACTION_BLOCKED_MESSAGE);
 
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     expect(session.journey().storyChoice).toBeNull();
-    expectEventLeadParity(session, EVENT_INVESTIGATE_MESSAGE);
+    expect(session.compactView().event_leads).toBeUndefined();
     expect(session.compactView().service_actions).toBeDefined();
 
     session.investigateEvent(EVENT_ID);
@@ -167,7 +153,7 @@ describe("progressive authored-event disclosure", () => {
     checkpoint.exploreArea("albany_city__civic_core");
     pauseAtAlbanyCheckpoint(checkpoint);
 
-    expectEventLeadParity(checkpoint, EVENT_PAUSED_MESSAGE);
+    expect(checkpoint.compactView().event_leads).toBeUndefined();
     expect(checkpoint.compactView().service_actions).toBeUndefined();
     expectInvestigationRejectedWithoutMutation(
       checkpoint,
@@ -177,7 +163,7 @@ describe("progressive authored-event disclosure", () => {
     const boundary = checkpoint.snapshot();
     const continued = OverworldSession.restore(WORLD, boundary);
     continued.chooseJourney("continue");
-    expectEventLeadParity(continued, EVENT_INVESTIGATE_MESSAGE);
+    expect(continued.compactView().event_leads).toBeUndefined();
     expect(continued.compactView().service_actions).toBeDefined();
     continued.investigateEvent(EVENT_ID);
     expect(continued.compactView().event_choices).toEqual([
@@ -187,7 +173,7 @@ describe("progressive authored-event disclosure", () => {
 
     const ended = OverworldSession.restore(WORLD, boundary);
     ended.chooseJourney("end");
-    expectEventLeadParity(ended, EVENT_PAUSED_MESSAGE);
+    expect(ended.compactView().event_leads).toBeUndefined();
     expect(ended.compactView().service_actions).toBeUndefined();
     expectInvestigationRejectedWithoutMutation(ended, "This journey has ended.");
   });
@@ -204,9 +190,7 @@ describe("progressive authored-event disclosure", () => {
     pauseAtAlbanyCheckpoint(session);
     expect(session.compactView().event_scenes).toBeUndefined();
     expect(session.compactView().event_choices).toBeUndefined();
-    expect(session.compactView().event_leads?.[0]?.[2]).toBe(
-      "No authored choice is currently available in this journey state.",
-    );
+    expect(session.compactView().event_leads).toBeUndefined();
 
     session.chooseJourney("continue");
     expect(session.compactView().event_leads).toBeUndefined();

@@ -33,8 +33,8 @@ import { applyOverworldQuestLaunchOption } from "../../src/world/quest_launch.js
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
-const NORTH_PENDING_GUIDANCE =
-  "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
+const NORTH_LURE_PENDING_GUIDANCE =
+  "North is blocked. Finish the shown LURE action first. Feed is west; the hatch is west then up.";
 
 const world = loadOverworldManifest(process.cwd());
 const preparation =
@@ -1002,7 +1002,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     );
     expect(splitGuardObservation.blocked_exits).toContainEqual({
       direction: "north",
-      message: NORTH_PENDING_GUIDANCE,
+      message: NORTH_LURE_PENDING_GUIDANCE,
     });
     expect(splitGuardCompact.text).toMatch(
       /CALL Jamie's sealed relief protocol[^]*used once here/i,
@@ -1010,7 +1010,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(splitGuardCompact.actions).toEqual(
       expect.arrayContaining(["use_relief_protocol_docket", "go_west"]),
     );
-    expect(splitGuardCompact.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+    expect(splitGuardCompact.blocked).toContainEqual(["north", NORTH_LURE_PENDING_GUIDANCE]);
 
     splitGuard = act(splitGuard, "use_relief_protocol_docket");
     expect(splitGuard.flags.relief_protocol_attempted).toBe(true);
@@ -1027,11 +1027,11 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     );
     expect(afterProtocol.blocked_exits).toContainEqual({
       direction: "north",
-      message: NORTH_PENDING_GUIDANCE,
+      message: NORTH_LURE_PENDING_GUIDANCE,
     });
     expect(afterProtocolCompact.actions).toContain("go_west");
     expect(afterProtocolCompact.actions).not.toContain("use_relief_protocol_docket");
-    expect(afterProtocolCompact.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+    expect(afterProtocolCompact.blocked).toContainEqual(["north", NORTH_LURE_PENDING_GUIDANCE]);
 
     let braced = foulFirstCast(profileState(RELIEF, LEDGER));
     braced = act(braced, "wedge_paling_rail", 20);

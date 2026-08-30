@@ -83,7 +83,7 @@ const OPENING_CLARITY_SOURCE_HASH =
 const CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH =
   "99afa4a376f7c18a6871a784473d375773661032000cabe7171bfbe1742755fa";
 const CLEAR_PROSE_REWRITE_SOURCE_HASH =
-  "8e950b43ce3da425397192365aec6f6ea29ab78b41f572a136154fdb07c80fbc";
+  "a75b266898ff45a388d455ad400c04b678ab3415895e7ff9eb42266278dbae06";
 const CADE_PEER_PLAN_PARITY_SOURCE_HASH =
   "08ddb7ce41d319fa34db896ba032cbf69edcf0b0d2a5fd413c457b28091be777";
 const YEARLING_DEFEAT_JOURNAL = "The yearling wolf is dead at the Broken Paling.";
@@ -551,9 +551,7 @@ describe("Wolf-Winter compact authored prose", () => {
       expect(reselected.actions).not.toContain("ask_quick_lesson");
       expect(reselected.dialogue?.[1]).toMatch(/Choose LURE here/i);
       if (limitedDuty) {
-        expect(reselected.dialogue?.[1]).toMatch(
-          /Aid-Only oath prevents LURE's final \+1 cattle alarm/i,
-        );
+        expect(reselected.dialogue?.[1]).toMatch(/skips the last feed's \+1, not the first/i);
       }
 
       state = actById(state, "ask_commit_lure");

@@ -51,7 +51,7 @@ function storyChoiceResult(
     goal: {
       version: 1,
       id: "albany_local_lead",
-      text: "Find one local lead in Albany and see it through.",
+      text: "Complete Wolf-Winter in Albany.",
       status: "active",
       completedAtDecision: null,
     },

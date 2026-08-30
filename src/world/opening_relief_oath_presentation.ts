@@ -73,8 +73,9 @@ const STANDARD_PACKET_SUPPORT_COPY: Readonly<
     expectedReliefOathTitle: "Accept Full Compact Authority",
     expectedLeadSourceOptionId: "albany:source_rowan_civic_docket",
     expectedLeadSourceTitle: "Use Rowan's Public Report",
-    expectedTriggerCategory: "Repair 4; first public-seal FORTIFY check is 2 DC easier.",
-    outcome: "Start with public authority and a stronger first FORTIFY Repair check.",
+    expectedTriggerCategory: "Repair 4; first public-seal FORTIFY Repair is DC 12 instead of 14.",
+    outcome:
+      "Start with public authority and a first public-seal FORTIFY Repair of DC 12 instead of 14.",
   }),
   "albany:doctrine_road_warden_aid_route": Object.freeze({
     dispatchLabel: "Ready-made setup — Aid-Only + Hayden's report",
@@ -84,7 +85,7 @@ const STANDARD_PACKET_SUPPORT_COPY: Readonly<
     expectedLeadSourceOptionId: "albany:source_hayden_frost_report",
     expectedLeadSourceTitle: "Use Hayden's Frost Report",
     expectedTriggerCategory:
-      "Defense starts at 4. A clean first LURE feed prevents the final +1 cattle alarm. A split rail can help HUNT.",
+      "Defense 4. First LURE LAY still +1; last feed skips +1 if that LAY succeeded. Split rail can help HUNT.",
     outcome:
       "Start with Defense 4, the clean-feed LURE benefit, and Hayden's conditional HUNT brace.",
   }),

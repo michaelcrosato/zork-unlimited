@@ -764,7 +764,7 @@ describe("MCP pure play mode", () => {
         const selectedRoleText = textResult(selectedRoleCall);
         const selectedRole = textPayload(selectedRoleCall);
         expect(selectedRoleCall.isError).not.toBe(true);
-        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBe(5_792);
+        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBe(5_523);
         expect(Buffer.byteLength(selectedRoleText, "utf8")).toBeLessThanOrEqual(6_400);
         expect((selectedRole.result as { consequence?: string }).consequence).toContain(
           "In Wolf-Winter, Defense starts at 4 instead of 3.",
@@ -786,7 +786,7 @@ describe("MCP pure play mode", () => {
             }
           ).inspectedOption?.consequence,
         ).toContain(
-          "Benefit: Defense starts at 4. A clean first LURE feed prevents the final +1 cattle alarm. A split rail can help HUNT.",
+          "Benefit: Defense 4. First LURE LAY still +1; last feed skips +1 if that LAY succeeded. Split rail can help HUNT.",
         );
 
         const selectedDispatchCall = await client.callTool({
@@ -809,7 +809,7 @@ describe("MCP pure play mode", () => {
         ).toBe(true);
         expect(selectedDispatchText.split(readyDispatchStatus)).toHaveLength(3);
         expect(selectedDispatchText).not.toContain("optional Station support remains");
-        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(7_695);
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(7_500);
         expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBeLessThanOrEqual(9_250);
         expect(selectedDispatchText).not.toMatch(/\b(?:DEF|DRIVE|FORTIFY)\b/gu);
         expect(selectedDispatchText).not.toMatch(/\bWorks\b/gu);
@@ -818,7 +818,7 @@ describe("MCP pure play mode", () => {
         );
         const consequence = (selectedDispatch.result as { consequence?: string }).consequence;
         expect(consequence).toBe(
-          "Defense starts at 4 instead of 3. If the first LURE feed succeeds, cattle alarm rises one less at the end. Hayden's report can unlock a HUNT brace after a rail splits. Cost: 10 minutes and $0. Cost: 10 minutes and $0. Specialist preparation, the wagon, June, and both roads remain available. Background: Road Warden. Promise: Accept Aid-Only Terms. Report: Use Hayden's Frost Report.",
+          "Defense starts at 4 instead of 3. The first successful LURE LAY still raises cattle alarm as listed; Aid-Only then skips the last feed's +1, not the first. Hayden's report can unlock a HUNT brace after a rail splits. Cost: 10 minutes and $0. Cost: 10 minutes and $0. Specialist preparation, the wagon, June, and both roads remain available. Background: Road Warden. Promise: Accept Aid-Only Terms. Report: Use Hayden's Frost Report.",
         );
         expect(consequence).not.toMatch(
           /\b(?:DEF|DRIVE|FORTIFY|Works)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public (?:fence )?(?:brace|wedge)|yearling|bare spear|field-team|relief allocation/gu,
@@ -2255,7 +2255,7 @@ describe("MCP pure play mode", () => {
       );
       expect(fullJuneText.split(preparedDispatchStatus)).toHaveLength(3);
       expect(fullJuneText).not.toContain("optional Station support remains");
-      expect(Buffer.byteLength(fullJuneText, "utf8")).toBe(7_915);
+      expect(Buffer.byteLength(fullJuneText, "utf8")).toBe(7_842);
     });
   }, 120_000);
 
@@ -3483,7 +3483,7 @@ describe("MCP pure play mode", () => {
         );
         if (!cattleFirst) throw new Error("expected June's visible cattle-first option");
         const juneModalBytes = Buffer.byteLength(JSON.stringify(juneConversation), "utf8");
-        expect(juneModalBytes).toBe(3_493);
+        expect(juneModalBytes).toBe(3_420);
         expect(juneModalBytes).toBeLessThanOrEqual(4_000);
         const inspectedAlly = textPayload(
           await client.callTool({
@@ -3943,7 +3943,7 @@ describe("MCP pure play mode", () => {
           ask_byre:
             "ask: PREPARE SUPPORT — Learn the guarded HUNT tactic. This does not choose HUNT.",
           ask_hunt: CADE_HUNT_INSPECT_COMMAND,
-          ask_leave: "ask: LEAVE — Exit without choosing a plan.",
+          ask_leave: "ask: LEAVE — Return to the yard.",
         });
         const huntAction = labeledActions.find((action) => action.id === "ask_hunt");
         expect(MCP_ACTION_LABEL_CHAR_LIMIT).toBe(160);

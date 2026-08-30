@@ -21,6 +21,7 @@ import type { GameState } from "../core/state.js";
 import type {
   DialogueNode,
   Ending,
+  Exit,
   GameObject,
   Interaction,
   Npc,
@@ -146,6 +147,11 @@ export { isOpen, locateObject };
 
 export function roomDescription(room: Room, state: GameState): string {
   return reactiveText(room.description, room.variants, state);
+}
+
+export function exitLockedMessage(exit: Exit, state: GameState): string | undefined {
+  if (exit.locked_msg === undefined) return undefined;
+  return reactiveText(exit.locked_msg, exit.locked_msg_variants, state);
 }
 
 export function objectDescription(object: GameObject, state: GameState): string {

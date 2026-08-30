@@ -35,6 +35,8 @@ const ORDINARY_LURE_SEED = seedForSeededOpeningFlag(
 );
 const NORTH_PENDING_GUIDANCE =
   "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
+const NORTH_LURE_PENDING_GUIDANCE =
+  "North is blocked. Finish the shown LURE action first. Feed is west; the hatch is west then up.";
 const PALING_NORTH_GUIDANCE =
   "North is blocked. Complete the currently listed yearling or outer-seal action. During LURE, go south, west, and up, then CAST Cade's winter-feed sack THROUGH low wolf-hatch.";
 const YEARLING_DEFEAT_JOURNAL = "The yearling wolf is dead at the Broken Paling.";
@@ -205,9 +207,9 @@ function lureRoute(
   expect(pickup.actionIds).not.toContain("go_north");
   expect(pickup.full.blocked_exits).toContainEqual({
     direction: "north",
-    message: NORTH_PENDING_GUIDANCE,
+    message: NORTH_LURE_PENDING_GUIDANCE,
   });
-  expect(pickup.compact.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+  expect(pickup.compact.blocked).toContainEqual(["north", NORTH_LURE_PENDING_GUIDANCE]);
   act("go_west");
   act("take_winter_feed_sack");
   act("go_east");
@@ -289,9 +291,9 @@ function lureRoute(
     expect(protocol.actionIds).not.toContain("go_north");
     expect(protocol.full.blocked_exits).toContainEqual({
       direction: "north",
-      message: NORTH_PENDING_GUIDANCE,
+      message: NORTH_LURE_PENDING_GUIDANCE,
     });
-    expect(protocol.compact.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+    expect(protocol.compact.blocked).toContainEqual(["north", NORTH_LURE_PENDING_GUIDANCE]);
     act("use_relief_protocol_docket");
   }
   const { full: yard, compact: compactYard } = exactYardProjection(
@@ -304,10 +306,10 @@ function lureRoute(
   expect(state.flags.june_pike_present).not.toBe(true);
   expect(yard.blocked_exits).toContainEqual({
     direction: "north",
-    message: NORTH_PENDING_GUIDANCE,
+    message: NORTH_LURE_PENDING_GUIDANCE,
   });
   expect(compactYard.actions).toContain("go_west");
-  expect(compactYard.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+  expect(compactYard.blocked).toContainEqual(["north", NORTH_LURE_PENDING_GUIDANCE]);
   expect(NORTH_PENDING_GUIDANCE).toMatch(
     /Before HUNT[^]*TALK TO Road Warden June Pike[^]*During LURE[^]*shown CALL or feed action[^]*feed is west[^]*hatch is west then up[^]*During DRIVE or FORTIFY[^]*shown gear action/i,
   );

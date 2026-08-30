@@ -144,7 +144,7 @@ describe("compact legends", () => {
 
     expect(started.legend).toEqual(expectedLegendFor(started.context as Record<string, unknown>));
     expectLegendCovers(started.legend!, started.context as Record<string, unknown>);
-    expect(Object.keys(started.legend!)).toHaveLength(15);
+    expect(Object.keys(started.legend!)).toHaveLength(14);
     expect(JSON.stringify(started.legend).length).toBeLessThanOrEqual(3_100);
     expect(JSON.stringify(started.legend).length).toBeLessThan(
       JSON.stringify(OVERWORLD_COMPACT_LEGEND).length * 0.3,
