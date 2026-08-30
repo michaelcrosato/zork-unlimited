@@ -55,3 +55,7 @@ secrets.json
 # hundreds of session directories, and a dev loop whose worktree is never clean
 # cannot take a provisional commit.
 ai-runs/playtest/
+
+# Lane worktrees (docs/parallel_lanes.md): linked checkouts live under here; an
+# unignored worktree directory would show as untracked noise in every status.
+.claude/worktrees/

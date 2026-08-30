@@ -45,6 +45,11 @@ The dev loop reads it at the start of a cycle; it never waits for it. An empty
 queue is normal and means the assessor's own candidates carry the cycle (set
 `AI_LOOP_IDLE_WHEN_EMPTY=1` to wait instead).
 
+Running several lanes at once — worktree-per-lane, claim identity/leases, and
+the single-writer map — is `docs/parallel_lanes.md`. The human-facing ticket
+mirror of the intake queue is `docs/linear_workflow.md`; the repo queue always
+wins disagreements.
+
 ## The dev loop (one cycle)
 
 `loop.sh` is the repository's reference driver for this protocol;
@@ -78,13 +83,14 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    still needed Codex installed. The seal now treats those artifacts as **optional**:
    absent, it seals the acceptance marker alone; present, it verifies them exactly as
    it always did, including the pure-V2-sidecar-bound-to-the-provisional-commit check.
-   Publishing evidence or a sidecar *without* a report is rejected as an incomplete
+   Publishing evidence or a sidecar _without_ a report is rejected as an incomplete
    publication rather than silently skipped, so the weakest state cannot masquerade as
    the strongest.
 
    A dev cycle is therefore vendor-neutral end to end: any agent that reads STDIN,
    edits files and exits nonzero on failure can drive it, with no second vendor
    required to land the work.
+
 6. **Compile feedback (prompted-agent step)** — run `npm run feedback:status`.
    It verifies the local report ledger plus hash-bound pending cycle reports against
    the last accepted report manifest. Run `npm run feedback:compile` only when status
