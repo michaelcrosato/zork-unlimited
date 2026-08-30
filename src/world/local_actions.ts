@@ -21,22 +21,6 @@ export type OverworldLocalActionDescriptor<Kind extends OverworldLocalActionKind
   regionalRenown?: number;
 };
 
-export type OverworldLocalJournalEntry<Kind extends OverworldLocalActionKind> = {
-  kind: Kind;
-  title: string;
-  text: string;
-};
-
-export function localActionJournalEntry<Kind extends OverworldLocalActionKind>(
-  action: OverworldLocalActionDescriptor<Kind>,
-): OverworldLocalJournalEntry<Kind> {
-  return {
-    kind: action.kind,
-    title: action.title,
-    text: action.text,
-  };
-}
-
 export function describeOverworldAreaAction(
   area: OverworldArea,
 ): OverworldLocalActionDescriptor<"area"> {

@@ -40,12 +40,9 @@ export type OverworldSessionIndexes = {
   areaExitsByArea: Map<string, OverworldAreaExit[]>;
   areaExitsByAreaAndId: Map<string, Map<string, OverworldAreaExit>>;
   poisById: Map<string, OverworldPoi>;
-  poisByTown: Map<string, OverworldPoi[]>;
   poisByArea: Map<string, OverworldPoi[]>;
   charactersById: Map<string, OverworldCharacter>;
-  charactersByTown: Map<string, OverworldCharacter[]>;
   charactersByArea: Map<string, OverworldCharacter[]>;
-  eventsByTown: Map<string, OverworldLocalEvent[]>;
   eventsByArea: Map<string, OverworldLocalEvent[]>;
   localEventsById: Map<string, OverworldLocalEvent>;
   jobsById: Map<string, OverworldLocalJob>;
@@ -73,31 +70,16 @@ export function buildOverworldSessionIndexes(world: OverworldManifest): Overworl
   );
   const areaExitsByArea = indexAreaExits(world, areasById);
   const poisById = idIndex(world.points_of_interest);
-  const poisByTown = sortedIndex(
-    world.points_of_interest,
-    (poi) => poi.home,
-    (a, b) => a.title.localeCompare(b.title),
-  );
   const poisByArea = sortedIndex(
     world.points_of_interest,
     (poi) => poi.area,
     (a, b) => a.title.localeCompare(b.title),
   );
   const charactersById = idIndex(world.characters);
-  const charactersByTown = sortedIndex(
-    world.characters,
-    (character) => character.home,
-    (a, b) => a.name.localeCompare(b.name),
-  );
   const charactersByArea = sortedIndex(
     world.characters,
     (character) => character.area,
     (a, b) => a.name.localeCompare(b.name),
-  );
-  const eventsByTown = sortedIndex(
-    world.local_events,
-    (event) => event.home,
-    (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
   );
   const eventsByArea = sortedIndex(
     world.local_events,
@@ -162,12 +144,9 @@ export function buildOverworldSessionIndexes(world: OverworldManifest): Overworl
     areaExitsByArea,
     areaExitsByAreaAndId: nestedIdIndex(areaExitsByArea),
     poisById,
-    poisByTown,
     poisByArea,
     charactersById,
-    charactersByTown,
     charactersByArea,
-    eventsByTown,
     eventsByArea,
     localEventsById,
     jobsById,

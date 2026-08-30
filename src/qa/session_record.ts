@@ -56,6 +56,24 @@ export const PlaytestOutcomeSchema = z.enum([
 ]);
 export type PlaytestOutcome = z.infer<typeof PlaytestOutcomeSchema>;
 
+const PlaytestTranscriptFilenameSchema = z
+  .string()
+  .min(1)
+  .superRefine((filename, ctx) => {
+    if (
+      filename === "." ||
+      filename === ".." ||
+      /[\\/]/u.test(filename) ||
+      filename.toLowerCase() === "session.json"
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "transcript_filename must be a plain filename distinct from the reserved session.json record",
+      });
+    }
+  });
+
 /**
  * The play-style overlay the session ran under — "the role".
  *
@@ -84,13 +102,14 @@ export const PlaytestProviderStampSchema = z
     /**
      * For `runner_enforced` sessions: what the runner actually observed of the client
      * (resolved binary path, reported version, session id). Absent for
-     * `operator_attested` sessions, where by definition there is nothing to observe.
+     * `operator_attested` sessions, where there is no accepted client-capture proof.
      */
     client_evidence: z.record(z.string()).optional(),
     /**
-     * For `operator_attested` sessions: who asserted the tool boundary and how.
+     * For `operator_attested` sessions: who or which dedicated harness asserted the
+     * intended tool boundary, and how.
      * Required there, forbidden elsewhere — an attestation on a runner-enforced run
-     * would imply a human vouched for something the machine already proved.
+     * would duplicate something the accepted capture reader already proved.
      */
     operator_attestation: z
       .object({
@@ -145,7 +164,10 @@ export const PlaytestLogSchema = z
     turns: z.number().int().nonnegative(),
     /** Meaningful decisions the journey contract accepted, when the run reached an exit. */
     accepted_decisions: z.number().int().nonnegative().nullable(),
-    transcript_filename: z.string().min(1),
+    // Kept beside session.json. Reject paths and the record's own filename so a
+    // hand-ingested transcript cannot escape the staging directory or overwrite the
+    // immutable record before its atomic rename.
+    transcript_filename: PlaytestTranscriptFilenameSchema,
     transcript_sha256: SHA256,
     transcript_bytes: z.number().int().nonnegative(),
   })

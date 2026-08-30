@@ -16,9 +16,9 @@
  *    is evidence; silently dropping those runs is how a corpus becomes a
  *    survivorship-biased advertisement for itself.
  *
- * 2. IT NEVER OVERSTATES PROVENANCE. Isolation comes from the provider registry, not
- *    from a flag, so only a provider the runner actually owns the process of is stamped
- *    `runner_enforced`. The recorder cannot be talked into labelling a run as proven.
+ * 2. IT NEVER OVERSTATES PROVENANCE. Only a provider the runner actually owns the
+ *    process of is stamped `runner_enforced`. Any weaker lane requires an explicit
+ *    operator attestation; the recorder cannot be talked into labelling a run as proven.
  *
  * Usage (called by playtest-loop.sh; also fine by hand):
  *   npm run playtest:record -- --out <run.sh --out prefix> \
@@ -213,10 +213,34 @@ function main(): void {
     );
   }
 
+  const recordedAt = new Date().toISOString();
+  let operatorAttestation:
+    | {
+        attested_by: string;
+        method: string;
+        attested_at: string;
+      }
+    | undefined;
+  if (runnerIsolation === "operator_attested") {
+    const attestedBy = arg("--attested-by");
+    const method = arg("--method");
+    if (!attestedBy || !method) {
+      throw new Error(
+        `recording ${provider.id} as operator_attested requires both --attested-by and ` +
+          `--method; use npm run playtest:ingest for a manually driven session`,
+      );
+    }
+    operatorAttestation = {
+      attested_by: attestedBy,
+      method,
+      attested_at: recordedAt,
+    };
+  }
+
   const transcript = evidenceText ?? reportText ?? "";
   const body: PlaytestSessionBody = {
     schema_version: 1,
-    recorded_at: new Date().toISOString(),
+    recorded_at: recordedAt,
     game_session_id: pureSidecar?.session_id ?? arg("--game-session-id") ?? `unknown-${outPrefix}`,
     run_seed: pureSidecar?.run_seed ?? Number.parseInt(arg("--seed") ?? "0", 10),
     build,
@@ -234,6 +258,7 @@ function main(): void {
       // Downgrade, and say so, rather than trusting a field that is describing potential.
       isolation: runnerIsolation,
       transport_contract: provider.transportContract,
+      ...(operatorAttestation ? { operator_attestation: operatorAttestation } : {}),
     },
     model: { id: model.id, tier: model.tier, settings: model.settings },
     persona: {

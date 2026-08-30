@@ -266,7 +266,12 @@ contains clarity/enjoyment, severity-tagged findings, replay intent, and the
 exact game-returned journey receipt (schema in `src/blind/exit_interview.ts`).
 The verifier cross-checks it against server-authored fresh-start/exit evidence;
 legacy, structural, timed-out, or mismatched runs cannot count as pure retention
-evidence or resume a pure fleet member.
+evidence or resume a pure fleet member. A separate
+`npm run playtest:grok-wave` lane can launch 100 Grok Build players against the
+same pure server contract. It binds each report to private V2 server evidence,
+but remains `operator_attested` because this checkout cannot yet audit Grok's
+complete client tool surface; those reports corroborate bugs but do not move
+retention or clarity metrics.
 
 ```bash
 npm run crawl:smoke                               # Tier 1: mechanical gate, all quests + overworld
@@ -274,17 +279,19 @@ npm run blind                                     # Tier 2 DEFAULT: canonical pu
 npm run blind:smoke                               # explicit structural harness check, no LLM/tokens
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # structural quest check, no LLM
 npm run fleet -- --count 100                      # milestone: 100 pure fresh-world players
+npm run playtest:grok-wave -- --plan-only         # inspect the dedicated Grok 4.6 instant-thinking plan
+npm run playtest:grok-wave -- --count 100 --concurrency 4 # operator-attested, evidence-bound Grok wave
 npm run fleet:mock -- --count 2                   # structural zero-token CI lane
 npm run feedback:compile                          # Tier 3: hot spots + pure retention summary
 ```
 
-The blind harness drives whichever subscription CLI the provider registry
-(`src/blind/providers.ts`) names, through a runner-enforced no-file, no-shell,
-no-web tool boundary — no vendor is privileged, and adding one is a registry
-entry plus an operator-owned model catalog under `blind-tester/catalogs/`.
-Vendors that ship no CLI are played through their own client and recorded with
-`npm run playtest:ingest`; those sessions are stamped `operator_attested`, count
-toward bug corroboration, and are excluded from experience metrics. Arbitrary
+The generic blind harness drives only providers for which this checkout has both
+a hardened launch path and an auditable capture reader. Provider privilege is
+derived from those capabilities rather than a vendor name. Other clients are
+recorded with `npm run playtest:ingest`, while Grok Build has the dedicated
+`npm run playtest:grok-wave` batch lane described above. Both paths stamp
+`operator_attested`, count toward bug corroboration, and remain excluded from
+experience metrics. Arbitrary
 `BLIND_AGENT_CMD` overrides are still rejected for pure runs because their
 blindness cannot be verified. Live play is
 NOT part of CI or the health bar (a structural mock fleet run is — see
@@ -293,8 +300,10 @@ authoring/repair agents (`bin/author.ts`, the debugger/fixer) run against a
 deterministic, keyless `MockAuthorProvider` behind the small `Provider`
 interface (`agents/llm/`). The author fixture returns the same Lighthouse draft
 for every premise; what CI exercises is the real adapter → validator → revision
-loop, not open-ended prose generation. This is a public, no-runtime-LLM repo:
-there are no third-party LLM API keys or key-based provider backends in it.
+loop, not open-ended prose generation. The engine and CI require no runtime LLM
+or third-party API key. Optional blind-playtest commands use the operator's
+installed subscription clients; credentials are never passed into the game or
+committed to the repository.
 
 ## The flywheel — two independent loops
 
@@ -338,18 +347,23 @@ resolver all read it, so none can promise a lane another refuses. The registry's
 stored `isolation` is kept only as a second witness — disagree with the derivation
 and the registry fails to parse, so no vendor can be talked into the strong label by
 editing JSON. `bin/record-playtest-session.ts` likewise downgrades to
-`operator_attested`, loudly, rather than sealing a label this checkout cannot back.
+`operator_attested`, loudly, rather than sealing a label this checkout cannot back;
+that path requires explicit `--attested-by` and `--method` values and fails before
+writing if either is absent.
 
-Adding a vendor is five mechanical steps and no gate edit: registry entry, capture
-block, reader module, launch branch, one line in the implemented list. Today Codex
-is live; Claude Code is provable (`blind-tester/claude-session.mjs`) and awaiting a
-launch branch; Gemini and Grok are ingest-only. Vendors without a live lane are
-played in their own client and recorded with `npm run playtest:ingest`, landing
-`operator_attested`: counted toward bug corroboration, excluded from experience
-metrics. Arbitrary `BLIND_AGENT_CMD` overrides are still rejected for pure runs
-because their blindness cannot be verified.
+Adding a generic live provider is five mechanical steps and no gate edit: registry
+entry, capture block, reader module, launch branch, one line in the implemented
+list. Today Codex is live there; Claude Code is provable
+(`blind-tester/claude-session.mjs`) and awaiting a launch branch; Gemini remains
+ingest-only. Grok Build instead has a dedicated headless wave that isolates the
+pure game server and verifies its receipt/provenance while conservatively keeping
+the client `operator_attested`. Vendors without either lane are played in their own
+client and recorded with `npm run playtest:ingest`. Arbitrary `BLIND_AGENT_CMD`
+overrides are still rejected for pure runner-enforced runs because their blindness
+cannot be verified.
 
-`npm run doctor` reports which vendors a given machine can actually launch.
+`npm run doctor` reports which vendors the generic hardened runner can launch;
+`npm run playtest:grok-wave -- --plan-only` reports the dedicated Grok plan.
 
 Agent errors fail a dev cycle; a bounded durable failure ledger is shown by
 `npm run loop:status`. `npm run loop:status` / `npm run loop:stop` manage a

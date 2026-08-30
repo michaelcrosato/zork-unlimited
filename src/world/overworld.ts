@@ -665,42 +665,10 @@ export function overworldEdgesFrom(world: OverworldManifest, nodeId: string): Ov
     );
 }
 
-export function overworldPoisAt(world: OverworldManifest, nodeId: string): OverworldPoi[] {
-  return world.points_of_interest
-    .filter((poi) => poi.home === nodeId)
-    .sort((a, b) => a.title.localeCompare(b.title));
-}
-
-export function overworldPoisInArea(world: OverworldManifest, areaId: string): OverworldPoi[] {
-  return world.points_of_interest
-    .filter((poi) => poi.area === areaId)
-    .sort((a, b) => a.title.localeCompare(b.title));
-}
-
 export function overworldAreasAt(world: OverworldManifest, nodeId: string): OverworldArea[] {
   return world.areas
     .filter((area) => area.home === nodeId)
     .sort((a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name));
-}
-
-export function overworldAreaEdgesFrom(
-  world: OverworldManifest,
-  areaId: string,
-): OverworldAreaExit[] {
-  const areas = new Map(world.areas.map((area) => [area.id, area]));
-  return world.area_edges
-    .filter((edge) => edge.from_area === areaId || edge.to_area === areaId)
-    .map((edge) => {
-      const destinationId = edge.from_area === areaId ? edge.to_area : edge.from_area;
-      const destination = areas.get(destinationId);
-      if (!destination)
-        throw new Error(`Overworld area edge references missing area "${destinationId}".`);
-      return { ...edge, destination };
-    })
-    .sort(
-      (a, b) =>
-        a.travel_minutes - b.travel_minutes || a.destination.name.localeCompare(b.destination.name),
-    );
 }
 
 export function overworldCharactersAt(
@@ -712,27 +680,9 @@ export function overworldCharactersAt(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function overworldCharactersInArea(
-  world: OverworldManifest,
-  areaId: string,
-): OverworldCharacter[] {
-  return world.characters
-    .filter((character) => character.area === areaId)
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
 export function overworldEventsAt(world: OverworldManifest, nodeId: string): OverworldLocalEvent[] {
   return world.local_events
     .filter((event) => event.home === nodeId)
-    .sort((a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title));
-}
-
-export function overworldEventsInArea(
-  world: OverworldManifest,
-  areaId: string,
-): OverworldLocalEvent[] {
-  return world.local_events
-    .filter((event) => event.area === areaId)
     .sort((a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title));
 }
 

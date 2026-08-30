@@ -2,11 +2,10 @@
 /**
  * Ingest a playtest session that the runner did not launch.
  *
- * This is the path for vendors that ship no headless CLI — today that means Grok, and
- * tomorrow it means whatever arrives before its tooling does. A human plays through a
- * desktop or web client wired to the AdventureForge MCP server, saves the transcript
- * and the exit interview, and this turns them into a first-class session record in the
- * same corpus the automated cohorts write to.
+ * This is the path for any session that the repository's runner did not launch. A human
+ * plays through a desktop, web, or unsupported CLI client wired to the AdventureForge
+ * MCP server, saves the transcript and exit interview, and this turns them into a
+ * first-class session record in the same corpus the automated cohorts write to.
  *
  * The one thing it will not do is lie about provenance. A session ingested this way is
  * stamped `operator_attested`, and the attestation naming who vouched for the tool
@@ -17,7 +16,7 @@
  *
  * Usage:
  *   npm run playtest:ingest -- \
- *     --provider grok_desktop --model grok-4-fast --persona cynical_veteran \
+ *     --provider grok_desktop --model grok-4.6 --persona cynical_veteran \
  *     --seed 1234 --game-session-id o-… \
  *     --transcript run.jsonl --report report.md \
  *     --attested-by "michael" --method "desktop client, AdventureForge MCP only"
@@ -32,7 +31,7 @@ import {
   JourneyExitReceiptSchema,
   SubjectiveExitInterviewSchema,
 } from "../src/blind/exit_interview.js";
-import { verifyBlindReportText } from "../src/blind/report_verifier.js";
+import { savePlaytestReport } from "../src/qa/save_playtest_report.js";
 import {
   findCatalogModel,
   findPlaytestProvider,
@@ -125,15 +124,57 @@ function main(): void {
   if (interviewFile) {
     absorb(JSON.parse(readFileSync(interviewFile, "utf8")));
   } else if (reportFile) {
-    const verified = verifyBlindReportText(readFileSync(reportFile, "utf8"));
-    if (verified.ok) {
-      absorb(verified.interview);
-    } else {
-      // Kept, not discarded. A report that failed verification is still a real
-      // playthrough and still evidence of something — often of the very confusion it
-      // failed to describe cleanly.
-      failureNote = `report did not verify: ${verified.reason}`;
+    const attestedByEarly = arg("--attested-by");
+    if (attestedByEarly === null) {
+      throw new Error(
+        `--attested-by is required: a session ingested by hand was not launched by the runner, ` +
+          `so it cannot be recorded as runner-enforced. Say who is vouching for the tool boundary ` +
+          `(and pass --method describing how).`,
+      );
     }
+    const explicitOutcome = arg("--outcome");
+    const recordedAt = arg("--recorded-at");
+    const buildCommit = arg("--build-commit");
+    const acceptedDecisions = arg("--accepted-decisions");
+    const saved = savePlaytestReport({
+      reportText: readFileSync(reportFile, "utf8"),
+      transcript,
+      store: arg("--store") ?? DEFAULT_SESSION_STORE,
+      providerId,
+      modelId: model.id,
+      personaId,
+      personaTitle,
+      seed: Number.parseInt(required("--seed"), 10),
+      gameSessionId: required("--game-session-id"),
+      attestedBy: attestedByEarly,
+      method: required("--method"),
+      ...(recordedAt === null ? {} : { recordedAt }),
+      ...(explicitOutcome === null
+        ? {}
+        : { requestedOutcome: PlaytestOutcomeSchema.parse(explicitOutcome) }),
+      turns: Number.parseInt(arg("--turns") ?? "0", 10),
+      acceptedDecisions: acceptedDecisions === null ? null : Number.parseInt(acceptedDecisions, 10),
+      ...(buildCommit === null ? {} : { buildCommit }),
+      transcriptFilename: basename(transcriptPath),
+    });
+    const record = saved.record;
+    console.log(
+      `Ingested ${record.record_id} (${record.provider.id}/${record.model.id}) → ${saved.dir}`,
+    );
+    console.log(
+      `  isolation: ${record.provider.isolation}; outcome: ${record.outcome}; ` +
+        `counts toward metrics: ${record.outcome === "completed" && record.provider.isolation === "runner_enforced"}`,
+    );
+    if (record.exit_interview === null) {
+      console.log(
+        `\n  ! No exit interview was captured, so this session contributes no issues to\n` +
+          `    triage — it is stored as provenance only.\n` +
+          `    reason: ${record.failure_note ?? "no report supplied"}\n` +
+          `    Fix the report and re-run: the record is content-addressed, so re-ingesting\n` +
+          `    the corrected one adds it rather than duplicating this.`,
+      );
+    }
+    return;
   }
 
   const explicitOutcome = arg("--outcome");

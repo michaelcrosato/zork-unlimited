@@ -54,6 +54,15 @@ describe("blind prompts reference only registered adventureforge tools", () => {
     expect(unknown, `${file} references unregistered tool(s)`).toEqual([]);
   });
 
+  it.each(promptFiles)("%s uses only real Grok adventureforge__* bridge names", (file) => {
+    const text = effectivePrompt(file);
+    const refs = [...text.matchAll(/(?<!mcp__)adventureforge__([a-z_]+)/g)].map(
+      (match) => match[1]!,
+    );
+    const unknown = [...new Set(refs)].filter((name) => !registered.has(name)).sort();
+    expect(unknown, `${file} references unregistered Grok bridge tool(s)`).toEqual([]);
+  });
+
   it("keeps the Terra game-direct transport on registered gameplay tools", () => {
     const template = readFileSync(join(PROMPT_DIR, "prompt-overworld.md"), "utf8");
     const transport = readFileSync(

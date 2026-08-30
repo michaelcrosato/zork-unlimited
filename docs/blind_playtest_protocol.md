@@ -16,7 +16,7 @@
 > `codex-pure-envelope.mjs`, `codex-strict-stream.mjs`). No equivalent reader
 > exists for another vendor, so `run.sh` refuses their pure runs outright:
 > `Provider "<id>" cannot produce pure evidence: this runner can only launch
-> "codex".` Until 2026-08-29 that refusal did not exist — a `claude_code` or
+"codex".` Until 2026-08-29 that refusal did not exist — a `claude_code` or
 > `gemini_cli` pure run passed the registry's `headless_cli` gate and then executed
 > `codex exec` under the other vendor's name. The only thing that stopped it was
 > the unrelated missing-`~/.codex` error, which does not fire on the documented AFK
@@ -25,16 +25,18 @@
 > Codex-specific sections below are therefore the only implemented hardened path,
 > not one worked example among several already available.
 >
-> Every other vendor — Grok, which ships no headless CLI, and today also
-> `claude_code` and `gemini_cli`, which have one the runner cannot yet audit — is
-> played through its own client and recorded with `npm run playtest:ingest`.
-> Those sessions are stamped `operator_attested`: kept in full and counted toward
-> bug corroboration, but excluded from experience metrics, because no code here
-> watched the client. One consequence is worth stating plainly: every headline
-> retention and clarity number in this repo is a measurement of Codex
-> specifically rather than of players in general.
+> `claude_code` and `gemini_cli` are played through their own client and recorded
+> with `npm run playtest:ingest` until the generic runner can audit and launch them.
+> Grok Build now has a separate headless `playtest:grok-wave` lane: it verifies a
+> private pure server's session, seed, build, world, and receipt, but no reader here
+> audits Grok's complete offered client tool surface. All three therefore remain
+> `operator_attested`: kept in full and counted toward bug corroboration, but
+> excluded from experience metrics. One consequence is worth stating plainly:
+> every headline retention and clarity number in this repo is currently a
+> measurement of Codex specifically rather than of players in general.
 >
-> `npm run doctor` reports what a given machine can actually launch. See
+> `npm run doctor` reports what the generic hardened runner can launch;
+> `npm run playtest:grok-wave -- --plan-only` reports the dedicated Grok plan. See
 > [`two_loop_workflow.md`](./two_loop_workflow.md).
 
 Blind playtests measure the experience a new player actually receives. They are
@@ -44,6 +46,20 @@ player-facing AdventureForge MCP surface.
 
 A normal cycle uses one player (`npm run blind`). A milestone or feedback
 harvest uses 100 independent players (`npm run fleet -- --count 100`).
+
+The alternative Grok batch is explicit and never part of the dev gate:
+
+```bash
+npm run playtest:grok-wave -- --plan-only
+npm run playtest:grok-wave -- --count 100 --concurrency 4
+```
+
+It refuses a dirty worktree before model spend, creates one native project MCP
+config per child, starts the server with `--play-mode pure` plus V2 provenance,
+captures Grok's NDJSON stream, and updates an ignored manifest after each member.
+The report must match the private server receipt exactly. This proves the game
+run, not the entire Grok client boundary, so the resulting session remains
+`operator_attested` and retention-ineligible.
 
 ## Two contracts that must not be mixed
 

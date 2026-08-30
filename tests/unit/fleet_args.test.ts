@@ -973,8 +973,8 @@ describe("fleet planning", () => {
   });
 
   it("refuses to launch a provider the fleet cannot own the process of", () => {
-    // Grok ships no headless CLI, so the fleet cannot prove its tool boundary. It must
-    // point at the ingest path instead of pretending it launched something.
+    // The desktop provider is intentionally distinct from the headless grok_cli lane. It
+    // points at the ingest path instead of pretending the generic fleet launched it.
     expect(() => parseFleetArgs(["--provider", "grok_desktop"])).toThrow(/desktop_client/);
     expect(() => parseFleetArgs(["--provider", "grok_desktop"])).toThrow(/playtest:ingest/);
   });

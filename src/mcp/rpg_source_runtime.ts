@@ -117,10 +117,9 @@ function rememberSourceCacheEntry<Key, Entry>(
   }
 }
 
-function schemaFindings(
-  sourcePath: string,
-  error: { issues: { message: string; path: (string | number)[] }[] },
-): Finding[] {
+function schemaFindings(error: {
+  issues: { message: string; path: (string | number)[] }[];
+}): Finding[] {
   return error.issues.map((i) => ({
     severity: "error" as const,
     code: "SCHEMA",
@@ -452,7 +451,7 @@ export class RpgSourceRuntime {
     if (!compileRes.ok) {
       result = freezeLoadResult({
         ok: false,
-        report: makeReport(sourcePath, schemaFindings(sourcePath, compileRes.error)),
+        report: makeReport(sourcePath, schemaFindings(compileRes.error)),
       });
       rememberSourceCacheEntry(this.sourceLoadCache, abs, {
         ctimeMs: stat.ctimeMs,

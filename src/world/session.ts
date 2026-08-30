@@ -223,7 +223,6 @@ import {
   planOverworldSessionEventResolution,
 } from "./session_event_lifecycle.js";
 import {
-  applyOverworldSessionCurrentAreaForTown,
   applyOverworldSessionLocalDiscoveryForTown,
   buildOverworldSessionCurrentLocalView,
   requireOverworldSessionCurrentAreaId,
@@ -523,12 +522,9 @@ export class OverworldSession {
   private readonly areaExitsByArea: Map<string, OverworldAreaExit[]>;
   private readonly areaExitsByAreaAndId: Map<string, Map<string, OverworldAreaExit>>;
   private readonly poisById: Map<string, OverworldPoi>;
-  private readonly poisByTown: Map<string, OverworldPoi[]>;
   private readonly poisByArea: Map<string, OverworldPoi[]>;
   private readonly charactersById: Map<string, OverworldCharacter>;
-  private readonly charactersByTown: Map<string, OverworldCharacter[]>;
   private readonly charactersByArea: Map<string, OverworldCharacter[]>;
-  private readonly eventsByTown: Map<string, OverworldLocalEvent[]>;
   private readonly eventsByArea: Map<string, OverworldLocalEvent[]>;
   private readonly localEventsById: Map<string, OverworldLocalEvent>;
   private readonly jobsById: Map<string, OverworldLocalJob>;
@@ -603,12 +599,9 @@ export class OverworldSession {
     this.areaExitsByArea = indexes.areaExitsByArea;
     this.areaExitsByAreaAndId = indexes.areaExitsByAreaAndId;
     this.poisById = indexes.poisById;
-    this.poisByTown = indexes.poisByTown;
     this.poisByArea = indexes.poisByArea;
     this.charactersById = indexes.charactersById;
-    this.charactersByTown = indexes.charactersByTown;
     this.charactersByArea = indexes.charactersByArea;
-    this.eventsByTown = indexes.eventsByTown;
     this.eventsByArea = indexes.eventsByArea;
     this.localEventsById = indexes.localEventsById;
     this.jobsById = indexes.jobsById;
@@ -2883,12 +2876,6 @@ export class OverworldSession {
     }
     if (applied.stateChanged || journeyDecision.countsTowardJourney) this.clearSessionCaches();
     return withJourneyDecision(cloneOverworldServiceResult(applied.result), journeyDecision);
-  }
-
-  private setCurrentAreaForTown(nodeId: string): void {
-    const applied = applyOverworldSessionCurrentAreaForTown(this.localState(), nodeId);
-    this.applyCurrentAreaState(applied);
-    if (applied.stateChanged) this.clearSessionCaches();
   }
 
   private currentArea(): OverworldArea | null {

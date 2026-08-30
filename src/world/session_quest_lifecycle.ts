@@ -77,9 +77,6 @@ export type MutableOverworldSessionQuestCompletionState = OverworldActionJournal
 export type OverworldSessionQuestStartState = OverworldSessionQuestStartPlanState &
   MutableOverworldSessionQuestStartState;
 
-export type OverworldSessionQuestCompletionState = OverworldSessionQuestCompletionPlanState &
-  MutableOverworldSessionQuestCompletionState;
-
 export type OverworldAppliedSessionQuestStart = OverworldSessionActionApplication & {
   quest: OverworldQuestView;
   characterAfter: CampaignCharacterState;
@@ -130,12 +127,6 @@ export function applyOverworldSessionQuestStart(
   };
 }
 
-export function applyOverworldSessionQuestStartFromState(
-  state: OverworldSessionQuestStartState,
-): OverworldAppliedSessionQuestStart {
-  return applyOverworldSessionQuestStart(state, planOverworldSessionQuestStart(state));
-}
-
 export function applyOverworldSessionQuestCompletion(
   state: MutableOverworldSessionQuestCompletionState,
   plan: OverworldQuestCompletionPlan,
@@ -170,10 +161,4 @@ export function applyOverworldSessionQuestCompletion(
     minutesAfter: applied.minutesAfter,
     stateChanged: applied.stateChanged,
   };
-}
-
-export function applyOverworldSessionQuestCompletionFromState(
-  state: OverworldSessionQuestCompletionState,
-): OverworldAppliedSessionQuestCompletion {
-  return applyOverworldSessionQuestCompletion(state, planOverworldSessionQuestCompletion(state));
 }

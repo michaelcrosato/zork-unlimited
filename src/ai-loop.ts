@@ -248,7 +248,7 @@ function main(): void {
   if (commitEnabled) {
     appendFileSync(
       "AI_LOOP_STATE.md",
-      formatLoopStateAppend(stamp, a, target, ultraplan, currentPlanRecord),
+      formatLoopStateAppend(stamp, a, ultraplan, currentPlanRecord),
     );
   }
 
@@ -425,7 +425,6 @@ export function buildPrompt(ctx: {
 export function formatLoopStateAppend(
   stamp: string,
   a: Assessment,
-  target: string,
   ultraplan: boolean,
   currentPlanRecord: string | null = null,
 ): string {
@@ -434,9 +433,8 @@ export function formatLoopStateAppend(
   // has to stay true of a cycle that plays nothing. The old entry advertised a per-cycle
   // playtest target and a blind-report guard; both were retired with the two-loop split,
   // and a ledger line asserting evidence nobody produced is the exact failure this
-  // subsystem exists to prevent. `target` stays in the signature because latest-cycle.json
-  // still records the launch contract (via playtestTargetSummary/playtestTargetMetadata)
-  // for whoever DOES play this build — the cycle just no longer claims to be that player.
+  // subsystem exists to prevent. The playtest launch contract remains in latest-cycle.json
+  // via playtestTargetSummary/playtestTargetMetadata, where it belongs.
   const text = [
     "",
     `## AFK Cycle ${stamp}${ultraplan ? " — ULTRAPLAN (saturation re-aim)" : ""}`,

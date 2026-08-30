@@ -77,17 +77,6 @@ export function recordOverworldSessionLocalAction(
   return applyOverworldSessionRecordedAction(recordOverworldLocalAction(state, action, town));
 }
 
-export function alreadyKnownOverworldSessionLocalAction(
-  entry: OverworldJournalEntry,
-): OverworldActionResult {
-  return {
-    minutes: 0,
-    alreadyKnown: true,
-    entry,
-    ...emptyOverworldLocalDiscovery(),
-  };
-}
-
 export function withOverworldSessionLocalDiscovery(
   result: OverworldActionResult,
   discovery: OverworldLocalDiscoveryResult | null,

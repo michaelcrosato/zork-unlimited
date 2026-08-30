@@ -32,11 +32,7 @@ import {
   type WorldActionCard,
   type WorldActionSection,
 } from "./OverworldPlayScreen.js";
-import {
-  presentServiceSection,
-  primaryWorldSectionIds,
-  serviceActionTitle,
-} from "./worldActionPresentation.js";
+import { presentServiceSection, primaryWorldSectionIds } from "./worldActionPresentation.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
@@ -440,54 +436,6 @@ function clearWorldSessionSave(): void {
   } catch {
     // Ignore storage failures; the fresh in-memory session still replaces play state.
   }
-}
-
-export function ServiceOfferTerms({
-  offer,
-  id,
-}: {
-  offer: OverworldView["serviceOffers"][number] | undefined;
-  id: string | undefined;
-}): JSX.Element | null {
-  if (!offer) return null;
-  return (
-    <small className="service-offer-terms" id={id}>
-      <strong>{offer.title}</strong>
-      {offer.providerName ? ` — From ${offer.providerName}.` : " —"} {offer.summary} (
-      {offer.minutes} min, one use)
-    </small>
-  );
-}
-
-export function ServiceAction({
-  serviceAction,
-  offer,
-  onActivate,
-}: {
-  serviceAction: OverworldView["serviceActions"][number];
-  offer: OverworldView["serviceOffers"][number] | undefined;
-  onActivate: () => void;
-}): JSX.Element {
-  const action = serviceAction.action;
-  const termsId = offer ? `service-offer-${action}-terms` : undefined;
-  const previewId = `service-action-${action}-preview`;
-  return (
-    <div>
-      <button
-        aria-describedby={[previewId, termsId].filter(Boolean).join(" ")}
-        aria-disabled={!serviceAction.available}
-        onClick={serviceAction.available ? onActivate : undefined}
-      >
-        {serviceActionTitle(action)}
-      </button>
-      <small className="service-action-preview" id={previewId}>
-        {serviceAction.message} {serviceAction.minutes} min · supplies{" "}
-        {serviceAction.suppliesBefore}→{serviceAction.suppliesAfter} · fatigue{" "}
-        {serviceAction.fatigueBefore}→{serviceAction.fatigueAfter}
-      </small>
-      <ServiceOfferTerms id={termsId} offer={offer} />
-    </div>
-  );
 }
 
 export function DepartureContactLead({

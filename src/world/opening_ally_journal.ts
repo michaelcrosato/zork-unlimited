@@ -75,18 +75,6 @@ export function openingAllyJournalDraft(args: {
   });
 }
 
-export function allOpeningAllyJournalDrafts(
-  scene: OpeningAlly,
-  character: CampaignCharacterState,
-): readonly OpeningAllyJournalDraft[] {
-  const parsed = parseOpeningAlly(scene);
-  return Object.freeze(
-    parsed.options.map((option) =>
-      openingAllyJournalDraft({ scene: parsed, character, optionId: option.id }),
-    ),
-  );
-}
-
 function freezeBoundary(
   boundary: OverworldJournalDecisionBoundary,
 ): OverworldJournalDecisionBoundary {
