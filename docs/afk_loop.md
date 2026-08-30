@@ -49,24 +49,25 @@ loop.sh  (outer driver — orchestration + the bar)
 │          chosen candidate id (or null for off-list work) in the scaffold's
 │          machine-owned `feedback_cycle_selection` marker. This is the revision
 │          the player will exercise.
-│       c. MANDATORY PURE LLM PLAYTEST — spawns a fresh, no-context player in a
-│          brand-new CORE GAME overworld session, with only the human tutorial,
-│          goal, state, legal choices, decision/checkpoint status, and consequences
-│          exposed through player MCP tools. The harness supplies transport syntax
-│          but no route, coverage target, solution, or test-only stopping rule.
-│          The game itself offers continue/end at goal completion and fixed
-│          decision checkpoints; the harness interviews only after confirmed end.
-│          Server evidence and the V2 receipt are independently cross-checked
-│          (docs/blind_playtest_protocol.md). Direct quest starts and crawler/
+│       c. NO PLAYTEST IN THIS LOOP — the dev cycle never plays the game and
+│          cannot be failed for lacking a session. Experience evidence is
+│          produced asynchronously by the playtest loop (playtest-loop.sh)
+│          against the published build and enters LATER cycles as triaged
+│          intake tickets (docs/two_loop_workflow.md). When pure cycle
+│          artifacts DO exist under ai-runs/<runId>/, the seal verifies them
+│          exactly as it always did — server evidence and the V2 receipt
+│          independently cross-checked (docs/blind_playtest_protocol.md) —
+│          and evidence or a sidecar published WITHOUT a report is rejected
+│          as an incomplete publication. Direct quest starts and crawler/
 │          smoke/mock modes are structural QA, never pure retention evidence.
-│          Milestone/harvest cycles run `npm run fleet -- --count 100` instead of
-│          a single pure player (docs/testing_pyramid.md).
+│          Milestone/harvest fleets belong to the playtest loop
+│          (`npm run fleet -- --count 100`, docs/testing_pyramid.md).
 │       d. FEEDBACK + LEDGER — run `npm run feedback:status`, which verifies the
 │          unseen ledger plus accepted pending-cycle cohort. Run `npm run
 │          feedback:compile` only when it reports a one-time bootstrap or ≥3 new
 │          actionable reports. Mocks remain accounted for but cannot trigger or
-│          steer a compile. Complete AI_LOOP_STATE.md after play; it must be the
-│          only tracked change left outside the provisional commit.
+│          steer a compile. Complete AI_LOOP_STATE.md after the change; it must be
+│          the only tracked change left outside the provisional commit.
 │
 ├─ 4. CRAWL GATE (post)  npm run crawl:smoke again — a new finding here is a
 │     regression the cycle itself just introduced; the cycle halts and reverts.
@@ -81,8 +82,10 @@ loop.sh  (outer driver — orchestration + the bar)
 │                                                      deleted/disabled tests, dropped
 │                                                      test count, or a re-pin with no
 │                                                      content change; legit re-pins warn)
-│       require_final_ledger_only  (only AI_LOOP_STATE.md may differ after play)
-│       loop:seal-feedback         (reverify the exact pure run; atomically promote
+│       require_final_ledger_only  (only AI_LOOP_STATE.md may differ after the gates)
+│       loop:seal-feedback         (verify any present cycle playtest artifacts —
+│                                    optional since 2026-08-29, but an incomplete
+│                                    publication fails closed; atomically promote
 │                                    any compile manifest and queue this report)
 │
 └─ 6. FINALIZE/PUSH   commit only the completed, machine-sealed AI_LOOP_STATE.md

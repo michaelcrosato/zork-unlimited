@@ -12,12 +12,11 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 
 - PREPEND each new entry directly below this intro — the log is NEWEST-FIRST.
 - Keep the exact heading form "### Cycle result - slug" (rotation and cycle counting match it at line start).
-- Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
+- If the cycle consumed or produced playtest evidence, name the world quest(s) involved — the blind-pass rotation derives attendance from those names (and from local blind-tester report filenames). A cycle with no experience evidence names none; the dev loop itself never plays (docs/two_loop_workflow.md).
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
-
 
 ### Cycle result - road_warden_confirmation_progressive_disclosure_v1
 
@@ -139,7 +138,6 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Guard delta: independent 234/234 changed-file review plus the 15/15 health-discovered contracts, exact 461-file/4,087-test health, 6,000-step smoke, 384,000-step deep crawl, all 12 packs, browser interaction, and pure authentication are green; post-ledger outer gates, start-ref integrity, and seal remain fail-closed.
 
 <!-- feedback_cycle_selection: {"run_id":"2026-08-12T01-29-11-314Z","selected_recommendation_id":null} -->
-
 
 ### Cycle result - station_dispatch_board_v4_inline_support
 
