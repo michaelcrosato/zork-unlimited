@@ -14,6 +14,7 @@ import type { WorldBinding } from "../world/schema.js";
 import {
   activeDialogue,
   endingText as resolveEndingText,
+  exitLockedMessage,
   nodeText,
   npcsInRoom,
   objectName,
@@ -116,8 +117,11 @@ export function buildRpgObservation(
             ? { direction: exit.direction }
             : { direction: exit.direction, to: exit.to },
         );
-      } else if (exit.locked_msg !== undefined) {
-        blockedExits.push({ direction: exit.direction, message: exit.locked_msg });
+      } else {
+        const locked = exitLockedMessage(exit, state);
+        if (locked !== undefined) {
+          blockedExits.push({ direction: exit.direction, message: locked });
+        }
       }
     }
     exits.sort((a, b) => a.direction.localeCompare(b.direction));

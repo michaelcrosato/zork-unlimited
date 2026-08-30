@@ -20,6 +20,7 @@ import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
 import { evalConditions } from "../src/core/conditions.js";
 import type { RpgAction } from "../src/api/types.js";
+import { exitLockedMessage } from "../src/rpg/model.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -68,9 +69,9 @@ export function render(obs: RpgObservation): string {
 /**
  * A friendly reason a parsed-but-illegal action failed. An attempted MOVE onto a barred
  * but present exit surfaces the
- * author's `locked_msg` (the same string the structured `blocked_exits` hint carries),
- * not a flat "You can't do that right now." It never reveals HOW to clear the exit (that
- * stays a hidden, not-yet-legal command).
+ * author's locked-exit copy (the same string the structured `blocked_exits` hint
+ * carries, including `locked_msg_variants`), not a flat "You can't do that right now."
+ * It never reveals HOW to clear the exit (that stays a hidden, not-yet-legal command).
  */
 export function illegalReason(
   index: ReturnType<typeof indexRpgPack>,
@@ -82,7 +83,7 @@ export function illegalReason(
       .get(state.current)
       ?.exits.find((e) => e.direction === action.direction);
     if (exit && !evalConditions(exit.conditions, state))
-      return exit.locked_msg ?? "You can't go that way yet.";
+      return exitLockedMessage(exit, state) ?? "You can't go that way yet.";
   }
   return "You can't do that right now.";
 }

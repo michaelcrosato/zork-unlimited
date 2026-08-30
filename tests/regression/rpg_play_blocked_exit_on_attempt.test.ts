@@ -16,7 +16,12 @@
 import { describe, it, expect } from "vitest";
 import { illegalReason } from "../../bin/rpg_play.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -57,6 +62,59 @@ describe("bug_0207 — RPG CLI on-attempt message surfaces a barred exit's locke
     expect(illegalReason(index, s, { type: "MOVE", direction: "up" })).toBe(
       "You can't do that right now.",
     );
+  });
+
+  it("after a Wolf-Winter plan is committed, a typed north uses the locked plan variant, not the uncommitted HUNT copy", () => {
+    const wolf = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
+    if (!wolf.ok) throw new Error("wolf_winter must compile");
+    const wolfIndex = indexRpgPack(wolf.compiled.pack);
+    const wolfStep = makeStep(buildRpgRules(wolfIndex));
+    const cases = [
+      {
+        commit: "ask_commit_lure",
+        discuss: "ask_lure",
+        flag: "strategy_lure_committed",
+        message:
+          "North is blocked. Finish the shown LURE action first. Feed is west; the hatch is west then up.",
+      },
+      {
+        commit: "ask_commit_drive",
+        discuss: "ask_drive",
+        flag: "strategy_drive_committed",
+        message: "North is blocked. Finish the shown DRIVE gear action first.",
+      },
+      {
+        commit: "ask_commit_cade_terms",
+        discuss: "ask_fortify",
+        flag: "strategy_fortify_committed",
+        message: "North is blocked. Finish the shown FORTIFY gear action first.",
+      },
+    ] as const;
+
+    for (const c of cases) {
+      let s = initStateForRpgPack(wolfIndex, 1124);
+      const go = (id: string): void => {
+        const option = enumerateRpgActions(wolfIndex, s).find((candidate) => candidate.id === id);
+        expect(option, `${id} must be legal in ${s.current}`).toBeDefined();
+        if (!option) throw new Error(`Missing ${id}`);
+        const r = wolfStep(s, option.action);
+        expect(r.ok, r.rejectionReason).toBe(true);
+        s = r.state;
+      };
+      go("go_north");
+      go("talk_houndsman");
+      go(c.discuss);
+      go(c.commit);
+      expect(s.flags[c.flag]).toBe(true);
+      // Typed north while still in Cade's talk, then again from the yard after leave.
+      expect(illegalReason(wolfIndex, s, { type: "MOVE", direction: "north" })).toBe(c.message);
+      go("ask_leave");
+      expect(s.current).toBe("byre_yard");
+      expect(illegalReason(wolfIndex, s, { type: "MOVE", direction: "north" })).toBe(c.message);
+      expect(illegalReason(wolfIndex, s, { type: "MOVE", direction: "north" })).not.toMatch(
+        /Before HUNT|chooses HUNT/i,
+      );
+    }
   });
 
   it("once the barred way clears, the move is legal and no locked_msg is owed there", () => {

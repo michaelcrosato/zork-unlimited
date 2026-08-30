@@ -31,10 +31,15 @@ const CADE_STANCE =
 const ALBANY_STANCE =
   /Albany's relief seals[^]*protect his property[^]*consume the public supply[^]*no Cade help/i;
 const FULL_DUTY_TERMS =
-  /violate Full Duty[^]*first Repair DC by 2[^]*mobile crew stabilizes a recovered failure[^]*dawn/i;
+  /violate Full Duty[^]*first Repair DC 12 instead of 14[^]*mobile crew stabilizes a recovered failure[^]*dawn/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const NORTH_PENDING_GUIDANCE =
   "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action.";
+const NORTH_LURE_PENDING_GUIDANCE =
+  "North is blocked. Finish the shown LURE action first. Feed is west; the hatch is west then up.";
+const NORTH_FORTIFY_PENDING_GUIDANCE =
+  "North is blocked. Finish the shown FORTIFY gear action first.";
+const NORTH_DRIVE_PENDING_GUIDANCE = "North is blocked. Finish the shown DRIVE gear action first.";
 const PALING_NORTH_GUIDANCE =
   "North is blocked. Complete the currently listed yearling or outer-seal action. During LURE, go south, west, and up, then CAST Cade's winter-feed sack THROUGH low wolf-hatch.";
 const MOUTH_NORTH_GUIDANCE =
@@ -376,7 +381,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
     );
 
     assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS, ["take_albany_relief_seals"]);
-    assertNorthBlockedOnce(state, "take_albany_relief_seals");
+    assertNorthBlockedOnce(state, "take_albany_relief_seals", NORTH_FORTIFY_PENDING_GUIDANCE);
     expect(NORTH_PENDING_GUIDANCE.length).toBe(214);
     expect(NORTH_PENDING_GUIDANCE.length).toBeLessThanOrEqual(220);
 
@@ -459,7 +464,11 @@ describe("Wolf-Winter authority commitment boundary", () => {
       expect(state.flags[committedFlag]).toBe(true);
       expect(enumerateRpgActions(index, state).map((action) => action.id)).toContain(pickup);
       assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS, [pickup]);
-      assertNorthBlockedOnce(state, pickup);
+      const yardNorth =
+        committedFlag === "strategy_drive_committed"
+          ? NORTH_DRIVE_PENDING_GUIDANCE
+          : NORTH_FORTIFY_PENDING_GUIDANCE;
+      assertNorthBlockedOnce(state, pickup, yardNorth);
 
       state = act(state, pickup);
       assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS);
@@ -575,7 +584,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
       ["south", "steading_yard"],
       ["west", "store"],
     ]);
-    assertNorthBlockedOnce(lure, "go_west");
+    assertNorthBlockedOnce(lure, "go_west", NORTH_LURE_PENDING_GUIDANCE);
 
     lure = act(lure, "go_west");
     lure = act(lure, "take_winter_feed_sack");

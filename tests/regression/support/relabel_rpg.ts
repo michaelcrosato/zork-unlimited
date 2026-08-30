@@ -114,6 +114,9 @@ function relabelExit(x: Exit, r: (id: string) => string, rv: (n: string) => stri
     to: r(x.to),
     conditions: x.conditions.map((c) => relabelCondition(c, r, rv)),
     ...(x.locked_msg !== undefined ? { locked_msg: x.locked_msg } : {}),
+    ...(x.locked_msg_variants
+      ? { locked_msg_variants: x.locked_msg_variants.map((v) => relabelRoomVariant(v, r, rv)) }
+      : {}),
   };
 }
 

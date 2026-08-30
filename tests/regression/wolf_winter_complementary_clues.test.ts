@@ -223,11 +223,11 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       /FORTIFY protects home and herd until dawn[^]*all wolves alive[^]*retreat and other plans close[^]*Cade's shutters[^]*expose his property[^]*preserve Albany's seals[^]*gain his help after one failed outer seal[^]*Albany's seals[^]*protect his property[^]*spend public stock[^]*gain no help[^]*unstabilized failed seal can cost 2 HP at dawn[^]*June[^]*mobile relief crew/i,
     );
     expect(fortify).not.toMatch(/Albany Repair[^]*2 easier/i);
-    expect(fullDutyFortify).toMatch(/Full Compact lowers the first Repair DC by 2/i);
+    expect(fullDutyFortify).toMatch(/Full Compact makes the first Repair DC 12 instead of 14/i);
     expect(limitedDutyLure).toHaveLength(2);
     for (const disclosure of limitedDutyLure) {
       expect(disclosure).toMatch(
-        /Aid-Only oath prevents LURE's final \+1 cattle alarm only if the first LAY action succeeds/i,
+        /first successful LURE LAY still raises cattle alarm by 1[^]*skips the last feed's \+1, not the first/i,
       );
     }
     expect(limitedDutyFortify).toMatch(

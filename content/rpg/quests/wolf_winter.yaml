@@ -194,8 +194,9 @@ rooms:
           - { not_visited: byre_yard }
         text: >
           FOLLOW sheltered stockway last mile to reach Cade's yard unseen with June Pike. The
-          hedges keep the herd calm but hide the smoke and crosswind that can help the first
-          LURE LAY check. Cade may identify a stronger field condition.
+          hedges keep the herd calm. The first LURE LAY is still Fieldcraft DC 12; they hide
+          the easier DC 10 crosswind and do not skip the check. Cade may identify a stronger
+          field condition.
       - when:
           - { has_flag: approach_sheltered_stockway }
           - { not_flag: approach_exposed_ridge }
@@ -203,8 +204,8 @@ rooms:
           - { not_visited: byre_yard }
         text: >
           FOLLOW sheltered stockway last mile to reach Cade's yard unseen. The hedges keep the
-          herd calm but hide the smoke and crosswind that can help the first LURE LAY check.
-          Cade may identify a stronger field condition.
+          herd calm. The first LURE LAY is still Fieldcraft DC 12; they hide the easier DC 10
+          crosswind and do not skip the check. Cade may identify a stronger field condition.
       - when: [{ has_flag: june_pike_present }, { not_visited: byre_yard }]
         text: >
           Go north to the byre-yard and protect the cattle until dawn. Road Warden June
@@ -489,6 +490,13 @@ rooms:
               - { has_flag: strategy_drive_committed }
               - { has_flag: strategy_fortify_committed }
         locked_msg: "North is blocked. Before HUNT, TALK TO Road Warden June Pike. During LURE, follow the shown CALL or feed action; feed is west, and the hatch is west then up. During DRIVE or FORTIFY, complete the shown gear action."
+        locked_msg_variants:
+          - when: [{ has_flag: strategy_lure_committed }]
+            text: "North is blocked. Finish the shown LURE action first. Feed is west; the hatch is west then up."
+          - when: [{ has_flag: strategy_fortify_committed }]
+            text: "North is blocked. Finish the shown FORTIFY gear action first."
+          - when: [{ has_flag: strategy_drive_committed }]
+            text: "North is blocked. Finish the shown DRIVE gear action first."
 
   - id: store
     name: "The Store-Shed"
@@ -1611,8 +1619,9 @@ objects:
     name: "sheltered stockway last mile"
     aliases: [sheltered stockway, stockway, stock gate, lee path]
     description: >
-      FOLLOW sheltered stockway last mile to keep cattle alarm at 0. This route hides the
-      crosswind that can help the first LURE LAY check.
+      FOLLOW sheltered stockway last mile to keep cattle alarm at 0. The first LURE LAY is
+      still a Fieldcraft DC 12 check; the hedges hide the easier DC 10 crosswind, they do
+      not skip the check.
     visible_when:
       - { has_flag: approach_sheltered_stockway }
       - { not_flag: approach_exposed_ridge }
@@ -1626,10 +1635,11 @@ objects:
           - { not_flag: approach_exposed_ridge }
           - { not_visited: byre_yard }
         effects:
-          - add_journal: "You follow the sheltered stockway. Cattle alarm stays at 0, but the crosswind for the first LURE LAY check remains hidden."
+          - add_journal: "You follow the sheltered stockway. Cattle alarm stays at 0. The first LURE LAY is still Fieldcraft DC 12; the hedges hide the easier DC 10 crosswind, they do not skip the check."
           - narrate: >
               You follow the sheltered stockway. The hedges hide you from the herd, so
-              cattle alarm stays at 0. They also hide the crosswind for the first LURE LAY check.
+              cattle alarm stays at 0. The first LURE LAY is still a Fieldcraft DC 12 check;
+              the hidden crosswind does not skip that roll.
           - goto: byre_yard
 
   # The Albany relief spear is real runtime gear, not prose-only equipment. Earlier
@@ -4368,7 +4378,7 @@ npcs:
               goto: cade_current_support
             - id: leave
               aliases: [leave_cade]
-              prompt: "LEAVE — Exit without choosing a plan."
+              prompt: "LEAVE — Return to the yard."
               end: true
         - id: cade_hunt
           npc_text: >
@@ -4426,9 +4436,10 @@ npcs:
                 sound lower frame removes FORTIFY's first Repair check.
             - when: [{ has_flag: relief_oath_limited_duty }]
               text: >
-                The Aid-Only oath gives no DRIVE or HUNT benefit. After a successful first
-                LURE action, it prevents the final +1 cattle alarm. FORTIFY with Cade's
-                shutters follows the oath; using Albany's relief seals exceeds it.
+                The Aid-Only oath gives no DRIVE or HUNT benefit. The first successful LURE
+                LAY still raises cattle alarm by 1. Aid-Only then skips the last feed's +1,
+                not the first. FORTIFY with Cade's shutters follows the oath; using Albany's
+                relief seals exceeds it.
             - when: [{ has_flag: june_pike_present }]
               text: >
                 June only protects cattle. During HUNT, the first wolf death ends her agreement.
@@ -4441,8 +4452,8 @@ npcs:
                 - { has_flag: relief_oath_full_duty }
                 - { not_flag: opening_condition_sound_lower_frame }
               text: >
-                Full Compact lowers the first Albany relief-seal Repair DC by 2. Other checks
-                are unchanged.
+                Full Compact makes the first Albany relief-seal Repair DC 12 instead of 14.
+                Other checks are unchanged.
             - when:
                 - { has_flag: relief_oath_full_duty }
                 - { has_flag: opening_condition_sound_lower_frame }
@@ -4618,8 +4629,9 @@ npcs:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
               text: >
-                The Aid-Only oath prevents LURE's final +1 cattle alarm only if the first LAY
-                action succeeds. LURE consumes Cade's only winter-feed sack and leaves the
+                The first successful LURE LAY still raises cattle alarm by 1. Aid-Only then
+                skips the last feed's +1, not the first. A failed first LAY gets no last-feed
+                skip. LURE consumes Cade's only winter-feed sack and leaves the
                 Broken Paling unrepaired. Use the one displayed LAY action, then the two
                 displayed CAST actions. A failed first LAY action
                 raises cattle alarm by 2, cannot be retried, and requires a fallen paling-rail
@@ -4644,8 +4656,9 @@ npcs:
                 - { has_flag: relief_oath_limited_duty }
                 - { not_flag: strategy_lure_committed }
               text: >
-                The Aid-Only oath prevents LURE's final +1 cattle alarm only if the first LAY
-                action succeeds. LURE consumes Cade's only winter-feed sack and leaves the
+                The first successful LURE LAY still raises cattle alarm by 1. Aid-Only then
+                skips the last feed's +1, not the first. A failed first LAY gets no last-feed
+                skip. LURE consumes Cade's only winter-feed sack and leaves the
                 Broken Paling unrepaired. Use the one displayed LAY action, then the two
                 displayed CAST actions. A failed first LAY action
                 raises cattle alarm by 2, cannot be retried, and requires a fallen paling-rail
@@ -4857,8 +4870,8 @@ npcs:
                 Choosing FORTIFY closes retreat, HUNT, LURE, and DRIVE. Cade's shutters expose
                 his property, preserve Albany's relief seals, provide one failed-seal recovery,
                 and violate Full Duty. Albany's relief seals protect his property, consume the
-                public supply, provide no Cade help, and follow Full Duty; Full Compact lowers
-                the first Repair DC by 2. The mobile crew stabilizes a recovered failure. At
+                public supply, provide no Cade help, and follow Full Duty; Full Compact makes
+                the first Repair DC 12 instead of 14. The mobile crew stabilizes a recovered failure. At
                 Strained or higher after an unstabilized failure, June prevents the 2 HP dawn
                 cost if her agreement remains intact; otherwise you lose 2 HP. A stabilized
                 seal or Hammering pressure costs no HP.
@@ -5008,8 +5021,8 @@ npcs:
                 sealed-byre dawn watch; you cannot retreat or change plans.
             - when: [{ has_flag: relief_oath_full_duty }]
               text: >
-                Albany's relief seals follow Full Duty. Full Compact lowers the first outer
-                seal Repair DC by 2. Cade refuses to recover a failure. Instead, BIND authority
+                Albany's relief seals follow Full Duty. Full Compact makes the first outer
+                seal Repair DC 12 instead of 14. Cade refuses to recover a failure. Instead, BIND authority
                 emergency binding WITH Albany relief seal roll. His property is
                 protected and the public seals are spent.
             - when: [{ has_flag: relief_oath_limited_duty }]

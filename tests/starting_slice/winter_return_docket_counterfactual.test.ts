@@ -418,6 +418,7 @@ describe("Winter Return Docket", () => {
     if (!event?.authored_scene) throw new Error("expected authored Civic event");
     event.authored_scene.requires_completed_quests = ["wolf_winter"];
     event.authored_scene.forbids_completed_quests = undefined;
+    event.authored_scene.advertise_blocked_lead = undefined;
 
     const before = preparedForWolf(null, postWolfWorld).session;
     moveToArea(before, CIVIC_AREA, postWolfWorld);

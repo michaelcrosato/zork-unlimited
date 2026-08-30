@@ -18,21 +18,31 @@ export const ATTACK_VAR = "attack";
 export const DEFENSE_VAR = "defense";
 export const RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT = 180;
 
-export const ExitSchema = z
-  .object({
-    direction: z.string().min(1),
-    to: z.string().min(1),
-    conditions: z.array(ConditionSchema).default([]),
-    locked_msg: z.string().min(1).optional(),
-  })
-  .strict();
-
 export const RoomVariantSchema = z
   .object({
     when: z.array(ConditionSchema).min(1),
     text: z.string().min(1),
   })
   .strict();
+
+export const ExitSchema = z
+  .object({
+    direction: z.string().min(1),
+    to: z.string().min(1),
+    conditions: z.array(ConditionSchema).default([]),
+    locked_msg: z.string().min(1).optional(),
+    locked_msg_variants: z.array(RoomVariantSchema).optional(),
+  })
+  .strict()
+  .superRefine((exit, context) => {
+    if (exit.locked_msg_variants !== undefined && exit.locked_msg === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["locked_msg"],
+        message: "locked_msg_variants require locked_msg",
+      });
+    }
+  });
 
 export const RoomSchema = z
   .object({

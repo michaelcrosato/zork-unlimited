@@ -808,7 +808,7 @@ describe("overworld_play CLI (scripted mode)", () => {
 
     expect(run.status, run.output).toBe(0);
     expect(run.output).toContain(
-      "Guidance: Complete Wolf-Winter. Jobs, events, and sites can help you find it, but they do not complete this goal. Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter.",
+      "Guidance: Finish The Wolf-Winter to complete this opening. Wolf-Winter ends the opening chapter. Choose End to stop there, or Continue to carry its results into the optional Gallowmere chapter.",
     );
     expect(run.output).toContain(
       "You cannot travel toward this goal from here. Follow the local goal guidance above.",

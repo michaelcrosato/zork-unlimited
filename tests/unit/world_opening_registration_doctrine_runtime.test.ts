@@ -98,7 +98,7 @@ describe("Albany background-first ready-made dispatch runtime", () => {
         expect(packetOption.label).toBe(READY_MADE_DISPATCH_LABELS[matchedPacket.id]);
         const expectedOutcome =
           matchedPacket.profile_id === "albany:ironhands_repairer"
-            ? "Start with public authority and a stronger first FORTIFY Repair check."
+            ? "Start with public authority and a first public-seal FORTIFY Repair of DC 12 instead of 14."
             : matchedPacket.profile_id === "albany:road_warden"
               ? "Start with Defense 4, the clean-feed LURE benefit, and Hayden's conditional HUNT brace."
               : "Start independent with an easier first DRIVE shutter-signal check.";
@@ -108,7 +108,7 @@ describe("Albany background-first ready-made dispatch runtime", () => {
         expect(packetOption.consequence).toContain(`Benefit: ${matchedPacket.trigger_category}`);
         expect(packetOption.summary?.commitment).not.toContain(matchedPacket.trigger_category);
         expect(JSON.stringify(packetOption.summary)).not.toMatch(
-          /\b(?:DEF|DC|import|fieldTrigger)\b/i,
+          /\b(?:DEF|import|fieldTrigger)\b/i,
         );
       }
       expect(
@@ -250,7 +250,7 @@ describe("Albany background-first ready-made dispatch runtime", () => {
       if (doctrine.id === "albany:doctrine_road_warden_aid_route") {
         expect(receipt.consequence).toContain("Defense starts at 4 instead of 3.");
         expect(receipt.consequence).toContain(
-          "If the first LURE feed succeeds, cattle alarm rises one less at the end.",
+          "The first successful LURE LAY still raises cattle alarm as listed; Aid-Only then skips the last feed's +1, not the first.",
         );
         expect(receipt.consequence).toContain(
           "Hayden's report can unlock a HUNT brace after a rail splits.",
