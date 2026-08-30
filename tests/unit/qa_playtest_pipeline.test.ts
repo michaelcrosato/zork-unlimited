@@ -3,8 +3,9 @@
  *
  * These tests pin the properties that make the split SAFE rather than merely fast.
  * Speed is easy; what is hard is keeping the evidence honest once playtests stop being
- * bound to the commit under test and start arriving in bulk from four vendors at once.
+ * bound to the commit under test and start arriving in bulk from several providers at once.
  */
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -28,10 +29,22 @@ import {
 } from "../../src/qa/session_record.js";
 import {
   listPlaytestSessions,
+  readPlaytestSession,
   sha256Hex,
   summarizePlaytestStore,
   writePlaytestSession,
 } from "../../src/qa/session_store.js";
+import { savePlaytestReport } from "../../src/qa/save_playtest_report.js";
+import {
+  GROK_MCP_INSTANT_THINKING_EFFORT,
+  GROK_MCP_WAVE_COUNT,
+  GROK_MCP_WAVE_MODEL,
+  GROK_MCP_WAVE_SURFACE,
+  grokMcpProjectConfig,
+  parseGrokMcpWaveArgs,
+  parseGrokStreamingOutput,
+} from "../../src/qa/grok_mcp_wave.js";
+import { extractExitInterview, isPureExitInterviewV2 } from "../../src/blind/exit_interview.js";
 import { derivePromotion, isActionable, ticketId, type QaTicket } from "../../src/qa/ticket.js";
 import { readTickets, writeTickets } from "../../src/qa/ticket_store.js";
 import { triagePlaytestCorpus } from "../../src/qa/triage.js";
@@ -103,12 +116,18 @@ function body(overrides: Partial<PlaytestSessionBody> = {}): PlaytestSessionBody
 
 describe("playtest provider registry", () => {
   it("registers every vendor with a distinct id and exposes them sorted", () => {
-    expect(playtestProviderIds()).toEqual(["claude_code", "codex", "gemini_cli", "grok_desktop"]);
+    expect(playtestProviderIds()).toEqual([
+      "claude_code",
+      "codex",
+      "gemini_cli",
+      "grok_cli",
+      "grok_desktop",
+    ]);
   });
 
   it("counts DISTINCT LINEAGES, so one vendor twice is not two witnesses", () => {
     expect(playtestFamilies(["codex", "codex"])).toEqual(["gpt"]);
-    expect(playtestFamilies(["codex", "gemini_cli", "grok_desktop"])).toEqual([
+    expect(playtestFamilies(["codex", "gemini_cli", "grok_cli", "grok_desktop"])).toEqual([
       "gemini",
       "gpt",
       "grok",
@@ -207,6 +226,22 @@ describe("playtest session record", () => {
 
   it("requires every non-completed session to explain itself", () => {
     expect(() => sealPlaytestSession(body({ failure_note: null }))).toThrow(/failure_note/);
+  });
+
+  it.each([
+    "session.json",
+    "SESSION.JSON",
+    "../outside.jsonl",
+    "nested/transcript.jsonl",
+    "nested\\transcript.jsonl",
+  ])("rejects unsafe transcript filename %s", (transcriptFilename) => {
+    const candidate = body();
+    expect(() =>
+      sealPlaytestSession({
+        ...candidate,
+        log: { ...candidate.log, transcript_filename: transcriptFilename },
+      }),
+    ).toThrow(/transcript_filename must be a plain filename/);
   });
 
   it("keeps operator-attested sessions but excludes them from experience metrics", () => {
@@ -750,5 +785,282 @@ describe("end to end: a corroborated finding reaches the dev loop's queue", () =
     // Both are real evidence and both stay in the bucket; only one is work.
     expect(promoted).toHaveLength(1);
     expect(promoted[0]!.body).toContain("steading_yard");
+  });
+});
+
+const GROK_V2_INTERVIEW = {
+  schema_version: 2 as const,
+  issue_consistency_version: 1 as const,
+  play_mode: "pure" as const,
+  start_surface: "fresh_overworld" as const,
+  retention_eligible: true as const,
+  journey_exit_receipt: {
+    contractVersion: 3 as const,
+    exitReason: "player_ended_at_choice" as const,
+    goalVersion: 1,
+    goalId: "albany_local_lead",
+    goalText: "Find one local lead in Albany and see it through.",
+    goalStatus: "completed" as const,
+    goalCompletedAtDecision: 17,
+    completedGoals: [
+      {
+        version: 1,
+        id: "albany_local_lead",
+        text: "Find one local lead in Albany and see it through.",
+        status: "completed" as const,
+        completedAtDecision: 17,
+      },
+    ],
+    acceptedDecisions: 17,
+    exitReasons: ["goal_completed" as const],
+    checkpoint: null,
+    decisionProofHash: "26fbe3f372ca587f38a3439e3c7bfa7c7a43688cc5ee7cdc3e27a13eef69c5ff",
+    retentionHistory: [
+      {
+        sequence: 1,
+        atDecision: 17,
+        reasons: ["goal_completed" as const],
+        checkpoint: null,
+        goalVersion: 1,
+        goalId: "albany_local_lead",
+        choice: "end" as const,
+        decisionProofHash: "26fbe3f372ca587f38a3439e3c7bfa7c7a43688cc5ee7cdc3e27a13eef69c5ff",
+      },
+    ],
+    receiptHash: "2136b41c82e821ed7eee1cfc432b7903d57ae197bbc4c7497cd49cc94a5d06ff",
+  },
+  clarity: 3,
+  enjoyment: 3,
+  goal_understood: true,
+  got_stuck: false,
+  confusions: ["Tutorial local-lead goal vs Wolf-Winter chapter guidance"],
+  bugs: [] as { where: string; severity: "S0" | "S1" | "S2" | "S3" | "S4"; note: string }[],
+  best_moment: "Repair 17 vs 12 locking the first Albany seal while Cade refused to help.",
+  worst_moment: "Parsing compact tuples before I understood what a lead even was.",
+  would_replay: true,
+  verdict:
+    "A working compact TTRPG loop from Albany registration through a sealed-byre FORTIFY win and a real End receipt; readable once committed, but the opening is more ledger than story.",
+};
+
+function grokReport(interview: unknown, fence = "json exit-interview", trailing = ""): string {
+  return [
+    "Playthrough log",
+    "Albany Civic Center to Wolf-Winter, then End.",
+    "Verdict",
+    "A real new player would keep going after the first lead.",
+    "clarity 3 enjoyment 3",
+    "Bugs or design flaws",
+    "No bugs observed.",
+    "",
+    `\`\`\`${fence}`,
+    JSON.stringify(interview, null, 2),
+    "```",
+    trailing,
+  ].join("\n");
+}
+
+function grokEvidence(seed = 11, receipt = GROK_V2_INTERVIEW.journey_exit_receipt): string {
+  const build = {
+    git_commit: "a".repeat(40),
+    tracked_worktree_clean: true,
+    world_id: "new_york_overworld",
+    world_hash: "b".repeat(64),
+  };
+  return [
+    {
+      schema_version: 2,
+      play_mode: "pure",
+      event: "fresh_start",
+      start_surface: "fresh_overworld",
+      session_id: `o-test-${seed}`,
+      run_seed: seed,
+      build,
+    },
+    {
+      schema_version: 2,
+      play_mode: "pure",
+      event: "journey_exit",
+      start_surface: "fresh_overworld",
+      session_id: `o-test-${seed}`,
+      run_seed: seed,
+      build,
+      quest_outcomes: [],
+      receipt,
+    },
+  ]
+    .map((row) => JSON.stringify(row))
+    .join("\n");
+}
+
+function saveGrokReport(store: string, reportText: string, seed = 11, runEvidenceText?: string) {
+  return savePlaytestReport({
+    reportText,
+    transcript: reportText,
+    store,
+    providerId: "grok_cli",
+    modelId: "grok-4.6",
+    seed,
+    gameSessionId: `o-test-${seed}`,
+    attestedBy: "qa-test",
+    method: "unit test, AdventureForge MCP only",
+    recordedAt: "2026-08-29T12:00:00.000Z",
+    buildCommit: "a".repeat(40),
+    trackedWorktreeClean: true,
+    ...(runEvidenceText === undefined ? {} : { runEvidenceText }),
+  });
+}
+
+describe("grok MCP wave request", () => {
+  it("targets 100 grok-4.6 instant-thinking MCP players, twice", () => {
+    const first = parseGrokMcpWaveArgs([]);
+    const second = parseGrokMcpWaveArgs([]);
+    expect(first).toEqual(second);
+    expect(first.count).toBe(GROK_MCP_WAVE_COUNT);
+    expect(first.count).toBe(100);
+    expect(first.model).toBe(GROK_MCP_WAVE_MODEL);
+    expect(first.effort).toBe(GROK_MCP_INSTANT_THINKING_EFFORT);
+    expect(first.instantThinking).toBe(true);
+    expect(first.playSurface).toBe(GROK_MCP_WAVE_SURFACE);
+    expect(first.provider).toBe("grok_cli");
+    const tsx = join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
+    const run = () =>
+      JSON.parse(
+        execFileSync("node", [tsx, "bin/playtest-grok-wave.ts", "--plan-only"], {
+          encoding: "utf8",
+        }),
+      ) as {
+        count: number;
+        model: string;
+        effort: string;
+        instantThinking: boolean;
+        playSurface: string;
+      };
+    const cliFirst = run();
+    const cliSecond = run();
+    expect(cliFirst).toEqual(cliSecond);
+    expect(cliFirst).toMatchObject({
+      count: 100,
+      model: "grok-4.6",
+      effort: "low",
+      instantThinking: true,
+      playSurface: "mcp",
+      provider: "grok_cli",
+    });
+  });
+
+  it("builds a private pure MCP server config with exact run provenance", () => {
+    const config = grokMcpProjectConfig({
+      repoRoot: "C:\\game",
+      evidencePath: "C:\\work\\evidence.jsonl",
+      seed: 1700000007,
+      buildCommit: "a".repeat(40),
+      trackedWorktreeClean: true,
+    });
+    expect(config).toContain("[mcp_servers.adventureforge]");
+    expect(config).toContain('"--play-mode","pure"');
+    expect(config).toContain('"--run-evidence","C:\\\\work\\\\evidence.jsonl"');
+    expect(config).toContain('"--run-seed","1700000007"');
+    expect(config).toContain(`"--build-commit","${"a".repeat(40)}"`);
+    expect(config).toContain('"--tracked-worktree-clean","true"');
+  });
+
+  it("reassembles report text and counts only AdventureForge use_tool calls", () => {
+    const stream = [
+      { type: "thought", data: "playing" },
+      {
+        type: "tool_call",
+        toolName: "use_tool",
+        rawInput: { tool_name: "adventureforge__start_overworld", tool_input: {} },
+      },
+      { type: "tool_call", toolName: "search_tool", rawInput: { query: "journey" } },
+      { type: "text", data: "Playthrough " },
+      { type: "future_event", data: "ignored safely" },
+      { type: "text", data: "log" },
+      { type: "end", stopReason: "end_turn", sessionId: "grok-session" },
+    ]
+      .map((event) => JSON.stringify(event))
+      .join("\n");
+    expect(parseGrokStreamingOutput(stream)).toEqual({
+      reportText: "Playthrough log",
+      clientSessionId: "grok-session",
+      gameToolCalls: 1,
+      stopReason: "end_turn",
+      error: null,
+      ended: true,
+    });
+  });
+});
+
+describe("playtest report save keeps interviews intact or fail-closed", () => {
+  it("writes a valid V2 json exit-interview with the same subjective fields and receipt", () => {
+    const store = tempDir();
+    const reportText = grokReport(GROK_V2_INTERVIEW);
+    const extracted = extractExitInterview(reportText);
+    expect(extracted.ok).toBe(true);
+    if (!extracted.ok) throw new Error(extracted.reason);
+    expect(isPureExitInterviewV2(extracted.interview)).toBe(true);
+    const saved = saveGrokReport(store, reportText);
+    expect(saved.record.outcome).toBe("completed");
+    expect(saved.record.exit_interview).toMatchObject({
+      clarity: GROK_V2_INTERVIEW.clarity,
+      enjoyment: GROK_V2_INTERVIEW.enjoyment,
+      goal_understood: GROK_V2_INTERVIEW.goal_understood,
+      got_stuck: GROK_V2_INTERVIEW.got_stuck,
+      confusions: GROK_V2_INTERVIEW.confusions,
+      bugs: GROK_V2_INTERVIEW.bugs,
+      best_moment: GROK_V2_INTERVIEW.best_moment,
+      worst_moment: GROK_V2_INTERVIEW.worst_moment,
+      would_replay: GROK_V2_INTERVIEW.would_replay,
+      verdict: GROK_V2_INTERVIEW.verdict,
+    });
+    expect(saved.record.journey_receipt).toEqual(GROK_V2_INTERVIEW.journey_exit_receipt);
+    expect(saved.record.model).toMatchObject({
+      id: "grok-4.6",
+      settings: { reasoning_effort: "low" },
+    });
+    const roundTrip = readPlaytestSession(saved.dir);
+    expect(roundTrip.record.exit_interview).toEqual(saved.record.exit_interview);
+    expect(roundTrip.record.journey_receipt).toEqual(saved.record.journey_receipt);
+  });
+
+  it("binds a completed report to the server session, seed, build, and receipt", () => {
+    const store = tempDir();
+    const saved = saveGrokReport(store, grokReport(GROK_V2_INTERVIEW), 11, grokEvidence(11));
+    expect(saved.record.outcome).toBe("completed");
+    expect(saved.record.game_session_id).toBe("o-test-11");
+    expect(saved.record.run_seed).toBe(11);
+    expect(saved.record.build).toEqual({
+      git_commit: "a".repeat(40),
+      tracked_worktree_clean: true,
+      world_id: "new_york_overworld",
+      world_hash: "b".repeat(64),
+    });
+  });
+
+  it("does not record a plain json fence as a completed interview-bearing session", () => {
+    const store = tempDir();
+    const saved = saveGrokReport(store, grokReport(GROK_V2_INTERVIEW, "json"), 12);
+    expect(saved.record.outcome).toBe("malformed_report");
+    expect(saved.record.exit_interview).toBeNull();
+    expect(saved.extract.ok).toBe(false);
+  });
+
+  it("does not record missing subjective fields as completed", () => {
+    const store = tempDir();
+    const { clarity: _clarity, ...incomplete } = GROK_V2_INTERVIEW;
+    const saved = saveGrokReport(store, grokReport(incomplete), 13);
+    expect(saved.record.outcome).toBe("malformed_report");
+    expect(saved.record.exit_interview).toBeNull();
+  });
+
+  it("does not record trailing text after the interview fence as completed", () => {
+    const store = tempDir();
+    const saved = saveGrokReport(
+      store,
+      grokReport(GROK_V2_INTERVIEW, "json exit-interview", "USAGE NOTES: 1\n"),
+      14,
+    );
+    expect(saved.record.outcome).toBe("malformed_report");
+    expect(saved.record.exit_interview).toBeNull();
   });
 });

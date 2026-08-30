@@ -492,8 +492,6 @@ function initialDecisionProofHash(goal: JourneyGoalDefinition): string {
   });
 }
 
-export const JOURNEY_INITIAL_DECISION_PROOF_HASH = initialDecisionProofHash(INITIAL_JOURNEY_GOAL);
-
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const SAFE_NONNEGATIVE_INT = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const POSITIVE_SAFE_INT = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);

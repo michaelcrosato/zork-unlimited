@@ -101,7 +101,7 @@ export const PlaytestIsolationSchema = z.enum([
    * earlier; sessions keep whatever label was honest when they were recorded.
    */
   "runner_enforced",
-  /** A human asserts the client had only the AdventureForge MCP tools attached. */
+  /** The intended boundary is attested, but no client-log reader proves the offered tools. */
   "operator_attested",
 ]);
 export type PlaytestIsolation = z.infer<typeof PlaytestIsolationSchema>;

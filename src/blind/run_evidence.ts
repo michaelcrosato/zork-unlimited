@@ -32,6 +32,7 @@ export const PureRunBuildSchema = z
     world_hash: z.string().regex(/^[0-9a-f]{64}$/),
   })
   .strict();
+export type PureRunBuild = z.infer<typeof PureRunBuildSchema>;
 
 export const CanonicalQuestOutcomesSchema = z
   .array(z.tuple([z.string().min(1), z.string().min(1)]))

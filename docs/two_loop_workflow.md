@@ -83,10 +83,10 @@ PLAYTEST_COHORT="codex:8" ./playtest-loop.sh
 **No vendor is named anywhere in the gate.** Whether a provider may produce a
 `runner_enforced` session is computed, per provider, from two facts about this checkout:
 
-| Question | Answered by | Where it lives |
-| --- | --- | --- |
-| Can this vendor's blindness be **proven** here? | it declares a `capture` block whose reader module exists | `blind-tester/providers.json` + the reader |
-| Can `run.sh` actually **launch** it? | its reader is in the implemented list | `blind-tester/implemented-launch-paths.json` |
+| Question                                        | Answered by                                              | Where it lives                               |
+| ----------------------------------------------- | -------------------------------------------------------- | -------------------------------------------- |
+| Can this vendor's blindness be **proven** here? | it declares a `capture` block whose reader module exists | `blind-tester/providers.json` + the reader   |
+| Can `run.sh` actually **launch** it?            | its reader is in the implemented list                    | `blind-tester/implemented-launch-paths.json` |
 
 Both must hold. `derivePlaytestIsolation()` in `src/blind/providers.ts` answers the first
 and `runnerCanDriveProvider()` combines them; `blind-tester/run.sh`, `bin/doctor.ts`,
@@ -101,7 +101,9 @@ label onto a corpus record, and the ranking layer lets `runner_enforced` session
 experience metrics. A provider stamped with a label the runner cannot back is the
 contamination `src/blind/providers.ts` calls the worst error available in that file —
 so the recorder now downgrades to `operator_attested`, loudly, for any provider this
-checkout cannot actually drive.
+checkout cannot actually drive. The weaker path requires explicit `--attested-by` and
+`--method` values and fails before writing if either is absent; it never manufactures
+an attestation to make the schema pass.
 
 Adding a vendor is therefore five mechanical steps, none of which is "edit a gate":
 a registry entry, a `capture` block, a reader module, a launch branch in `run.sh`, and
@@ -109,9 +111,10 @@ one line in `implemented-launch-paths.json`. The first three make its evidence h
 the last two make it runnable. `npm run doctor` prints exactly which of the five are
 missing, per provider, in this checkout.
 
-**Today that yields: codex live; claude_code provable but not yet launchable
-(`blind-tester/claude-session.mjs` exists, no launch branch); gemini_cli and grok
-ingest-only.** Claude Code was verified this session to be genuinely provable —
+**Today that yields: codex live in the generic runner; claude_code provable but not
+yet launchable (`blind-tester/claude-session.mjs` exists, no launch branch);
+gemini_cli ingest-only; and grok_cli available through its own operator-attested
+headless wave.** Claude Code was verified this session to be genuinely provable —
 `--strict-mcp-config` plus `--tools ""` plus `--setting-sources ""` yields a process whose
 entire callable surface is the one declared MCP server, with a runner-pinned
 `--session-id` naming the transcript path before launch.
@@ -131,9 +134,10 @@ What this does and does not cost you while a vendor still lacks a launch path:
   `runner_enforced` sessions only, so headline experience numbers remain a measurement
   of whichever vendors are live in this checkout — currently Codex alone.
 
-So a mixed fleet is worth running now: drive the not-yet-launchable vendors through their
-own client and ingest them, and read headline experience numbers as belonging to the live
-vendors specifically until the others' launch paths land.
+So a mixed fleet is worth running now: drive not-yet-launchable vendors through their
+own client and ingest them, or use the dedicated Grok wave. Read headline experience
+numbers as belonging only to runner-enforced vendors until equivalent capture readers
+and launch paths land.
 
 ### Cheap by default, expensive on purpose
 
@@ -167,18 +171,20 @@ a 3-run finding that four vendors confirmed.
 
 ## Blindness: two honest evidence classes
 
-| Class               | How it is established                                               | Counts toward bug corroboration | Counts toward experience metrics |
-| ------------------- | ------------------------------------------------------------------- | ------------------------------- | -------------------------------- |
-| `runner_enforced`   | the runner owns argv, cwd and the tool allowlist, and records proof | yes                             | yes                              |
-| `operator_attested` | a human asserts the client had only the AdventureForge MCP tools    | yes                             | **no**                           |
+| Class               | How it is established                                                                      | Counts toward bug corroboration | Counts toward experience metrics |
+| ------------------- | ------------------------------------------------------------------------------------------ | ------------------------------- | -------------------------------- |
+| `runner_enforced`   | the runner owns argv, cwd and the tool allowlist, and records proof                        | yes                             | yes                              |
+| `operator_attested` | operator/harness records the intended client boundary, without an auditable capture reader | yes                             | **no**                           |
 
-Vendors the runner cannot prove — Grok, which has no headless CLI, and today every
-non-Codex vendor, since the capture that establishes `runner_enforced` is Codex-specific
-(see above) — are played through their own client and recorded with
-`npm run playtest:ingest`. The attestation naming who vouched is
-**required**. This keeps the corpus maximally inclusive without letting unverifiable
-runs quietly move a headline quality number, which is the contamination the
-`BLIND_AGENT_CMD` ban has always existed to prevent.
+Vendors the generic runner cannot prove are played through their own client and recorded
+with `npm run playtest:ingest`; the attestation naming who vouched is **required**.
+Grok Build is the one dedicated exception to the manual launch shape: its headless wave
+starts a private pure server per player and verifies the server's session, seed, build,
+and exact receipt, but still records the client as `operator_attested` because no Grok
+capture reader proves the complete offered tool surface. This keeps the corpus maximally
+inclusive without letting unverifiable client runs quietly move a headline quality
+number, which is the contamination the `BLIND_AGENT_CMD` ban has always existed to
+prevent.
 
 ## Nothing is thrown away
 
@@ -440,18 +446,32 @@ for harness reasons rather than game reasons, and fix the harness.
 
 ### Grok
 
-No headless CLI ships today, so Grok cannot be a QA loop's provider or an orchestrator
-terminal. Play it through the desktop client and ingest the session:
+Grok Build ships a headless CLI. The dedicated instant-thinking lane targets
+`grok-4.6` at `reasoning_effort=low`, launches each player with only Grok's
+`search_tool`/`use_tool` built-ins, and gives it a private pure AdventureForge MCP
+server. Inspect the deterministic plan without spending, then launch only from a clean
+tracked revision:
 
 ```bash
-npm run playtest:ingest -- --provider grok_desktop --model grok-4-fast \
+npm run playtest:grok-wave -- --plan-only
+npm run playtest:grok-wave -- --count 100 --concurrency 4
+```
+
+Each completed report must match the server's V2 evidence for game session, seed, build,
+world, and receipt. The ignored manifest is updated after every player so partial waves
+remain diagnosable. Any incomplete member makes the command exit nonzero. The sessions
+are nevertheless `operator_attested`: the server evidence proves what game was played,
+not that the Grok client was offered no unrelated MCP tools. They count toward bug
+corroboration and remain excluded from experience metrics.
+
+Desktop/web sessions still use the manual path:
+
+```bash
+npm run playtest:ingest -- --provider grok_desktop --model grok-4.6 \
   --persona cynical_veteran --seed 1234 --game-session-id o-… \
   --transcript run.jsonl --report report.md \
   --attested-by "you" --method "desktop client, AdventureForge MCP only"
 ```
-
-That session is `operator_attested`: kept in full, counted toward corroboration, excluded
-from experience metrics.
 
 ## Acceptance test: is the two-loop system actually working?
 
@@ -466,16 +486,19 @@ PLAYTEST_MOCK=1 PLAYTEST_COHORT="codex:2" PLAYTEST_STORE=/d/af-corpus \
   ./playtest-loop.sh --once                # 2. wiring, zero tokens, records nothing
 PLAYTEST_COHORT="codex:2" PLAYTEST_STORE=/d/af-corpus ./playtest-loop.sh --once
                                            # 3. two real Codex players
-# 4. play once in Gemini's own client, then:
+# 4a. one evidence-bound Grok player on the same clean revision:
+npm run playtest:grok-wave -- --count 1 --concurrency 1 --store /d/af-corpus
+# Or 4b. play once in Gemini's own client, then:
 npx tsx bin/ingest-playtest-session.ts --provider gemini_cli --model <id> \
   --attested-by "<you>" --method "desktop client, AdventureForge MCP only" \
   --transcript run.jsonl --report report.md --store /d/af-corpus
 npm run doctor -- --store /d/af-corpus     # 5. the verdict
 ```
 
-**Pass** is step 5 reporting `families: codex, gemini` and `The dev loop has work`, with
-the item visible in `npm run work -- --list`. That means a finding two independent
-vendors hit travelled the whole way to the dev loop on its own.
+**Pass** is step 5 reporting both selected model families (`gpt` plus `grok` or
+`gemini`) and `The dev loop has work`, with the item visible in
+`npm run work -- --list`. That means a finding two independent vendors hit travelled
+the whole way to the dev loop on its own.
 
 **A stall is not automatically a failure.** If the doctor says `Add a SECOND model family`
 you only have one lineage in the corpus — step 4 did not land. If it says tickets exist
@@ -486,10 +509,11 @@ investigating rather than accepting.
 
 Two things that will bite if you skip the doctor:
 
-- **Only `codex` runs live.** Every other vendor is refused at launch with
+- **Only `codex` runs live through `playtest-loop.sh`.** Every other vendor is refused there with
   `cannot produce pure evidence: this runner can only launch "codex"`, because
-  runner-enforced blindness is proved from Codex's own rollout logs. The others are
-  hand-played and ingested, and still count toward bug corroboration.
+  runner-enforced blindness is proved from Codex's own rollout logs. Grok's separate
+  headless command and manually ingested sessions still count toward bug corroboration,
+  but remain operator-attested.
 - **A report that does not verify is kept but contributes nothing.** The ingest command
   now says so explicitly and names the reason; if you see that line, fix the report and
   re-run rather than assuming the session landed as evidence.
@@ -509,4 +533,5 @@ Two things that will bite if you skip the doctor:
 | `npm run qa:triage`                    | re-triage the corpus (pure; safe to re-run)          |
 | `npm run qa:publish`                   | push the session corpus to its branch                |
 | `npm run playtest:record -- …`         | seal one finished run into the corpus                |
-| `npm run playtest:ingest -- …`         | record a session played through a client with no CLI |
+| `npm run playtest:ingest -- …`         | record any session the runner did not launch         |
+| `npm run playtest:grok-wave -- …`      | evidence-bound, operator-attested Grok Build batch   |

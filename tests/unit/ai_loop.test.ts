@@ -200,12 +200,7 @@ describe("compact AFK handoff metadata", () => {
       title: "Verbose title that should stay out of compact loop state",
       rationale: "Verbose rationale that should stay out of compact loop state.",
     };
-    const text = formatLoopStateAppend(
-      "2026-07-04T00-00-00-000Z",
-      assessment(top),
-      "breaking_weir",
-      false,
-    );
+    const text = formatLoopStateAppend("2026-07-04T00-00-00-000Z", assessment(top), false);
 
     expect(text).toContain("Rec: engine-runtime-cache (engine/M; score=1).");
     expect(text).not.toContain(top.title);

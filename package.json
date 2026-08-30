@@ -48,6 +48,7 @@
     "qa:publish": "tsx scripts/publish-playtest-sessions.ts",
     "playtest:loop": "bash playtest-loop.sh",
     "playtest:ingest": "tsx bin/ingest-playtest-session.ts",
+    "playtest:grok-wave": "tsx bin/playtest-grok-wave.ts",
     "playtest:record": "tsx bin/record-playtest-session.ts",
     "submit": "tsx bin/submit.ts",
     "work": "tsx bin/work.ts",

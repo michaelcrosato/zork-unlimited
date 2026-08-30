@@ -245,10 +245,6 @@ export function resolveGameSource(
   return generatedGameSource(args.generate_rpg_seed);
 }
 
-export function traceWorldQuestId(trace: Trace, operation: string): string | undefined {
-  return traceEmbeddedSource(trace, operation).worldQuestId;
-}
-
 export function traceGeneratedRpgSeed(trace: Trace, operation: string): number | undefined {
   return traceEmbeddedSource(trace, operation).generatedRpgSeed;
 }

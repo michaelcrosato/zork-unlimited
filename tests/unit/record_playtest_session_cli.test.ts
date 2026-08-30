@@ -14,7 +14,7 @@
  * zero-token mock run indistinguishable from a real vendor's playthrough.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -68,7 +68,22 @@ const REPORT = [
   "",
 ].join("\n");
 
-function record(outPrefix: string, store: string): { output: string; status: number | null } {
+type RecordOptions = {
+  provider?: string;
+  model?: string;
+  attestation?: { attestedBy: string; method: string };
+};
+
+function record(
+  outPrefix: string,
+  store: string,
+  options: RecordOptions = {},
+): { output: string; status: number | null } {
+  const provider = options.provider ?? "codex";
+  const model = options.model ?? "gpt-5.3-codex-spark";
+  const attestationArgs = options.attestation
+    ? ["--attested-by", options.attestation.attestedBy, "--method", options.attestation.method]
+    : [];
   const result = spawnSync(
     process.execPath,
     [
@@ -77,13 +92,14 @@ function record(outPrefix: string, store: string): { output: string; status: num
       "--out",
       outPrefix,
       "--provider",
-      "codex",
+      provider,
       "--persona",
       "default",
       "--model",
-      "gpt-5.3-codex-spark",
+      model,
       "--store",
       store,
+      ...attestationArgs,
     ],
     { cwd: ROOT, encoding: "utf8", timeout: 120_000 },
   );
@@ -136,5 +152,54 @@ describe("recording a run into the playtest corpus", () => {
     const { output, status } = record(out, store);
     expect(status, output).toBe(0);
     expect(readdirSync(store).length, output).toBe(1);
+  });
+
+  it("refuses to invent a missing operator attestation", () => {
+    const work = temp("af-rec-run-");
+    const store = temp("af-rec-store-");
+    const out = join(work, "run1");
+    writeFileSync(`${out}.md`, REPORT, "utf8");
+
+    const { output, status } = record(out, store, {
+      provider: "grok_cli",
+      model: "grok-4.6",
+    });
+
+    expect(status, output).not.toBe(0);
+    expect(output).toContain("requires both --attested-by and --method");
+    expect(readdirSync(store), output).toEqual([]);
+  });
+
+  it("preserves an explicit operator attestation on a weaker lane", () => {
+    const work = temp("af-rec-run-");
+    const store = temp("af-rec-store-");
+    const out = join(work, "run1");
+    writeFileSync(`${out}.md`, REPORT, "utf8");
+
+    const { output, status } = record(out, store, {
+      provider: "grok_cli",
+      model: "grok-4.6",
+      attestation: {
+        attestedBy: "qa-harness",
+        method: "dedicated MCP-only harness",
+      },
+    });
+
+    expect(status, output).toBe(0);
+    const [sessionDir] = readdirSync(store);
+    expect(sessionDir, output).toBeDefined();
+    const session = JSON.parse(readFileSync(join(store, sessionDir!, "session.json"), "utf8")) as {
+      provider: {
+        isolation: string;
+        operator_attestation?: { attested_by: string; method: string };
+      };
+    };
+    expect(session.provider).toMatchObject({
+      isolation: "operator_attested",
+      operator_attestation: {
+        attested_by: "qa-harness",
+        method: "dedicated MCP-only harness",
+      },
+    });
   });
 });

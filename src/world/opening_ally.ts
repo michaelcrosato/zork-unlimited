@@ -219,10 +219,6 @@ export function parseOpeningAlly(input: unknown): OpeningAlly {
   return OpeningAllySchema.parse(input);
 }
 
-export function cloneOpeningAlly(scene: OpeningAlly): OpeningAlly {
-  return parseOpeningAlly(scene);
-}
-
 export function openingAllyOptionById(
   scene: OpeningAlly,
   optionId: string,

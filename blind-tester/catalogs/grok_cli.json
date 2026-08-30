@@ -1,0 +1,21 @@
+{
+  "provider": "grok_cli",
+  "models": [
+    {
+      "id": "grok-4.5",
+      "tier": "volume",
+      "settings": {
+        "reasoning_effort": "low"
+      },
+      "notes": "Registered as the lower-cost Grok Build lineage. The dedicated instant-thinking wave currently pins grok-4.6, so use this entry only from a lane that records the exact selected model and setting."
+    },
+    {
+      "id": "grok-4.6",
+      "tier": "reference",
+      "settings": {
+        "reasoning_effort": "low"
+      },
+      "notes": "The dedicated MCP wave pins Grok 4.6 to low reasoning effort, the instant-thinking setting used by this lane. Server run evidence is verified; the unaudited client boundary keeps the session operator_attested."
+    }
+  ]
+}

@@ -159,17 +159,16 @@ function main(): void {
           // naming loudly because it is one launch branch away from working.
           `blindness is provable, but run.sh has no launch path for ${derived.readerModule} yet — ` +
           `hand-play and npm run playtest:ingest until it does`
-        : "hand-play in its own client, then npm run playtest:ingest (operator_attested)";
+        : "not live in playtest-loop.sh; use a documented dedicated lane when available, otherwise npm run playtest:ingest (operator_attested)";
     console.log(`  ${mark} ${provider.id.padEnd(14)} ${provider.family.padEnd(8)} ${how}`);
     // The derivation's own sentence, printed VERBATIM and per provider — never a shared
     // house summary. Two vendors can miss `runner_enforced` for completely different
-    // reasons (claude_code ships a CLI and simply has no capture reader written yet;
-    // grok_desktop is a desktop client the runner never spawns at all), and those two
-    // facts imply different work: one is "write the reader", the other is "this will
-    // never be enforceable as registered". The old single sentence flattened both into
-    // "not codex", which told an operator nothing they could act on. It is printed for
-    // the qualifying vendor too, because "why is THIS one trusted" is the same question
-    // and the answer names the module doing the trusting.
+    // reasons (claude_code has a reader but no launch branch, grok_cli has a dedicated
+    // operator-attested lane but no capture reader, and grok_desktop is never spawned).
+    // Those facts imply different work. The old single sentence flattened all of them
+    // into "not codex", which told an operator nothing they could act on. It is printed
+    // for the qualifying vendor too, because "why is THIS one trusted" is the same
+    // question and the answer names the module doing the trusting.
     console.log(`      ${derived.reason}`);
   }
   console.log(

@@ -438,6 +438,31 @@ Recording is best-effort (a telemetry failure never fails the run) and happens
 on the built-in Codex pure path. Structural mock runs do not produce a provider
 envelope to measure.
 
+## Dedicated Grok Build wave
+
+Grok Build does not go through `run.sh`: this checkout has no Grok session-log
+reader capable of proving the complete client tool boundary. It has a separate
+operator-attested batch lane for cross-family bug corroboration:
+
+```bash
+npm run playtest:grok-wave -- --plan-only
+npm run playtest:grok-wave -- --count 100 --concurrency 4
+```
+
+The lane pins `grok_cli` / `grok-4.6` / low reasoning effort, refuses dirty
+tracked state before spend, gives every child a private native `.grok/config.toml`
+whose AdventureForge server runs in pure mode, and parses the Grok NDJSON stream.
+The private server writes V2 run evidence; a completed report is accepted only
+when its game session, seed, build/world provenance, and exact receipt match that
+evidence. The ignored manifest is rewritten after each child and the command exits
+nonzero if any requested member is incomplete.
+
+That server proof does not prove which unrelated tools the Grok client may have
+been offered from ambient client configuration. The session is therefore honestly
+`operator_attested`: useful for issue corroboration, excluded from retention and
+clarity metrics. Manual Grok desktop/web sessions continue to use
+`npm run playtest:ingest -- --provider grok_desktop ...`.
+
 ## How pure blindness is enforced
 
 1. **Isolation.** The agent runs from an isolated temporary directory. File,
@@ -481,6 +506,8 @@ structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 - `prompt.md` — the direct-quest prompt retained for non-LLM structural fixtures.
 - `prompt-loadtest.md` — retained historical structural workload prompt; the
   Claude load-test runtime entrypoints are retired.
+- `prompt-grok-mcp-instant.md` — Grok's search_tool/use_tool transport contract
+  and the same terminal pure-V2 interview contract.
 - `reports/` — run outputs (gitignored).
 
 ## Options
@@ -489,7 +516,7 @@ structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 --quest <id>     target ONE shipped quest for a structural dev/QA drop-in;
                  requires --smoke (or --mock through fleet), never a live agent
 --seed <n>       deterministic seed (default: 7)
---provider <id>  codex (default and only current live provider)
+--provider <id>  run.sh: codex (default and only current live provider there)
 --model <id>     exact Codex id (default: gpt-5.3-codex-spark)
 --out <prefix>   report path prefix (default: reports/<stamp>_<source>_seed<n>)
 --smoke          run the no-LLM MCP smoke test instead of a real playtest
