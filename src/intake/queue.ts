@@ -17,6 +17,7 @@
  * add its own without stepping on anyone else's.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { hostname, userInfo } from "node:os";
 import { join, resolve } from "node:path";
 import { canonicalize } from "../core/hash.js";
 import {
@@ -107,6 +108,12 @@ export function upsertSubmission(
       ...submission,
       status: existing.status === "stale" ? "open" : existing.status,
       external: submission.external ?? existing.external,
+      // The claim is the queue's, exactly like `status`: a source re-filing an item it
+      // knows nothing about must not evict the lane that is working it, and a re-file
+      // that changes nothing must stay byte-identical even while the item is claimed.
+      claimed_by: existing.claimed_by,
+      claimed_at: existing.claimed_at,
+      resolved_by: existing.resolved_by,
       created_at: existing.created_at,
       // Carried, not stamped, so the comparison below sees only real changes.
       updated_at: existing.updated_at,
@@ -132,21 +139,115 @@ export function upsertSubmission(
   return merged;
 }
 
+/** Rewrite one submission in place, evicting any older file that carried its id. */
+function rewriteSubmission(next: Submission, dir: string): Submission {
+  const root = resolve(dir);
+  for (const name of readdirSync(root)) {
+    if (name.endsWith(`-${next.id}.json`) && name !== submissionFileName(next)) {
+      rmSync(join(root, name));
+    }
+  }
+  writeFileSync(join(root, submissionFileName(next)), `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  return next;
+}
+
 /** Update just the lifecycle fields of one submission, by id. */
 export function setSubmissionStatus(
   id: string,
   status: SubmissionStatus,
   dir: string = DEFAULT_QUEUE_DIR,
+  options: { resolvedBy?: string } = {},
 ): Submission | null {
   const found = readQueue(dir).submissions.find((s) => s.id === id);
   if (!found) return null;
-  const next: Submission = { ...found, status, updated_at: new Date().toISOString() };
-  const root = resolve(dir);
-  for (const name of readdirSync(root)) {
-    if (name.endsWith(`-${id}.json`)) rmSync(join(root, name));
+  const next: Submission = {
+    ...found,
+    status,
+    ...(options.resolvedBy !== undefined ? { resolved_by: options.resolvedBy } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  return rewriteSubmission(next, dir);
+}
+
+/** How long a work claim holds before another lane may take the item over. */
+export const DEFAULT_CLAIM_LEASE_HOURS = 24;
+
+/**
+ * Who is doing the claiming. `AI_LANE_ID` names one lane among several running the
+ * same agent; `AI_AGENT` is the loop's vendor selection (see AGENTS.md); the machine
+ * identity is the fallback so a bare human invocation still leaves a real name.
+ */
+export function resolveClaimIdentity(env: NodeJS.ProcessEnv = process.env): string {
+  const fromEnv = env.AI_LANE_ID?.trim() || env.AI_AGENT?.trim();
+  return fromEnv || `${userInfo().username}@${hostname()}`;
+}
+
+/** Lease length in hours: env `AI_CLAIM_LEASE_HOURS`, else the default. */
+export function claimLeaseHours(env: NodeJS.ProcessEnv = process.env): number {
+  const parsed = Number(env.AI_CLAIM_LEASE_HOURS);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_CLAIM_LEASE_HOURS;
+}
+
+export type ClaimResult =
+  | { ok: false; reason: "missing" }
+  /** Someone else's claim is younger than the lease and `force` was not given. */
+  | { ok: false; reason: "held"; holder: string; heldHours: number; leaseHours: number }
+  | {
+      ok: true;
+      outcome: "claimed" | "refreshed" | "reclaimed" | "forced";
+      submission: Submission;
+      /** The lane displaced by a `reclaimed` or `forced` takeover; null otherwise. */
+      previousHolder: string | null;
+      heldHours: number | null;
+    };
+
+/**
+ * Claim one submission for an identity, honouring the lease another lane may hold.
+ *
+ * The rules, in the order they resolve:
+ *   - the same identity re-claiming REFRESHES its lease (a long task keeps its item);
+ *   - a different identity's claim younger than the lease REFUSES unless forced,
+ *     because two lanes building the same thing is the exact waste claims exist to stop;
+ *   - a claim older than the lease is RECLAIMED — a crashed lane must not hold work
+ *     hostage — and a claim with no timestamp at all (files from before claims
+ *     existed) counts as expired for the same reason: it cannot prove freshness.
+ */
+export function claimSubmission(
+  id: string,
+  options: { identity?: string; leaseHours?: number; force?: boolean; now?: Date } = {},
+  dir: string = DEFAULT_QUEUE_DIR,
+): ClaimResult {
+  const found = readQueue(dir).submissions.find((s) => s.id === id);
+  if (!found) return { ok: false, reason: "missing" };
+  const identity = options.identity ?? resolveClaimIdentity();
+  const leaseHours = options.leaseHours ?? claimLeaseHours();
+  const now = options.now ?? new Date();
+
+  let outcome: "claimed" | "refreshed" | "reclaimed" | "forced" = "claimed";
+  let previousHolder: string | null = null;
+  let heldHours: number | null = null;
+  if (found.status === "in_progress" && found.claimed_by && found.claimed_by !== identity) {
+    heldHours = found.claimed_at
+      ? (now.getTime() - Date.parse(found.claimed_at)) / 3_600_000
+      : Number.POSITIVE_INFINITY;
+    const fresh = heldHours < leaseHours;
+    if (fresh && !options.force) {
+      return { ok: false, reason: "held", holder: found.claimed_by, heldHours, leaseHours };
+    }
+    previousHolder = found.claimed_by;
+    outcome = fresh ? "forced" : "reclaimed";
+  } else if (found.claimed_by === identity) {
+    outcome = "refreshed";
   }
-  writeFileSync(join(root, submissionFileName(next)), `${JSON.stringify(next, null, 2)}\n`, "utf8");
-  return next;
+
+  const next: Submission = {
+    ...found,
+    status: "in_progress",
+    claimed_by: identity,
+    claimed_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  };
+  return { ok: true, outcome, submission: rewriteSubmission(next, dir), previousHolder, heldHours };
 }
 
 export type QueueSummary = {
