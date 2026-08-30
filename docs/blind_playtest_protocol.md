@@ -1,8 +1,8 @@
 # Blind playtest protocol
 
-> **Any model can be a blind playtester. Only Codex can currently be PROVEN
-> blind.** Those are different claims and the difference decides how you run a
-> cohort.
+> **Any model can be a blind playtester. Only Codex and Claude Code can
+> currently be PROVEN blind.** Those are different claims and the difference
+> decides how you run a cohort.
 >
 > Providers are declared in `src/blind/providers.ts` with their playable models in
 > operator-owned catalogs under `blind-tester/catalogs/`, and the corpus, triage,
