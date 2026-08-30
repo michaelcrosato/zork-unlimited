@@ -200,6 +200,8 @@ PROVIDER_SESSION_LOG_ROOT_ENV=""
 PROVIDER_SESSION_LOG_ROOT_DEFAULT=""
 PROVIDER_LAUNCH_EXECUTABLE=""
 PROVIDER_LAUNCH_BINARY_ENV=""
+PROVIDER_LAUNCH_ARGV=()
+PROVIDER_TRANSPORT_CONTRACT=""
 MODEL=""
 MODEL_TIER=""
 while IFS=$'\t' read -r provider_record_key provider_record_value; do
@@ -212,6 +214,13 @@ while IFS=$'\t' read -r provider_record_key provider_record_value; do
     session_log_root_default)   PROVIDER_SESSION_LOG_ROOT_DEFAULT="$provider_record_value" ;;
     launch_executable)          PROVIDER_LAUNCH_EXECUTABLE="$provider_record_value" ;;
     launch_binary_override_env) PROVIDER_LAUNCH_BINARY_ENV="$provider_record_value" ;;
+    # Repeated key, one row per argv element, EMPTY VALUES INCLUDED — claude_code
+    # legitimately declares `--tools ""`, and dropping the empty element would launch a
+    # command nobody wrote. The codex launch path predates this record and builds its
+    # argv in codex-strict-stream.mjs instead, so only reader-keyed branches below that
+    # opt in ever read the array.
+    launch_argv)                PROVIDER_LAUNCH_ARGV+=("$provider_record_value") ;;
+    transport_contract)         PROVIDER_TRANSPORT_CONTRACT="$provider_record_value" ;;
     model)                      MODEL="$provider_record_value" ;;
     model_tier)                 MODEL_TIER="$provider_record_value" ;;
     *) ;;
@@ -391,6 +400,21 @@ if [[ "$PLAY_MODE" == "pure" ]]; then
   fi
 fi
 
+# The launch branches below are keyed on the same reader-module names the list holds —
+# the launch path is written against a reader's requirements, never against a brand —
+# and the two facts must cover each other. A reader listed as implemented that no branch
+# here matches would sail past the gate above and fall into whichever branch is the
+# `else`, which is exactly the burned-launch-under-the-wrong-name both files exist to
+# prevent. So a pure run for an unmatched reader refuses loudly instead.
+CODEX_ROLLOUT_READER_MODULE="blind-tester/codex-rollout.mjs"
+CLAUDE_SESSION_READER_MODULE="blind-tester/claude-session.mjs"
+if [[ "$PLAY_MODE" == "pure" && \
+      "$PROVIDER_CAPTURE_READER" != "$CODEX_ROLLOUT_READER_MODULE" && \
+      "$PROVIDER_CAPTURE_READER" != "$CLAUDE_SESSION_READER_MODULE" ]]; then
+  echo "Reader \"$PROVIDER_CAPTURE_READER\" is listed in blind-tester/implemented-launch-paths.json, but this script has no launch branch keyed to it; fix the list or add the branch." >&2
+  exit 4
+fi
+
 case "$TIMEOUT" in
   ''|*[!0-9]*|0) echo "BLIND_TIMEOUT requires a positive whole number of seconds." >&2; exit 2 ;;
 esac
@@ -562,7 +586,12 @@ if [[ "$OVERWORLD" == "1" ]]; then
   SOURCE_SLUG="overworld"
   START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Read the one-time \`tutorial\`, capture the initial \`legend\`, and merge every later \`legend_delta\` into it by key before reading that response."
   PROMPT_FILE="$SCRIPT_DIR/prompt-overworld.md"
-  if [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.3-codex-spark" ]]; then
+  if [[ "$PLAY_MODE" == "pure" && "$PROVIDER_CAPTURE_READER" == "$CLAUDE_SESSION_READER_MODULE" ]]; then
+    # This lane speaks the registry's own transport contract for the provider —
+    # direct MCP tool calls — and its instruction sheet must exist beside the others
+    # or the prompt fill below refuses the run before any client is launched.
+    PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/$PROVIDER_TRANSPORT_CONTRACT.md"
+  elif [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.3-codex-spark" ]]; then
     CODEX_TRANSPORT_CONTRACT="spark-direct-mcp-v1"
     PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"
     PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/spark-direct-mcp-v1.md"
@@ -676,7 +705,10 @@ elif [[ "${BLIND_CODEX_TEST_SCRIPT_CLIENT:-0}" != "0" ]]; then
   echo "BLIND_CODEX_TEST_SCRIPT_CLIENT must be unset, 0, or the explicit test value 1." >&2
   exit "$CODEX_PREFLIGHT_EXIT"
 fi
-if [[ "$PLAY_MODE" == "pure" ]]; then
+# Everything from here to the end of `preflight_codex_client` is the launch path
+# written against the codex-rollout reader; the claude-session reader's own (much
+# smaller) resolution and preflight follow it, keyed the same way.
+if [[ "$PLAY_MODE" == "pure" && "$PROVIDER_CAPTURE_READER" == "$CODEX_ROLLOUT_READER_MODULE" ]]; then
   if [[ -n "$EXPECTED_CODEX_BIN_IDENTITY" && -z "$EXPECTED_CODEX_CLI_VERSION" ]] || \
      [[ -z "$EXPECTED_CODEX_BIN_IDENTITY" && -n "$EXPECTED_CODEX_CLI_VERSION" ]]; then
     echo "Codex client preflight requires expected authority and version together." >&2
@@ -828,6 +860,104 @@ preflight_codex_client() {
   fi
 }
 
+# The claude-session reader's launch path resolves and pins its client the same way —
+# override env var or the registry's literal default, absolute paths only, no fallback,
+# no substitution — but far more simply, because this vendor's strength is elsewhere:
+# the pinned session id makes the evidence exact, so the deep binary classification the
+# codex reader performs is not what stands between this lane and a wrong certificate.
+# What IS checked, before and after gameplay: the selected file answers `--version` as
+# Claude Code with one semantic version, and that version never changes across the run.
+CLAUDE_VERSION_TIMEOUT_SECONDS=20
+CLAUDE_VERSION_MAX_BYTES=1024
+SELECTED_CLAUDE_BIN=""
+CLAUDE_CLI_VERSION=""
+EXPECTED_CLAUDE_CLI_VERSION=""
+if [[ "$PLAY_MODE" == "pure" && "$PROVIDER_CAPTURE_READER" == "$CLAUDE_SESSION_READER_MODULE" ]]; then
+  if [[ "$CLIENT_AUTHORITY_JSON" == "1" ]]; then
+    echo "--client-authority-json renders the codex-rollout reader's client-authority pin; the $PROVIDER_CAPTURE_READER launch path does not implement one yet." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ -z "$PROVIDER_LAUNCH_EXECUTABLE" || -z "$PROVIDER_LAUNCH_BINARY_ENV" ]]; then
+    echo "Provider \"$PROVIDER\" declares no launch executable or binary-override env var." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ ! "$PROVIDER_LAUNCH_BINARY_ENV" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    echo "Provider \"$PROVIDER\" declares an unusable binary-override env var name." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ ${#PROVIDER_LAUNCH_ARGV[@]} -eq 0 ]]; then
+    echo "Provider \"$PROVIDER\" declares no launch argv template; refusing to invent one." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ -n "${!PROVIDER_LAUNCH_BINARY_ENV+x}" ]]; then
+    SELECTED_CLAUDE_BIN="${!PROVIDER_LAUNCH_BINARY_ENV}"
+    if [[ -z "$SELECTED_CLAUDE_BIN" || "$SELECTED_CLAUDE_BIN" == *$'\n'* || \
+          "$SELECTED_CLAUDE_BIN" == *$'\r'* ]] || ! is_absolute_output_prefix "$SELECTED_CLAUDE_BIN"; then
+      echo "$PROVIDER_LAUNCH_BINARY_ENV must name exactly one absolute Claude Code executable path (no arguments or aliases)." >&2
+      echo "The runner will not evaluate it, search for a substitute, or fall back to another provider." >&2
+      exit "$CODEX_PREFLIGHT_EXIT"
+    fi
+  else
+    # Same external-file-only lookup the codex resolution uses, for the same reason:
+    # `type -P` ignores aliases/functions and keeps Git Bash's extensionless npm shim.
+    if ! SELECTED_CLAUDE_BIN="$(type -P "$PROVIDER_LAUNCH_EXECUTABLE")" || [[ -z "$SELECTED_CLAUDE_BIN" ]]; then
+      echo "Claude Code client preflight failed: the literal default executable \"$PROVIDER_LAUNCH_EXECUTABLE\" was not found." >&2
+      echo "Set $PROVIDER_LAUNCH_BINARY_ENV to the one intended absolute Claude Code executable path; no fallback was attempted." >&2
+      exit "$CODEX_PREFLIGHT_EXIT"
+    fi
+  fi
+fi
+
+preflight_claude_client() {
+  local quiet="${1:-0}" probe status version_output marker errexit_was_set=0
+  marker=$'\036'
+  case "$-" in
+    *e*) errexit_was_set=1 ;;
+  esac
+  set +e
+  probe="$(
+    timeout -k 1 "$CLAUDE_VERSION_TIMEOUT_SECONDS" "$SELECTED_CLAUDE_BIN" --version 2>&1 \
+      | head -c "$((CLAUDE_VERSION_MAX_BYTES + 1))"
+    status=$?
+    printf '%s%s' "$marker" "$status"
+  )"
+  if [[ "$errexit_was_set" == "1" ]]; then
+    set -e
+  else
+    set +e
+  fi
+  status="${probe##*"$marker"}"
+  version_output="${probe%"$marker"*}"
+  if [[ ! "$status" =~ ^[0-9]+$ || "$status" -ne 0 ]]; then
+    echo "Claude Code client preflight failed for selected binary \"$SELECTED_CLAUDE_BIN\": --version exited ${status:-unknown}." >&2
+    if [[ -n "$version_output" ]]; then
+      printf '%s\n' "$version_output" >&2
+    fi
+    echo "Set $PROVIDER_LAUNCH_BINARY_ENV to the one intended Claude Code executable path; no retry, fallback, or provider substitution was attempted." >&2
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  # The probe must answer as Claude Code with one semantic version — e.g.
+  # `2.1.251 (Claude Code)` — or the selected file is not the client this launch
+  # path was verified against.
+  if [[ ! "$version_output" =~ ^[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*)[[:space:]]+\(Claude\ Code\)[[:space:]]*$ ]]; then
+    echo "Claude Code client preflight failed for selected binary \"$SELECTED_CLAUDE_BIN\": --version did not answer as Claude Code with one semantic version." >&2
+    printf '%s\n' "$version_output" >&2
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  local version="${BASH_REMATCH[1]}"
+  if [[ -z "$EXPECTED_CLAUDE_CLI_VERSION" ]]; then
+    EXPECTED_CLAUDE_CLI_VERSION="$version"
+  elif [[ "$version" != "$EXPECTED_CLAUDE_CLI_VERSION" ]]; then
+    echo "Claude Code client preflight failed for selected binary \"$SELECTED_CLAUDE_BIN\": expected cli=$EXPECTED_CLAUDE_CLI_VERSION but observed cli=$version." >&2
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  CLAUDE_CLI_VERSION="$version"
+  if [[ "$quiet" != "1" ]]; then
+    printf 'Claude Code client preflight: executable=%q cli=%s\n' \
+      "$SELECTED_CLAUDE_BIN" "$CLAUDE_CLI_VERSION"
+  fi
+}
+
 # A Windows-installed node_modules cannot run under WSL's Linux node: only the
 # @esbuild/win32-x64 native binary is present, so tsx (and with it the MCP
 # server) dies with a cryptic "MCP error -32000: Connection closed". Fail with
@@ -842,8 +972,8 @@ fi
 
 # Pin and validate one exact client before gameplay or retry machinery exists.
 # `--preflight-only` reaches this point without resolving, reading, or listing
-# CODEX_HOME and creates no report or player artifacts.
-if [[ "$PLAY_MODE" == "pure" ]]; then
+# the client home and creates no report or player artifacts.
+if [[ "$PLAY_MODE" == "pure" && "$PROVIDER_CAPTURE_READER" == "$CODEX_ROLLOUT_READER_MODULE" ]]; then
   if ! preflight_codex_client "$CLIENT_AUTHORITY_JSON"; then
     exit "$CODEX_PREFLIGHT_EXIT"
   fi
@@ -852,6 +982,14 @@ if [[ "$PLAY_MODE" == "pure" ]]; then
       "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" render-client-authority \
         --identity "$CODEX_BIN_IDENTITY" --cli-version "$CODEX_CLI_VERSION"
     fi
+    exit 0
+  fi
+fi
+if [[ "$PLAY_MODE" == "pure" && "$PROVIDER_CAPTURE_READER" == "$CLAUDE_SESSION_READER_MODULE" ]]; then
+  if ! preflight_claude_client 0; then
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ "$PREFLIGHT_ONLY" == "1" ]]; then
     exit 0
   fi
 fi
@@ -1172,6 +1310,117 @@ record_playthrough_terminal() {
   PLAYTHROUGH_TELEMETRY_RECORDED=1
 }
 
+# One launch branch per capture reader, dispatched on the same reader-module key the
+# implemented-launch-paths list holds. The claude-session branch comes first so the
+# codex text below stays byte-identical for the tests that slice it out of this file.
+if [[ "$PROVIDER_CAPTURE_READER" == "$CLAUDE_SESSION_READER_MODULE" ]]; then
+  # Claude Code leaves subscription state CLI-owned in the operator's existing home and
+  # needs no relocation: the runner PINS the session id, so the one private transcript
+  # this run may write has an exact path BEFORE the process starts, and concurrent
+  # players stay apart under one shared root because their ids differ. The blind
+  # contract is the same as the codex branch's — an isolated temp cwd and only the pure
+  # AdventureForge MCP surface — enforced by the registry argv (--tools "",
+  # --strict-mcp-config, --setting-sources "", --disable-slash-commands) and then
+  # PROVEN from the client's own init event and transcript by claude-session.mjs.
+  CLAUDE_SESSION_SCRIPT="$(node_path_arg "$SCRIPT_DIR/claude-session.mjs")"
+  CLAUDE_PLAYER_CWD="$WORK/player"
+  mkdir -p "$CLAUDE_PLAYER_CWD"
+  CLAUDE_PLAYER_CWD_ARG="$(node_path_arg "$CLAUDE_PLAYER_CWD")"
+  CLAUDE_STREAM="$OUT.claude.jsonl"
+  CLAUDE_STREAM_ARG="$(node_path_arg "$CLAUDE_STREAM")"
+  CLAUDE_CAPTURE="$OUT.claude-capture.json"
+  CLAUDE_CAPTURE_ARG="$(node_path_arg "$CLAUDE_CAPTURE")"
+  CLAUDE_TRANSCRIPT_COPY="$OUT.claude-session.jsonl"
+  CLAUDE_TRANSCRIPT_COPY_ARG="$(node_path_arg "$CLAUDE_TRANSCRIPT_COPY")"
+  # The reader takes the directory that CONTAINS the client's `.claude` state root:
+  # the registry's rootDefault is {HOME}/.claude, and it deliberately declares no
+  # relocation env var (see providers.json), so this is exactly {HOME}.
+  CLAUDE_STATE_PARENT_ARG="$(node_path_arg "$HOME")"
+
+  CLAUDE_SESSION_ID="$("$NODE_CMD" -e 'process.stdout.write(require("node:crypto").randomUUID())')"
+  if ! CLAUDE_EXPECTED_LOG="$("$NODE_CMD" "$CLAUDE_SESSION_SCRIPT" resolve-log \
+      --home "$CLAUDE_STATE_PARENT_ARG" --cwd "$CLAUDE_PLAYER_CWD_ARG" \
+      --session-id "$CLAUDE_SESSION_ID")"; then
+    echo "Could not resolve the pinned Claude Code session log path; no client was launched." >&2
+    exit 4
+  fi
+  # A fresh UUID makes a pre-existing log at that path effectively impossible; if one
+  # is there anyway, something else owns this id and this run must not adopt it.
+  if ! "$NODE_CMD" -e 'process.exit(require("node:fs").existsSync(process.argv[1]) ? 1 : 0)' "$CLAUDE_EXPECTED_LOG"; then
+    echo "Refusing to launch: the pinned Claude Code session log already exists: $CLAUDE_EXPECTED_LOG" >&2
+    exit 4
+  fi
+
+  # The registry's launch argv IS the launch command — the same dumb exact-token
+  # substitution PlaytestLaunchSchema documents, plus the runner-appended
+  # `--session-id` pair (there is deliberately no {SESSION_ID} token: the id is the
+  # runner's fact, not the template's). The MCP config path crosses into a native
+  # client on Windows, so it is handed over in native form like the server's paths.
+  CLAUDE_MCP_CONFIG_ARG="$MCP_CONFIG"
+  if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]] && command -v cygpath >/dev/null 2>&1; then
+    CLAUDE_MCP_CONFIG_ARG="$(cygpath -m "$MCP_CONFIG")"
+  fi
+  CLAUDE_LAUNCH_ARGS=()
+  for provider_launch_template_argument in "${PROVIDER_LAUNCH_ARGV[@]}"; do
+    provider_launch_argument="${provider_launch_template_argument//\{MODEL\}/$MODEL}"
+    provider_launch_argument="${provider_launch_argument//\{CWD\}/$CLAUDE_PLAYER_CWD_ARG}"
+    provider_launch_argument="${provider_launch_argument//\{MCP_CONFIG\}/$CLAUDE_MCP_CONFIG_ARG}"
+    CLAUDE_LAUNCH_ARGS+=("$provider_launch_argument")
+  done
+  CLAUDE_LAUNCH_ARGS+=(--session-id "$CLAUDE_SESSION_ID")
+
+  # Re-probe the same pinned executable immediately before the gameplay process, and
+  # recheck build provenance so drift cannot spend gameplay tokens — the same order
+  # the codex branch keeps.
+  if ! preflight_claude_client 1; then
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if ! assert_launch_provenance_unchanged; then
+    exit 4
+  fi
+set +e
+  printf "%s" "$PROMPT" | (
+    cd "$CLAUDE_PLAYER_CWD" &&
+      timeout -k 10 "$TIMEOUT" "$SELECTED_CLAUDE_BIN" "${CLAUDE_LAUNCH_ARGS[@]}"
+  ) > "$CLAUDE_STREAM" 2> "$OUT.log"
+  STATUS=$?
+  # The same bounded identity probe closes the run, so a client replacement mid-run
+  # is loud instead of silently accepted.
+  if ! preflight_claude_client 1; then
+    set -e
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  # Exit 42 is reserved for runner-owned pre-game client rejection; a provider
+  # process exiting with that ordinary status is gameplay-time CLI failure.
+  if [[ "$STATUS" -eq "$CODEX_PREFLIGHT_EXIT" ]]; then
+    STATUS=4
+  fi
+  if [[ "$STATUS" -eq 0 ]]; then
+    "$NODE_CMD" "$CLAUDE_SESSION_SCRIPT" capture \
+      --home "$CLAUDE_STATE_PARENT_ARG" --cwd "$CLAUDE_PLAYER_CWD_ARG" \
+      --session-id "$CLAUDE_SESSION_ID" --stream "$CLAUDE_STREAM_ARG" \
+      --transcript-out "$CLAUDE_TRANSCRIPT_COPY_ARG" \
+      >"$CLAUDE_CAPTURE" 2>"$OUT.claude-capture.log"
+    CLAUDE_CAPTURE_STATUS=$?
+    if [[ "$CLAUDE_CAPTURE_STATUS" -ne 0 ]]; then
+      STATUS=4
+      cat "$OUT.claude-capture.log" >&2 || true
+    fi
+  fi
+  if [[ "$STATUS" -eq 0 ]]; then
+    "$NODE_CMD" "$CLAUDE_SESSION_SCRIPT" envelope \
+      --receipt "$CLAUDE_CAPTURE_ARG" --stream "$CLAUDE_STREAM_ARG" \
+      --model "$MODEL" --cli-version "$CLAUDE_CLI_VERSION" \
+      --transport-contract "$PROVIDER_TRANSPORT_CONTRACT" \
+      > "$OUT.json" 2> "$OUT.claude-audit.log"
+    CLAUDE_AUDIT_STATUS=$?
+    if [[ "$CLAUDE_AUDIT_STATUS" -ne 0 ]]; then
+      STATUS=4
+      cat "$OUT.claude-audit.log" >&2 || true
+    fi
+  fi
+set -e
+else
 # The blind-provider contract is an isolated temp cwd and only the pure
 # AdventureForge MCP surface. Codex starts without
 # user/project config, rules, shell, web, apps, plugins, hooks, browser, computer,
@@ -1329,6 +1578,7 @@ set +e
     fi
   fi
 set -e
+fi
 
 if [[ "${BLIND_CODEX_TEST_SCRIPT_CLIENT:-0}" == "1" && "$STATUS" -eq 0 ]]; then
   echo "Codex test-script client reached a synthetic success; publication and retention are forbidden." >&2

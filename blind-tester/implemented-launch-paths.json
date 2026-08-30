@@ -20,5 +20,5 @@
     "a launch branch in run.sh + one line here. The first three make the evidence honest;",
     "the last two make it runnable."
   ],
-  "implementedCaptureReaders": ["blind-tester/codex-rollout.mjs"]
+  "implementedCaptureReaders": ["blind-tester/codex-rollout.mjs", "blind-tester/claude-session.mjs"]
 }

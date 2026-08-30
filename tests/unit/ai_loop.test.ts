@@ -381,7 +381,7 @@ describe("buildUltraplanPrompt drops the blind-playtest mandate", () => {
 
     expect(promptSteps(prompt)).toEqual([
       "0 — Read the decision log FIRST (docs/DECISION_LOG.md)",
-      "1 — Run a LOCAL-ONLY ULTRAPLAN (the Workflow tool)",
+      "1 — Run a LOCAL-ONLY ULTRAPLAN (multi-agent if available)",
       "2 — Persist the decision and the ignored per-cycle handoff",
       "3 — Implement in a FRESH context",
       "4 — Run focused checks and create the LOCAL provisional commit",

@@ -64,7 +64,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { closeSync, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
+import { closeSync, fstatSync, lstatSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { CODEX_PURE_PLAYER_TOOLS } from "./codex-pure-envelope.mjs";
@@ -517,7 +517,14 @@ export function auditClaudeInitEvent(init, { sessionId, cwd }) {
  * as much as an unaudited one and returning a "mostly fine" object invites a caller to
  * treat it as proof.
  */
-export function captureClaudeSession({ home, cwd, sessionId, streamPath, maxBytes }) {
+export function captureClaudeSession({
+  home,
+  cwd,
+  sessionId,
+  streamPath,
+  maxBytes,
+  transcriptOut,
+}) {
   const path = claudeSessionLogPath({ home, cwd, sessionId });
   const transcriptBytes = readStableClaudeFile(path, "Claude Code session transcript", {
     maxBytes: maxBytes ?? CLAUDE_TRANSCRIPT_MAX_BYTES,
@@ -543,6 +550,16 @@ export function captureClaudeSession({ home, cwd, sessionId, streamPath, maxByte
     );
   }
 
+  // Evidence inside the directory the client owns is evidence the client can rewrite,
+  // so the runner asks for a copy beside the report — the codex lane's rollout copy,
+  // done the cheap way this vendor allows: these are the exact bytes every audit above
+  // ran over, so identity with the receipt's sha256 holds by construction rather than
+  // by a second read that could race. `wx` because a pre-existing file at the
+  // destination means the prefix was reused, which the runner treats as refusal.
+  if (transcriptOut !== undefined) {
+    writeFileSync(transcriptOut, transcriptBytes, { flag: "wx" });
+  }
+
   return {
     schema_version: 1,
     provider: "claude_code",
@@ -563,6 +580,108 @@ export function captureClaudeSession({ home, cwd, sessionId, streamPath, maxByte
     mcp_servers: offered.mcp_servers,
     called_tools: toolCalls.map((call) => ({ name: call.name, id: call.id })),
     tool_call_counts: toolCallCounts,
+  };
+}
+
+/** A finite number or null — the telemetry fields are forwarded, never invented. */
+function finiteOrNull(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * The one artifact the generic tail of run.sh reads per run: the client's own final
+ * `result` event, audited and stapled to the capture receipt.
+ *
+ * The codex lane builds its `<out>.json` in `codex-pure-envelope.mjs` from three
+ * artifacts; this vendor needs far less because the receipt already carries the audited
+ * tool boundary, so the envelope's only new job is the RESULT: exactly one successful
+ * result event, bound to the same pinned session as everything else, answered by the
+ * model the run was requested for. Everything the runner's telemetry reads
+ * (`is_error`, `duration_ms`, `num_turns`, `total_cost_usd`, `usage`) is forwarded
+ * from that event verbatim — the client's report of its own run, never a synthesis.
+ *
+ * Like the receipt, it emits FACTS and no isolation verdict — see the module header.
+ */
+export function buildClaudeEnvelope({ receipt, streamRows, model, cliVersion, transportContract }) {
+  if (
+    receipt === null ||
+    typeof receipt !== "object" ||
+    receipt.provider !== "claude_code" ||
+    typeof receipt.session_id !== "string"
+  ) {
+    fail("envelope requires a claude_code capture receipt with a session id");
+  }
+  if (typeof model !== "string" || model.length === 0) {
+    fail("envelope requires the requested model id");
+  }
+  if (typeof transportContract !== "string" || transportContract.length === 0) {
+    fail("envelope requires the transport contract id");
+  }
+
+  const results = streamRows.filter((row) => row.type === "result");
+  if (results.length !== 1) {
+    fail(
+      `client stream carries ${results.length} result events, so it is not one ` +
+        `completed session`,
+    );
+  }
+  const [result] = results;
+  if (result.subtype !== "success" || result.is_error !== false) {
+    fail(
+      `client run did not end in one successful result (subtype ` +
+        `${JSON.stringify(result.subtype)}, is_error ${JSON.stringify(result.is_error)})`,
+    );
+  }
+  if (typeof result.result !== "string" || result.result.length === 0) {
+    fail("client result carries no report text");
+  }
+  if (result.session_id !== receipt.session_id) {
+    fail(
+      `client result belongs to session ${JSON.stringify(result.session_id)}, not the ` +
+        `runner's ${JSON.stringify(receipt.session_id)}`,
+    );
+  }
+
+  // The catalog refuses aliases so a sealed run means what its record says; this is
+  // where that promise meets what the transcript actually recorded. Absence is
+  // tolerated on the recorded side only — a client that wrote no model is not evidence
+  // of a substitution — but a recorded model that differs from the requested one is.
+  const recordedModel = receipt.client?.model ?? null;
+  if (recordedModel !== null && recordedModel !== model) {
+    fail(
+      `session was answered by model ${JSON.stringify(recordedModel)}, not the ` +
+        `requested ${JSON.stringify(model)}`,
+    );
+  }
+  const recordedVersion = receipt.client?.version ?? null;
+  if (
+    cliVersion !== undefined &&
+    cliVersion !== null &&
+    recordedVersion !== null &&
+    recordedVersion !== cliVersion
+  ) {
+    fail(
+      `session was written by client ${JSON.stringify(recordedVersion)}, not the ` +
+        `preflighted ${JSON.stringify(cliVersion)}`,
+    );
+  }
+
+  return {
+    schema_version: 1,
+    provider: "claude_code",
+    transport_contract: transportContract,
+    model,
+    session_id: receipt.session_id,
+    is_error: false,
+    duration_ms: finiteOrNull(result.duration_ms),
+    num_turns: finiteOrNull(result.num_turns),
+    total_cost_usd: finiteOrNull(result.total_cost_usd),
+    usage:
+      result.usage !== null && typeof result.usage === "object" && !Array.isArray(result.usage)
+        ? result.usage
+        : null,
+    result: result.result,
+    capture: receipt,
   };
 }
 
@@ -589,15 +708,51 @@ function main() {
     const cwd = option(argv, "--cwd");
     const sessionId = option(argv, "--session-id");
     const streamPath = option(argv, "--stream");
+    const transcriptOut = option(argv, "--transcript-out");
     if (!home || !cwd || !sessionId || !streamPath) {
       fail("capture requires --home, --cwd, --session-id and --stream");
     }
-    const receipt = captureClaudeSession({ home, cwd, sessionId, streamPath });
+    const receipt = captureClaudeSession({ home, cwd, sessionId, streamPath, transcriptOut });
     process.stdout.write(`${JSON.stringify(receipt)}\n`);
     return;
   }
+  if (command === "envelope") {
+    const receiptPath = option(argv, "--receipt");
+    const streamPath = option(argv, "--stream");
+    const model = option(argv, "--model");
+    const cliVersion = option(argv, "--cli-version");
+    const transportContract = option(argv, "--transport-contract");
+    if (!receiptPath || !streamPath || !model || !transportContract) {
+      fail("envelope requires --receipt, --stream, --model and --transport-contract");
+    }
+    const receiptText = readStableClaudeFile(receiptPath, "Claude Code capture receipt", {
+      maxBytes: CLAUDE_STREAM_MAX_BYTES,
+    }).toString("utf8");
+    const parsedReceipt = parseJsonRejectingDuplicateKeys(
+      receiptText,
+      "Claude Code capture receipt",
+    );
+    if (!parsedReceipt.ok) fail(parsedReceipt.reason);
+    const streamRows = parseClaudeJsonl(
+      readStableClaudeFile(streamPath, "Claude Code client stream", {
+        maxBytes: CLAUDE_STREAM_MAX_BYTES,
+      }).toString("utf8"),
+      "Claude Code client stream",
+    );
+    const envelope = buildClaudeEnvelope({
+      receipt: parsedReceipt.value,
+      streamRows,
+      model,
+      cliVersion,
+      transportContract,
+    });
+    process.stdout.write(`${JSON.stringify(envelope)}\n`);
+    return;
+  }
   fail(
-    "Usage: claude-session.mjs resolve-log|capture --home <dir> --cwd <dir> --session-id <uuid> [--stream <path>]",
+    "Usage: claude-session.mjs resolve-log|capture|envelope --home <dir> --cwd <dir> " +
+      "--session-id <uuid> [--stream <path>] [--transcript-out <path>] " +
+      "[--receipt <path>] [--model <id>] [--cli-version <v>] [--transport-contract <id>]",
   );
 }
 

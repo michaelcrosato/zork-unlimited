@@ -495,8 +495,11 @@ structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 ## Files
 
 - `run.sh` — the runner: builds the pure MCP config and private evidence path,
-  fills the transport-only prompt, runs the Codex CLI from an isolated directory,
-  and verifies the report/receipt after game-confirmed exit.
+  fills the transport-only prompt, runs the selected provider's CLI (one launch
+  branch per implemented capture reader: Codex via the strict-stream harness,
+  Claude Code via a runner-pinned `--session-id` whose private transcript path is
+  exact before launch) from an isolated directory, and verifies the
+  report/receipt after game-confirmed exit.
   `--smoke` selects the structural no-LLM path.
 - `smoke.mjs` — token-free MCP smoke test via the MCP SDK client: spawn server,
   `tools/list`, exercise overworld and direct quest starts, step a few actions,
@@ -516,8 +519,9 @@ structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 --quest <id>     target ONE shipped quest for a structural dev/QA drop-in;
                  requires --smoke (or --mock through fleet), never a live agent
 --seed <n>       deterministic seed (default: 7)
---provider <id>  run.sh: codex (default and only current live provider there)
---model <id>     exact Codex id (default: gpt-5.3-codex-spark)
+--provider <id>  run.sh: codex (default) or claude_code — the providers with a live
+                 launch branch here; every other provider is refused before launch
+--model <id>     exact catalog id (default: the provider's volume model)
 --out <prefix>   report path prefix (default: reports/<stamp>_<source>_seed<n>)
 --smoke          run the no-LLM MCP smoke test instead of a real playtest
 --overworld      explicit fresh-overworld target (already fixed for pure live play)
@@ -528,7 +532,8 @@ structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 Environment: `BLIND_QUEST_ID` (structural runs only), `BLIND_MODEL`,
 `BLIND_TIMEOUT` (seconds, default 1200; technical failure/failsafe, never a play budget),
 `BLIND_SPECTATE=1`, `BLIND_SPECTATE_DELAY_MS`, `BLIND_BASH` (Windows: path to Git
-Bash if auto-detection fails).
+Bash if auto-detection fails). `BLIND_CLAUDE_BIN` pins the Claude Code lane to one
+absolute executable exactly the way `BLIND_CODEX_BIN` pins the Codex lane.
 
 ## Why arbitrary provider overrides are not pure evidence
 

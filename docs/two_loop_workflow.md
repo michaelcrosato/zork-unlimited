@@ -111,13 +111,14 @@ one line in `implemented-launch-paths.json`. The first three make its evidence h
 the last two make it runnable. `npm run doctor` prints exactly which of the five are
 missing, per provider, in this checkout.
 
-**Today that yields: codex live in the generic runner; claude_code provable but not
-yet launchable (`blind-tester/claude-session.mjs` exists, no launch branch);
-gemini_cli ingest-only; and grok_cli available through its own operator-attested
-headless wave.** Claude Code was verified this session to be genuinely provable —
-`--strict-mcp-config` plus `--tools ""` plus `--setting-sources ""` yields a process whose
-entire callable surface is the one declared MCP server, with a runner-pinned
-`--session-id` naming the transcript path before launch.
+**Today that yields: codex and claude_code both live in the generic runner
+(`blind-tester/claude-session.mjs` has its launch branch and its line in the
+implemented list); gemini_cli ingest-only; and grok_cli available through its own
+operator-attested headless wave.** The Claude Code lane launches with
+`--strict-mcp-config` plus `--tools ""` plus `--setting-sources ""` — a process whose
+entire callable surface is the one declared MCP server — with a runner-pinned
+`--session-id` naming the transcript path before launch, and audits both the
+offered surface (the stream's init event) and the called one (the transcript).
 
 The remaining asymmetry is capability, not policy. `runner_enforced` means the runner
 PROVED the agent saw only the AdventureForge MCP tools, and for Codex that proof is read
@@ -132,7 +133,7 @@ What this does and does not cost you while a vendor still lacks a launch path:
   toward it, and corroboration across families is the promotion rung that matters.
 - Multi-vendor **experience metrics do not**. Retention and clarity numbers take
   `runner_enforced` sessions only, so headline experience numbers remain a measurement
-  of whichever vendors are live in this checkout — currently Codex alone.
+  of whichever vendors are live in this checkout — currently Codex and Claude Code.
 
 So a mixed fleet is worth running now: drive not-yet-launchable vendors through their
 own client and ingest them, or use the dedicated Grok wave. Read headline experience

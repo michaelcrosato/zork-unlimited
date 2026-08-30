@@ -10,6 +10,7 @@ import {
   derivePlaytestIsolation,
   parsePlaytestCatalog,
   resolvePlaytestSessionLogLocator,
+  runnerCanDriveProvider,
   type PlaytestCapture,
   type PlaytestIsolationSubject,
   type PlaytestProvider,
@@ -326,6 +327,27 @@ describe("playtest provider isolation matches what the runner can prove", () => 
     for (const reader of runnerImplementedCaptureReaders()) {
       expect(existsSync(join(process.cwd(), reader)), reader).toBe(true);
     }
+  });
+
+  it("drives the claude-session reader: the second vendor is live end to end here", () => {
+    // The state this replaces was the honest middle: claude_code's blindness provable
+    // (blind-tester/claude-session.mjs on disk), but nothing able to spawn it. Both
+    // halves must now hold — the derivation AND the implemented launch path — because a
+    // second drivable family is what makes the corroboration rule reachable without
+    // hand-played ingestion, and because this is the proof the seam is a seam rather
+    // than a Codex-shaped hole.
+    const claude = PLAYTEST_PROVIDERS.find((provider) => provider.id === "claude_code")!;
+    expect(claude.capture?.readerModule).toBe("blind-tester/claude-session.mjs");
+    const drive = runnerCanDriveProvider(claude);
+    expect(drive.drivable, drive.reason).toBe(true);
+    expect(pureLaunchableProviders()).toContain("claude_code");
+    // And the runner's own dispatch is keyed on the READER, not on a vendor name — the
+    // same rule implemented-launch-paths.json states for itself. The registry's pinned
+    // session-id contract must be visible in the launch: the runner appends the pair,
+    // because PlaytestLaunchSchema deliberately has no {SESSION_ID} token.
+    const source = runnerSource();
+    expect(source).toContain('CLAUDE_SESSION_READER_MODULE="blind-tester/claude-session.mjs"');
+    expect(source).toContain('--session-id "$CLAUDE_SESSION_ID"');
   });
 
   it("never delivers the player prompt as a launch argument", () => {

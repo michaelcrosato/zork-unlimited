@@ -14,13 +14,27 @@
  *   npm run work                    the next item, human-readable
  *   npm run work -- --json          machine-readable, for a driver
  *   npm run work -- --list          the whole open queue in order
- *   npm run work -- --claim <id>    mark in_progress
- *   npm run work -- --done <id>     mark done
- *   npm run work -- --decline <id>  mark declined
+ *   npm run work -- --claim <id>    mark in_progress, stamped with this lane's identity
+ *                                   (env AI_LANE_ID, else AI_AGENT, else user@host) and
+ *                                   a lease timestamp. Refuses, nonzero, while another
+ *                                   lane's claim is younger than the lease
+ *                                   (AI_CLAIM_LEASE_HOURS, default 24); an expired
+ *                                   claim is taken over. Add --force to override a
+ *                                   fresh foreign claim.
+ *   npm run work -- --done <id>     mark done (records who resolved it)
+ *   npm run work -- --decline <id>  mark declined (records who resolved it)
  *   npm run work -- --next-id      just the id, or nothing — for shell callers
  */
 import { DEFAULT_QUEUE_DIR, type Submission } from "../src/intake/submission.js";
-import { nextWork, readQueue, setSubmissionStatus, summarizeQueue } from "../src/intake/queue.js";
+import {
+  claimLeaseHours,
+  claimSubmission,
+  nextWork,
+  readQueue,
+  resolveClaimIdentity,
+  setSubmissionStatus,
+  summarizeQueue,
+} from "../src/intake/queue.js";
 
 // Piping to `head`/`less` closes stdout early; Node turns that into an unhandled EPIPE
 // and a stack trace. A list-printing CLI is going to be piped, so swallow it and exit
@@ -53,19 +67,58 @@ function describe(s: Submission): string {
 function main(): void {
   const dir = arg("--queue") ?? DEFAULT_QUEUE_DIR;
 
+  const claimId = arg("--claim");
+  if (claimId) {
+    const identity = resolveClaimIdentity();
+    const result = claimSubmission(
+      claimId,
+      { identity, leaseHours: claimLeaseHours(), force: process.argv.includes("--force") },
+      dir,
+    );
+    if (!result.ok) {
+      if (result.reason === "missing") {
+        console.error(`no submission ${claimId} in ${dir}`);
+      } else {
+        // Refusing IS the feature: a second lane building the same item is the exact
+        // duplicated work claims exist to prevent. Exit nonzero so a driver stops here.
+        console.error(
+          `refusing --claim ${claimId}: held by ${result.holder}, ` +
+            `claimed ${result.heldHours.toFixed(1)}h ago (lease ${result.leaseHours}h). ` +
+            `Re-run with --force to take it over anyway.`,
+        );
+      }
+      process.exit(1);
+    }
+    const age =
+      result.heldHours !== null && Number.isFinite(result.heldHours)
+        ? `${result.heldHours.toFixed(1)}h ago`
+        : "at an unrecorded time";
+    if (result.outcome === "forced") {
+      console.error(
+        `!! FORCED TAKEOVER: ${claimId} was still held by ${result.previousHolder} ` +
+          `(claimed ${age}, lease not yet expired)`,
+      );
+    } else if (result.outcome === "reclaimed") {
+      console.log(
+        `lease expired: taking ${claimId} over from ${result.previousHolder} (claimed ${age})`,
+      );
+    }
+    console.log(`${result.submission.id} → in_progress (claimed by ${identity})`);
+    return;
+  }
+
   for (const [flag, status] of [
-    ["--claim", "in_progress"],
     ["--done", "done"],
     ["--decline", "declined"],
   ] as const) {
     const id = arg(flag);
     if (!id) continue;
-    const updated = setSubmissionStatus(id, status, dir);
+    const updated = setSubmissionStatus(id, status, dir, { resolvedBy: resolveClaimIdentity() });
     if (!updated) {
       console.error(`no submission ${id} in ${dir}`);
       process.exit(1);
     }
-    console.log(`${updated.id} → ${updated.status}`);
+    console.log(`${updated.id} → ${updated.status} (by ${updated.resolved_by})`);
     return;
   }
 

@@ -132,6 +132,17 @@ export const SubmissionSchema = z
     kind: SubmissionKindSchema,
     priority: SubmissionPrioritySchema,
     status: SubmissionStatusSchema,
+    /**
+     * The work claim: which lane holds this item and since when. OPTIONAL on purpose —
+     * every queue file written before claims existed must keep parsing — and owned by
+     * the queue's lifecycle like `status`, never by the source re-filing the item.
+     * None of these participate in the content-addressed id (`submissionId` hashes
+     * source/kind/key only).
+     */
+    claimed_by: z.string().min(1).optional(),
+    claimed_at: z.string().datetime().optional(),
+    /** Who marked it done or declined. The claim fields stay behind as history. */
+    resolved_by: z.string().min(1).optional(),
     /** Free-form tags, mirrored to the tracker's labels. */
     labels: z.array(z.string().min(1)).default([]),
     /** Where in the game or repo, when the source knows. */
