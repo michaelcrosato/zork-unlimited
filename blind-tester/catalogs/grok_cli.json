@@ -12,10 +12,11 @@
     {
       "id": "grok-4.6",
       "tier": "reference",
+      "default": true,
       "settings": {
         "reasoning_effort": "low"
       },
-      "notes": "The dedicated MCP wave pins Grok 4.6 to low reasoning effort, the instant-thinking setting used by this lane. Server run evidence is verified; the unaudited client boundary keeps the session operator_attested."
+      "notes": "The default grok_cli model. The dedicated MCP wave pins Grok 4.6 to low reasoning effort, the instant-thinking setting used by this lane. Server run evidence is verified; the unaudited client boundary keeps the session operator_attested."
     }
   ]
 }

@@ -9,7 +9,7 @@
 # own CLAUDE.md.
 #
 # Usage:
-#   blind-tester/run.sh [--provider <id>] [--seed <n>] [--model <id>] [--out <prefix>]   # CORE GAME
+#   blind-tester/run.sh [--provider <id>] [--seed <n>] [--model <id>] [--effort <level>] [--out <prefix>]   # CORE GAME
 #   blind-tester/run.sh --quest <id> --mock [--seed <n>] ...              # structural targeted test, no LLM
 #   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # structural MCP smoke, no LLM
 #   ... [--persona <name>]  # play-style overlay; see blind-tester/personas/*.md (default: "default", a no-op)
@@ -39,6 +39,10 @@ SEED=7
 DEFAULT_PROVIDER="codex"
 PROVIDER="${BLIND_PROVIDER:-$DEFAULT_PROVIDER}"
 MODEL="${BLIND_MODEL:-}"
+# Reasoning effort for the launched player. An explicit --effort/BLIND_REASONING_EFFORT
+# wins; otherwise the selected model's catalog settings.reasoning_effort applies; a
+# codex launch with neither keeps the historical xhigh.
+REASONING_EFFORT="${BLIND_REASONING_EFFORT:-}"
 OUT=""
 SMOKE=0
 MOCK=0
@@ -131,6 +135,8 @@ while [[ $# -gt 0 ]]; do
     --provider=*)       PROVIDER="${1#*=}"; shift ;;
     --model)            MODEL="$2"; shift 2 ;;
     --model=*)          MODEL="${1#*=}"; shift ;;
+    --effort)           REASONING_EFFORT="$2"; shift 2 ;;
+    --effort=*)         REASONING_EFFORT="${1#*=}"; shift ;;
     --out)              OUT="$2"; shift 2 ;;
     --out=*)            OUT="${1#*=}"; shift ;;
     --smoke)            SMOKE=1; shift ;;
@@ -204,6 +210,8 @@ PROVIDER_LAUNCH_ARGV=()
 PROVIDER_TRANSPORT_CONTRACT=""
 MODEL=""
 MODEL_TIER=""
+CATALOG_REASONING_EFFORT=""
+CATALOG_CONTEXT_WINDOW=""
 while IFS=$'\t' read -r provider_record_key provider_record_value; do
   case "$provider_record_key" in
     kind)                       PROVIDER_KIND="$provider_record_value" ;;
@@ -223,11 +231,30 @@ while IFS=$'\t' read -r provider_record_key provider_record_value; do
     transport_contract)         PROVIDER_TRANSPORT_CONTRACT="$provider_record_value" ;;
     model)                      MODEL="$provider_record_value" ;;
     model_tier)                 MODEL_TIER="$provider_record_value" ;;
+    model_reasoning_effort)     CATALOG_REASONING_EFFORT="$provider_record_value" ;;
+    model_context_window)       CATALOG_CONTEXT_WINDOW="$provider_record_value" ;;
     *) ;;
   esac
 done <<< "$PROVIDER_RECORDS"
 if [[ -z "$PROVIDER_KIND" || -z "$PROVIDER_ISOLATION" || -z "$MODEL" || -z "$MODEL_TIER" ]]; then
   echo "resolve-provider.mjs returned an incomplete record set for provider \"$PROVIDER\"." >&2
+  exit 2
+fi
+
+# One effective effort for this run: explicit request beats the catalog default.
+# The value crosses into provider config strings, so it is whitelisted before any
+# interpolation rather than trusted as free text.
+MODEL_REASONING_EFFORT="${REASONING_EFFORT:-${CATALOG_REASONING_EFFORT:-}}"
+if [[ -n "$MODEL_REASONING_EFFORT" && \
+      ! "$MODEL_REASONING_EFFORT" =~ ^(minimal|low|medium|high|xhigh|max)$ ]]; then
+  echo "--effort must be one of: minimal, low, medium, high, xhigh, max (got \"$MODEL_REASONING_EFFORT\")." >&2
+  exit 2
+fi
+# A catalog may pin the model's advertised context window (long max-effort
+# playthroughs fill the client default and die at the no-compaction rule). The
+# value crosses into provider config, so it must be a plain positive integer.
+if [[ -n "$CATALOG_CONTEXT_WINDOW" && ! "$CATALOG_CONTEXT_WINDOW" =~ ^[1-9][0-9]{0,8}$ ]]; then
+  echo "catalog settings.context_window must be a positive integer (got \"$CATALOG_CONTEXT_WINDOW\")." >&2
   exit 2
 fi
 
@@ -1368,6 +1395,12 @@ if [[ "$PROVIDER_CAPTURE_READER" == "$CLAUDE_SESSION_READER_MODULE" ]]; then
     CLAUDE_LAUNCH_ARGS+=("$provider_launch_argument")
   done
   CLAUDE_LAUNCH_ARGS+=(--session-id "$CLAUDE_SESSION_ID")
+  # The effort dial is runner-appended for the same reason --session-id is: it is
+  # the runner's resolved fact (explicit flag or the catalog's settings), not part
+  # of the registry template. claude 2.1.251 accepts --effort low|medium|high|xhigh|max.
+  if [[ -n "$MODEL_REASONING_EFFORT" ]]; then
+    CLAUDE_LAUNCH_ARGS+=(--effort "$MODEL_REASONING_EFFORT")
+  fi
 
   # Re-probe the same pinned executable immediately before the gameplay process, and
   # recheck build provenance so drift cannot spend gameplay tokens — the same order
@@ -1445,6 +1478,10 @@ else
   CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
   CODEX_TRANSPORT_FEATURE_ARGS=(--enable code_mode_only --disable tool_suggest)
   CODEX_PLAYER_PROFILE_ARGS=()
+  CODEX_CONTEXT_WINDOW_ARGS=()
+  if [[ -n "$CATALOG_CONTEXT_WINDOW" ]]; then
+    CODEX_CONTEXT_WINDOW_ARGS=(--config "model_context_window=$CATALOG_CONTEXT_WINDOW")
+  fi
   if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" || \
         "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ]]; then
     CODEX_TRANSPORT_FEATURE_ARGS=(--disable code_mode_only --disable tool_suggest)
@@ -1526,7 +1563,8 @@ set +e
     --json \
     --output-last-message "$CODEX_REPORT_ARG" \
     -c 'project_doc_max_bytes=0' \
-    --config 'model_reasoning_effort="xhigh"' \
+    --config "model_reasoning_effort=\"${MODEL_REASONING_EFFORT:-xhigh}\"" \
+    "${CODEX_CONTEXT_WINDOW_ARGS[@]}" \
     --config 'features.shell_tool=false' \
     --config 'web_search="disabled"' \
     --config 'approval_policy="never"' \
@@ -1570,6 +1608,7 @@ set +e
       --events "$CODEX_EVENTS_ARG" --rollout "$CODEX_ROLLOUT_ARG" --report "$CODEX_REPORT_ARG" \
       --model "$MODEL" --cli-version "$CODEX_CLI_VERSION" --started-at-ms "$CODEX_STARTED_AT_MS" \
       --transport-contract "$CODEX_TRANSPORT_CONTRACT" \
+      --expected-effort "${MODEL_REASONING_EFFORT:-xhigh}" \
       > "$OUT.json" 2> "$OUT.codex-audit.log"
     CODEX_AUDIT_STATUS=$?
     if [[ "$CODEX_AUDIT_STATUS" -ne 0 ]]; then

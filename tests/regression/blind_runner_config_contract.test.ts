@@ -507,19 +507,26 @@ exit 93
       );
       chmodSync(selected, 0o755);
 
-      const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
-        cwd: cleanGit.path,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          NODE_ENV: "test",
-          CODEX_HOME: home,
-          BLIND_CODEX_BIN: bashPath(selected),
-          BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
-          SELECTED_CAPTURE: bashPath(capture),
+      // The catalog default is now the strict-code-mode Luna lane, which pins
+      // no CLI version, so the direct-transport version gate is exercised by
+      // naming Spark explicitly.
+      const result = spawnSync(
+        process.execPath,
+        ["blind-tester/blind-launch.mjs", "--model", "gpt-5.3-codex-spark", "--out", out],
+        {
+          cwd: cleanGit.path,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            NODE_ENV: "test",
+            CODEX_HOME: home,
+            BLIND_CODEX_BIN: bashPath(selected),
+            BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+            SELECTED_CAPTURE: bashPath(capture),
+          },
+          timeout: 30_000,
         },
-        timeout: 30_000,
-      });
+      );
       const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
       expect(result.status, output).toBe(42);
       expect(output).toContain("spark-direct-mcp-v1 requires exact codex-cli 0.146.0");

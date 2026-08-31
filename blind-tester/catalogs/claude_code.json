@@ -5,7 +5,7 @@
       "id": "claude-haiku-4-5-20251001",
       "tier": "volume",
       "settings": {},
-      "notes": "Cheap, fast volume player, and the one model the blind launch flags have actually been exercised against on this machine (claude 2.1.251). Settings are empty on purpose: the registry records them verbatim onto every sealed session record, and the launch argv carries no knob that could apply one, so a populated block would put a claim about how the run was configured into the corpus that nothing enforced. `--effort` is the real dial when the launch template can carry per-model settings."
+      "notes": "Cheap, fast volume player, and the one model the blind launch flags have actually been exercised against on this machine (claude 2.1.251). Settings are empty on purpose: with no settings.reasoning_effort the runner appends no --effort flag and the CLI's own default applies, so this block still claims nothing it does not enforce. Populate reasoning_effort only when that exact launch dial should be pinned (run.sh maps it to `--effort`)."
     },
     {
       "id": "claude-fable-5",
@@ -16,8 +16,9 @@
     {
       "id": "claude-sonnet-5",
       "tier": "volume",
-      "settings": {},
-      "notes": "Mid volume player. Confirm availability against your subscription."
+      "default": true,
+      "settings": { "reasoning_effort": "medium" },
+      "notes": "The default claude_code blind player (no --model needed). settings.reasoning_effort is enforced at launch: run.sh appends `--effort medium` to the registry argv, and claude 2.1.251 accepts --effort (low, medium, high, xhigh, max). Verified live: `claude --model claude-sonnet-5 --effort medium --print` answers on this subscription."
     },
     {
       "id": "claude-opus-5",

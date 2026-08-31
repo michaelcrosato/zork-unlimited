@@ -2,6 +2,13 @@
   "provider": "gemini_cli",
   "models": [
     {
+      "id": "gemini-3.5-flash",
+      "tier": "volume",
+      "default": true,
+      "settings": {},
+      "notes": "The default gemini_cli model. Operator-owned id: gemini-cli 0.46.0 names this slug in its own model constants (its bundled ids run gemini-2.5-* through gemini-3.5-flash; the requested 'gemini-flash-3.7' matches no known slug and could not be verified against the API from an unauthenticated CLI). Confirm against your authenticated CLI before a live cohort. Settings stay empty because the launch template carries no thinking-level knob for this CLI, so no setting here is enforced."
+    },
+    {
       "id": "gemini-2.5-flash",
       "tier": "volume",
       "settings": {},

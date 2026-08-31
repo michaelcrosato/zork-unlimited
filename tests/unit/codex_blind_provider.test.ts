@@ -1021,7 +1021,19 @@ describe("Codex pure blind provider envelope", () => {
     rolloutPayload(malformed, 0).input =
       `// @exec: {"yield_time_ms":120000}\n` +
       "text(await tools.mcp__adventureforge__start_overworld({}));\n";
-    expect(inspectCodexGameplayResultForwardingPrefix(malformed.slice(0, 1), strict)).toEqual({
+    // A refused wrapper stays pending for exactly one row: the host's refusal
+    // receipt proves inertness, and anything else keeps the terminal rejection.
+    expect(inspectCodexGameplayResultForwardingPrefix(malformed.slice(0, 1), strict)).toMatchObject(
+      {
+        ok: true,
+        pending: "wrapper_attempt_output",
+      },
+    );
+    expect(inspectCodexGameplayResultForwardingPrefix(malformed.slice(0, 2), strict)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden wrapper program/i),
+    });
+    expect(inspectCodexGameplayResultForwarding(malformed.slice(0, 1), strict)).toEqual({
       ok: false,
       reason: expect.stringMatching(/forbidden wrapper program/i),
     });
@@ -4026,6 +4038,501 @@ describe("Spark direct MCP transport", () => {
     expect(inspectCodexPureEventPrefix(rows, SPARK_MODEL, direct)).toEqual({
       ok: false,
       reason: "Codex direct MCP run used an unexpected startup error",
+    });
+  });
+});
+
+/**
+ * Codex ≥0.147 rewrote the private rollout's event vocabulary: the dedicated
+ * user_message / agent_message / mcp_tool_call_end rows became generic
+ * item_completed mirrors, response items gained unique ids, passthrough
+ * metadata gained bookkeeping fields, and the developer prelude serializes the
+ * skills block before the permissions block. Every fixture below reproduces
+ * the row shapes captured live from codex-cli 0.151.0 on 2026-08-30 (thread
+ * 01a05585-2289-7f61-93ec-cbbe74d2da97).
+ */
+describe("Codex ≥0.147 item-lifecycle rollout dialect", () => {
+  const CURRENT_CLI = "0.151.0";
+  const strict = { codeModeContract: "strict-code-mode-v2" };
+
+  function itemEventRow(item: Record<string, unknown>) {
+    return {
+      type: "event_msg",
+      payload: {
+        type: "item_completed",
+        thread_id: THREAD_ID,
+        turn_id: "turn-1",
+        item,
+        started_at_ms: 1,
+        completed_at_ms: 2,
+      },
+    };
+  }
+
+  function reasoningPair(ordinal: number) {
+    return [
+      itemEventRow({
+        type: "Reasoning",
+        id: `rs-event-${ordinal}`,
+        summary_text: [],
+        raw_content: [],
+      }),
+      {
+        type: "response_item",
+        payload: {
+          type: "reasoning",
+          id: `rs-${ordinal}`,
+          summary: [],
+          encrypted_content: "opaque",
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+        },
+      },
+    ];
+  }
+
+  function currentForwardingRollout(
+    result: Record<string, unknown> = {
+      content: [{ type: "text", text: '{"state_hash":"next"}' }],
+    },
+  ): unknown[] {
+    return [
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call",
+          id: "ctc-1",
+          status: "completed",
+          call_id: "call-wrapper-1",
+          name: "exec",
+          input: canonicalGameplayWrapper("tools.mcp__adventureforge__start_overworld({})"),
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1", create_time: 1.5 },
+        },
+      },
+      itemEventRow({
+        type: "McpToolCall",
+        id: "exec-gameplay-1",
+        server: "adventureforge",
+        tool: "start_overworld",
+        arguments: {},
+        status: "completed",
+        result,
+        duration: { secs: 0, nanos: 5 },
+      }),
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call_output",
+          id: "ctco-1",
+          call_id: "call-wrapper-1",
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1", create_time: 1.6 },
+          output: [
+            { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+            { type: "input_text", text: JSON.stringify(result) },
+          ],
+        },
+      },
+    ];
+  }
+
+  function completeCurrentLunaRollout(
+    // The public fixture's completed gameplay result is `{content: []}`, and the
+    // evidence cross-bind compares the two lifecycles byte-for-byte.
+    gameplayRows: unknown[] = currentForwardingRollout({ content: [] }),
+    effort = "max",
+  ): unknown[] {
+    const inputMessage = (
+      id: string,
+      role: "developer" | "user",
+      kinds: string[],
+      ...texts: string[]
+    ) => ({
+      type: "response_item",
+      payload: {
+        type: "message",
+        id,
+        role,
+        content: texts.map((text) => ({ type: "input_text", text })),
+        internal_chat_message_metadata_passthrough: {
+          turn_id: "turn-1",
+          create_time: 1.1,
+          content_item_kinds: kinds,
+        },
+      },
+    });
+    return [
+      { type: "session_meta", payload: { id: THREAD_ID, cli_version: CURRENT_CLI } },
+      { type: "event_msg", payload: { type: "task_started", turn_id: "turn-1" } },
+      inputMessage(
+        "msg-1",
+        "developer",
+        ["host_skills.instructions", "permissions.instructions"],
+        SKILLS_BLOCK,
+        PERMISSIONS_BLOCK,
+      ),
+      inputMessage(
+        "msg-2",
+        "user",
+        ["agents_md.instructions", "environments.environment_context"],
+        GLOBAL_AGENTS_BLOCK,
+        ENVIRONMENT_BLOCK,
+      ),
+      { type: "world_state", payload: { full: true } },
+      {
+        type: "turn_context",
+        payload: {
+          turn_id: "turn-1",
+          model: "gpt-5.6-luna",
+          effort,
+          collaboration_mode: {
+            mode: "default",
+            settings: {
+              model: "gpt-5.6-luna",
+              reasoning_effort: effort,
+              developer_instructions: null,
+            },
+          },
+          multi_agent_version: "v1",
+        },
+      },
+      inputMessage("msg-3", "user", ["user.text"], "blind prompt"),
+      itemEventRow({
+        type: "UserMessage",
+        id: "um-1",
+        content: [{ type: "text", text: "blind prompt", text_elements: [] }],
+      }),
+      ...reasoningPair(1),
+      ...gameplayRows,
+      { type: "event_msg", payload: { type: "token_count", info: {}, rate_limits: {} } },
+      ...reasoningPair(2),
+      itemEventRow({
+        type: "AgentMessage",
+        id: "am-1",
+        content: [{ type: "Text", text: "report" }],
+        phase: "final_answer",
+      }),
+      {
+        type: "response_item",
+        payload: {
+          type: "message",
+          id: "msg-4",
+          role: "assistant",
+          content: [{ type: "output_text", text: "report" }],
+          phase: "final_answer",
+          internal_chat_message_metadata_passthrough: {
+            turn_id: "turn-1",
+            create_time: 2.5,
+            content_item_kinds: ["unknown"],
+          },
+        },
+      },
+      { type: "event_msg", payload: { type: "task_complete", turn_id: "turn-1" } },
+    ];
+  }
+
+  function currentLunaEnvelopeInput(rolloutRows: unknown[] = completeCurrentLunaRollout()) {
+    return {
+      rows: singleCodeModeWarningRows(),
+      rolloutRows,
+      report: "report",
+      model: "gpt-5.6-luna",
+      durationMs: 1200,
+      codeModeContract: "strict-code-mode-v2",
+      cliVersion: CURRENT_CLI,
+      expectedEffort: "max",
+    };
+  }
+
+  it("authenticates a complete 0.151-dialect Luna run end to end", () => {
+    expect(buildCodexPureEnvelope(currentLunaEnvelopeInput())).toMatchObject({ ok: true });
+  });
+
+  it("accepts the item-lifecycle gameplay triplet in the streaming prefix", () => {
+    const rollout = completeCurrentLunaRollout();
+    expect(inspectCodexGameplayResultForwardingPrefix(rollout, strict)).toMatchObject({
+      ok: true,
+      completedGameplayCalls: 1,
+      pending: null,
+    });
+    const throughCompletion = rollout.slice(
+      0,
+      rollout.findIndex(
+        (row) =>
+          (row as { payload?: { item?: { type?: string } } }).payload?.item?.type === "McpToolCall",
+      ) + 1,
+    );
+    expect(inspectCodexGameplayResultForwardingPrefix(throughCompletion, strict)).toMatchObject({
+      ok: true,
+      pending: "visible_result",
+    });
+  });
+
+  it("rejects an item-lifecycle mirror inside a legacy-dialect rollout", () => {
+    const rollout = completeRollout(forwardingRollout(), "luna_v1") as unknown[];
+    rollout.splice(
+      2,
+      0,
+      itemEventRow({ type: "Reasoning", id: "rs-x", summary_text: [], raw_content: [] }),
+    );
+    expect(inspectCodexGameplayResultForwardingPrefix(rollout, strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden private event"),
+    });
+  });
+
+  it("rejects a free-floating McpToolCall mirror as an orphan tool lifecycle", () => {
+    const rollout = completeCurrentLunaRollout();
+    rollout.splice(
+      8,
+      0,
+      itemEventRow({
+        type: "McpToolCall",
+        id: "exec-orphan",
+        server: "adventureforge",
+        tool: "get_overworld_session",
+        arguments: {},
+        status: "completed",
+        result: { content: [] },
+        duration: { secs: 0, nanos: 1 },
+      }),
+    );
+    expect(inspectCodexGameplayResultForwardingPrefix(rollout, strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("orphan or unexpected tool lifecycle"),
+    });
+  });
+
+  it("rejects tool-shaped and unknown item mirrors and legacy plain events", () => {
+    for (const item of [
+      { type: "CommandExecution", id: "ce-1" },
+      { type: "ContextCompaction", id: "cc-1" },
+      { type: "FileChange", id: "fc-1" },
+    ]) {
+      const rollout = completeCurrentLunaRollout();
+      rollout.splice(8, 0, itemEventRow(item));
+      expect(inspectCodexGameplayResultForwardingPrefix(rollout, strict)).toMatchObject({
+        ok: false,
+      });
+    }
+    const withSettings = completeCurrentLunaRollout();
+    withSettings.splice(1, 0, {
+      type: "event_msg",
+      payload: { type: "thread_settings_applied", settings: {} },
+    });
+    expect(inspectCodexGameplayResultForwardingPrefix(withSettings, strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden private event"),
+    });
+    const withLegacyUserEvent = completeCurrentLunaRollout();
+    withLegacyUserEvent.splice(8, 0, {
+      type: "event_msg",
+      payload: {
+        type: "user_message",
+        message: "blind prompt",
+        images: [],
+        local_images: [],
+        text_elements: [],
+      },
+    });
+    expect(inspectCodexGameplayResultForwardingPrefix(withLegacyUserEvent, strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden private event"),
+    });
+  });
+
+  it("rejects a rollout whose dialect differs from the authenticated client version", () => {
+    expect(
+      buildCodexPureEnvelope({ ...currentLunaEnvelopeInput(), cliVersion: "0.146.0" }),
+    ).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("dialect differs"),
+    });
+  });
+
+  it("binds the launched reasoning effort to the captured turn context", () => {
+    const xhighRollout = completeCurrentLunaRollout(
+      currentForwardingRollout({ content: [] }),
+      "xhigh",
+    );
+    expect(buildCodexPureEnvelope(currentLunaEnvelopeInput(xhighRollout))).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("capture profile is unsupported"),
+    });
+    expect(
+      buildCodexPureEnvelope({
+        ...currentLunaEnvelopeInput(xhighRollout),
+        expectedEffort: "xhigh",
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("requires unique response-item ids throughout the current Luna profile", () => {
+    const rollout = completeCurrentLunaRollout() as Array<{
+      type?: string;
+      payload?: Record<string, unknown>;
+    }>;
+    const prompt = rollout.find(
+      (row) => row.type === "response_item" && row.payload?.role === "user",
+    );
+    if (!prompt?.payload) throw new Error("missing prompt fixture");
+    delete prompt.payload.id;
+    expect(buildCodexPureEnvelope(currentLunaEnvelopeInput(rollout))).toMatchObject({ ok: false });
+  });
+
+  it("requires the 0.147+ skills-then-permissions developer prelude order", () => {
+    const rollout = completeCurrentLunaRollout() as Array<{
+      type?: string;
+      payload?: { role?: string; content?: Array<{ text?: string }> };
+    }>;
+    const developer = rollout.find(
+      (row) => row.type === "response_item" && row.payload?.role === "developer",
+    );
+    if (!developer?.payload?.content) throw new Error("missing developer prelude fixture");
+    developer.payload.content.reverse();
+    expect(buildCodexPureEnvelope(currentLunaEnvelopeInput(rollout))).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("input and initial context lifecycle"),
+    });
+  });
+
+  // Observed live (luna 0.151.0, gameplay call 20): the model dropped a closing
+  // quote, the host refused the script, and the strict lane killed a 19-call
+  // clean run. The refusal pair below reproduces that rollout byte shape.
+  function inertAttemptPair(ordinal: number) {
+    return [
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call",
+          id: `ctc-inert-${ordinal}`,
+          status: "completed",
+          call_id: `call-inert-${ordinal}`,
+          name: "exec",
+          input:
+            '// @exec: {"yield_time_ms": 120000}\n' +
+            'text(await tools.mcp__adventureforge__step_action({"session_id":"r1","action_id":"oops));\n',
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1", create_time: 1.7 },
+        },
+      },
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call_output",
+          id: `ctco-inert-${ordinal}`,
+          call_id: `call-inert-${ordinal}`,
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1", create_time: 1.8 },
+          output: [
+            { type: "input_text", text: "Script failed\nWall time 0.0 seconds\nOutput:\n" },
+            {
+              type: "input_text",
+              text: "Script error:\nSyntaxError: Invalid or unexpected token",
+            },
+          ],
+        },
+      },
+    ];
+  }
+
+  it("tolerates a host-refused wrapper attempt as a visible rejected input", () => {
+    const rollout = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...inertAttemptPair(1),
+    ]);
+    expect(buildCodexPureEnvelope(currentLunaEnvelopeInput(rollout))).toMatchObject({ ok: true });
+    expect(inspectCodexGameplayResultForwarding(rollout, strict)).toMatchObject({
+      ok: true,
+      completedGameplayCalls: 1,
+    });
+  });
+
+  it("tolerates the exec front end's bare pragma-refusal string receipt", () => {
+    // Observed live (luna 0.151.0, gameplay call 73): a `yield_time` pragma
+    // typo drew a plain-string refusal and executed nothing.
+    const pragmaAttempt = inertAttemptPair(1) as Array<{
+      payload: Record<string, unknown>;
+    }>;
+    pragmaAttempt[0]!.payload.input =
+      '// @exec: {"yield_time": 120000}\n' +
+      'text(await tools.mcp__adventureforge__step_action({"session_id":"r3","action_id":"x","expected_state_hash":"h"}));\n';
+    pragmaAttempt[1]!.payload.output =
+      "exec pragma only supports `yield_time_ms` and `max_output_tokens`; got `yield_time`";
+    const rollout = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...pragmaAttempt,
+    ]);
+    expect(buildCodexPureEnvelope(currentLunaEnvelopeInput(rollout))).toMatchObject({ ok: true });
+
+    const arbitraryString = inertAttemptPair(2) as Array<{
+      payload: Record<string, unknown>;
+    }>;
+    arbitraryString[1]!.payload.output = "some other host prose";
+    expect(
+      inspectCodexGameplayResultForwarding(
+        completeCurrentLunaRollout([
+          ...currentForwardingRollout({ content: [] }),
+          ...arbitraryString,
+        ]),
+        strict,
+      ),
+    ).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden wrapper program"),
+    });
+  });
+
+  it("keeps a live prefix pending until the refusal receipt row lands", () => {
+    const rollout = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...inertAttemptPair(1),
+    ]);
+    const throughAttempt = rollout.slice(
+      0,
+      rollout.findIndex(
+        (row) => (row as { payload?: { id?: string } }).payload?.id === "ctc-inert-1",
+      ) + 1,
+    );
+    expect(inspectCodexGameplayResultForwardingPrefix(throughAttempt, strict)).toMatchObject({
+      ok: true,
+      pending: "wrapper_attempt_output",
+    });
+  });
+
+  it("still fails closed when a refused wrapper is not provably inert", () => {
+    const completedBanner = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...inertAttemptPair(1),
+    ]) as Array<{ payload?: { id?: string; output?: Array<{ text: string }> } }>;
+    const receipt = completedBanner.find((row) => row.payload?.id === "ctco-inert-1");
+    if (!receipt?.payload?.output) throw new Error("missing refusal receipt fixture");
+    receipt.payload.output[0].text = "Script completed\nWall time 0.0 seconds\nOutput:\n";
+    expect(inspectCodexGameplayResultForwarding(completedBanner, strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden wrapper program"),
+    });
+
+    const executedBetween = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...inertAttemptPair(2),
+    ]) as unknown[];
+    const attemptIndex = executedBetween.findIndex(
+      (row) => (row as { payload?: { id?: string } }).payload?.id === "ctc-inert-2",
+    );
+    executedBetween.splice(
+      attemptIndex + 1,
+      0,
+      itemEventRow({
+        type: "McpToolCall",
+        id: "exec-sneak",
+        server: "adventureforge",
+        tool: "step_action",
+        arguments: {},
+        status: "completed",
+        result: { content: [] },
+        duration: { secs: 0, nanos: 1 },
+      }),
+    );
+    expect(inspectCodexGameplayResultForwarding(executedBetween, strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden wrapper program"),
     });
   });
 });

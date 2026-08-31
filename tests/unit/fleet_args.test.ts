@@ -982,8 +982,9 @@ describe("fleet planning", () => {
   it("accepts any registered headless provider, not one privileged vendor", () => {
     expect(parseFleetArgs(["--provider", "gemini_cli"]).provider).toBe("gemini_cli");
     expect(parseFleetArgs(["--provider", "claude_code"]).provider).toBe("claude_code");
-    // Each defaults to its own catalog's cheap tier — the fleet's job is throughput.
-    expect(parseFleetArgs(["--provider", "gemini_cli"]).model).toBe("gemini-2.5-flash");
+    // Each defaults to its own catalog's marked default (volume tier when none
+    // is marked) — the fleet's job is throughput.
+    expect(parseFleetArgs(["--provider", "gemini_cli"]).model).toBe("gemini-3.5-flash");
   });
   it("pins Codex fleets to exact provider/model pairs without mix, aliases, or fallback", () => {
     for (const model of [
