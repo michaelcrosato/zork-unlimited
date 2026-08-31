@@ -1,5 +1,5 @@
 /**
- * `npm run inspect` classifies a run that ended in DEATH as `death_unrecoverable`.
+ * Both inspect surfaces classify a run that ended in DEATH as `death_unrecoverable`.
  *
  * The debugger's only high-severity ending verdict was unreachable from every
  * production caller. `diagnose` (agents/debugger.ts) decides a win with
@@ -17,9 +17,17 @@
  * Both directions are pinned, because "every ending is a death" would satisfy the
  * first case alone: a death run must read `death_unrecoverable (high)`, and a
  * genuine victory must still read `no_failure`.
+ *
+ * The MCP `inspect_trace` half was fixed later (intake be3be04184833357). bin/inspect
+ * got the predicate; src/mcp/tools.ts kept calling `diagnose(rules, initial_state,
+ * actions)` with no options, so the SAME trace read `death_unrecoverable` from the CLI
+ * and `no_failure` from MCP — and MCP is the more-used production call site, the one
+ * playtest agents actually read. Both surfaces are pinned here, over the same two
+ * fixtures, plus their agreement: one tool over one trace must not give two answers.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { createToolApi } from "../../src/mcp/tools.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
@@ -34,11 +42,14 @@ import type { RpgIndex } from "../../src/rpg/runner.js";
 import type { Rules } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Action, RpgAction } from "../../src/api/types.js";
+import type { Diagnosis } from "../../agents/debugger.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const DEATH_TRACE = "traces/bug_inspect_death_ending.json";
 const VICTORY_TRACE = "traces/bug_inspect_victory_ending.json";
+
+type InspectTraceResult = { ok: boolean; diagnosis: Diagnosis };
 
 function inspect(tracePath: string): string {
   const result = runNpmScript("inspect", [tracePath], { cwd: ROOT, timeout: 60_000 });
@@ -179,5 +190,40 @@ describe("bin/inspect — a death ending is diagnosed, not reported as no_failur
     expect(output).toContain("[END ending_victory]");
     expect(output).toContain('Suspected bug: no_failure (low) — Reached ending "ending_victory"');
     expect(output).not.toContain("death_unrecoverable");
+  });
+});
+
+describe("MCP inspect_trace — the same death run is diagnosed, not reported as no_failure", () => {
+  const diagnosisFor = (tracePath: string): Diagnosis => {
+    const result = createToolApi({ root: ROOT }).inspect_trace({
+      trace_path: tracePath,
+    }) as InspectTraceResult;
+    expect(result.ok, `inspect_trace must succeed for ${tracePath}`).toBe(true);
+    return result.diagnosis;
+  };
+
+  it("diagnoses a death run as death_unrecoverable (high)", () => {
+    const diagnosis = diagnosisFor(DEATH_TRACE);
+
+    expect(diagnosis.type).toBe("death_unrecoverable");
+    expect(diagnosis.severity).toBe("high");
+    // The pre-fix verdict — the whole defect was that MCP returned this instead.
+    expect(diagnosis.type).not.toBe("no_failure");
+  });
+
+  it("still diagnoses a winning run as no_failure", () => {
+    const diagnosis = diagnosisFor(VICTORY_TRACE);
+
+    expect(diagnosis.type).toBe("no_failure");
+    expect(diagnosis.description).toContain("ending_victory");
+  });
+
+  it("agrees with bin/inspect on both traces — one tool, one trace, one answer", () => {
+    expect(inspect(DEATH_TRACE)).toContain(
+      `Suspected bug: ${diagnosisFor(DEATH_TRACE).type} (${diagnosisFor(DEATH_TRACE).severity})`,
+    );
+    expect(inspect(VICTORY_TRACE)).toContain(
+      `Suspected bug: ${diagnosisFor(VICTORY_TRACE).type} (${diagnosisFor(VICTORY_TRACE).severity})`,
+    );
   });
 });

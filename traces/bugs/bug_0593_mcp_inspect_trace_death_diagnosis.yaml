@@ -1,0 +1,83 @@
+id: bug_0593
+title: "MCP inspect_trace diagnosed death runs as no_failure while bin/inspect called them death_unrecoverable"
+pack: sunken_barrow (fixtures); defect is in the MCP tool surface, not in content
+reported_by: >
+  2026-08-28/29 repository audit, confirmed by an adversarial verifier and deferred at the
+  time on subsystem-ownership grounds; promoted into the intake queue as be3be04184833357.
+severity: S1
+
+evidence:
+  ticket: be3be04184833357
+  deferral_note: >
+    The audit's fixing agent applied the predicate to bin/inspect.ts and explicitly left
+    src/mcp/tools.ts alone as belonging to another subsystem owner, noting that "the MCP
+    surface is the more-used of the two production call sites, so this is worth picking up
+    there". AGENTS.md places engine code inside agent authority with no approval gate, so
+    the deferral reason does not survive into this cycle.
+  divergence: >
+    The two surfaces are the same tool over the same trace file. Before this fix they
+    returned different verdicts for the identical input: the CLI said
+    death_unrecoverable (high) and MCP said no_failure (low).
+
+symptom: >
+  A trace that ended on a DEATH ending was summarized by the MCP `inspect_trace` tool as
+  `no_failure` with severity `low` — literally "Reached ending" — which is the opposite of
+  what happened. The debugger's only high-severity ending verdict, `death_unrecoverable`,
+  was unreachable from the MCP surface, so an agent triaging a fatal run through MCP saw
+  the run's own ending reported as a clean finish.
+
+root_cause: >
+  `diagnose` (agents/debugger.ts:100) decides a win with
+  `opts.isWinningEnding ? opts.isWinningEnding(id) : true` — "any ending wins" by default.
+  src/mcp/tools.ts called `diagnose(rules, trace.initial_state, trace.actions)` with no
+  options at all, so every ending, death included, took the winning branch and returned
+  `no_failure`. bin/inspect.ts had already been given the predicate; the MCP call site was
+  simply never updated, leaving the two production callers of one function disagreeing.
+
+fix: >
+  Pass the same predicate at the MCP call site, reading the fact the pack already carries:
+  `EndingSchema` has `death: boolean` (src/rpg/schema.ts:362), and the built index exposes
+  the pack, so the predicate is one lookup —
+  `isWinningEnding: (endingId) => index.pack.endings.find((e) => e.id === endingId)?.death
+  !== true`. This is the identical form bin/inspect.ts uses. No schema, tool signature,
+  response shape, or diagnosis type changed; one call site gained the option the other
+  already passed.
+
+deterministic_witnesses:
+  - "the change is 1 call site: src/mcp/tools.ts:862, +10/-1 lines including the comment"
+  - "reverting only src/mcp/tools.ts turns exactly 2 of the 5 cases in the regression red — the MCP death case and the CLI/MCP agreement case"
+  - "the 3 that stay green under that revert are the two unaffected bin/inspect cases and the MCP victory case, which the predicate does not change"
+  - "the death fixture ends on ending_fallen and now reports type death_unrecoverable, severity high, from both surfaces"
+  - "the victory fixture ends on ending_victory and still reports type no_failure from both surfaces"
+
+mechanics_unchanged:
+  - "the diagnose() implementation, its FailureType union, and its severity ladder"
+  - "the inspect_trace tool signature, argument schema, and response shape, including diverged_at_step and step_summary"
+  - "bin/inspect.ts, which already passed this predicate"
+  - "every non-death ending, which the predicate leaves on the winning branch"
+  - "replay, hashing, trace recording, and per-step divergence localization"
+
+nonclaims:
+  - "This does not change how any run PLAYS; it changes only how a finished trace is summarized."
+  - "It does not claim the death/no-death split is the right severity model, only that the two surfaces must not disagree about one trace."
+  - "No other diagnose() caller was audited for the same omission beyond the two production inspect surfaces named here."
+  - "The sibling deferred audit items (247a4e033fb3a1bc ticket_id stability, 4ccaf8b0bba934b2 severity direction) are untouched and remain open; both say in their own text that they want an owner decision."
+
+production:
+  - src/mcp/tools.ts
+
+tests:
+  - tests/regression/inspect_death_ending_diagnosis.test.ts
+
+verification:
+  - npm run crawl:smoke
+  - npm run verify:integrity
+  - npm run verify:bug-traces
+  - npm run verify:opening-density
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run ui:typecheck
+  - npm run validate
+  - npx vitest run tests/regression/inspect_death_ending_diagnosis.test.ts
+  - npx vitest run tests/unit tests/regression
