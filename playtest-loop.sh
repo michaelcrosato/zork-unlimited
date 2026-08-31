@@ -16,7 +16,9 @@
 # anything (see PlaytestTier in src/blind/providers.ts).
 #
 # Env knobs (defaults in brackets):
-#   PLAYTEST_COHORT="gemini_cli:8,codex:2"   provider:count pairs ["codex:1"]
+#   PLAYTEST_COHORT="claude_code:8,codex:2"  provider:count pairs ["codex:1"]
+#                                            Live waves take only live-capable
+#                                            providers; `npm run doctor` lists them.
 #   PLAYTEST_MODELS="codex=gpt-5.6-terra"    pin a model per provider [catalog default]
 #   PLAYTEST_PERSONAS="default,cynical_veteran,breaker"   rotated across players [default]
 #   PLAYTEST_CONCURRENCY=N                   players in flight at once [4]
