@@ -20,6 +20,13 @@
  * This scans the prompts rather than pinning a list of filenames, so a new
  * vendor's prompt is covered the day it lands instead of the day someone
  * remembers to add it here.
+ *
+ * The check is ORDERED on purpose. Looking for a direction-word anywhere in the
+ * file would accept the exact regression it exists to catch: `S0 (blocking)
+ * through S4 (cosmetic)` contains both words and states the scale backwards, so
+ * a presence test would pass it while every Spark report came out inverted. The
+ * pattern therefore binds the mild word to S0 and the severe word to S4, in that
+ * order, and `rejects the inverted wording` below proves it does.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -27,8 +34,21 @@ import { describe, expect, it } from "vitest";
 
 const PROMPT_DIR = "blind-tester";
 
-/** Names the ascending direction in any of the phrasings the prompts use. */
-const STATES_DIRECTION = /cosmetic|blocking|mildest|most severe|trivial/i;
+/** Mild end of the scale, in the phrasings the prompts use. */
+const MILD = String.raw`(?:cosmetic|mildest|trivial|minor)`;
+/** Severe end of the scale. */
+const SEVERE = String.raw`(?:blocking|most severe|critical|worst)`;
+
+/**
+ * Names the ascending direction: S0 bound to a mild word, then S4 bound to a
+ * severe word. The short gap absorbs the separators actually in use — `) through
+ * (`, `)-(`, `)–(` — without letting two unrelated mentions elsewhere in the file
+ * pair up by accident.
+ */
+const STATES_DIRECTION = new RegExp(
+  String.raw`S0\s*[([:=-]?\s*${MILD}[\s\S]{0,24}?S4\s*[([:=-]?\s*${SEVERE}`,
+  "i",
+);
 
 function promptFiles(): string[] {
   return readdirSync(PROMPT_DIR)
@@ -61,5 +81,21 @@ describe("player prompt severity direction", () => {
         `the scale and the doubling weight will rank their report backwards. Name the ` +
         `direction, e.g. "S0 (cosmetic) through S4 (blocking)".`,
     ).toEqual([]);
+  });
+
+  it("rejects the inverted wording, so the guard above is not vacuous", () => {
+    // The failure this whole file exists to prevent is a prompt that names both
+    // ends and swaps them. A presence-only check accepts it — which would leave
+    // Spark's reports ranked backwards with the regression green — so assert
+    // directly that the pattern refuses it.
+    expect(STATES_DIRECTION.test("severity S0 (blocking) through S4 (cosmetic)")).toBe(false);
+    expect(STATES_DIRECTION.test("severity S0 (cosmetic) through S4 (blocking)")).toBe(true);
+    // The phrasings actually shipped in blind-tester/ must all pass.
+    expect(STATES_DIRECTION.test("severity S0 (mildest) through S4 (blocking)")).toBe(true);
+    expect(STATES_DIRECTION.test("a severity S0(cosmetic)\u2013S4(blocking).")).toBe(true);
+    // A file that merely mentions both words far apart is not a statement of direction.
+    expect(
+      STATES_DIRECTION.test("S0 is used for cosmetic things.\n\nSeparately, S4 means blocking."),
+    ).toBe(false);
   });
 });

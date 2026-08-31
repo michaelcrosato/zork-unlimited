@@ -61,13 +61,18 @@ function documentedCohort(): string {
   return cohort ?? "";
 }
 
+/** The provider ids in a `provider:count,provider:count` cohort, blanks dropped. */
+function cohortProviderIds(cohort: string): string[] {
+  return cohort
+    .split(",")
+    .map((group) => (group.split(":")[0] ?? "").trim())
+    .filter((id) => id.length > 0);
+}
+
 describe("playtest-loop documented cohort example", () => {
   it("names only providers this checkout can actually launch live", () => {
     const cohort = documentedCohort();
-    const ids = cohort
-      .split(",")
-      .map((group) => (group.split(":")[0] ?? "").trim())
-      .filter((id) => id.length > 0);
+    const ids = cohortProviderIds(cohort);
 
     expect(ids.length, `cohort "${cohort}" parsed to no providers`).toBeGreaterThan(0);
 
@@ -83,10 +88,24 @@ describe("playtest-loop documented cohort example", () => {
     }
   }, 120_000);
 
-  it("still documents a cohort with more than one provider", () => {
+  it("still documents a cohort of more than one DISTINCT provider", () => {
     // The example carries the file's own "large volume cohort + small reference
-    // cohort" argument. A single-provider example would pass the gate check above
-    // while quietly losing the point the header is making.
-    expect(documentedCohort()).toContain(",");
+    // cohort" argument, and that argument is about cross-vendor calibration: the
+    // reference cohort is only a reference because it is a different vendor.
+    //
+    // So the invariant is distinct providers, not a comma. `codex:8,codex:2` has
+    // the shape and none of the meaning — it launches one vendor family twice —
+    // and would sail through a `toContain(",")` check while silently retiring the
+    // calibration the header is there to describe.
+    const cohort = documentedCohort();
+    const distinct = new Set(cohortProviderIds(cohort));
+
+    expect(
+      distinct.size,
+      `The header documents PLAYTEST_COHORT="${cohort}", which names ${distinct.size} ` +
+        `distinct provider(s): ${[...distinct].sort().join(", ")}. The example is meant to ` +
+        `show a large volume cohort alongside a small cross-vendor reference cohort, so it ` +
+        `needs at least two different providers.`,
+    ).toBeGreaterThan(1);
   });
 });
