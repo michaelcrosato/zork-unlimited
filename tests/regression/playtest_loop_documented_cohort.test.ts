@@ -56,8 +56,9 @@ function resolveProvider(id: string): { isolation: string; drivable: string; rea
 function documentedCohort(): string {
   const script = readFileSync("playtest-loop.sh", "utf8");
   const match = script.match(/^#\s+PLAYTEST_COHORT="([^"]+)"/m);
-  expect(match, "playtest-loop.sh no longer documents a PLAYTEST_COHORT example").not.toBeNull();
-  return match![1];
+  const cohort = match?.[1];
+  expect(cohort, "playtest-loop.sh no longer documents a PLAYTEST_COHORT example").toBeTruthy();
+  return cohort ?? "";
 }
 
 describe("playtest-loop documented cohort example", () => {
@@ -65,7 +66,7 @@ describe("playtest-loop documented cohort example", () => {
     const cohort = documentedCohort();
     const ids = cohort
       .split(",")
-      .map((group) => group.split(":")[0].trim())
+      .map((group) => (group.split(":")[0] ?? "").trim())
       .filter((id) => id.length > 0);
 
     expect(ids.length, `cohort "${cohort}" parsed to no providers`).toBeGreaterThan(0);
