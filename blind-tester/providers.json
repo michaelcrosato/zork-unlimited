@@ -26,7 +26,7 @@
       },
       "catalogPath": "blind-tester/catalogs/codex.json",
       "transportContract": "game-direct-mcp-v1",
-      "notes": "The only vendor with a capture reader, so the only one the derivation stamps runner_enforced. The session id is announced rather than pinned, so the rollout must be searched for under the sessions root and matched to the public thread.started id — codex-rollout.mjs does that walk and rejects anything outside the root. Strongest at driving the dev loop as well. Historical strict-code-mode and direct-MCP receipts remain readable through src/blind/receipt_binding.ts."
+      "notes": "The first vendor with a capture reader (claude_code is the second), stamped runner_enforced by the same derivation. The session id is announced rather than pinned, so the rollout must be searched for under the sessions root and matched to the public thread.started id — codex-rollout.mjs does that walk and rejects anything outside the root. Strongest at driving the dev loop as well. Historical strict-code-mode and direct-MCP receipts remain readable through src/blind/receipt_binding.ts."
     },
     {
       "id": "claude_code",

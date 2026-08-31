@@ -40,10 +40,22 @@ import {
 } from "../world/campaign_character_state.js";
 import type { OverworldManifest } from "../world/overworld.js";
 import {
+  embeddedLaunchOverlayForPlan,
+  embeddedLaunchOverlayFromPersistedReceipt,
+} from "../world/embedded_launch_overlay.js";
+import {
   OverworldSession,
   type OverworldJourneyQuestCompletionResult,
   type OverworldJourneyQuestStartResult,
 } from "../world/session.js";
+
+/**
+ * The parent reference recorded in a CLI-launched overlay receipt. The MCP
+ * server records its per-process `o-<uuid>`; the terminal journey has exactly
+ * one parent per process, so a stable marker keeps the receipt honest about
+ * which surface launched the child.
+ */
+const CLI_JOURNEY_PARENT_SESSION_REF = "cli-journey";
 
 export const CLI_JOURNEY_SAVE_KIND = "adventureforge_cli_journey" as const;
 export const CLI_JOURNEY_SAVE_VERSION = 1 as const;
@@ -330,13 +342,21 @@ function restoreChild(args: {
     }
     assertSame("Embedded launch character", args.saved.launchCharacter, provenLaunchCharacter);
     const launchCharacter = provenLaunchCharacter;
+    const launchOverlay = embeddedLaunchOverlayFromPersistedReceipt(
+      bundle.state.embeddedLaunchOverlayReceipt,
+    );
     const launchState =
       source.campaignImports === undefined
-        ? initStateForRpgPack(index, bundle.state.seed)
-        : initStateForRpgPack(index, bundle.state.seed, {
-            character: launchCharacter,
-            imports: source.campaignImports,
-          });
+        ? initStateForRpgPack(index, bundle.state.seed, undefined, launchOverlay)
+        : initStateForRpgPack(
+            index,
+            bundle.state.seed,
+            {
+              character: launchCharacter,
+              imports: source.campaignImports,
+            },
+            launchOverlay,
+          );
     assertSame(
       "Embedded campaign import receipt",
       bundle.state.campaignImportReceipt,
@@ -514,6 +534,7 @@ export class CliJourneySession {
       throw new Error("Answer the active parent journey choice before starting a quest.");
     }
     const plan = this.parentSession.prepareQuestStart(questId, approachId);
+    const launchOverlay = embeddedLaunchOverlayForPlan(plan, CLI_JOURNEY_PARENT_SESSION_REF);
     let source;
     let index: RpgIndex;
     let state: GameState;
@@ -523,11 +544,16 @@ export class CliJourneySession {
       index = indexRpgPack(source.compiled.pack);
       state =
         source.campaignImports === undefined
-          ? initStateForRpgPack(index, seed)
-          : initStateForRpgPack(index, seed, {
-              character: plan.characterAfter,
-              imports: source.campaignImports,
-            });
+          ? initStateForRpgPack(index, seed, undefined, launchOverlay)
+          : initStateForRpgPack(
+              index,
+              seed,
+              {
+                character: plan.characterAfter,
+                imports: source.campaignImports,
+              },
+              launchOverlay,
+            );
       continuity = buildEmbeddedQuestCharacterContinuity({
         character: plan.characterAfter,
         pack: source.compiled.pack,

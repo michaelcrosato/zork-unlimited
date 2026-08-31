@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "b2e74fa36c75cc38",
+  "title": "windows-smoke CI job's path-sensitive CLI list is hardcoded",
+  "body": "The windows-smoke job runs three hardcoded path-sensitive CLI test files (doctor_cli, record_playtest_session_cli, qa_triage_cli — .github/workflows/ci.yml:~179). New path-sensitive CLI suites do not join automatically, so the lane that exists because \"a repo-root bug made health red on Windows and stayed green in CI\" can silently under-cover as bin/ grows.\n\nOptions: derive the list (a filename convention like *_cli.test.ts under tests/unit, or a small marker the workflow globs), or pin the list with a regression test that fails when a new *_cli test file exists but is absent from ci.yml, so additions become a conscious choice. The second is cheaper and matches the repo's pin-the-contract style.\n\nFrom the 2026-08-30 full audit, findings ledger P3.",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "2026-08-30 audit: the lane built for a shipped blind spot under-covers as CLI surface grows",
+    "refs": [
+      ".github/workflows/ci.yml"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T02:09:35.365Z",
+  "updated_at": "2026-08-31T02:09:35.365Z",
+  "external": null
+}

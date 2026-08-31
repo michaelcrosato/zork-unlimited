@@ -205,6 +205,14 @@ async function main(): Promise<void> {
   const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
   const scripted = commands ?? [];
 
+  if (interactive) {
+    console.log(
+      "Type `actions` (or `help`) for everything you can do right now, `quit` to stop.\n" +
+        "This binary plays one quest with no save; `npm run overworld` is the full game\n" +
+        "with saves.",
+    );
+  }
+
   try {
     while (true) {
       const obs = buildRpgObservation(index, state, { includeWorldIntro: true });
@@ -234,7 +242,9 @@ async function main(): Promise<void> {
 
       const parsed = resolve(index, state, raw);
       if (!parsed.ok) {
-        console.log(parsed.reason);
+        console.log(
+          interactive ? `${parsed.reason} (Type \`actions\` for the menu.)` : parsed.reason,
+        );
         continue;
       }
       if (!rules.legalActions(state).some((a) => actionEquals(a, parsed.action))) {

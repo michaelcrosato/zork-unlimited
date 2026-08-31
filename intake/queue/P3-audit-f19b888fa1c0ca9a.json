@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "f19b888fa1c0ca9a",
+  "title": "on_enter goto skips the destination room's on_enter effects",
+  "body": "A goto inside a room's on_enter moves the player, but the destination's on_enter (and its entry-time win check) does not fire for that hop: core/engine.ts:117-122 runs the hook once, non-recursively. The post-step checkWin (:128-132) still catches wins, so wins are safe — but an authored teleport-on-enter room silently skips the destination's entry effects, and no validator flags the pattern.\n\nEither make on_enter fire for the final room after a hook-driven move (bounded, to keep MAX_ENGINE_STEP semantics; watch for authored goto cycles), or add a foundation-validator finding for on_enter goto so authors learn the rule at validate time. Shipped packs currently avoid the pattern, so this is a future-authoring hazard, not a live defect.\n\nFrom the 2026-08-30 full audit, findings ledger P3 (engine section).",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "2026-08-30 audit: authoring hazard nothing validates",
+    "refs": [
+      "src/core/engine.ts"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T02:09:50.527Z",
+  "updated_at": "2026-08-31T02:09:50.527Z",
+  "external": null
+}

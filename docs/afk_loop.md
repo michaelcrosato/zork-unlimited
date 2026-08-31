@@ -145,9 +145,10 @@ initial baseline.
 
 **Evidence-only mode.** With `AI_LOOP_COMMIT=0`, `npm run ai:loop` does not rotate or
 append to the tracked loop ledger before the agent starts. The prompt requires an
-exact-clean baseline pure play before any uncommitted edit. The later work can be
-checked locally, but its baseline report must not be represented as evidence for that
-uncommitted revision. The driver enforces a clean start again at every cycle boundary;
+exactly clean `git status --porcelain` before any uncommitted edit (no play of any
+kind — the dev loop never plays). Work can be checked locally, but nothing produced
+against the uncommitted revision may be represented as published evidence for it.
+The driver enforces a clean start again at every cycle boundary;
 `AI_LOOP_ALLOW_DIRTY=1` cannot bypass that provenance gate. If a successful
 evidence-only cycle leaves work uncommitted, continuous mode stops before launching
 another baseline and tells the operator to commit, stash, or discard the pending work.
@@ -177,8 +178,8 @@ ASSESS → isSaturated?  ── no ──▶ standard cycle (as above)
       never overwritten by the loop.
    3. A FRESH implementation subagent reads ONLY that per-cycle handoff + the files
       it names (clean context, not the whole repo) and makes the one change.
-   4. Same provisional-commit → exact-clean blind playtest → outer green bar →
-      final ledger-commit sequence as every commit-enabled cycle.
+   4. Same provisional-commit → outer green bar → final ledger-commit sequence
+      as every commit-enabled cycle (no playtest — this loop never plays).
 ```
 
 **Cost control.** An ultraplan is multi-agent (≈4-6 agents) / multi-minute work, so it must not fire
@@ -282,12 +283,16 @@ failure records (default 100).
 
 ## Honest limits
 
-- loop.sh requires the pure runner's sidecar-last publication, a schema-valid V2
-  interview, an exact game receipt match, `tracked_worktree_clean: true`, and a
-  build commit equal to provisional HEAD. This rejects empty, fabricated-shape,
-  interrupted, dirty-build, and stale-revision artifacts. It still cannot prove
-  the model's private motivation, but it does prove the recorded session followed
-  the enforced player surface and ended through the game contract.
+- When a cycle publishes playtest artifacts, the seal (`loop:seal-feedback`, not
+  the driver) verifies them in full: the pure runner's sidecar-last publication,
+  a schema-valid V2 interview, an exact game receipt match,
+  `tracked_worktree_clean: true`, and a build commit equal to provisional HEAD.
+  This rejects empty, fabricated-shape, interrupted, dirty-build, and
+  stale-revision artifacts — and an evidence file or sidecar published without
+  its report fails closed as an incomplete publication. The artifacts themselves
+  are optional (the dev loop plays nothing); verification cannot prove the
+  model's private motivation, but it does prove a recorded session followed the
+  enforced player surface and ended through the game contract.
 - The verifier-integrity guard catches _mechanical_ tampering (skip/delete/empty/
   re-pin), not _semantic_ weakening (a future LLM-judge could).
 - The loop makes one change per cycle by design; broad multi-step work should be

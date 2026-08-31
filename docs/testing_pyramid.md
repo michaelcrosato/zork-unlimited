@@ -31,11 +31,14 @@ reference for what each tier does, when it runs, and its exact shapes.
   interviews only after a confirmed exit and cross-checks the schema-V2 report
   receipt against server evidence. Evidence-sidecar v2 binds seed, clean tracked
   commit, canonical world id/hash, and quest outcomes. The generic hardened
-  runner currently proves the full client boundary only for Codex. The dedicated
-  Grok wave uses the same pure server evidence but remains operator-attested and
-  therefore cannot enter retention metrics. One per normal cycle; the
-  loop's commit gate requires that V2 sidecar, verifies its exact receipt, and
-  rejects evidence whose build commit is not the current provisional HEAD. The
+  runner proves the full client boundary for the vendors with capture readers in
+  this checkout — Codex and Claude Code today; the list is
+  `blind-tester/implemented-launch-paths.json` and `npm run doctor` explains every
+  provider. The dedicated Grok wave uses the same pure server evidence but remains
+  operator-attested and therefore cannot enter retention metrics. Playtests run in
+  their own loop, not per dev cycle; when a cycle does publish one, the seal
+  verifies the V2 sidecar's exact receipt and rejects evidence whose build commit
+  is not the current provisional HEAD. The
   milestone/feedback-harvest `fleet` runs 100 seed/model variants of that same
   neutral pure contract. Direct quest, persona-coverage, crawler, smoke, and
   mock paths are explicit structural QA and never pure retention evidence.

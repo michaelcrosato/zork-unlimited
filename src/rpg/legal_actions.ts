@@ -11,7 +11,7 @@ import { evalConditions, type Condition } from "../core/conditions.js";
 import { applyEffects, type Effect } from "../core/effects.js";
 import type { RpgAction } from "../api/types.js";
 import type { Resolution } from "../core/engine.js";
-import type { GameState } from "../core/state.js";
+import { readVar, type GameState } from "../core/state.js";
 import type { DialogueTopic, Interaction } from "./schema.js";
 import type { ManeuverPhase } from "./maneuver_sequence.js";
 import { authoredUseActionIdentity } from "./action_ids.js";
@@ -689,8 +689,12 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   const room = index.rooms.get(here);
   if (!room) return out;
 
-  // Movement (sorted by direction for determinism).
-  for (const exit of [...room.exits].sort((a, b) => a.direction.localeCompare(b.direction))) {
+  // Movement (sorted by direction for determinism — code-unit order, so the
+  // enumeration cannot vary with the host's default locale/ICU the way bare
+  // localeCompare nominally can).
+  for (const exit of [...room.exits].sort((a, b) =>
+    a.direction < b.direction ? -1 : a.direction > b.direction ? 1 : 0,
+  )) {
     push(
       option(index, state, `go_${exit.direction}`, `go ${exit.direction}`, {
         type: "MOVE",
@@ -774,7 +778,10 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
       if (opt && it.skill_check) {
         opt.skill_check = {
           skill: it.skill_check.skill,
-          modifier: state.vars[it.skill_check.skill] ?? 0,
+          // readVar, not a bare index: an authored name like "__proto__" would
+          // otherwise read the inherited accessor instead of 0 (defense in
+          // depth — the validator already forces the var to be declared).
+          modifier: readVar(state.vars, it.skill_check.skill),
           difficulty: it.skill_check.difficulty,
           die: "d20",
           ...(it.skill_check.stakes ? { stakes: it.skill_check.stakes } : {}),

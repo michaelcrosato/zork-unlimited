@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { z } from "zod";
 import { GameSession, type View } from "./engine.js";
 import {
+  embeddedLaunchOverlayForPlan,
   hasLiveOverworldEventChoice,
   OverworldSession,
   type OverworldActionResult,
@@ -909,11 +910,15 @@ export default function App(): JSX.Element {
       // target validation, and imported-state construction happen before the
       // overworld records that the quest has started.
       const plan = worldSession.prepareQuestStart(quest.id, approachId);
+      // Same shared derivation the MCP bridge uses: a delayed Wolf-Winter
+      // dispatch must open the same child state on every interface.
+      const launchOverlay = embeddedLaunchOverlayForPlan(plan, "ui-journey");
       const session = GameSession.startEmbedded(
         pack.source,
         plan.characterAfter,
         manifestQuest.campaign_imports,
         BROWSER_QUEST_SEED,
+        launchOverlay,
       );
       const localQuest = worldSession.commitQuestStart(plan);
       const selectedApproach = localQuest.launch?.options.find(
