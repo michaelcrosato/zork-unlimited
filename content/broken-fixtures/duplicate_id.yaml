@@ -1,4 +1,6 @@
-# Expect: DUPLICATE_ID — two scenes share an id.
+# Expect: UNSUPPORTED_LEGACY_PACK — a scene-shaped legacy pack the RPG-only
+# loader rejects before any id check runs (tests use this file as the
+# legacy-shape witness; the duplicate ids below are historical).
 meta: { id: bad_dup, title: "Bad Dup", start: s1 }
 scenes:
   - id: s1

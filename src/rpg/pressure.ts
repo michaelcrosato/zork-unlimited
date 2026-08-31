@@ -1,4 +1,4 @@
-import type { GameState } from "../core/state.js";
+import { readVar, type GameState } from "../core/state.js";
 import type { RpgPressureTrack } from "./schema.js";
 
 export type RpgPressureBandView = {
@@ -28,7 +28,10 @@ export function resolveRpgPressureTrack(
   track: RpgPressureTrack,
   state: GameState,
 ): RpgPressureTrackView {
-  const value = state.vars[track.var] ?? 0;
+  // readVar, not a bare index: defense in depth against an authored var name
+  // that collides with an Object.prototype key (the validator already requires
+  // the var to be declared, which gives it an own key).
+  const value = readVar(state.vars, track.var);
   let bandIndex = 0;
   for (let index = 1; index < track.bands.length; index += 1) {
     const threshold = track.bands[index]!.min;

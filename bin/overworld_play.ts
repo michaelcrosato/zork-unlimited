@@ -56,6 +56,7 @@ import {
   type TerminalStoryChoiceAuxiliaryResult,
 } from "./terminal_story_choice.js";
 import { loadOverworldManifest } from "../src/world/source.js";
+import { embeddedLaunchOverlayForPlan } from "../src/world/embedded_launch_overlay.js";
 import { timeLabel } from "../src/world/session_journal_codec.js";
 import type {
   JourneyChoiceOption,
@@ -1606,6 +1607,7 @@ export async function runQuestSession(
   // before committing it. A bad pack or import therefore cannot spend the approach
   // resources, record its memory, or consume the quest-start decision.
   const plan = session.prepareQuestStart(quest.id, approachId);
+  const launchOverlay = embeddedLaunchOverlayForPlan(plan, "cli-journey");
   const source = runtime.requireWorldQuestPlayable(plan.quest.id);
 
   const index = indexRpgPack(source.compiled.pack);
@@ -1613,11 +1615,16 @@ export async function runQuestSession(
   const step = makeStep(rules);
   let state =
     source.campaignImports === undefined
-      ? initStateForRpgPack(index, seed)
-      : initStateForRpgPack(index, seed, {
-          character: plan.characterAfter,
-          imports: source.campaignImports,
-        });
+      ? initStateForRpgPack(index, seed, undefined, launchOverlay)
+      : initStateForRpgPack(
+          index,
+          seed,
+          {
+            character: plan.characterAfter,
+            imports: source.campaignImports,
+          },
+          launchOverlay,
+        );
   session.commitQuestStart(plan);
   console.log(
     `Started local quest: ${plan.quest.title}${

@@ -406,7 +406,7 @@ export class SessionStore {
     const session = refreshSessionEntry(this.sessions, id);
     if (!session) {
       throw new Error(
-        `RPG session "${id}" was not found. Pass the child session_id returned by the RPG start, or its embedded rpg_session_id. Do not pass an overworld session id.`,
+        `RPG session "${id}" was not found. Pass the child session_id returned by the RPG start, or its embedded rpg_session_id. Do not pass an overworld session id. (Sessions live in server memory and only the most recent are retained, so a long-idle handle may have been evicted — save_game before setting a session aside.)`,
       );
     }
     return session;

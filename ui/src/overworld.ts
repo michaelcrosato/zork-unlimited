@@ -15,6 +15,7 @@ export {
   type TravelLogEntry,
 } from "../../src/world/session.js";
 export type { CampaignCharacterView } from "../../src/world/campaign_character_view.js";
+export { embeddedLaunchOverlayForPlan } from "../../src/world/embedded_launch_overlay.js";
 
 /** The UI must only disclose authored event terms once the engine marks one legal. */
 export function hasLiveOverworldEventChoice(

@@ -182,8 +182,34 @@ preflight_cohort() {
   return 1
 }
 
+# The persona gate mirrors run.sh's pure-run rule (persona-directed play changes
+# the thing retention measures, so live runs accept only `default`). Refusing the
+# wave here — like the drivability gate above — keeps a misconfigured live wave
+# from dispatching players run.sh then refuses one by one, each of which the
+# unconditional recorder would file as a `failed` session under a real vendor's
+# name. Personas remain available on the structural lanes.
+preflight_personas() {
+  local list=() persona blocked=()
+  # ${PERSONAS:-default}: the harness in tests/unit/doctor_cli.test.ts runs this
+  # gate section standalone under `set -u` with only COHORT/MOCK defined, and an
+  # unset persona list must mean the safe default, not an unbound-variable abort.
+  IFS=',' read -ra list <<< "${PERSONAS:-default}"
+  for persona in "${list[@]}"; do
+    [[ -z "$persona" || "$persona" == "default" ]] && continue
+    blocked+=("$persona")
+  done
+  (( ${#blocked[@]} == 0 )) && return 0
+  echo "Refusing the wave: PLAYTEST_PERSONAS names non-default personas (${blocked[*]})."
+  echo "Pure live players accept only the default persona; run.sh would refuse each of"
+  echo "these AFTER dispatch, and every refusal would be recorded as a failed vendor"
+  echo "session. Rotate personas on the structural lanes instead: PLAYTEST_MOCK=1 here,"
+  echo "or \`npm run fleet:mock -- --personas ...\`."
+  return 1
+}
+
 if [[ "$MOCK" != "1" ]]; then
   preflight_cohort || exit 1
+  preflight_personas || exit 1
 else
   # A wiring check drives run.sh's bundled scripted agent, so no vendor client is
   # launched and there is nothing to prove blind. Gating it would make the one free way

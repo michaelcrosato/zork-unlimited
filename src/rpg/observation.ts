@@ -124,8 +124,12 @@ export function buildRpgObservation(
         }
       }
     }
-    exits.sort((a, b) => a.direction.localeCompare(b.direction));
-    blockedExits.sort((a, b) => a.direction.localeCompare(b.direction));
+    // Code-unit order, not localeCompare: rendered order must not depend on the
+    // host's default locale/ICU build.
+    const byDirection = (a: { direction: string }, b: { direction: string }): number =>
+      a.direction < b.direction ? -1 : a.direction > b.direction ? 1 : 0;
+    exits.sort(byDirection);
+    blockedExits.sort(byDirection);
   }
 
   const enemies: RpgObservation["enemies_present"] = [];

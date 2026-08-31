@@ -13,6 +13,13 @@ import { fileURLToPath } from "node:url";
 import { createToolApi } from "../src/mcp/tools.js";
 
 export const MAX_OPENING_WORD_TOKENS = 732;
+// The live opening measures exactly 12/12 (2026-08-30 audit) — the option budget
+// is at saturation ON PURPOSE: it is a hard ceiling, not headroom. Any change
+// that surfaces one more road/area/POI/contact/event or actionable service at
+// the Albany opening trips this gate immediately, which is the desired behavior:
+// widening the opening surface must be a deliberate, reviewed re-pin here (with
+// the player-facing case for it), never a side effect of a content edit.
+// Words have real headroom (581/732 at the same audit); options have none.
 export const MAX_OPENING_ACTIONABLE_OPTIONS = 12;
 
 const ACTION_COLLECTION_KEYS = ["roads", "areas", "poi", "contacts", "events"] as const;

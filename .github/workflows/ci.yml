@@ -50,13 +50,31 @@ jobs:
         run: npm run verify:opening-density
       # Static mode alone cannot see a deletion that stays above the floors. Drift
       # mode compares this branch against the base it will merge into, which is the
-      # same comparison loop.sh makes per cycle. On a push (no PR context) there is
-      # no base ref, so the static run above stands on its own.
+      # same comparison loop.sh makes per cycle.
       - name: Verifier drift vs the merge base (the count ratchet + guard-weakening check)
         if: ${{ github.event_name == 'pull_request' }}
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: npm run verify:integrity -- --against "$BASE_SHA"
+      # A push to main has no PR base, but it does have the previous tip. Running
+      # the same ratchet against it closes the one gap the 2026-08-30 audit flagged:
+      # an admin direct push (enforce_admins is off) used to receive static mode
+      # only, so the actor able to skip review was also exempt from the strongest
+      # check. This runs post-hoc — it cannot block the push — but it turns a
+      # weakening landed that way into a red run on main instead of silence.
+      # github.event.before is the all-zeros SHA on a branch's first push, and can
+      # be absent from history after a force push; both fall back loudly to static.
+      - name: Verifier drift vs the previous tip (push events)
+        if: ${{ github.event_name == 'push' }}
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] \
+            || ! git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
+            echo "::warning::No usable previous tip ($BEFORE_SHA); the static verifier run above stands on its own."
+          else
+            npm run verify:integrity -- --against "$BEFORE_SHA"
+          fi
       - name: Typecheck
         run: npm run typecheck
       - name: Lint (ESLint)

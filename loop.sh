@@ -262,13 +262,17 @@ agent_cmd() {
 
   if [[ -n "${AI_AGENT:-}" ]]; then
     local requested_bin
+    # An explicitly requested agent that cannot run FAILS the resolution (and the
+    # cycle) rather than degrading to an agent-less pass: the operator asked for
+    # specific work to happen, and "loudly" must mean the exit code, not just a
+    # stderr line a detached loop never shows anyone.
     if ! requested_bin="$(dev_agent_binary "$AI_AGENT")"; then
       echo "AI_AGENT=\"$AI_AGENT\" is not a known dev agent (${DEV_AGENT_IDS[*]}); set AI_AGENT_CMD for anything else." >&2
-      return 0
+      return 1
     fi
     if ! command -v "$requested_bin" >/dev/null 2>&1; then
       echo "AI_AGENT=\"$AI_AGENT\" was requested but \"$requested_bin\" is not on PATH." >&2
-      return 0
+      return 1
     fi
     dev_agent_command "$AI_AGENT"
     return 0
@@ -286,14 +290,23 @@ agent_cmd() {
 
 run_agent() {
   local prompt cmd
+  AGENTLESS_CYCLE=0
   prompt="$(latest_prompt)"
   if [[ -z "$prompt" ]]; then echo "No AFK agent prompt found; skipping agent handoff."; return 0; fi
   if [[ "${AI_LOOP_RUN_AGENT:-1}" != "1" ]]; then echo "AI_LOOP_RUN_AGENT is not 1; prompt is ready at $prompt."; return 0; fi
-  cmd="$(agent_cmd)"
+  if ! cmd="$(agent_cmd)"; then
+    echo "The requested agent cannot run — failing this cycle rather than proceeding without it."
+    return 1
+  fi
   if [[ -z "$cmd" ]]; then
     echo "No supported dev agent found on PATH (tried: ${DEV_AGENT_IDS[*]})."
     echo "Install one, set AI_AGENT=<id>, or set AI_AGENT_CMD to any command that reads the prompt from STDIN."
     echo "Evidence-only this cycle. Prompt at $prompt."
+    # Mark the cycle agent-less so continuous mode can stop instead of looping
+    # gate-only "successes" forever: each such pass burns the pre+post crawl and
+    # the full health bar while the breakers (which count only FAILURES) never
+    # trip. One informative pass is useful; an unattended chain of them is not.
+    AGENTLESS_CYCLE=1
     return 0
   fi
   local budget="${AI_AGENT_TIMEOUT_SECONDS:-2400}"
@@ -515,6 +528,17 @@ run_cycle() {
     _reject_cycle "agent" "headless agent exited with status $agent_rc"
     return 1
   fi
+  # The evidence-only mirror of require_provisional_commit below: with
+  # AI_LOOP_COMMIT=0 no commit is allowed at all. The prompt says so, but a
+  # disobedient agent's commit used to leave a clean tree, so the cycle
+  # "succeeded" and unsealed commits (no selection attestation, no
+  # acceptance-marker update) quietly accumulated on the branch. The charter
+  # states this as a driver property (AGENTS.md, evidence-only mode); this makes
+  # the driver actually own it.
+  if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]] && [[ "$(git rev-parse HEAD)" != "$start_ref" ]]; then
+    _reject_cycle "evidence-commit" "evidence-only cycle advanced HEAD; no commit is allowed with AI_LOOP_COMMIT=0"
+    return 1
+  fi
   require_provisional_commit "$start_ref" || {
     _reject_cycle "provisional-commit" "required provisional implementation commit is absent or invalid"
     return 1
@@ -610,6 +634,16 @@ while true; do
     if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]] && [[ -n "$(git status --porcelain)" ]]; then
       echo "Evidence-only work remains uncommitted; stopping before another cycle so"
       echo "the next pure baseline cannot be mislabeled. Commit, stash, or discard it first."
+      break
+    fi
+    # A cycle that ran no agent (auto-detect found none) proves the gates and
+    # writes a prompt, and one of those is informative — but repeating it can
+    # only burn the ~50-minute bar per lap with zero possible progress, and the
+    # failure breakers never see it because the cycle "succeeds". Stop unless
+    # the operator explicitly asked for agent-less cycles (AI_LOOP_RUN_AGENT=0).
+    if [[ "${AGENTLESS_CYCLE:-0}" == "1" && "${AI_LOOP_RUN_AGENT:-1}" == "1" ]]; then
+      echo "No dev agent is installed, so further cycles cannot make progress — stopping"
+      echo "continuous mode. Install codex/claude/gemini or set AI_AGENT_CMD, then relaunch."
       break
     fi
   else

@@ -422,11 +422,18 @@ back to assessor candidates.
 ```bash
 cd ../af-qa-a
 PLAYTEST_STORE=/d/af-corpus \
-PLAYTEST_COHORT="gemini_cli:12" \
-PLAYTEST_PERSONAS="default,cynical_veteran,breaker" \
+PLAYTEST_COHORT="codex:12" \
 PLAYTEST_CONCURRENCY=8 \
 ./playtest-loop.sh
 ```
+
+Two constraints the preflight now enforces up front, so a wave refuses instead of
+dispatching doomed players: the cohort may name only vendors this checkout can both
+prove blind and launch (`npm run doctor` prints the current table — today that is
+`codex` and `claude_code`; a `gemini_cli` cohort is refused with the ingest
+alternative), and live waves accept only the `default` persona — persona-directed
+play changes the thing retention measures. Rotate personas on the structural lanes
+instead (`PLAYTEST_MOCK=1`, or `npm run fleet:mock -- --personas ...`).
 
 Vary the cohort per terminal — `codex:10`, `claude_code:10` — and pin the reference tier
 on **exactly one**:
@@ -510,11 +517,13 @@ investigating rather than accepting.
 
 Two things that will bite if you skip the doctor:
 
-- **Only `codex` runs live through `playtest-loop.sh`.** Every other vendor is refused there with
-  `cannot produce pure evidence: this runner can only launch "codex"`, because
-  runner-enforced blindness is proved from Codex's own rollout logs. Grok's separate
-  headless command and manually ingested sessions still count toward bug corroboration,
-  but remain operator-attested.
+- **Only `codex` and `claude_code` run live through `playtest-loop.sh`.** Every other
+  vendor is refused there with `cannot produce pure evidence`, because runner-enforced
+  blindness is proved from the client's own session log and only those two have capture
+  readers in this checkout (`blind-tester/implemented-launch-paths.json` is the list;
+  `npm run doctor` explains every provider's status). Grok's separate headless command
+  and manually ingested sessions still count toward bug corroboration, but remain
+  operator-attested.
 - **A report that does not verify is kept but contributes nothing.** The ingest command
   now says so explicitly and names the reason; if you see that line, fix the report and
   re-run rather than assuming the session landed as evidence.

@@ -43,6 +43,8 @@ import {
   type EmbeddedQuestCharacterContinuity,
 } from "../../src/rpg/embedded_quest_character_continuity.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
+import type { EmbeddedLaunchOverlay } from "../../src/core/embedded_launch_overlay_receipt.js";
+import { embeddedLaunchOverlayFromPersistedReceipt } from "../../src/world/embedded_launch_overlay.js";
 import { SAVE_MODE, SaveIntegrityError, load, save } from "../../src/persist/save_load.js";
 import { assertCampaignImportReceiptCatalogCompatibility } from "../../src/persist/campaign_import_integrity.js";
 import {
@@ -196,6 +198,7 @@ export class GameSession {
     character: CampaignCharacterState,
     imports: CampaignCharacterImports | undefined,
     seed = 1,
+    launchOverlay?: EmbeddedLaunchOverlay,
   ): GameSession {
     const c = compileRpgSource(source);
     const index = indexRpgPack(c.pack);
@@ -210,11 +213,16 @@ export class GameSession {
       index,
       fresh: () =>
         importsSnapshot === undefined
-          ? initStateForRpgPack(index, seed)
-          : initStateForRpgPack(index, seed, {
-              character: characterSnapshot,
-              imports: importsSnapshot,
-            }),
+          ? initStateForRpgPack(index, seed, undefined, launchOverlay)
+          : initStateForRpgPack(
+              index,
+              seed,
+              {
+                character: characterSnapshot,
+                imports: importsSnapshot,
+              },
+              launchOverlay,
+            ),
       campaignCharacter: characterSnapshot,
     });
   }
@@ -251,13 +259,23 @@ export class GameSession {
     assertRpgStateReferences(index, bundle.state);
     assertCampaignImportReceiptCatalogCompatibility(bundle.state, importsSnapshot);
 
+    // A saved child that opened under a launch overlay carries its receipt in
+    // state; replaying from a bare fresh state could never reproduce it.
+    const launchOverlay = embeddedLaunchOverlayFromPersistedReceipt(
+      bundle.state.embeddedLaunchOverlayReceipt,
+    );
     const fresh = () =>
       importsSnapshot === undefined
-        ? initStateForRpgPack(index, expectedSeed)
-        : initStateForRpgPack(index, expectedSeed, {
-            character: characterSnapshot,
-            imports: importsSnapshot,
-          });
+        ? initStateForRpgPack(index, expectedSeed, undefined, launchOverlay)
+        : initStateForRpgPack(
+            index,
+            expectedSeed,
+            {
+              character: characterSnapshot,
+              imports: importsSnapshot,
+            },
+            launchOverlay,
+          );
     const launchState = fresh();
     const expectedContinuity = buildEmbeddedQuestCharacterContinuity({
       character: characterSnapshot,
