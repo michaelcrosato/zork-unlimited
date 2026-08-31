@@ -38,7 +38,9 @@ import { savePlaytestReport } from "../../src/qa/save_playtest_report.js";
 import {
   GROK_MCP_INSTANT_THINKING_EFFORT,
   GROK_MCP_WAVE_COUNT,
+  GROK_MCP_WAVE_LIVE_CHILD_CAP,
   GROK_MCP_WAVE_MODEL,
+  GROK_MCP_WAVE_PROMPT,
   GROK_MCP_WAVE_SURFACE,
   grokMcpProjectConfig,
   parseGrokMcpWaveArgs,
@@ -948,6 +950,37 @@ describe("grok MCP wave request", () => {
     });
   });
 
+  it("caps live children at 32 even when the caller asks for more", () => {
+    expect(GROK_MCP_WAVE_LIVE_CHILD_CAP).toBe(32);
+    expect(parseGrokMcpWaveArgs(["--concurrency", "32"]).concurrency).toBe(32);
+    expect(parseGrokMcpWaveArgs(["--concurrency", "100"]).concurrency).toBe(
+      GROK_MCP_WAVE_LIVE_CHILD_CAP,
+    );
+  });
+
+  it("demands high-standard gamer feedback and a V2 json exit-interview", () => {
+    const prompt = readFileSync(GROK_MCP_WAVE_PROMPT, "utf8");
+    expect(prompt).toMatch(/gamer with high standards/i);
+    expect(prompt).toContain("Do not pander");
+    expect(prompt).toContain("worst_moment");
+    expect(prompt).toContain("would_replay");
+    expect(prompt).toContain("json exit-interview");
+    expect(prompt).toContain("journey_exit_receipt");
+    expect(prompt).toContain("exitReceipt");
+    expect(prompt).toContain('"bugs": []');
+    expect(prompt).not.toContain('bugs": "none"');
+  });
+
+  it("rewrites the ignored manifest after each child, including spawn failures", () => {
+    const driver = readFileSync(join(process.cwd(), "bin", "playtest-grok-wave.ts"), "utf8");
+    expect(driver).toContain("rows[index] = await playOne(");
+    expect(driver).toMatch(
+      /rows\[index\] = await playOne\([\s\S]*?writeManifest\(manifestPath, rows\)/u,
+    );
+    expect(driver).toContain('requestedOutcome: "failed"');
+    expect(driver).toContain("savePlaytestReport({");
+  });
+
   it("builds a private pure MCP server config with exact run provenance", () => {
     const config = grokMcpProjectConfig({
       repoRoot: "C:\\game",
@@ -1062,5 +1095,53 @@ describe("playtest report save keeps interviews intact or fail-closed", () => {
     );
     expect(saved.record.outcome).toBe("malformed_report");
     expect(saved.record.exit_interview).toBeNull();
+  });
+
+  it("still writes a session when the player times out without a valid interview", () => {
+    const store = tempDir();
+    const saved = savePlaytestReport({
+      reportText: "Playthrough log\nTimed out before exitReceipt.\n",
+      transcript: "timed out\n",
+      store,
+      providerId: "grok_cli",
+      modelId: "grok-4.6",
+      seed: 15,
+      gameSessionId: "o-test-15",
+      attestedBy: "qa-test",
+      method: "unit test, AdventureForge MCP only",
+      recordedAt: "2026-08-29T12:00:00.000Z",
+      requestedOutcome: "timed_out",
+      buildCommit: "a".repeat(40),
+      trackedWorktreeClean: true,
+    });
+    expect(saved.record.outcome).toBe("timed_out");
+    expect(saved.record.exit_interview).toBeNull();
+    expect(readPlaytestSession(saved.dir).record.outcome).toBe("timed_out");
+    expect(readPlaytestSession(saved.dir).record.exit_interview).toBeNull();
+  });
+
+  it("still writes a session when the player fails without a valid interview", () => {
+    const store = tempDir();
+    const saved = savePlaytestReport({
+      reportText: "",
+      transcript: '{"type":"adventureforge_grok_harness","stderr":"spawn grok ENOENT"}\n',
+      store,
+      providerId: "grok_cli",
+      modelId: "grok-4.6",
+      seed: 16,
+      gameSessionId: "unknown-grok-wave-16",
+      attestedBy: "qa-test",
+      method: "unit test, AdventureForge MCP only",
+      recordedAt: "2026-08-29T12:00:00.000Z",
+      requestedOutcome: "failed",
+      buildCommit: "a".repeat(40),
+      trackedWorktreeClean: true,
+    });
+    expect(saved.record.outcome).toBe("failed");
+    expect(saved.record.exit_interview).toBeNull();
+    const roundTrip = readPlaytestSession(saved.dir);
+    expect(roundTrip.record.outcome).toBe("failed");
+    expect(roundTrip.record.exit_interview).toBeNull();
+    expect(roundTrip.transcript).toContain("spawn grok ENOENT");
   });
 });
