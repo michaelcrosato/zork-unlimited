@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "683329c06ec641b9",
+  "title": "June Pike talk required an explicit expected_snapshot_hash unlike other… @ June Pike talk required an explicit expected_snapshot_hash unlike other contact talks, with no prior signal",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "June Pike talk required an explicit expected_snapshot_hash unlike other contact talks, with no prior signal",
+  "excerpts": [
+    "June Pike talk required an explicit expected_snapshot_hash unlike other contact talks, with no prior signal"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "77363321ef280ec27c8090ca40a710d3388c0c20b38551344cca8f9da2bbe277"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:21:00.903Z",
+    "last_seen_at": "2026-08-31T07:21:00.903Z"
+  },
+  "priority": 2
+}

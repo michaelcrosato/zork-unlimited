@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "97a8dd8113b335d6",
+  "title": "dispatch board slot terminology (duty/evidence/preparation/etc mapping… @ dispatch board slot terminology (duty/evidence/preparation/etc mapping to promise/report/kit)",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "dispatch board slot terminology (duty/evidence/preparation/etc mapping to promise/report/kit)",
+  "excerpts": [
+    "dispatch board slot terminology (duty/evidence/preparation/etc mapping to promise/report/kit)"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "7467c065e8194a1290be013ae7b1653558366b55fca3f78bbb7d069a38b0aa55"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:17:15.530Z",
+    "last_seen_at": "2026-08-31T09:17:15.530Z"
+  },
+  "priority": 2
+}

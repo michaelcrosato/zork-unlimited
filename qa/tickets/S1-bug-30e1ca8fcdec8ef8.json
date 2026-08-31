@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "30e1ca8fcdec8ef8",
+  "title": "Room text still advertises go north for HUNT and comparing all four… @ byre_yard",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "Room text still advertises go north for HUNT and comparing all four plans.",
+    "Room text still pushes Hayden's brace/yearling-attack hunt option after those plans are closed."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "161b0e95e9cc5ca788b083aa7656c15c54458c86fe271914a07d07d6d7632536",
+      "8a7551d6421b572d6227e4e689c32768742d643fecd0935219671cef78fd4d8b"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.480Z",
+    "last_seen_at": "2026-08-31T01:10:14.761Z"
+  },
+  "priority": 7.754887502163468
+}

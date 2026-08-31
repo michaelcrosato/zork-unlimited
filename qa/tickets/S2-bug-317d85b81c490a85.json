@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "317d85b81c490a85",
+  "title": "Room and tutorial say Fieldcraft DC 12; field condition and actual… @ Steading Yard / Broken Paling first LURE LAY",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Steading Yard / Broken Paling first LURE LAY",
+  "excerpts": [
+    "Room and tutorial say Fieldcraft DC 12; field condition and actual result skip the check.",
+    "Approach/journal say Fieldcraft DC 12 and hedges do not skip the check; field condition, Cade, and the actual LAY skip it."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "3bfe032231a2a877ab0bf7afd2d0aa3c03e8b7e4981e8c9d978bebef7553bbe1",
+      "a538fec579c0ef76e7346a200fc3331bf743ebdf99f8b1d4f64ac630d0d0ae82"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.816Z",
+    "last_seen_at": "2026-08-31T01:04:45.309Z"
+  },
+  "priority": 15.509775004326936
+}

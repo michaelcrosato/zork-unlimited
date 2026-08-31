@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "f0d3685458bc27d4",
+  "title": "Safer-sounding stockway hides the DC 10 crosswind and still forces a… @ Steading Yard / Broken Paling first LURE LAY",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Steading Yard / Broken Paling first LURE LAY",
+  "excerpts": [
+    "Safer-sounding stockway hides the DC 10 crosswind and still forces a no-retry DC 12; failure scattered cattle."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "dc7df42ac397a10f4672e24f16d535d37225964cf75efedec532869265134429"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:11:24.994Z",
+    "last_seen_at": "2026-08-31T01:11:24.994Z"
+  },
+  "priority": 12
+}

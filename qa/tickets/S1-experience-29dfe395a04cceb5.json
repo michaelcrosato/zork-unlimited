@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "29dfe395a04cceb5",
+  "title": "Unclear how much the wind-stone life-or-death check odds had actually… @ Unclear how much the wind-stone life-or-death check odds had actually been improved by prior dialogue",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Unclear how much the wind-stone life-or-death check odds had actually been improved by prior dialogue",
+  "excerpts": [
+    "Unclear how much the wind-stone life-or-death check odds had actually been improved by prior dialogue"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "640fc6a22e5b26e325eae92bc4e8b3455ddd46855523b08f58655cd7dfcd40ce"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:37:31.452Z",
+    "last_seen_at": "2026-08-31T09:37:31.452Z"
+  },
+  "priority": 2
+}

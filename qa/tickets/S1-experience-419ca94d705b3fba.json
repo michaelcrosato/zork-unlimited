@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "419ca94d705b3fba",
+  "title": "Parallel tool calls caused one rejected stale-state action @ Parallel tool calls caused one rejected stale-state action",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Parallel tool calls caused one rejected stale-state action",
+  "excerpts": [
+    "Parallel tool calls caused one rejected stale-state action"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "7899d81da1e128de179f2091d481a3a1a30a08afc1c5b1c683b45243362cba04"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:50:59.312Z",
+    "last_seen_at": "2026-08-31T07:50:59.312Z"
+  },
+  "priority": 2
+}

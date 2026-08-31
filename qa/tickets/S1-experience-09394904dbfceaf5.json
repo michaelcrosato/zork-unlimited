@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "09394904dbfceaf5",
+  "title": "Station dispatch board slot system took a couple reads to parse @ Station dispatch board slot system took a couple reads to parse",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Station dispatch board slot system took a couple reads to parse",
+  "excerpts": [
+    "Station dispatch board slot system took a couple reads to parse"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "dea8d7d4ba55cd2fadf60febf2049a0bd333bb9499caca0bf4678d493b4b2e62"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:29:31.216Z",
+    "last_seen_at": "2026-08-31T09:29:31.216Z"
+  },
+  "priority": 2
+}

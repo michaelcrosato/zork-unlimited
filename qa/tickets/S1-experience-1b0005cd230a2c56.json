@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "1b0005cd230a2c56",
+  "title": "Station dispatch board/reveal/modal flow is dense before quest start @ Station dispatch board/reveal/modal flow is dense before quest start",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Station dispatch board/reveal/modal flow is dense before quest start",
+  "excerpts": [
+    "Station dispatch board/reveal/modal flow is dense before quest start"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "d428395a197c6adc00359e7f6c94dcd4693ec55ee1c3307c4fa64c4edfb28e5e"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:13:26.271Z",
+    "last_seen_at": "2026-08-31T07:13:26.271Z"
+  },
+  "priority": 2
+}

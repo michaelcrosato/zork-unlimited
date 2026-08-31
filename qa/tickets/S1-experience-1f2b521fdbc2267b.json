@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "1f2b521fdbc2267b",
+  "title": "June Pike talk required an undocumented expected_snapshot_hash the… @ June Pike talk required an undocumented expected_snapshot_hash the first time",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "June Pike talk required an undocumented expected_snapshot_hash the first time",
+  "excerpts": [
+    "June Pike talk required an undocumented expected_snapshot_hash the first time"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "f2b23d54cfedfae5adc38fa049227d569b4f1f0cc16cb0dc0f648a19aa34fd18"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:35:59.919Z",
+    "last_seen_at": "2026-08-31T09:35:59.919Z"
+  },
+  "priority": 2
+}

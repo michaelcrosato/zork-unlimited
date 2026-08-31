@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "b94bd11a8ed4a03a",
+  "title": "Station dispatch optional-support system needed extra inspection to… @ Station dispatch optional-support system needed extra inspection to understand",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Station dispatch optional-support system needed extra inspection to understand",
+  "excerpts": [
+    "Station dispatch optional-support system needed extra inspection to understand"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "541cd3b43271597ed1969cee5965928dad1232ca1bcee85d4925bf58c64e04e2"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:52:19.675Z",
+    "last_seen_at": "2026-08-31T07:52:19.675Z"
+  },
+  "priority": 2
+}

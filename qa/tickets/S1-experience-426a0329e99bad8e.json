@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "426a0329e99bad8e",
+  "title": "After each successful kill, the available action collapsed to one exact… @ After each successful kill, the available action collapsed to one exact verb phrase, which required careful reading but stayed understandable.",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "After each successful kill, the available action collapsed to one exact verb phrase, which required careful reading but stayed understandable.",
+  "excerpts": [
+    "After each successful kill, the available action collapsed to one exact verb phrase, which required careful reading but stayed understandable."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "gpt"
+    ],
+    "providers": [
+      "codex"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "0d1aff2f3e2e979d8e30d38f9c9e069a3873542821cdcafc6d66f15d580df961"
+    ],
+    "first_seen_build": "f7753cd0e775a5888739fefd3c9194b55e41f335",
+    "last_seen_build": "f7753cd0e775a5888739fefd3c9194b55e41f335",
+    "first_seen_at": "2026-08-31T08:04:22.518Z",
+    "last_seen_at": "2026-08-31T08:04:22.518Z"
+  },
+  "priority": 2
+}

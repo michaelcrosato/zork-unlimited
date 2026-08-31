@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "2562c342b40d21c5",
+  "title": "Fodder allocation's cattle-alarm benefit text seemed to not apply on… @ Fodder allocation's cattle-alarm benefit text seemed to not apply on the first descent, though it resolved sensibly later",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Fodder allocation's cattle-alarm benefit text seemed to not apply on the first descent, though it resolved sensibly later",
+  "excerpts": [
+    "Fodder allocation's cattle-alarm benefit text seemed to not apply on the first descent, though it resolved sensibly later"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "363173662a7756cf1a5b45e80359be64cf39bd7c1ac41d68e362da57db262bbe"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:11:55.034Z",
+    "last_seen_at": "2026-08-31T07:11:55.034Z"
+  },
+  "priority": 2
+}

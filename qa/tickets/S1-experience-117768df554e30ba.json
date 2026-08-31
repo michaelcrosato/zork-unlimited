@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "117768df554e30ba",
+  "title": "first LURE described as DC 12 then auto-succeeds @ first LURE described as DC 12 then auto-succeeds",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "first LURE described as DC 12 then auto-succeeds",
+  "excerpts": [
+    "first LURE described as DC 12 then auto-succeeds"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "6bfe00e38d802bb0872f34f2c959d14766e6a31292911140d9b3d23a2c975e77"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:09:57.213Z",
+    "last_seen_at": "2026-08-31T01:09:57.213Z"
+  },
+  "priority": 6
+}

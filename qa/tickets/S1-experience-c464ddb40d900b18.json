@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c464ddb40d900b18",
+  "title": "Dense compact ID/legend fields take a beat to parse @ Dense compact ID/legend fields take a beat to parse",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Dense compact ID/legend fields take a beat to parse",
+  "excerpts": [
+    "Dense compact ID/legend fields take a beat to parse"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "5f36f3f9e00794de9aa2f44e4928819ec9cdaed43b14a182574f4b8fa9e52020"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:54:09.420Z",
+    "last_seen_at": "2026-08-31T09:54:09.420Z"
+  },
+  "priority": 2
+}

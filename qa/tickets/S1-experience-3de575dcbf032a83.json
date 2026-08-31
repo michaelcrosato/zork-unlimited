@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "3de575dcbf032a83",
+  "title": "Dense compact context format hard to parse as a human without a… @ Dense compact context format hard to parse as a human without a rendered UI",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dense compact context format hard to parse as a human without a rendered UI",
+  "excerpts": [
+    "Dense compact context format hard to parse as a human without a rendered UI"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "2a1b1662c9234b804a1adc90821ce166f111671044429436f3efda55530eb609"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:39:18.983Z",
+    "last_seen_at": "2026-08-31T07:39:18.983Z"
+  },
+  "priority": 2
+}

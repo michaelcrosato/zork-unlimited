@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "47506fada79b6697",
+  "title": "too many pre-quest layers before Cade @ too many pre-quest layers before Cade",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "too many pre-quest layers before Cade",
+  "excerpts": [
+    "too many pre-quest layers before Cade"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "f18a720e8733cc936aee9d1121aa0ac826ece3c243a2e755ea802cfcd720a8b1"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:07:31.077Z",
+    "last_seen_at": "2026-08-31T01:07:31.077Z"
+  },
+  "priority": 6
+}

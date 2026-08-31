@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "45aafd5bb7fa84b3",
+  "title": "snapshot_hash requirement for talking to June Pike surfaced only via… @ snapshot_hash requirement for talking to June Pike surfaced only via rejection error, not signaled in advance",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "snapshot_hash requirement for talking to June Pike surfaced only via rejection error, not signaled in advance",
+  "excerpts": [
+    "snapshot_hash requirement for talking to June Pike surfaced only via rejection error, not signaled in advance"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "1381d494f2a567b8e49c91c065259bc37a21cdb6e031007a2e705b94f08750b2"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:51:30.824Z",
+    "last_seen_at": "2026-08-31T09:51:30.824Z"
+  },
+  "priority": 2
+}

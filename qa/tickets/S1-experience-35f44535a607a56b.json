@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "35f44535a607a56b",
+  "title": "High-stakes 'no retry, failure ends the game' framing on the wind-stone… @ High-stakes 'no retry, failure ends the game' framing on the wind-stone check was tense but ultimately well-signaled by the shown DC/modifier",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "High-stakes 'no retry, failure ends the game' framing on the wind-stone check was tense but ultimately well-signaled by the shown DC/modifier",
+  "excerpts": [
+    "High-stakes 'no retry, failure ends the game' framing on the wind-stone check was tense but ultimately well-signaled by the shown DC/modifier"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "6018dcb0a5f68d03f3354f4df929858fa1a9c31fbb599a7c3030ba4a89eed0ce"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:18:41.141Z",
+    "last_seen_at": "2026-08-31T09:18:41.141Z"
+  },
+  "priority": 2
+}

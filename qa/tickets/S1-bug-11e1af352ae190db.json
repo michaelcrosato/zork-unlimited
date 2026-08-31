@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "11e1af352ae190db",
+  "title": "Copy promises Hayden frost-jammed HUNT brace; committing LURE closes… @ byre_yard",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "Copy promises Hayden frost-jammed HUNT brace; committing LURE closes HUNT with no brace attempt."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "28a4189c0935091a07856a02633c1c52c28acc6fed8bdfd57fb9f5fe386c73c3"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:44.295Z",
+    "last_seen_at": "2026-08-31T01:10:44.295Z"
+  },
+  "priority": 6
+}

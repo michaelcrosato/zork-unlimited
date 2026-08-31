@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "4f4e087e11e98a36",
+  "title": "Fodder relief's cattle-alarm prevention on Exposed Ridge seemed not to… @ Fodder relief's cattle-alarm prevention on Exposed Ridge seemed not to apply as described",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Fodder relief's cattle-alarm prevention on Exposed Ridge seemed not to apply as described",
+  "excerpts": [
+    "Fodder relief's cattle-alarm prevention on Exposed Ridge seemed not to apply as described"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "ccb5a086161cf25f7c8dcdd7e4e31020a814cf8b31a021842fec854e98686286"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:09:01.772Z",
+    "last_seen_at": "2026-08-31T07:09:01.772Z"
+  },
+  "priority": 2
+}

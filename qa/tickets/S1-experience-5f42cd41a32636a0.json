@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "5f42cd41a32636a0",
+  "title": "dead event lead after journey end @ dead event lead after journey end",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "dead event lead after journey end",
+  "excerpts": [
+    "dead event lead after journey end"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "91d6e049a21ce083c9607847926a9b3b6cfcd6bcd98f00fd6ead379137ac4d4e"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:09:59.855Z",
+    "last_seen_at": "2026-08-31T01:09:59.855Z"
+  },
+  "priority": 6
+}

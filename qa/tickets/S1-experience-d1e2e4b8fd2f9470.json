@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "d1e2e4b8fd2f9470",
+  "title": "Cade ALL-CAPS plan reviews @ Cade ALL-CAPS plan reviews",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Cade ALL-CAPS plan reviews",
+  "excerpts": [
+    "Cade ALL-CAPS plan reviews"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "665bb38076d27d9242ee726799abebd23d7f7bb7692a34ac00af23a82f4fa04b"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:12:01.115Z",
+    "last_seen_at": "2026-08-31T01:12:01.115Z"
+  },
+  "priority": 6
+}

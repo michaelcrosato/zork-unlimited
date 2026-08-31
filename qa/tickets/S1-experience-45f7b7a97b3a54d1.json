@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "45f7b7a97b3a54d1",
+  "title": "Some dialogue back-navigation felt redundant when an option explicitly… @ Some dialogue back-navigation felt redundant when an option explicitly stated it chose nothing",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Some dialogue back-navigation felt redundant when an option explicitly stated it chose nothing",
+  "excerpts": [
+    "Some dialogue back-navigation felt redundant when an option explicitly stated it chose nothing"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "832d3e494feaa51cc63ce0c306a91c95f2fb0794ddd6ffc66cbb314d9886be1a"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:08:21.442Z",
+    "last_seen_at": "2026-08-31T07:08:21.442Z"
+  },
+  "priority": 2
+}

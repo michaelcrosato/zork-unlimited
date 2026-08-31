@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "0886d407581be401",
+  "title": "dispatch-board role/duty/evidence/etc terminology required extra mental… @ dispatch-board role/duty/evidence/etc terminology required extra mental mapping",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "dispatch-board role/duty/evidence/etc terminology required extra mental mapping",
+  "excerpts": [
+    "dispatch-board role/duty/evidence/etc terminology required extra mental mapping"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "6b87b9598aa1975ef7e748d110c628a1509366be2b84811b860b5db98238c706"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:25:10.896Z",
+    "last_seen_at": "2026-08-31T09:25:10.896Z"
+  },
+  "priority": 2
+}

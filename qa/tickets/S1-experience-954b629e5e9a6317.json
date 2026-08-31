@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "954b629e5e9a6317",
+  "title": "Fodder-relief's cattle-alarm protection applied only to the first LURE… @ Fodder-relief's cattle-alarm protection applied only to the first LURE feed, not the ridge approach itself, despite similar wording",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Fodder-relief's cattle-alarm protection applied only to the first LURE feed, not the ridge approach itself, despite similar wording",
+  "excerpts": [
+    "Fodder-relief's cattle-alarm protection applied only to the first LURE feed, not the ridge approach itself, despite similar wording"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "05eee1bb6874a7882e485a2950af3a1db51ad1da62c8dc5f1b91dccbf276a2aa"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:29:03.272Z",
+    "last_seen_at": "2026-08-31T09:29:03.272Z"
+  },
+  "priority": 2
+}

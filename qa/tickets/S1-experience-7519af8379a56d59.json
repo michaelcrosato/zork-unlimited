@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "7519af8379a56d59",
+  "title": "Station board ally-talk required a fresh expected_snapshot_hash after… @ Station board ally-talk required a fresh expected_snapshot_hash after reveal, not obvious until rejected once",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Station board ally-talk required a fresh expected_snapshot_hash after reveal, not obvious until rejected once",
+  "excerpts": [
+    "Station board ally-talk required a fresh expected_snapshot_hash after reveal, not obvious until rejected once"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "de49fdd4b4de9d5347104e06d68295305d945173ee2cc13a8b648d3a734963ac"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:18:25.452Z",
+    "last_seen_at": "2026-08-31T07:18:25.452Z"
+  },
+  "priority": 2
+}

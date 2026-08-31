@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "5028be46659714c0",
+  "title": "talk_overworld_session_contact to June required an unexpected… @ talk_overworld_session_contact to June required an unexpected expected_snapshot_hash retry",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "talk_overworld_session_contact to June required an unexpected expected_snapshot_hash retry",
+  "excerpts": [
+    "talk_overworld_session_contact to June required an unexpected expected_snapshot_hash retry"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "f3a1f9a01b74d7dc71b8057ac89a62539dbc0124b71c6e076a8aac143a23728f"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:24:55.010Z",
+    "last_seen_at": "2026-08-31T07:24:55.010Z"
+  },
+  "priority": 2
+}

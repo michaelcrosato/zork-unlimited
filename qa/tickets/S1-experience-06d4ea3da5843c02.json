@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "06d4ea3da5843c02",
+  "title": "stockway hides easier LURE check but still requires DC 12 with no retry @ stockway hides easier LURE check but still requires DC 12 with no retry",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "stockway hides easier LURE check but still requires DC 12 with no retry",
+  "excerpts": [
+    "stockway hides easier LURE check but still requires DC 12 with no retry"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "99a26435f6e0b3d1909633259eb35ef7cb0b61effe87e7d17f5eb310e712e039"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:20.576Z",
+    "last_seen_at": "2026-08-31T01:10:20.576Z"
+  },
+  "priority": 6
+}

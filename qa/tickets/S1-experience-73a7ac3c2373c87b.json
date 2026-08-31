@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "73a7ac3c2373c87b",
+  "title": "unclear upfront which optional prep (kit/wagon/rider) matters most… @ unclear upfront which optional prep (kit/wagon/rider) matters most before committing",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "unclear upfront which optional prep (kit/wagon/rider) matters most before committing",
+  "excerpts": [
+    "unclear upfront which optional prep (kit/wagon/rider) matters most before committing"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "62835ee62dead1ddfe398ae53a599dcc8bbe60583abe694a915dfeec3e9145ff"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:12:03.829Z",
+    "last_seen_at": "2026-08-31T07:12:03.829Z"
+  },
+  "priority": 2
+}

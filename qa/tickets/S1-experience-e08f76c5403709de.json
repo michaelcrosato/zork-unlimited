@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "e08f76c5403709de",
+  "title": "cattle-alarm fodder benefit only applies to first LURE feed, not… @ cattle-alarm fodder benefit only applies to first LURE feed, not initial descent, and this wasn't obvious upfront",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "cattle-alarm fodder benefit only applies to first LURE feed, not initial descent, and this wasn't obvious upfront",
+  "excerpts": [
+    "cattle-alarm fodder benefit only applies to first LURE feed, not initial descent, and this wasn't obvious upfront"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "22b020f8990071f4c29ac34243910290dcb998db1f4bffb6072e4f83753a63c2"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:47:20.271Z",
+    "last_seen_at": "2026-08-31T07:47:20.271Z"
+  },
+  "priority": 2
+}

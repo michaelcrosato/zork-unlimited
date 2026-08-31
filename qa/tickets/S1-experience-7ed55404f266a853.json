@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "7ed55404f266a853",
+  "title": "blocked-exit reasons citing the wrong plan @ blocked-exit reasons citing the wrong plan",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "blocked-exit reasons citing the wrong plan",
+  "excerpts": [
+    "blocked-exit reasons citing the wrong plan"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "9a3d5909a3168328733a248a635894b552d4ae5a5f3472411254af342b060198"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.840Z",
+    "last_seen_at": "2026-08-31T01:04:44.840Z"
+  },
+  "priority": 6
+}

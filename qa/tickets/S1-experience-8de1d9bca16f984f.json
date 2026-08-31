@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "8de1d9bca16f984f",
+  "title": "Uncertainty whether inspecting/asking about combat prep would silently… @ Uncertainty whether inspecting/asking about combat prep would silently forfeit the non-lethal LURE plan before I committed to it",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Uncertainty whether inspecting/asking about combat prep would silently forfeit the non-lethal LURE plan before I committed to it",
+  "excerpts": [
+    "Uncertainty whether inspecting/asking about combat prep would silently forfeit the non-lethal LURE plan before I committed to it"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "0d1304124074fdfd28e84cc3fb18345bedea1ce17159ba4ebb0df64c98a74022"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:34:09.267Z",
+    "last_seen_at": "2026-08-31T09:34:09.267Z"
+  },
+  "priority": 2
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "db4cdb8f4aeea92c",
+  "title": "Journal still cites Fieldcraft DC 12 while the scent-channel text says… @ Steading Yard / Byre-Yard first LURE LAY",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Steading Yard / Byre-Yard first LURE LAY",
+  "excerpts": [
+    "Journal still cites Fieldcraft DC 12 while the scent-channel text says that same LAY succeeds with no check."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "43572ab779ed4d2a39c4cfe7e1f96e3aaf98a8cf7475c2d5c505881dc906c1f6"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:08:40.533Z",
+    "last_seen_at": "2026-08-31T01:08:40.533Z"
+  },
+  "priority": 6
+}

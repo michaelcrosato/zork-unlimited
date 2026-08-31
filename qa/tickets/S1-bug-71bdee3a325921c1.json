@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "71bdee3a325921c1",
+  "title": "First-session context is compact arrays and legend, not a readable… @ albany_city",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "albany_city",
+  "excerpts": [
+    "First-session context is compact arrays and legend, not a readable scene.",
+    "First player surface is compact context plus a schema legend, not a readable scene."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "144b0a7e5b6e22c5d44524bacbe740ff1faebca76499d469e2dc56a2cda0d317",
+      "3bfe032231a2a877ab0bf7afd2d0aa3c03e8b7e4981e8c9d978bebef7553bbe1"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.816Z",
+    "last_seen_at": "2026-08-31T01:08:33.455Z"
+  },
+  "priority": 7.754887502163468
+}

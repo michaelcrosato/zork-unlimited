@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "e9460d19a1a42c82",
+  "title": "sheltered stockway still DC 12 @ sheltered stockway still DC 12",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "sheltered stockway still DC 12",
+  "excerpts": [
+    "sheltered stockway still DC 12"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "552bb45331836c2fcdd55acb8943c0ae07e60ab3e71ec7f62e3d40ce0ae69c19"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:41.260Z",
+    "last_seen_at": "2026-08-31T01:10:41.260Z"
+  },
+  "priority": 6
+}

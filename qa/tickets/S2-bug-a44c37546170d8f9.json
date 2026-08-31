@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "a44c37546170d8f9",
+  "title": "Journal says first LAY is Fieldcraft DC 12; object and Cade say it… @ byre_yard",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "Journal says first LAY is Fieldcraft DC 12; object and Cade say it auto-succeeds; auto-success won.",
+    "Copy says first LAY is still Fieldcraft DC 12 and hedges do not skip it; live field condition auto-succeeds the same LAY."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "144b0a7e5b6e22c5d44524bacbe740ff1faebca76499d469e2dc56a2cda0d317",
+      "59202b5f57f123d11d76fa3376348ae1345c46b6cc09465bc4ebdad5bd2674e7"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:08:11.619Z",
+    "last_seen_at": "2026-08-31T01:08:33.455Z"
+  },
+  "priority": 15.509775004326936
+}

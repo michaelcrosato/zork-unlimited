@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c5b2bb48067d035e",
+  "title": "sheltered stockway hiding the easier lure DC @ sheltered stockway hiding the easier lure DC",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "sheltered stockway hiding the easier lure DC",
+  "excerpts": [
+    "sheltered stockway hiding the easier lure DC"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "de88185732e270afdad629bc35397780136b8561760dc664c11d91fa8170151a"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:09:31.622Z",
+    "last_seen_at": "2026-08-31T01:09:31.622Z"
+  },
+  "priority": 6
+}

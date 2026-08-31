@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "4f55a05e928a34f2",
+  "title": "Dense compact legend/legend_delta encoding required frequent lookups @ Dense compact legend/legend_delta encoding required frequent lookups",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Dense compact legend/legend_delta encoding required frequent lookups",
+  "excerpts": [
+    "Dense compact legend/legend_delta encoding required frequent lookups"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "a535658113f0dba7e226b77c5259fb87695e34402e7910ce8e4348aa916635fc"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:37:25.911Z",
+    "last_seen_at": "2026-08-31T09:37:25.911Z"
+  },
+  "priority": 2
+}

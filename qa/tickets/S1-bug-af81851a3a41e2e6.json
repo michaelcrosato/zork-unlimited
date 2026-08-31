@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "af81851a3a41e2e6",
+  "title": "NPC speech is a wall of LURE/DRIVE/FORTIFY/HUNT ops jargon. @ byre_yard",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "NPC speech is a wall of LURE/DRIVE/FORTIFY/HUNT ops jargon."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "6128e22788f96f66c85eac5b784d2de1cd4f752e43831ad80c72d18af7635171"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:43.354Z",
+    "last_seen_at": "2026-08-31T01:10:43.354Z"
+  },
+  "priority": 6
+}

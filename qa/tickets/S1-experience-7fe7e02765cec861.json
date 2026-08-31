@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "7fe7e02765cec861",
+  "title": "overworld compact legend is hard to read as a newcomer @ overworld compact legend is hard to read as a newcomer",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "overworld compact legend is hard to read as a newcomer",
+  "excerpts": [
+    "overworld compact legend is hard to read as a newcomer"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "a538fec579c0ef76e7346a200fc3331bf743ebdf99f8b1d4f64ac630d0d0ae82"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.309Z",
+    "last_seen_at": "2026-08-31T01:04:45.309Z"
+  },
+  "priority": 6
+}

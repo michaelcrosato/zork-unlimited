@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "91ae0ca489180cb2",
+  "title": "Needed an explicit BACK/leave step before re-issuing a talk action… @ Needed an explicit BACK/leave step before re-issuing a talk action while mid-dialogue submenu",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Needed an explicit BACK/leave step before re-issuing a talk action while mid-dialogue submenu",
+  "excerpts": [
+    "Needed an explicit BACK/leave step before re-issuing a talk action while mid-dialogue submenu"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "80d52b2e84bb3002fb8e1147a39fc049cb16eb21c14bdf6700c08fef9cb2e3cd"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:23:32.617Z",
+    "last_seen_at": "2026-08-31T07:23:32.617Z"
+  },
+  "priority": 2
+}

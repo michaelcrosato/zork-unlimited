@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "594e41cbe0cba522",
+  "title": "Deferred opportunity leads kept reappearing from a town far away with… @ Deferred opportunity leads kept reappearing from a town far away with unclear reachability",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Deferred opportunity leads kept reappearing from a town far away with unclear reachability",
+  "excerpts": [
+    "Deferred opportunity leads kept reappearing from a town far away with unclear reachability"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "56f2a10fc27e5407c28159dd185cb6dd44adc842bc54d4a2f31e17a89095b79f"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:48:58.160Z",
+    "last_seen_at": "2026-08-31T07:48:58.160Z"
+  },
+  "priority": 2
+}

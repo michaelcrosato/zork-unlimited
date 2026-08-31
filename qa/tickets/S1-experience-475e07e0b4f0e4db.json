@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "475e07e0b4f0e4db",
+  "title": "some dialogue branches (e.g. @ some dialogue branches (e.g. June's HUNT option) required backing out after exploring",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "some dialogue branches (e.g. June's HUNT option) required backing out after exploring",
+  "excerpts": [
+    "some dialogue branches (e.g. June's HUNT option) required backing out after exploring"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "f4d4573354df8ddd74f0e6d1032f0ac7323e7884e0a87c16ddabafeb5145ccd4"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:25:27.349Z",
+    "last_seen_at": "2026-08-31T07:25:27.349Z"
+  },
+  "priority": 2
+}

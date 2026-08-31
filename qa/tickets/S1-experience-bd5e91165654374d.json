@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "bd5e91165654374d",
+  "title": "Aid-Only cattle-alarm skip wording @ Aid-Only cattle-alarm skip wording",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Aid-Only cattle-alarm skip wording",
+  "excerpts": [
+    "Aid-Only cattle-alarm skip wording"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "2cde8c764d906763206ae27674e290d546e9d91c2742594b33de3c0e156f8522"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:08:11.583Z",
+    "last_seen_at": "2026-08-31T01:08:11.583Z"
+  },
+  "priority": 6
+}

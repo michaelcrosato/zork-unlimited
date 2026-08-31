@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "4fdaed51aa0a4b3d",
+  "title": "unclear which optional prep purchases would carry over into the chosen… @ unclear which optional prep purchases would carry over into the chosen strategy",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "unclear which optional prep purchases would carry over into the chosen strategy",
+  "excerpts": [
+    "unclear which optional prep purchases would carry over into the chosen strategy"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "b91705dbcf9e32a9c7f084dd2a7b05559c41f2c718b0c45b715accf3e9f39333"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:38:53.873Z",
+    "last_seen_at": "2026-08-31T07:38:53.873Z"
+  },
+  "priority": 2
+}

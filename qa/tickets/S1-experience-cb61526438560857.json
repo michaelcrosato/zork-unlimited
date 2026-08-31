@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "cb61526438560857",
+  "title": "Relief-fodder cattle-alarm benefit text appeared to apply on the ridge… @ Relief-fodder cattle-alarm benefit text appeared to apply on the ridge descent but only kicked in at the first LURE feed action several steps later",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Relief-fodder cattle-alarm benefit text appeared to apply on the ridge descent but only kicked in at the first LURE feed action several steps later",
+  "excerpts": [
+    "Relief-fodder cattle-alarm benefit text appeared to apply on the ridge descent but only kicked in at the first LURE feed action several steps later"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "ddf9c01c64a89a26170fdd8715a655ff79f8ab00692fb754f03b67d5c1bf3904"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:54:57.909Z",
+    "last_seen_at": "2026-08-31T09:54:57.909Z"
+  },
+  "priority": 2
+}

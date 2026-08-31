@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "24acfbe65d7793ce",
+  "title": "blocked north claimed both approaches selected @ blocked north claimed both approaches selected",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "blocked north claimed both approaches selected",
+  "excerpts": [
+    "blocked north claimed both approaches selected"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "56f12bbcf1ec9aa10349ed35834de4c9b00cc8f545b80fe9cc0e7d350a734e12"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:07:07.870Z",
+    "last_seen_at": "2026-08-31T01:07:07.870Z"
+  },
+  "priority": 6
+}

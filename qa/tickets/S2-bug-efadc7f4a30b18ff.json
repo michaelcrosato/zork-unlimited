@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "ticket_id": "efadc7f4a30b18ff",
+  "title": "Relief Advocate Mediation 4 and Jamie's certified market/loft report… @ wolf_winter",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "wolf_winter",
+  "excerpts": [
+    "Relief Advocate Mediation 4 and Jamie's certified market/loft report never affect the Fortify shutter checklist.",
+    "Certified Jamie market/loft setup never surfaces once FORTIFY is chosen.",
+    "Certified market testimony promised a fodder-loft route that never appeared in play."
+  ],
+  "evidence": {
+    "report_count": 3,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "4305fbd54b809d13d509cceb820f96ce6c9ead414a000d42ded351d6afa49f08",
+      "5e9c990db0a4f821d54d0872004080b4dbf55090bab8b0fae9e0dcbc8ff72bd9",
+      "e7ccb8709e395255907131186ad901965a0b596d420b2dbcb3b48306659ac590"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.886Z",
+    "last_seen_at": "2026-08-31T01:10:40.147Z"
+  },
+  "priority": 18
+}

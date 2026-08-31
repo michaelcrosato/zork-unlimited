@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "afb27146ded77df8",
+  "title": "Fodder relief's cattle-alarm prevention text implied it would cover the… @ Fodder relief's cattle-alarm prevention text implied it would cover the Exposed Ridge descent's own alarm tick, but it applied to a different later trigger instead",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Fodder relief's cattle-alarm prevention text implied it would cover the Exposed Ridge descent's own alarm tick, but it applied to a different later trigger instead",
+  "excerpts": [
+    "Fodder relief's cattle-alarm prevention text implied it would cover the Exposed Ridge descent's own alarm tick, but it applied to a different later trigger instead"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "5d74365aad8694db0dac1711509700e448ab7b44cb9e1e7fe1653f7866236def"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:47:12.693Z",
+    "last_seen_at": "2026-08-31T09:47:12.693Z"
+  },
+  "priority": 2
+}

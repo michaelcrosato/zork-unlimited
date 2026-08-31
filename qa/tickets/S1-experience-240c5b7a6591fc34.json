@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "240c5b7a6591fc34",
+  "title": "fodder relief allocation's cattle-alarm-prevention effect didn't apply… @ fodder relief allocation's cattle-alarm-prevention effect didn't apply where first expected",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "fodder relief allocation's cattle-alarm-prevention effect didn't apply where first expected",
+  "excerpts": [
+    "fodder relief allocation's cattle-alarm-prevention effect didn't apply where first expected"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "91ad4bcc123fa4492438fc74ae087e22bdced91e9bda5b3f9d6f0b04c3e991c9"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:13:35.189Z",
+    "last_seen_at": "2026-08-31T07:13:35.189Z"
+  },
+  "priority": 2
+}

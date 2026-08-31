@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c7ec33632173f7b8",
+  "title": "Heavy upfront Station dispatch setup… @ wolf_winter",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "wolf_winter",
+  "excerpts": [
+    "Heavy upfront Station dispatch setup (background/promise/report/kit/wagon/ally) before Wolf-Winter play began",
+    "Long multi-step pre-quest setup sequence in Wolf-Winter (background/promise/report/ally/wagon/kit)",
+    "Dense nested registration/promise/report/ally choice sequence before Wolf-Winter play began",
+    "Dense multi-screen setup sequence before Wolf-Winter play began",
+    "Long registration/setup funnel before Wolf-Winter gameplay began"
+  ],
+  "evidence": {
+    "report_count": 5,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "33fb9bab7c1d60b38d49a979e4a9bd59c4af205ec9975cd201c07a9a911f99a1",
+      "35b2cd9d77bac5dcd10dafcb348ae1f11e9d07f87cc1dd170885328d3705bee9",
+      "6f9d60b47ee8d844048196aa1368d754291cb8e6bebe961e21a5d647f1b41d61",
+      "c0cd8871860394a4c30fcb2b5fb400c9ca4c19cee92d1f054455ff42b55eefbd",
+      "d424bb9007a3ee28664b97da5f0598e53f8c29c98a9cbfb2b63713401d6c005a"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T07:20:05.845Z",
+    "last_seen_at": "2026-08-31T09:50:48.642Z"
+  },
+  "priority": 3.584962500721156
+}

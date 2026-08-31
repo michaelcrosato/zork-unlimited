@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "ticket_id": "f1f650f0874d661a",
+  "title": "Cade dialogue is a rules dump @ Cade dialogue is a rules dump",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Cade dialogue is a rules dump",
+  "excerpts": [
+    "Cade dialogue is a rules dump"
+  ],
+  "evidence": {
+    "report_count": 4,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "161b0e95e9cc5ca788b083aa7656c15c54458c86fe271914a07d07d6d7632536",
+      "74ddc2309b52b8d95bb76620309eb47b5e3b8ccbaaa35eecfb66567745b45a15",
+      "7bfc937867e1b09fff339a5cc5d2fc0ff7844b5a5d3cccda7738bd590c997f36",
+      "be89b54d97de9a04f63afdd8f6ca8ef047f8e855d22420dd8bea183b2eca17a6"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.861Z",
+    "last_seen_at": "2026-08-31T01:10:14.761Z"
+  },
+  "priority": 9.965784284662087
+}

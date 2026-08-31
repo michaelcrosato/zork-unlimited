@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "103a2a6c8970381a",
+  "title": "long chain of setup menus before first real gameplay @ long chain of setup menus before first real gameplay",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "long chain of setup menus before first real gameplay",
+  "excerpts": [
+    "long chain of setup menus before first real gameplay"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "e09b17b4fe805019f8f7e93d55cc65f06856d1123dd1f679e3e8c29109505193"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:47:34.046Z",
+    "last_seen_at": "2026-08-31T09:47:34.046Z"
+  },
+  "priority": 2
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "22ef5bb38eac3d01",
+  "title": "Approach promised cattle alarm 1; quest opened at 0 until… @ Exposed Ridge approach vs first quest room",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Exposed Ridge approach vs first quest room",
+  "excerpts": [
+    "Approach promised cattle alarm 1; quest opened at 0 until use_exposed_ridge_last_mile."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "04d2beb9019f51e095ac9e02745ed1b2a441b454c06b8a0474f4c5542579298e"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:11:37.780Z",
+    "last_seen_at": "2026-08-31T01:11:37.780Z"
+  },
+  "priority": 6
+}

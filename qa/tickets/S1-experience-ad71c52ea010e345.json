@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "ad71c52ea010e345",
+  "title": "Dense Station dispatch/registration jargon at the very start before… @ Dense Station dispatch/registration jargon at the very start before world context is established",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dense Station dispatch/registration jargon at the very start before world context is established",
+  "excerpts": [
+    "Dense Station dispatch/registration jargon at the very start before world context is established"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "9242663fff960542588d21496716c36fa2d6dc4150e9c9e807ca858384122335"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:09:26.757Z",
+    "last_seen_at": "2026-08-31T07:09:26.757Z"
+  },
+  "priority": 2
+}

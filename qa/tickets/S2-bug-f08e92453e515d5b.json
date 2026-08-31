@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "f08e92453e515d5b",
+  "title": "Fieldcraft 4 vs unretryable DC 12 on the only first-feed action turns a… @ paling_gap",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "paling_gap",
+  "excerpts": [
+    "Fieldcraft 4 vs unretryable DC 12 on the only first-feed action turns a single low roll into cattle-scattered victory.",
+    "Relief Advocate plus Full Compact still rolls Repair 0 vs DC 12 as the only skill check."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "183acba0e3495f4f4e31584fd623bb392ebff75060394941886a0a22959c4fbd",
+      "e7ccb8709e395255907131186ad901965a0b596d420b2dbcb3b48306659ac590"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.050Z",
+    "last_seen_at": "2026-08-31T01:10:27.575Z"
+  },
+  "priority": 15.509775004326936
+}

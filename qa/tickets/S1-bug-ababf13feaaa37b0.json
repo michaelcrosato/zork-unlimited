@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "ticket_id": "ababf13feaaa37b0",
+  "title": "Cade Return Filing event lead with no authored choice after the journey… @ wolf_winter",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "wolf_winter",
+  "excerpts": [
+    "Cade Return Filing event lead with no authored choice after the journey ended.",
+    "Hayden Hale's Cade Return Filing Standard is listed with no authored choice available.",
+    "Hayden's Cade Return Filing Standard is an event lead with no authored choice."
+  ],
+  "evidence": {
+    "report_count": 3,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "432097e0d28f2c64b2c98d09c74bb9c58f6cfab7cb2b82168522b67397128207",
+      "7b44fc19ae21ac2f91bf9a31dbfc3920a414ebe8e87ea0b185cd8ab3bde2ca6c",
+      "ee111a8d2a64d7473679d1c3fdb4251023f2ef1f5d471fd509e524f34af5130c"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:07:29.472Z",
+    "last_seen_at": "2026-08-31T01:11:37.133Z"
+  },
+  "priority": 9
+}

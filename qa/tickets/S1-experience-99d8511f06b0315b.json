@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "99d8511f06b0315b",
+  "title": "compact schema/legend system has a learning curve for the operator @ compact schema/legend system has a learning curve for the operator",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "compact schema/legend system has a learning curve for the operator",
+  "excerpts": [
+    "compact schema/legend system has a learning curve for the operator"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "a989298e8516b432ae7c0449f4f8351fb38182acb4943389f60a4bb8fdcc710a"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:21:02.712Z",
+    "last_seen_at": "2026-08-31T09:21:02.712Z"
+  },
+  "priority": 2
+}

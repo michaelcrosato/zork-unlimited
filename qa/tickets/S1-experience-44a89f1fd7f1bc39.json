@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "44a89f1fd7f1bc39",
+  "title": "Layered pre-quest setup (background/promise/report/kit/wagon/ally)… @ Layered pre-quest setup (background/promise/report/kit/wagon/ally) stacks many menus before the quest starts",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Layered pre-quest setup (background/promise/report/kit/wagon/ally) stacks many menus before the quest starts",
+  "excerpts": [
+    "Layered pre-quest setup (background/promise/report/kit/wagon/ally) stacks many menus before the quest starts"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "67fb826ea2ce64b05df3139f0a95a6754c45e0fb7810ef8d708794440371c5ef"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:13:21.018Z",
+    "last_seen_at": "2026-08-31T09:13:21.018Z"
+  },
+  "priority": 2
+}

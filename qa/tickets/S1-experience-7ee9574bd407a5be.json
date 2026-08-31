@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "7ee9574bd407a5be",
+  "title": "sheltered stockway hides easier lure DC then still requires DC 12 @ sheltered stockway hides easier lure DC then still requires DC 12",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "sheltered stockway hides easier lure DC then still requires DC 12",
+  "excerpts": [
+    "sheltered stockway hides easier lure DC then still requires DC 12"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "dc7df42ac397a10f4672e24f16d535d37225964cf75efedec532869265134429"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:11:24.994Z",
+    "last_seen_at": "2026-08-31T01:11:24.994Z"
+  },
+  "priority": 6
+}

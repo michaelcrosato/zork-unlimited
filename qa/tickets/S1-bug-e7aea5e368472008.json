@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "ticket_id": "e7aea5e368472008",
+  "title": "talk_overworld_session_contact rejected the call without… @ albany_city",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "albany_city",
+  "excerpts": [
+    "talk_overworld_session_contact rejected the call without expected_snapshot_hash even though this precondition isn't evident from the tool schema; self-corrected via the error message.",
+    "talk_overworld_session_contact rejected without expected_snapshot_hash after a reveal_station_dispatch_support call; recoverable but not obviously signposted.",
+    "talk_overworld_session_contact rejected without expected_snapshot_hash on first attempt instead of succeeding or documenting the requirement upfront",
+    "talk_overworld_session_contact rejected the just-received snapshot_hash as stale, requiring an extra read"
+  ],
+  "evidence": {
+    "report_count": 4,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "49f98e30e2bbc3840af01773620605ae0054e6c882a9c99e02beb5c91aa84be9",
+      "8270bc8008def9a2339a5717c6b3f064885162433d62495a306d1efc61ad2e6a",
+      "a535658113f0dba7e226b77c5259fb87695e34402e7910ce8e4348aa916635fc",
+      "e09b17b4fe805019f8f7e93d55cc65f06856d1123dd1f679e3e8c29109505193"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T07:48:02.900Z",
+    "last_seen_at": "2026-08-31T09:56:24.388Z"
+  },
+  "priority": 3.321928094887362
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "ticket_id": "378ecbd1b891d31d",
+  "title": "sheltered road hiding the easier lure DC @ sheltered road hiding the easier lure DC",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "sheltered road hiding the easier lure DC",
+  "excerpts": [
+    "sheltered road hiding the easier lure DC"
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "5d37e00d068ed67c701b9cec245fdbb33dd71653712087a3a1cf3a4f145dd0a8",
+      "ac188ac3d6fdebf32e9f12a7fe704a47f7f5513356f6d3387ccbb3218a0b4c76"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.463Z",
+    "last_seen_at": "2026-08-31T01:07:08.401Z"
+  },
+  "priority": 7.754887502163468
+}

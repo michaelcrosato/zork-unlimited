@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "d9713c3409f47f8c",
+  "title": "Station dispatch board terminology (role/duty/evidence/etc.) took a… @ Station dispatch board terminology (role/duty/evidence/etc.) took a moment to map to background/promise/report/kit/wagon/rider",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "Station dispatch board terminology (role/duty/evidence/etc.) took a moment to map to background/promise/report/kit/wagon/rider",
+  "excerpts": [
+    "Station dispatch board terminology (role/duty/evidence/etc.) took a moment to map to background/promise/report/kit/wagon/rider"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "c4f57ff62328275f0da4ae282d5a33fa7b27c0f131560675f3517f5d821bdcb6"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:15:50.073Z",
+    "last_seen_at": "2026-08-31T09:15:50.073Z"
+  },
+  "priority": 2
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "844054842c452d7e",
+  "title": "June Pike talk initially required an expected_snapshot_hash not obvious… @ June Pike talk initially required an expected_snapshot_hash not obvious until the error explained it",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "June Pike talk initially required an expected_snapshot_hash not obvious until the error explained it",
+  "excerpts": [
+    "June Pike talk initially required an expected_snapshot_hash not obvious until the error explained it"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "457ac07c813c0500728da367db91b954fbc04cf5951f5c62dd70c0c5b9cfbafe"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:41:43.043Z",
+    "last_seen_at": "2026-08-31T07:41:43.043Z"
+  },
+  "priority": 2
+}

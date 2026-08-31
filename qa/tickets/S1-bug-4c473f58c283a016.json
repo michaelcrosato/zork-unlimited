@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "4c473f58c283a016",
+  "title": "NPC and room text dump operator checklists instead of a scene, making… @ byre_yard",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "NPC and room text dump operator checklists instead of a scene, making plans feel like UI labels."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "91abb341acd6d5a4fd2049ef6b5c79ad13d8805894e599d370d9a6adf0feb4ea"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.259Z",
+    "last_seen_at": "2026-08-31T01:04:45.259Z"
+  },
+  "priority": 6
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "9eb9ee86ce76c00b",
+  "title": "field condition describes FIRE/DRIVE while on LURE @ field condition describes FIRE/DRIVE while on LURE",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "field condition describes FIRE/DRIVE while on LURE",
+  "excerpts": [
+    "field condition describes FIRE/DRIVE while on LURE"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "10d0037bf854379d31c83849771bdc8508423ae71905a2d677e6b40288e797ed"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:12:10.736Z",
+    "last_seen_at": "2026-08-31T01:12:10.736Z"
+  },
+  "priority": 6
+}
