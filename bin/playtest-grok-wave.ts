@@ -222,21 +222,65 @@ async function playOne(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return {
-      index,
-      seed,
-      model: plan.model,
-      effort: plan.effort,
-      playSurface: "mcp",
-      outcome: "failed",
-      extractOk: false,
-      recordId: null,
-      gameSessionId: null,
-      clientSessionId: null,
-      buildCommit,
-      dir: null,
-      error: message,
-    };
+    const transcript = `${JSON.stringify({
+      type: "adventureforge_grok_harness",
+      exitCode: null,
+      timedOut: false,
+      stderr: message,
+      runEvidence: "",
+    })}\n`;
+    try {
+      const saved = savePlaytestReport({
+        reportText: "",
+        transcript,
+        store: plan.store,
+        providerId: plan.provider,
+        modelId: plan.model,
+        seed,
+        gameSessionId: `unknown-grok-wave-${index}`,
+        attestedBy: "playtest-grok-wave",
+        method:
+          "Grok Build CLI with a private pure AdventureForge MCP server; client tool boundary prompt-restricted but not independently audited",
+        recordedAt,
+        requestedOutcome: "failed",
+        turns: 0,
+        buildCommit,
+        trackedWorktreeClean: true,
+        transcriptFilename: "grok-stream.jsonl",
+      });
+      return {
+        index,
+        seed,
+        model: plan.model,
+        effort: plan.effort,
+        playSurface: "mcp",
+        outcome: saved.record.outcome,
+        extractOk: false,
+        recordId: saved.record.record_id,
+        gameSessionId: saved.record.game_session_id,
+        clientSessionId: null,
+        buildCommit: saved.record.build.git_commit,
+        dir: saved.dir,
+        error: message,
+      };
+    } catch (saveError) {
+      const saveMessage = saveError instanceof Error ? saveError.message : String(saveError);
+      return {
+        index,
+        seed,
+        model: plan.model,
+        effort: plan.effort,
+        playSurface: "mcp",
+        outcome: "failed",
+        extractOk: false,
+        recordId: null,
+        gameSessionId: null,
+        clientSessionId: null,
+        buildCommit,
+        dir: null,
+        error: `${message}; session save also failed: ${saveMessage}`,
+      };
+    }
   } finally {
     rmSync(workDir, { recursive: true, force: true });
   }
