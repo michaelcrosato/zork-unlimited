@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "f0d64bf5b028c189",
+  "title": "Ready-made oath confirmation repeats Cost: 10 minutes and $0",
+  "body": "Road Warden / Wolf-Winter **ready-made oath confirmation** repeats the same **“Cost: 10 minutes and $0”** line twice in one consequence paragraph.\n\nGrok-4.6 MCP wave: **19** `bugs[]` rows (S0 15 / S1 4). Cosmetic, but it is on the first civic confirmation every player hits.\n\nFix: emit the cost line once.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P2",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/world/new_york_overworld.json",
+  "evidence": {
+    "summary": "Grok-4.6 MCP wave cluster (19 mentions, 82 completed interviews).",
+    "refs": [
+      "ai-runs/playtest/sessions",
+      "ai-runs/playtest/grok-100-manifest.json"
+    ],
+    "lineages": [
+      "grok"
+    ],
+    "observations": 19
+  },
+  "created_at": "2026-08-31T02:14:26.429Z",
+  "updated_at": "2026-08-31T02:14:26.429Z",
+  "external": null
+}

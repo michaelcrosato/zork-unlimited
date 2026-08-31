@@ -5,7 +5,8 @@
  * survivable — stable identity, idempotent re-filing, lifecycle state the sources cannot
  * stomp, and an ordering that a loud source cannot hijack.
  */
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -430,5 +431,94 @@ describe("playtest tickets crossing into the queue", () => {
       ticket({ evidence: { ...ticket().evidence, has_runner_enforced_report: false } }),
     );
     expect(submission.body).toContain("operator-attested");
+  });
+});
+
+const GROK46_WAVE_CLUSTERS = [
+  { kind: "bug" as const, key: "grok46-wave-steading-north-both-routes" },
+  { kind: "bug" as const, key: "grok46-wave-lure-lay-dc12" },
+  { kind: "bug" as const, key: "grok46-wave-cattle-alarm-zero" },
+  { kind: "bug" as const, key: "grok46-wave-storeshed-up-yearling" },
+  { kind: "bug" as const, key: "grok46-wave-jamie-loft-unused" },
+  { kind: "experience" as const, key: "grok46-wave-cade-procedure-speech" },
+  { kind: "experience" as const, key: "grok46-wave-albany-paperwork-opening" },
+  { kind: "bug" as const, key: "grok46-wave-oath-duplicate-cost" },
+];
+
+describe("grok-4.6 wave playtest intake", () => {
+  it("keeps eight distinct 16-hex ids and open queue files for the wave clusters", () => {
+    const ids = GROK46_WAVE_CLUSTERS.map(({ kind, key }) =>
+      submissionId({ source: "playtest", kind, key }),
+    );
+    expect(new Set(ids).size).toBe(8);
+    for (const id of ids) {
+      expect(id).toMatch(/^[0-9a-f]{16}$/);
+      const files = readdirSync("intake/queue").filter((name) => name.includes(id));
+      expect(files, `missing queue file for ${id}`).toHaveLength(1);
+      const stored = JSON.parse(readFileSync(join("intake/queue", files[0]!), "utf8"));
+      expect(stored.id).toBe(id);
+      expect(stored.source).toBe("playtest");
+      expect(stored.status).toBe("open");
+      expect(stored.labels).toContain("lane:content");
+      expect(existsSync(join("intake/queue", files[0]!))).toBe(true);
+    }
+    expect(ids).not.toContain("4806c6f8ade14c0b");
+    expect(ids).not.toContain("61d3b9dec4cb09fd");
+  });
+
+  it("submit CLI upserts a playtest cluster on --key without duplicating", () => {
+    const queue = tempQueue();
+    const bodyFile = join(queue, "body.md");
+    writeFileSync(bodyFile, "Steading Yard north blocked after one road.\n");
+    const tsx = join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
+    const run = () =>
+      execFileSync(
+        "node",
+        [
+          tsx,
+          "bin/submit.ts",
+          "--source",
+          "playtest",
+          "--kind",
+          "bug",
+          "--priority",
+          "P1",
+          "--title",
+          "Steading Yard north blocked: both approach routes selected after one road",
+          "--body-file",
+          bodyFile,
+          "--key",
+          "grok46-wave-steading-north-both-routes",
+          "--label",
+          "lane:content",
+          "--observations",
+          "63",
+          "--lineage",
+          "grok",
+          "--queue",
+          queue,
+        ],
+        { encoding: "utf8" },
+      );
+    const id = submissionId({
+      source: "playtest",
+      kind: "bug",
+      key: "grok46-wave-steading-north-both-routes",
+    });
+    const first = run();
+    const second = run();
+    expect(first).toContain(id);
+    expect(second).toContain(id);
+    const files = readdirSync(queue).filter((name) => name.endsWith(".json"));
+    expect(files).toHaveLength(1);
+    const stored = JSON.parse(readFileSync(join(queue, files[0]!), "utf8"));
+    expect(stored.id).toBe(id);
+    expect(stored.source).toBe("playtest");
+    expect(stored.kind).toBe("bug");
+    expect(stored.priority).toBe("P1");
+    expect(stored.status).toBe("open");
+    expect(stored.labels).toContain("lane:content");
+    expect(stored.evidence.observations).toBe(63);
+    expect(stored.evidence.lineages).toContain("grok");
   });
 });

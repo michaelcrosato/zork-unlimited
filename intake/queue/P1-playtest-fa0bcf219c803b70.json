@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "fa0bcf219c803b70",
+  "title": "Cattle alarm stays 0 while prose says the cattle already saw you",
+  "body": "On Exposed Ridge / Steading Yard opening, prose says the cattle already saw you and that cattle alarm starts at 1, but the **meter stays at 0** until a later descend/feed.\n\nGrok-4.6 MCP wave: **14** `bugs[]` rows (S1 9 / S2 5). Players treated it as the UI lying next to the “both routes selected” yard copy.\n\nFix: either start the visible cattle-alarm track at the value the opening prose claims, or stop claiming the cattle already saw you / alarm 1 when the track is 0.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/world/new_york_overworld.json",
+  "evidence": {
+    "summary": "Grok-4.6 MCP wave cluster (14 mentions, 82 completed interviews).",
+    "refs": [
+      "ai-runs/playtest/sessions",
+      "ai-runs/playtest/grok-100-manifest.json"
+    ],
+    "lineages": [
+      "grok"
+    ],
+    "observations": 14
+  },
+  "created_at": "2026-08-31T02:14:25.124Z",
+  "updated_at": "2026-08-31T02:14:25.124Z",
+  "external": null
+}
