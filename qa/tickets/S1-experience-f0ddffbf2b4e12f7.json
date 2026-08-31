@@ -4,7 +4,7 @@
   "title": "talk_overworld_session_contact rejected without expected_snapshot_hash… @ talk_overworld_session_contact rejected without expected_snapshot_hash after a Station board reveal",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "talk_overworld_session_contact rejected without expected_snapshot_hash after a Station board reveal",
   "excerpts": [

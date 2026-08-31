@@ -4,7 +4,7 @@
   "title": "Dispatch board reveal/ally-modal snapshot-hash requirement for talking… @ Dispatch board reveal/ally-modal snapshot-hash requirement for talking to a companion wasn't obvious up front",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dispatch board reveal/ally-modal snapshot-hash requirement for talking to a companion wasn't obvious up front",
   "excerpts": [

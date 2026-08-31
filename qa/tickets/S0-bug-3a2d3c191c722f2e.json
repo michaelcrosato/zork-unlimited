@@ -4,7 +4,7 @@
   "title": "Check was framed as risking instant death on failure, but DC 9 vs a +8… @ moor_gully",
   "kind": "bug",
   "severity": "S0",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "moor_gully",
   "excerpts": [

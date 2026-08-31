@@ -4,7 +4,7 @@
   "title": "Briefly used array-style ['inspect', id] format for a plain-string… @ Briefly used array-style ['inspect', id] format for a plain-string story_choice_id inspect call, echoing the Station board reveal syntax",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Briefly used array-style ['inspect', id] format for a plain-string story_choice_id inspect call, echoing the Station board reveal syntax",
   "excerpts": [

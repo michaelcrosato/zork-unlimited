@@ -4,7 +4,7 @@
   "title": "Station dispatch board reveal mechanism took extra calls to surface… @ Station dispatch board reveal mechanism took extra calls to surface fully",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Station dispatch board reveal mechanism took extra calls to surface fully",
   "excerpts": [

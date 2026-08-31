@@ -4,7 +4,7 @@
   "title": "June's talk action initially required an unflagged… @ June's talk action initially required an unflagged expected_snapshot_hash",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "June's talk action initially required an unflagged expected_snapshot_hash",
   "excerpts": [

@@ -4,7 +4,7 @@
   "title": "Parallel tool calls after a state-changing action trigger a stale-hash… @ Parallel tool calls after a state-changing action trigger a stale-hash rejection",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Parallel tool calls after a state-changing action trigger a stale-hash rejection",
   "excerpts": [

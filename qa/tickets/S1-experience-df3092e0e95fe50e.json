@@ -4,7 +4,7 @@
   "title": "Station dispatch talk action required an undocumented… @ Station dispatch talk action required an undocumented expected_snapshot_hash on first attempt",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Station dispatch talk action required an undocumented expected_snapshot_hash on first attempt",
   "excerpts": [

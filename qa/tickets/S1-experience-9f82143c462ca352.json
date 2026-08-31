@@ -4,7 +4,7 @@
   "title": "One tool call required a snapshot hash I didn't have on first attempt… @ One tool call required a snapshot hash I didn't have on first attempt (talking to June before board reveal completed)",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "One tool call required a snapshot hash I didn't have on first attempt (talking to June before board reveal completed)",
   "excerpts": [

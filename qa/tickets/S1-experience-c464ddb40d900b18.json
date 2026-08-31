@@ -4,7 +4,7 @@
   "title": "Dense compact ID/legend fields take a beat to parse @ Dense compact ID/legend fields take a beat to parse",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dense compact ID/legend fields take a beat to parse",
   "excerpts": [

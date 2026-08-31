@@ -4,7 +4,7 @@
   "title": "Inspect/review vs. @ Inspect/review vs. commit actions weren't always distinguishable in-fiction",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Inspect/review vs. commit actions weren't always distinguishable in-fiction",
   "excerpts": [

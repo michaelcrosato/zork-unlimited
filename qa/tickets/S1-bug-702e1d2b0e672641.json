@@ -4,7 +4,7 @@
   "title": "Background text claims 'Defense starts at 4 instead of 3' but the… @ wolf_winter",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "wolf_winter",
   "excerpts": [

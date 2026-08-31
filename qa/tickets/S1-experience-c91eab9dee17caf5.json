@@ -4,7 +4,7 @@
   "title": "mandatory expected_snapshot_hash for June's talk action not signaled… @ mandatory expected_snapshot_hash for June's talk action not signaled until rejected once",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "mandatory expected_snapshot_hash for June's talk action not signaled until rejected once",
   "excerpts": [

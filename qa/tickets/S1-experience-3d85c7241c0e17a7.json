@@ -4,7 +4,7 @@
   "title": "June Pike talk required expected_snapshot_hash without prior signal @ June Pike talk required expected_snapshot_hash without prior signal",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "June Pike talk required expected_snapshot_hash without prior signal",
   "excerpts": [

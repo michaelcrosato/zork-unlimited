@@ -4,7 +4,7 @@
   "title": "one parallel-call race against a stale state_hash mid-quest @ one parallel-call race against a stale state_hash mid-quest",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "one parallel-call race against a stale state_hash mid-quest",
   "excerpts": [

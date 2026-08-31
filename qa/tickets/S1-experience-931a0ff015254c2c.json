@@ -4,7 +4,7 @@
   "title": "Dense compact JSON schema took a few actions to fully parse @ Dense compact JSON schema took a few actions to fully parse",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dense compact JSON schema took a few actions to fully parse",
   "excerpts": [

@@ -4,7 +4,7 @@
   "title": "Dense repeated JSON payloads on every call (likely a pure-mode artifact) @ Dense repeated JSON payloads on every call (likely a pure-mode artifact)",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dense repeated JSON payloads on every call (likely a pure-mode artifact)",
   "excerpts": [

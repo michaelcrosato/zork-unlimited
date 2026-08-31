@@ -4,7 +4,7 @@
   "title": "Talking to June Pike required an expected_snapshot_hash tied to the… @ Talking to June Pike required an expected_snapshot_hash tied to the Station board reveal, discovered only via error message",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Talking to June Pike required an expected_snapshot_hash tied to the Station board reveal, discovered only via error message",
   "excerpts": [

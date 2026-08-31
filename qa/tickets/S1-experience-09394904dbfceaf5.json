@@ -4,7 +4,7 @@
   "title": "Station dispatch board slot system took a couple reads to parse @ Station dispatch board slot system took a couple reads to parse",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Station dispatch board slot system took a couple reads to parse",
   "excerpts": [

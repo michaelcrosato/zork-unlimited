@@ -4,7 +4,7 @@
   "title": "Dense compact legend/tuple format takes a moment to parse @ Dense compact legend/tuple format takes a moment to parse",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dense compact legend/tuple format takes a moment to parse",
   "excerpts": [

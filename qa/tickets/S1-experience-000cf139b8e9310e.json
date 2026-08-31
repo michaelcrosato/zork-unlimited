@@ -4,7 +4,7 @@
   "title": "One rejected talk call needed a snapshot hash retry @ One rejected talk call needed a snapshot hash retry",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "One rejected talk call needed a snapshot hash retry",
   "excerpts": [

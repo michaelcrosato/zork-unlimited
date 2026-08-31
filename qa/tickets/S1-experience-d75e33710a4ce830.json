@@ -4,7 +4,7 @@
   "title": "ally talk requiring expected_snapshot_hash without prior warning @ ally talk requiring expected_snapshot_hash without prior warning",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "ally talk requiring expected_snapshot_hash without prior warning",
   "excerpts": [

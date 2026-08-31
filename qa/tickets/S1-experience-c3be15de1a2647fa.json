@@ -4,7 +4,7 @@
   "title": "Dense compact JSON responses take effort to parse as a raw… @ Dense compact JSON responses take effort to parse as a raw player-facing surface",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dense compact JSON responses take effort to parse as a raw player-facing surface",
   "excerpts": [

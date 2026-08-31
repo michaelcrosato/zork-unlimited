@@ -4,7 +4,7 @@
   "title": "June talk required an expected_snapshot_hash that wasn't obvious until… @ June talk required an expected_snapshot_hash that wasn't obvious until the error message",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "June talk required an expected_snapshot_hash that wasn't obvious until the error message",
   "excerpts": [

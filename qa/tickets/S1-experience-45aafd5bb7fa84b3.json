@@ -4,7 +4,7 @@
   "title": "snapshot_hash requirement for talking to June Pike surfaced only via… @ snapshot_hash requirement for talking to June Pike surfaced only via rejection error, not signaled in advance",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "snapshot_hash requirement for talking to June Pike surfaced only via rejection error, not signaled in advance",
   "excerpts": [

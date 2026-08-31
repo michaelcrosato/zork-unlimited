@@ -4,7 +4,7 @@
   "title": "occasional stale-hash rejection when issuing parallel tool calls in the… @ occasional stale-hash rejection when issuing parallel tool calls in the same room",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "occasional stale-hash rejection when issuing parallel tool calls in the same room",
   "excerpts": [

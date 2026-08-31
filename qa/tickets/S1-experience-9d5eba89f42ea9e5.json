@@ -4,7 +4,7 @@
   "title": "Parallel tool calls caused a stale-state rejection @ Parallel tool calls caused a stale-state rejection",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Parallel tool calls caused a stale-state rejection",
   "excerpts": [

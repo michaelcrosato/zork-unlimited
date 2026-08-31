@@ -4,7 +4,7 @@
   "title": "talk_overworld_session_contact rejected the call without… @ albany_city",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "albany_city",
   "excerpts": [

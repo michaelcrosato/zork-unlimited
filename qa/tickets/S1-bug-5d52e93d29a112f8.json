@@ -4,7 +4,7 @@
   "title": "Board displays an [\"inspect\", story_choice_id] action tuple but… @ albany_city",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "albany_city",
   "excerpts": [

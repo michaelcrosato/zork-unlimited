@@ -4,7 +4,7 @@
   "title": "Two step_action calls issued in the same batch against the same session… @ keeper_lodge",
   "kind": "bug",
   "severity": "S0",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "keeper_lodge",
   "excerpts": [

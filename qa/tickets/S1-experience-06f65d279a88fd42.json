@@ -4,7 +4,7 @@
   "title": "talk_overworld_session_contact for a Station-support NPC required an… @ talk_overworld_session_contact for a Station-support NPC required an expected_snapshot_hash not flagged in advance",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "talk_overworld_session_contact for a Station-support NPC required an expected_snapshot_hash not flagged in advance",
   "excerpts": [

@@ -4,7 +4,7 @@
   "title": "Dialogue BACK options sometimes required an extra no-op confirmation… @ Dialogue BACK options sometimes required an extra no-op confirmation step",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dialogue BACK options sometimes required an extra no-op confirmation step",
   "excerpts": [

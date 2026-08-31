@@ -4,7 +4,7 @@
   "title": "Dense compact JSON tuples require careful parsing to distinguish… @ Dense compact JSON tuples require careful parsing to distinguish previews from actionable choices",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dense compact JSON tuples require careful parsing to distinguish previews from actionable choices",
   "excerpts": [

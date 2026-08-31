@@ -4,7 +4,7 @@
   "title": "Not always immediately obvious if a 'review' dialogue option commits to… @ Not always immediately obvious if a 'review' dialogue option commits to a plan before reading its label carefully",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Not always immediately obvious if a 'review' dialogue option commits to a plan before reading its label carefully",
   "excerpts": [

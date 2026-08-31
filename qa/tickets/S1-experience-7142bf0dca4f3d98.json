@@ -4,7 +4,7 @@
   "title": "Compact positional-tuple context format is hard for a human to read at… @ Compact positional-tuple context format is hard for a human to read at a glance",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Compact positional-tuple context format is hard for a human to read at a glance",
   "excerpts": [

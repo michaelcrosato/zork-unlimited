@@ -4,7 +4,7 @@
   "title": "inspect tool rejected the displayed [\"inspect\", id] tuple format;… @ inspect tool rejected the displayed [\"inspect\", id] tuple format; needed the bare id string",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "inspect tool rejected the displayed [\"inspect\", id] tuple format; needed the bare id string",
   "excerpts": [

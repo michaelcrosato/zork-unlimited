@@ -4,7 +4,7 @@
   "title": "Dense compact legend/legend_delta encoding required frequent lookups @ Dense compact legend/legend_delta encoding required frequent lookups",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dense compact legend/legend_delta encoding required frequent lookups",
   "excerpts": [

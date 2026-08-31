@@ -4,7 +4,7 @@
   "title": "parallel step_action calls in dialogue trees fail with stale-hash… @ parallel step_action calls in dialogue trees fail with stale-hash rejection",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "parallel step_action calls in dialogue trees fail with stale-hash rejection",
   "excerpts": [

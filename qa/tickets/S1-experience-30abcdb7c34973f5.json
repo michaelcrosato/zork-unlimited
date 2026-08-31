@@ -4,7 +4,7 @@
   "title": "Dialogue trees required an explicit close/back action before other room… @ Dialogue trees required an explicit close/back action before other room actions became legal",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dialogue trees required an explicit close/back action before other room actions became legal",
   "excerpts": [

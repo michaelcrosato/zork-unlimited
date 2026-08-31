@@ -4,7 +4,7 @@
   "title": "Dense repeated metadata (legend_delta, station_dispatch_board,… @ Dense repeated metadata (legend_delta, station_dispatch_board, opportunity_leads) made it harder to spot the actual next decision at a glance",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Dense repeated metadata (legend_delta, station_dispatch_board, opportunity_leads) made it harder to spot the actual next decision at a glance",
   "excerpts": [

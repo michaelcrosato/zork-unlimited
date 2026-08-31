@@ -4,7 +4,7 @@
   "title": "Momentary block from an unresolved pending story choice before its… @ Momentary block from an unresolved pending story choice before its error message clarified the cause",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Momentary block from an unresolved pending story choice before its error message clarified the cause",
   "excerpts": [

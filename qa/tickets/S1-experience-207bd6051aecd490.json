@@ -4,7 +4,7 @@
   "title": "Checkpoint pause fired at an odd moment mid-hunt sequence @ Checkpoint pause fired at an odd moment mid-hunt sequence",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "Checkpoint pause fired at an odd moment mid-hunt sequence",
   "excerpts": [
