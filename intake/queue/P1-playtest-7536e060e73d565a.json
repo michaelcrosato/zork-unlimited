@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "7536e060e73d565a",
+  "title": "Certified Jamie market/loft setup never appears on FORTIFY or DRIVE",
+  "body": "Certifying Jamie’s market report / paying for the fodder-loft setup **never appears** once the player commits FORTIFY or DRIVE. Players spent 15 minutes on a loft/LURE benefit that did not show on those plans.\n\nGrok-4.6 MCP wave: about **10** `bugs[]` rows (S1–S2) on FORTIFY/DRIVE after market testimony.\n\nFix: either surface the loft/market term on FORTIFY and DRIVE where it was paid for, or stop advertising a loft route on those plans after certification.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/rpg/quests",
+  "evidence": {
+    "summary": "Grok-4.6 MCP wave cluster (10 mentions, 82 completed interviews).",
+    "refs": [
+      "ai-runs/playtest/sessions",
+      "ai-runs/playtest/grok-100-manifest.json"
+    ],
+    "lineages": [
+      "grok"
+    ],
+    "observations": 10
+  },
+  "created_at": "2026-08-31T02:14:25.599Z",
+  "updated_at": "2026-08-31T02:14:25.599Z",
+  "external": null
+}

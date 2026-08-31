@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "8c57d00c90511374",
+  "title": "Cade's talk is a procedure dump, not character speech",
+  "body": "Cade’s talk is a **procedure dump** (LAY/CAST/DC/cattle-alarm, “Reviews choose nothing”, ALL-CAPS LURE/DRIVE/FORTIFY/HUNT) instead of a farmer in a wolf siege. This is the chapter’s voice, not a single blocked exit.\n\nGrok-4.6 MCP wave: **17** `bugs[]` rows tagged as Cade-as-manual plus many more Cade lines; **13+** worst-moments named Cade’s first speech. Clarity averaged 2.45; 78/82 would not replay — this voice is a stated reason.\n\nFix: Cade’s plan comparison should stay in character. DCs and closed plans can live on the action/journal surface; his spoken lines should not be the rules document.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`. Not a duplicate of `4806c6f8ade14c0b` (action-id vocabulary).",
+  "source": "playtest",
+  "kind": "experience",
+  "priority": "P1",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/rpg/quests",
+  "evidence": {
+    "summary": "Grok-4.6 MCP wave cluster (17 mentions, 82 completed interviews).",
+    "refs": [
+      "ai-runs/playtest/sessions",
+      "ai-runs/playtest/grok-100-manifest.json"
+    ],
+    "lineages": [
+      "grok"
+    ],
+    "observations": 17
+  },
+  "created_at": "2026-08-31T02:14:25.883Z",
+  "updated_at": "2026-08-31T02:14:25.883Z",
+  "external": null
+}

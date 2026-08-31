@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "c3f6544dbf5cfa5b",
+  "title": "Store-Shed up blocked with yearling-combat copy during LURE",
+  "body": "During a committed LURE, after taking the winter-feed sack, Store-Shed **`up` is blocked** with yearling-combat / yearling-action copy while no yearling action is listed in that room yet (LAY often has not happened).\n\nGrok-4.6 MCP wave: **22** `bugs[]` rows (S1 20 / S2 2). Distinct from the older intake item `4806c6f8ade14c0b` (prose verb `DON` vs `take_byre_jerkin`).\n\nFix: ladder block reasons must match the current LURE step. If the player is fetching feed, `up` should be legal or the block should name the actual missing feed/LAY step — not a yearling fight that is not on the action list.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/rpg/quests",
+  "evidence": {
+    "summary": "Grok-4.6 MCP wave cluster (22 mentions, 82 completed interviews).",
+    "refs": [
+      "ai-runs/playtest/sessions",
+      "ai-runs/playtest/grok-100-manifest.json"
+    ],
+    "lineages": [
+      "grok"
+    ],
+    "observations": 22
+  },
+  "created_at": "2026-08-31T02:14:25.353Z",
+  "updated_at": "2026-08-31T02:14:25.353Z",
+  "external": null
+}

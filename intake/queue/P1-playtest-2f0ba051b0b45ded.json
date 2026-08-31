@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "2f0ba051b0b45ded",
+  "title": "Albany opening is paperwork and compact tuples before the farm",
+  "body": "The Albany opening is **registration / oath / report / ready-made setup** plus **compact tuples and a legend** before the player sees Cade’s farm or a wolf. Goal is understood; the first hour still feels like a dispatch form.\n\nGrok-4.6 MCP wave: **14** `bugs[]` rows on paperwork/tuples; **9** worst-moments named Rowan-to-oath before the yard; 53 verdicts mentioned paperwork/bureaucracy. Enjoyment 2.89, would-replay 4/82.\n\nFix: get a first-time player onto a readable place and a wolf problem faster. Keep civic choices, but do not front-load three stacked menus and machine tuples as the first scene.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`.",
+  "source": "playtest",
+  "kind": "experience",
+  "priority": "P1",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/world/new_york_overworld.json",
+  "evidence": {
+    "summary": "Grok-4.6 MCP wave cluster (14 mentions, 82 completed interviews).",
+    "refs": [
+      "ai-runs/playtest/sessions",
+      "ai-runs/playtest/grok-100-manifest.json"
+    ],
+    "lineages": [
+      "grok"
+    ],
+    "observations": 14
+  },
+  "created_at": "2026-08-31T02:14:26.185Z",
+  "updated_at": "2026-08-31T02:14:26.185Z",
+  "external": null
+}

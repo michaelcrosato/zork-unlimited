@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "a38a43b74212d7cc",
+  "title": "First LURE LAY Fieldcraft DC 12 contradicts silent skip / hidden DC 10",
+  "body": "The first LURE LAY is described as a Fieldcraft **DC 12** check that can fail, but overlapping copy (field condition, Cade, sheltered stockway) **skips the roll** or **hides the easier DC 10** and leaves a no-retry DC 12 that spikes cattle alarm.\n\nGrok-4.6 MCP wave: **21** `bugs[]` rows (S2 11 / S1 10) plus matching worst-moments (“told DC 12, then auto-succeed” / “quiet stockway still demanded DC 12”).\n\nFix: one player-visible rule for the first LAY on each approach. Journal, Cade, field condition, and the actual check must agree on DC, whether it can be skipped, and whether it is retryable.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/world/new_york_overworld.json",
+  "evidence": {
+    "summary": "Grok-4.6 MCP wave cluster (21 mentions, 82 completed interviews).",
+    "refs": [
+      "ai-runs/playtest/sessions",
+      "ai-runs/playtest/grok-100-manifest.json"
+    ],
+    "lineages": [
+      "grok"
+    ],
+    "observations": 21
+  },
+  "created_at": "2026-08-31T02:14:24.892Z",
+  "updated_at": "2026-08-31T02:14:24.892Z",
+  "external": null
+}
