@@ -5,7 +5,7 @@
   "body": "Deferred from the 2026-08-28/29 audit fix pass. The finding was confirmed by an\r\nadversarial verifier; it was not fixed in that pass for the reason below, which is\r\nthe fixing agent's own account after reading the code.\r\n\r\nOutside my ownership: the fix belongs in bin/record-playtest-session.ts and src/qa/* (session_record.client_evidence is declared there and never written by anything). My providers.json change removes two of the three forgeable vendors from the metrics lever — a hand-written claude_code or gemini_cli record is now stamped operator_attested and cannot move experience numbers — but a fabricated `codex` record still can, and the family-diversity promotion lever the verifier identified is untouched. The recorder still needs to require a real runner artifact (sidecar/envelope/rollout capture) before stamping runner_enforced.",
   "source": "audit",
   "kind": "bug",
-  "priority": "P1",
+  "priority": "P0",
   "status": "open",
   "labels": [],
   "area": "bin/record-playtest-session.ts",
@@ -16,6 +16,6 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:17:59.502Z",
-  "updated_at": "2026-08-29T07:17:59.502Z",
+  "updated_at": "2026-08-31T15:07:09.654Z",
   "external": null
 }
