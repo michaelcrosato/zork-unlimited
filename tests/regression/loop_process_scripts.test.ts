@@ -96,11 +96,32 @@ describe("loop status/stop process helpers", () => {
     withTempRoot((root) => {
       mkdirSync(join(root, "ai-runs"));
       writeFileSync(join(root, "loop-status.sh"), statusScript);
+      // Planting the worker retries until its recorded identity re-reads stable:
+      // under heavy suite load, Git Bash's emulated /proc can transiently
+      // mis-resolve a just-spawned background process, and this test then fails
+      // on its SETUP (a dead or identity-shifted plant) rather than on the
+      // classification it exists to witness. The retry hardens only the plant;
+      // loop-status still must classify a live, authenticated, loop-less worker
+      // as an orphan on its own.
       const harness = [
         RECORD_PROCESS_IDENTITY,
-        "sleep 30 &",
-        "worker=$!",
-        'record_identity "$worker" ai-runs/agent.pid',
+        "worker=",
+        "for attempt in 1 2 3 4 5; do",
+        "  sleep 300 &",
+        "  worker=$!",
+        '  if record_identity "$worker" ai-runs/agent.pid; then',
+        "    sleep 0.2",
+        '    now="$(process_start_time "$worker" 2>/dev/null || true)"',
+        '    rec="$(cut -d" " -f2 ai-runs/agent.pid)"',
+        '    if kill -0 "$worker" 2>/dev/null && [ -n "$now" ] && [ "$now" = "$rec" ]; then',
+        "      break",
+        "    fi",
+        "  fi",
+        '  kill "$worker" 2>/dev/null || true',
+        '  wait "$worker" 2>/dev/null || true',
+        "  worker=",
+        "done",
+        '[ -n "$worker" ] || { echo "precondition: could not plant a stable live worker"; exit 97; }',
         "bash loop-status.sh",
         "rc=$?",
         'kill "$worker" 2>/dev/null || true',
@@ -295,6 +316,53 @@ describe("loop status/stop process helpers", () => {
     expect(loopScript).not.toContain("agent step reported an error — continuing to verify");
     expect(loopScript).toContain("loop:seal-feedback");
     expect(packageScripts["loop:seal-feedback"]).toBe("tsx scripts/seal-feedback-acceptance.ts");
+  });
+
+  it("fails the cycle when an explicitly requested agent cannot run", () => {
+    // "Fails loudly" must mean the exit code, not a stderr line: an unknown or
+    // uninstalled AI_AGENT used to print and then proceed agent-less, so the
+    // ledger could claim a cycle an absent vendor never worked.
+    expect(loopScript).toContain("is not a known dev agent (${DEV_AGENT_IDS[*]})");
+    expect(loopScript).toContain('was requested but \\"$requested_bin\\" is not on PATH');
+    expect(loopScript).toContain(
+      "The requested agent cannot run — failing this cycle rather than proceeding without it.",
+    );
+    expect(loopScript).toContain('if ! cmd="$(agent_cmd)"; then');
+    // Both refusal branches must exit the resolver nonzero, not fall through.
+    const resolver = loopScript.slice(
+      loopScript.indexOf("agent_cmd() {"),
+      loopScript.indexOf("run_agent() {"),
+    );
+    expect(resolver.match(/return 1/g)?.length).toBe(2);
+  });
+
+  it("rejects an evidence-only cycle whose agent committed anyway", () => {
+    // AGENTS.md states "no provisional commit is allowed" as a driver property;
+    // the driver must own it, not the prompt: a disobedient commit used to leave
+    // a clean tree, so continuous mode kept going and unsealed commits (no
+    // selection attestation, no acceptance-marker update) accumulated silently.
+    expect(loopScript).toContain(
+      'if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]] && [[ "$(git rev-parse HEAD)" != "$start_ref" ]]; then',
+    );
+    expect(loopScript).toContain(
+      "evidence-only cycle advanced HEAD; no commit is allowed with AI_LOOP_COMMIT=0",
+    );
+    expect(loopScript).toContain('_reject_cycle "evidence-commit"');
+  });
+
+  it("stops continuous mode after an agent-less auto-detect cycle instead of looping", () => {
+    // With no vendor installed, every cycle "succeeds" on an unchanged tree and
+    // burns the pre+post crawl plus the full health bar; the breakers count only
+    // failures, so nothing ever tripped. One informative pass, then stop —
+    // unless the operator explicitly asked for agent-less cycles.
+    expect(loopScript).toContain("AGENTLESS_CYCLE=1");
+    expect(loopScript).toContain(
+      'if [[ "${AGENTLESS_CYCLE:-0}" == "1" && "${AI_LOOP_RUN_AGENT:-1}" == "1" ]]; then',
+    );
+    expect(loopScript).toContain("further cycles cannot make progress — stopping");
+    // The deliberate agent-less mode keeps running: the stop is gated on
+    // AI_LOOP_RUN_AGENT=1, and run_agent resets the marker at each cycle start.
+    expect(loopScript).toContain("AGENTLESS_CYCLE=0");
   });
 
   it("reads the intake queue instead of verifying a per-cycle playtest", () => {

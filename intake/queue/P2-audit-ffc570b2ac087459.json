@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "ffc570b2ac087459",
+  "title": "Single-source the wolf_winter id coupling threaded through engine core",
+  "body": "wolf_winter identifiers are hardcoded across ~18 src files: src/core/embedded_launch_overlay_receipt.ts pins pack id \"wolf_winter_v1\", flag \"dispatch_opening_delayed\", and schema literal world_quest_id: \"wolf_winter\"; both validators special-case it (rpg_validator.ts:42, rpg_foundation_validator.ts:28,201-205); src/world/wolf_hill_route_presentation.ts and the pure-mode Station/June narrowing in src/mcp/server.ts (~:616-620) carry more literals. Renaming the pack or quest id would silently sever the dispatch-overlay pathway (the schema literal rejects) and quietly disable the pure-mode narrowing (which falls back gracefully but stops working).\n\nProposal: one exported constants module (or registry-driven binding) for the wolf-winter campaign coupling that every consumer imports, so a rename is a one-line change the type system propagates. The receipt schema literal can derive from the constant.\n\nFrom the 2026-08-30 full audit, findings ledger P2.",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "2026-08-30 audit: content ids name-coupled into 18 engine files",
+    "refs": [
+      "src/core/embedded_launch_overlay_receipt.ts",
+      "src/validate/rpg_validator.ts"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T02:09:11.978Z",
+  "updated_at": "2026-08-31T02:09:11.978Z",
+  "external": null
+}

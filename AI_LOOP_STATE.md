@@ -137,8 +137,6 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback/next: the prior 11-report verified/actionable delta compiled for this HEAD at `20260820T183930Z`, recommends diagnostic `06ad0603`, and excludes this pure until seal. A wholly fresh no-retry 10-Terra pilot remains mandatory; the 100-player authority spend stays forbidden unless every pilot gate passes.
 - Guard delta: independent 234/234 changed-file review plus the 15/15 health-discovered contracts, exact 461-file/4,087-test health, 6,000-step smoke, 384,000-step deep crawl, all 12 packs, browser interaction, and pure authentication are green; post-ledger outer gates, start-ref integrity, and seal remain fail-closed.
 
-<!-- feedback_cycle_selection: {"run_id":"2026-08-12T01-29-11-314Z","selected_recommendation_id":null} -->
-
 ### Cycle result - station_dispatch_board_v4_inline_support
 
 - Evidence choice: the exact no-retry Terra pilot on `39e2e0ee` was valid at 10/10 but missed clarity (38/50), enjoyment (40/50), and continuation (6/10); all ten cited setup density and six found optional support indirect, justifying this off-list V4 correction while selection stays null.

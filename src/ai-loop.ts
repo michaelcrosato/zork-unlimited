@@ -47,7 +47,8 @@ import { formatFeedbackCycleSelectionMarker } from "./feedback/acceptance.js";
 const ULTRAPLAN_COOLDOWN = Number(process.env.AI_LOOP_ULTRAPLAN_COOLDOWN ?? 8);
 const ULTRAPLAN_TIMEOUT_SECONDS = Number(process.env.AI_LOOP_ULTRAPLAN_TIMEOUT_SECONDS ?? 3600);
 // Authoring a brand-new quest (content_new) is L-effort: it writes a quest +
-// validates + blind-playtests + locks tests, and was observed to hit loop.sh's
+// validates + locks tests (no playtest — the dev loop never plays), and was
+// observed to hit loop.sh's
 // default 2400s routine budget (twice) and get terminated mid-author, wasting the
 // cycle. Give content_new cycles the SAME larger budget as ultraplan cycles via the
 // existing per-cycle agentTimeoutSeconds override loop.sh already reads. Routine

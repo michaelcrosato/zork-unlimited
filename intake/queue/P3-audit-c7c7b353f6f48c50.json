@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "c7c7b353f6f48c50",
+  "title": "Retire the dead GIVE/INSPECT action surface and never-emitted dialogue event",
+  "body": "RpgAction declares GIVE and INSPECT (src/api/types.ts:22,24) but no enumerator emits them and the resolver has no case (falls to default null, src/rpg/legal_actions.ts:~515-517; INSPECT rides on LOOK at :252). GameEvent type \"dialogue\" (src/core/events.ts:17) is never emitted anywhere in src/. Downstream code still switch-cases GIVE (src/world/journey_decision.ts:157, src/mcp/tools.ts:375) — plumbing for actions that can never occur.\n\nEither implement them (if a quest wants them) or remove them from the public union and the dead switch arms, so the API stops advertising capabilities the engine does not have. Removal touches api/types.ts (public surface) — check UI/blind-harness consumers before landing.\n\nFrom the 2026-08-30 full audit, findings ledger P3.",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "2026-08-30 audit: public API declares actions no enumerator emits",
+    "refs": [
+      "src/api/types.ts",
+      "src/rpg/legal_actions.ts"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T02:09:49.173Z",
+  "updated_at": "2026-08-31T02:09:49.173Z",
+  "external": null
+}

@@ -247,21 +247,27 @@ export const APPROVED_D10_COMPLETION_RECORD = "docs/EXTERNAL_REVIEW_COMPLETION.m
 // The corpus had grown ~7-11% under floors that never moved, so the "~80%" the paragraph
 // above claims had quietly decayed to 74.5% / 71.6% / 71.7% — 891 cases, 6,413
 // assertions and 6,119 strong matchers that a static-only run would accept losing. The
-// floors below are the deliberate re-raise back to ~80% of that measurement; the drift
-// ratchet (--against) remains the check that catches a single-cycle drop of any size.
+// floors below were re-raised to ~80% of that measurement; the drift ratchet
+// (--against) remains the check that catches a single-cycle drop of any size.
+//
+// Re-measured 2026-08-30 over 485 files: 3,722 cases / 23,437 assertions / 22,382
+// strong. Three weeks of growth had already decayed the 08-28 floors to ~75-77%, so
+// this raise repeats the same maintenance. The decay is structural: the corpus grows
+// every cycle and these constants do not. Whenever an audit re-measures, re-raise to
+// ~80% of the fresh numbers — and treat a gap wider than ~5 points as overdue.
 
 /** Never drop below this many test cases (a mass-deletion tripwire). */
-export const MIN_TEST_CASES = 2790;
+export const MIN_TEST_CASES = 2975;
 
 /** Never drop below this many `expect()` assertions (the assertion-gutting tripwire,
  *  parallel to MIN_TEST_CASES), while the drift ASSERTION_COUNT_REGRESSION guards the
  *  precise per-cycle drop. */
-export const MIN_ASSERTIONS = 18000;
+export const MIN_ASSERTIONS = 18700;
 
 /** Never drop below this many STRONG (value-pinning) matchers — the strict→loose-swap
  *  tripwire, parallel to MIN_ASSERTIONS, while the drift STRONG_ASSERTION_REGRESSION
  *  guards the precise per-cycle drop. */
-export const MIN_STRONG_ASSERTIONS = 17250;
+export const MIN_STRONG_ASSERTIONS = 17900;
 
 /** Any chain of vitest modifiers sitting between the runner name and the terminal
  *  modifier — `.concurrent`, `.sequential`, `.each(...)`, `.for(...)`, `.extend(...)`.

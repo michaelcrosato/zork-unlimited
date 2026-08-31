@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "7250b22cf399b109",
+  "title": "Reference-tier rung lets one low-effort operator-attested session corroborate",
+  "body": "derivePromotion (src/qa/ticket.ts:163-171) treats ANY reference-tier report as corroborating on its own, and operator_attested sessions count. The grok wave (bin/playtest-grok-wave.ts) pins grok-4.6 — tier \"reference\" in blind-tester/catalogs/grok_cli.json — at reasoning_effort=low with a client tool boundary that is prompt-restricted but not independently audited. Net: one cheap, unaudited-client session's opinion can promote a ticket into intake/queue with no second family, which sits oddly against \"reference = expensive calibration instrument\" (src/blind/providers.ts:110-128).\n\nDecide one: (a) the reference rung requires runner_enforced isolation; (b) grok-4.6-at-low-effort loses the reference tier in the catalog; or (c) this is accepted and documented where the tiers are defined. Any of the three closes the gap; today the policy and the catalog disagree silently.\n\nFrom the 2026-08-30 full audit, findings ledger P3.",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "2026-08-30 audit: promotion policy vs reference-tier semantics",
+    "refs": [
+      "src/qa/ticket.ts",
+      "bin/playtest-grok-wave.ts"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T02:09:33.148Z",
+  "updated_at": "2026-08-31T02:09:33.148Z",
+  "external": null
+}

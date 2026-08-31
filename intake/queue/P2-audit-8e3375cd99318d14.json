@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "8e3375cd99318d14",
+  "title": "Deduplicate the quest-bridge orchestration shared by MCP, CLI, and UI",
+  "body": "The preview -> prepare -> init child -> commit -> foldback quest-launch sequence is implemented three times (src/mcp/overworld_quest_bridge.ts + tools.ts; src/cli/embedded_quest_journey.ts beginQuest; ui/src/App.tsx startQuest via GameSession), plus a fourth mostly-dead loop (bin/overworld_play.ts runQuestSession, kept alive only by wolf_winter_cli_command_projection.test.ts). This structure already produced a real divergence: the delayed-dispatch launch overlay existed only on the MCP path until audit/fix-2026-08-30 (which added a shared derivation in src/world/embedded_launch_overlay.ts and a parity regression, tests/regression/embedded_launch_overlay_parity.test.ts).\n\nRemaining work: extract ONE shared launch/foldback sequencer all three interfaces call (the overlay derivation shows the pattern); extend the plan WeakMap authentication (assertAuthenticatedQuestStartPreparation, src/world/session.ts:482-490) beyond the MCP bridge — CLI and UI commit unauthenticated plans today; and retire runQuestSession by porting its one test to CliJourneySession.\n\nFrom the 2026-08-30 full audit, findings ledger P2 (root cause of the launch-overlay P1).",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "2026-08-30 audit: triplicated bridge produced a real P1 divergence",
+    "refs": [
+      "src/mcp/overworld_quest_bridge.ts",
+      "src/cli/embedded_quest_journey.ts",
+      "ui/src/App.tsx",
+      "bin/overworld_play.ts"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T02:09:10.930Z",
+  "updated_at": "2026-08-31T02:09:10.930Z",
+  "external": null
+}

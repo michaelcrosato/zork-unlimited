@@ -466,7 +466,7 @@ export class OverworldMcpSessionStore {
     const session = refreshOverworldSessionEntry(this.sessions, sessionId);
     if (!session) {
       throw new Error(
-        `Overworld session "${sessionId}" was not found. Pass the current parent overworld_session_id.`,
+        `Overworld session "${sessionId}" was not found. Pass the current parent overworld_session_id. (Sessions live in server memory and only the most recent are retained, so a long-idle handle may have been evicted — export_overworld_session before setting a session aside.)`,
       );
     }
     return session;

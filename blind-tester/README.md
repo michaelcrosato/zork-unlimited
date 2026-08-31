@@ -2,18 +2,20 @@
 
 A self-contained harness that has a frontier model **play an AdventureForge game
 blind** — through the MCP server, with no access to the source — and write a
-ruthless first-time-player critique. Pure single runs use the hardened **OpenAI
-Codex** subscription CLI provider: no API key is passed to the game or harness.
+ruthless first-time-player critique. Pure single runs use a hardened subscription
+CLI provider — **Codex and Claude Code** both have live launch paths and capture
+readers here (`implemented-launch-paths.json` is the list): no API key is passed
+to the game or harness.
 
 ## Why no API key
 
 There are two different ways a model touches this project, with different auth:
 
-|                     | Authoring (`adapt_story`)         | **Blind playing (this harness)**               |
-| ------------------- | --------------------------------- | ---------------------------------------------- |
-| Who calls the model | the repo's own code, in-process   | an isolated external `codex` CLI               |
-| Authentication      | none (keyless deterministic mock) | the selected CLI's existing subscription login |
-| Needs a harness key | no                                | **no**                                         |
+|                     | Authoring (`adapt_story`)         | **Blind playing (this harness)**                    |
+| ------------------- | --------------------------------- | --------------------------------------------------- |
+| Who calls the model | the repo's own code, in-process   | an isolated external vendor CLI (`codex`, `claude`) |
+| Authentication      | none (keyless deterministic mock) | the selected CLI's existing subscription login      |
+| Needs a harness key | no                                | **no**                                              |
 
 This harness is the right-hand column: the model is an external player that reaches
 the game **only** through the `mcp__adventureforge__*` MCP tools. That uses your

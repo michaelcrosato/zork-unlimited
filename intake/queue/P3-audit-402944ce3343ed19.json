@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "402944ce3343ed19",
+  "title": "Crawl lane gaps: softlock-solver latency and invisible deep-crawl truncation",
+  "body": "Two related crawl-lane facts worth a deliberate decision:\n\n1. crawl:smoke sets solverBudget=0 (src/crawl/run.ts:219), so the quest softlock SOLVER runs only in nightly crawl:deep (20,000 states). Smoke still catches zero-legal-action hard locks and the overworld round-trip solver stays on (60k, run.ts:40), but softlock-by-unreachable-ending has ~24h detection latency and never blocks a PR. Either budget a small solver pass into smoke (measure the wall-clock cost first) or record the latency as accepted.\n\n2. A deep crawl that hits the 900s soft cutoff sets truncated/skippedItems loudly in artifacts (run.ts:102-108) but still exits 0 with no findings (bin/crawl.ts:91-96) — invisible to the workflow's pass/fail. Fine for an advisory lane; if deep is ever promoted to required, truncation must gate or the promotion is partly theater. A --fail-on-truncation flag the deep-audit workflow could adopt would make that future promotion honest.\n\nFrom the 2026-08-30 full audit, findings ledger P3.",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "2026-08-30 audit: required lane runs no quest softlock solver; deep truncation exits 0",
+    "refs": [
+      "src/crawl/run.ts",
+      "bin/crawl.ts"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T02:09:34.238Z",
+  "updated_at": "2026-08-31T02:09:34.238Z",
+  "external": null
+}

@@ -56,6 +56,14 @@ import {
   type OpeningCompactStationDispatchBoard,
 } from "../world/station_dispatch_board.js";
 
+/**
+ * Server-side, `structural` is deliberately identical to `full`: the only
+ * behavioral branches anywhere test `=== "pure"`. The name exists for the blind
+ * harness, whose attestations record that a run was a scripted structural check
+ * rather than a live model — the restriction it implies lives entirely in that
+ * harness, never here. Do not add a structural-only branch without updating
+ * blind-tester's attestation semantics first.
+ */
 export type McpPlayMode = "full" | "structural" | "pure";
 
 function parsePlayMode(): McpPlayMode {
@@ -2186,7 +2194,7 @@ tool(
 
 tool(
   "new_game",
-  "Start an RPG session with the default or a generated pack. Returns session_id, state_hash, compact context, and its legend.",
+  "Start an RPG session from a generated pack (generate_rpg_seed is required; mint one with generate_rpg_pack). Shipped quests start with start_world_quest. Returns session_id, state_hash, compact context, and its legend.",
   {
     generate_rpg_seed: G.optional().describe("Seed from generate_rpg_pack."),
     seed: z.number().int().safe().optional().describe("Runtime seed."),

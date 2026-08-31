@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "339f5089e42be20b",
+  "title": "Split the single-file overworld JSON into per-subsystem sources",
+  "body": "content/world/new_york_overworld.json (67,721 lines, 2.65MB) is at once world geometry, procedural population, the entire authored campaign scripting surface (opening_registration/oath/lead_source/preparation/relief_allocation/ally + campaign_service_rules), and the quest registry. Every content PR touches it, so any two lanes editing world data conflict in ONE file, and every process pays full parse + assertOverworldIntegrity on first world call.\n\nProposal: split the manifest into per-subsystem files (geometry+roads, procedural population, authored campaign scripting, quest registry) or per-region files, composed by loadOverworldManifest (src/world/source.ts:180) before the existing zod parse + integrity gauntlet, so the runtime contract and hashes stay unchanged while lanes stop colliding. The loader already deep-freezes and caches; only the read step changes. Migration must keep the world hash stable (or land with the receipt-aware re-pin workflow) and keep the registry bijection check intact (assertOverworldQuestSourceCoverage).\n\nFrom the 2026-08-30 full audit (\"How the Forge Turns\", findings ledger P2).",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "2026-08-30 audit: total single-file concentration",
+    "refs": [
+      "content/world/new_york_overworld.json",
+      "src/world/source.ts"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T02:09:09.884Z",
+  "updated_at": "2026-08-31T02:09:09.884Z",
+  "external": null
+}
