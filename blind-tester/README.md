@@ -61,7 +61,7 @@ npm run blind --spectate                  # then `npm run spectate` in another t
 # 3) Targeted quest plumbing — explicit structural smoke, NO LLM/tokens:
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
 
-# Codex Spark is the default pure player (PowerShell-safe equals form):
+# Luna at max effort is the default pure player (PowerShell-safe equals form):
 npm run blind --seed=2875
 
 ```
