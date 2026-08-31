@@ -25,8 +25,7 @@ import {
 } from "../src/intake/submission.js";
 import { readQueue, upsertSubmission } from "../src/intake/queue.js";
 import {
-  DEFAULT_LINEAR_PROJECT,
-  DEFAULT_LINEAR_TEAM,
+  resolveLinearTarget,
   ensureLinearLabels,
   linearAssigneeName,
   linearAuthorization,
@@ -248,9 +247,10 @@ async function main(): Promise<void> {
     console.error(`! unreadable submission ${bad.file}: ${bad.reason}`);
 
   try {
-    const teamKey = arg("--team") ?? process.env.LINEAR_TEAM?.trim() ?? DEFAULT_LINEAR_TEAM;
-    const projectSlug =
-      arg("--project") ?? process.env.LINEAR_PROJECT?.trim() ?? DEFAULT_LINEAR_PROJECT;
+    const { teamKey, projectSlug } = resolveLinearTarget(process.env, {
+      team: arg("--team"),
+      project: arg("--project"),
+    });
     const project = await resolveLinearProject(auth.header, teamKey, projectSlug);
     if (!project.ok) throw new Error(project.reason);
 

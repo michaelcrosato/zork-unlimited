@@ -31,6 +31,34 @@ export const DEFAULT_LINEAR_TEAM = LINEAR_TEAM_KEY;
 export const DEFAULT_LINEAR_PROJECT = LINEAR_PROJECT_SLUG;
 export const LINEAR_INTAKE_LABEL = "intake-mirror";
 
+/**
+ * Which team and project a sync targets, given CLI flags and the environment.
+ *
+ * A value that is PRESENT BUT BLANK means "unset", not "use the empty string".
+ * `.env.example` ships `LINEAR_PROJECT=` blank and tells the reader to copy the file
+ * to `.env` and fill in the values — and the only value that actually needs filling is
+ * the API key, because the defaults above are already correct for this repo. So the
+ * overwhelmingly common `.env` carries a blank LINEAR_PROJECT, and `??` does not fall
+ * through on "": the sync would resolve an empty project slug and fail to find the
+ * project, reporting an error that names Linear rather than the blank line that caused
+ * it. Treating blank as absent is what makes the shipped template correct as it ships,
+ * which is the entire point of shipping a template.
+ */
+export function resolveLinearTarget(
+  env: NodeJS.ProcessEnv = process.env,
+  overrides: { team?: string | null | undefined; project?: string | null | undefined } = {},
+): { teamKey: string; projectSlug: string } {
+  const pick = (
+    explicit: string | null | undefined,
+    fromEnv: string | undefined,
+    fallback: string,
+  ) => explicit?.trim() || fromEnv?.trim() || fallback;
+  return {
+    teamKey: pick(overrides.team, env.LINEAR_TEAM, DEFAULT_LINEAR_TEAM),
+    projectSlug: pick(overrides.project, env.LINEAR_PROJECT, DEFAULT_LINEAR_PROJECT),
+  };
+}
+
 /** Linear priority: 0 none, 1 Urgent, 2 High, 3 Medium, 4 Low. */
 export const LINEAR_PRIORITY: Readonly<Record<SubmissionPriority, number>> = {
   P0: 1,

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_LINEAR_PROJECT,
+  DEFAULT_LINEAR_TEAM,
   linearStateForStatus,
+  resolveLinearTarget,
   listTeamIssuesByPrefix,
   submissionFromLinearIssue,
   type LinearIssueSnapshot,
@@ -135,5 +138,41 @@ describe("Linear queue synchronization invariants", () => {
     expect(query).toContain("id identifier url title");
     expect(query).not.toContain("assignee");
     expect(query).not.toContain("first: 250");
+  });
+});
+
+describe("Linear sync target resolution", () => {
+  /**
+   * .env.example ships `LINEAR_PROJECT=` blank and says to copy it to .env, so the
+   * common .env has a blank value. `??` does not fall through on "", so before this
+   * the sync resolved an EMPTY project slug and failed to find the project — an error
+   * that names Linear rather than the blank line that caused it.
+   */
+  it("treats a blank env override as unset, so the shipped .env.example works as-is", () => {
+    const target = resolveLinearTarget({ LINEAR_PROJECT: "", LINEAR_TEAM: "" });
+    expect(target.projectSlug).toBe(DEFAULT_LINEAR_PROJECT);
+    expect(target.teamKey).toBe(DEFAULT_LINEAR_TEAM);
+  });
+
+  it("treats a whitespace-only override as unset", () => {
+    expect(resolveLinearTarget({ LINEAR_PROJECT: "   " }).projectSlug).toBe(DEFAULT_LINEAR_PROJECT);
+  });
+
+  it("still honours a real env override", () => {
+    const target = resolveLinearTarget({ LINEAR_TEAM: "OTHER", LINEAR_PROJECT: "other-slug" });
+    expect(target.teamKey).toBe("OTHER");
+    expect(target.projectSlug).toBe("other-slug");
+  });
+
+  it("lets an explicit flag win over the environment, and ignores a blank flag", () => {
+    const env = { LINEAR_TEAM: "FROM_ENV" };
+    expect(resolveLinearTarget(env, { team: "FROM_FLAG" }).teamKey).toBe("FROM_FLAG");
+    expect(resolveLinearTarget(env, { team: "  " }).teamKey).toBe("FROM_ENV");
+  });
+
+  it("falls back to the repo defaults when nothing is set", () => {
+    const target = resolveLinearTarget({});
+    expect(target.teamKey).toBe("MIC");
+    expect(target.projectSlug).toBe("adventureforge-59cb5298fba1");
   });
 });
