@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   linearStateForStatus,
+  listTeamIssuesByPrefix,
   submissionFromLinearIssue,
   type LinearIssueSnapshot,
   type LinearWorkflowStateSnapshot,
@@ -93,5 +94,46 @@ describe("Linear queue synchronization invariants", () => {
     const both = withExternalMirror(withExternalMirror(submission(), github), linear);
     expect(both.external).toEqual(github);
     expect(externalMirrors(both)).toEqual([github, linear]);
+  });
+
+  it("lists team issues with a slim query under Linear's complexity cap", async () => {
+    let query = "";
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      query = JSON.parse(String(init?.body ?? "{}")).query as string;
+      return new Response(
+        JSON.stringify({
+          data: {
+            teams: {
+              nodes: [
+                {
+                  issues: {
+                    nodes: [
+                      {
+                        id: "iss-1",
+                        identifier: "MIC-33",
+                        url: "https://linear.app/michael-crosato/issue/MIC-33",
+                        title: "[33c83cbe8ead954b] Steading Yard north blocked",
+                        project: { id: "proj" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }) as typeof fetch;
+    const listed = await listTeamIssuesByPrefix("lin_api_test", "MIC", fetchImpl);
+    expect(listed.ok).toBe(true);
+    if (listed.ok) {
+      expect(listed.data[0]?.identifier).toBe("MIC-33");
+      expect(listed.data[0]?.projectId).toBe("proj");
+    }
+    expect(query).toContain("issues(first: 100)");
+    expect(query).toContain("id identifier url title");
+    expect(query).not.toContain("assignee");
+    expect(query).not.toContain("first: 250");
   });
 });

@@ -227,10 +227,10 @@ function snapshotIssue(issue: {
   identifier: string;
   url: string;
   title: string;
-  priority: number;
+  priority?: number;
   description?: string | null;
-  state: { id?: string; name: string; type?: string } | null;
-  labels: { nodes: Array<{ id?: string; name: string }> };
+  state?: { id?: string; name: string; type?: string } | null;
+  labels?: { nodes: Array<{ id?: string; name: string }> };
   project?: { id: string } | null;
   assignee?: {
     id: string;
@@ -246,9 +246,9 @@ function snapshotIssue(issue: {
     identifier: issue.identifier,
     url: issue.url,
     title: issue.title,
-    priority: issue.priority,
+    priority: issue.priority ?? 0,
     state: issue.state?.name ?? "",
-    labels: issue.labels.nodes.map((node) => node.name),
+    labels: (issue.labels?.nodes ?? []).map((node) => node.name),
     ...(issue.description !== undefined ? { description: issue.description } : {}),
     ...(issue.state?.id ? { stateId: issue.state.id } : {}),
     ...(issue.state?.type ? { stateType: issue.state.type } : {}),
@@ -273,6 +273,8 @@ export async function listTeamIssuesByPrefix(
   teamKey: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<LinearGraphqlResult<LinearIssueSnapshot[]>> {
+  // Full ISSUE_FIELDS × 250 trips Linear's complexity cap (~86k vs 10k).
+  // Prefix matching only needs id + title; project { id } keeps the AdventureForge filter.
   const result = await linearGraphql<{
     teams: {
       nodes: Array<{
@@ -283,7 +285,7 @@ export async function listTeamIssuesByPrefix(
     authorization,
     `query TeamIssues($key: String!) {
       teams(filter: { key: { eq: $key } }) {
-        nodes { issues(first: 250) { nodes ${ISSUE_FIELDS} } }
+        nodes { issues(first: 100) { nodes { id identifier url title project { id } } } }
       }
     }`,
     { key: teamKey },
