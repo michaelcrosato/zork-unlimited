@@ -16,9 +16,17 @@ const ALL_EXHAUSTIVE_RPG_PROOFS = [
   VARIANT_LIVENESS_PROOF,
   ...EXHAUSTIVE_RPG_PROOFS,
 ];
+// The CI cap was 2 while every project shared one job: the memory-heavy exhaustive BFS
+// proofs ran alongside the ordinary files, and a wider pool put them over their limits
+// (see the per-project notes below). Those proofs now run in their own deep-audit job, so
+// the standard pool no longer has to leave headroom for a peer that is not there. A
+// GitHub runner has 4 vCPU and 16 GB, and this project's files are ordinary; a measured
+// 2-worker shard spent 1,562s of wall clock on 243 files with 1,115s of that in per-file
+// module import, which is precisely the cost more workers absorb. The exhaustive caps
+// below are UNCHANGED — they are the ones that were load-bearing.
 const standardWorkerCap =
   process.env.CI === "true"
-    ? Math.min(2, availableParallelism())
+    ? Math.min(4, availableParallelism())
     : Math.min(8, availableParallelism());
 const exhaustiveWorkerCap = Math.min(2, availableParallelism());
 const commonProject = {

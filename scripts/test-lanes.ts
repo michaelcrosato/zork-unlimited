@@ -60,6 +60,46 @@ export const EXHAUSTIVE_PROOF_FILES: readonly string[] = [
   "tests/regression/rpg_variant_liveness.test.ts",
 ];
 
+/**
+ * The ONLY source scopes the census proofs can see.
+ *
+ * Every file in EXHAUSTIVE_PROOF_FILES imports from these and nothing else, which is the
+ * entire reason the fast lane is allowed to skip them: a change confined outside these
+ * scopes cannot move a census verdict. Turn that around and it becomes the rule the
+ * `ship` script enforces — a change that DOES touch one of these is a change the fast
+ * lane cannot vouch for, and it has to run the full bar.
+ *
+ * `tests/unit/test_lanes.test.ts` re-derives this from the proofs' own import statements,
+ * so a proof that grows a new dependency widens this list instead of silently escaping it.
+ */
+export const CENSUS_PROOF_SOURCE_SCOPES: readonly string[] = [
+  "content/",
+  "src/api/",
+  "src/core/",
+  "src/rpg/",
+  "src/validate/",
+  "src/world/",
+  "tests/regression/support/",
+  "vitest.config.ts",
+];
+
+/** True when a changed path lands in something the census proofs read. */
+export function touchesCensusProofScope(file: string): boolean {
+  const normalized = file.split("\\").join("/");
+  return CENSUS_PROOF_SOURCE_SCOPES.some((scope) =>
+    scope.endsWith("/") ? normalized.startsWith(scope) : normalized === scope,
+  );
+}
+
+/**
+ * Which bar a changeset has to clear. `full` whenever ANY changed path is in a census
+ * scope — the safe direction, since the cost of being wrong the other way is a regression
+ * reaching main that only a nightly proof would catch.
+ */
+export function barForChangedFiles(files: readonly string[]): "fast" | "full" {
+  return files.some((file) => touchesCensusProofScope(file)) ? "full" : "fast";
+}
+
 export function laneForTestFile(file: string): LaneName {
   return EXHAUSTIVE_PROOF_FILES.includes(file) ? "exhaustive" : "fast";
 }

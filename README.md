@@ -84,6 +84,7 @@ copied anywhere and opened directly.
 ```bash
 npm install
 npm --prefix ui install                           # required by npm run health
+npm run ship -- "what you changed"               # the whole landing loop (see below)
 npm run health:fast                              # the pre-commit bar: every check, fast test lane
 npm run health                                   # the full verification bar (see below)
 npm run validate                                 # validate all 12 shipped quests
@@ -145,6 +146,24 @@ five jobs carry a `timeout-minutes` ceiling. A separate scheduled/manual
 [`Deep audit`](./.github/workflows/deep-audit.yml) runs the long crawl, the
 exhaustive census proofs, and a standard-suite V8 coverage report without
 lengthening the PR critical path.
+
+## Landing a change
+
+`main` is the only long-lived branch. `npm run ship -- "what you changed"` runs the bar,
+commits, pushes, opens a PR, waits for the required `verify` check, squash-merges, deletes
+the branch, and leaves you on an updated `main`. Nothing is committed or pushed until the
+bar passes — a red bar stops with your work still in the tree.
+
+The bar it picks comes from the diff, not from a flag: a change outside the scopes the
+census proofs read runs `health:fast`; a change that touches `src/core`, `src/rpg`,
+`src/validate`, `src/world`, `content/` or `vitest.config.ts` runs the full `health`,
+because for those the proofs are the ground truth. `--full` forces the full bar,
+`--no-merge` stops after the PR, `--dry-run` prints the plan and the chosen bar.
+
+Because each ship squash-merges, `main` gains exactly one commit per landing with a PR
+beside it, so rolling back a change is reverting a single commit. Shipping small and often
+is what makes that useful. Requires the GitHub CLI (`gh`), already used by
+`npm run intake:sync`.
 
 ## MCP server — how an agent plays
 

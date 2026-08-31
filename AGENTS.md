@@ -196,6 +196,28 @@ before assuming your work broke something.
 `npm run crawl:smoke` is the mechanical gate (docs/testing_pyramid.md); it is
 deliberately NOT part of `health`.
 
+### Landing a change
+
+`main` is the only branch that survives. One command does the whole loop:
+
+```bash
+npm run ship -- "what you changed"
+```
+
+It runs the bar, commits, pushes, opens a PR, waits for the required `verify` check,
+squash-merges, deletes the branch, and leaves you on an updated `main`. Nothing is
+committed or pushed until the bar is green: a red bar exits nonzero with the work still
+in the tree. `--no-merge` stops after opening the PR; `--dry-run` prints the plan.
+
+**Which bar it runs is not a flag — it is read off the diff.** A change confined outside
+`CENSUS_PROOF_SOURCE_SCOPES` gets `health:fast`; a change that touches any of them gets
+the full `health` automatically, because there the census proofs are the ground truth.
+`--full` forces the full bar; there is deliberately no flag to force the fast one.
+
+Squash-merging is what makes rollback cheap: `main` gains exactly ONE commit per ship,
+with a PR beside it explaining itself, so reverting a landing is reverting a commit.
+Ship small and often — every ship is another point to go back to.
+
 ## Do Not Weaken Verification
 
 - Do not disable, skip, delete, or hollow out tests to make a change pass.

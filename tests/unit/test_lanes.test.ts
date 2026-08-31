@@ -8,6 +8,7 @@ import {
   laneForTestFile,
   parseLaneProjects,
   readLaneProjects,
+  readPackageScripts,
   readVitestProjects,
   readVitestProjectNames,
 } from "../../scripts/test-lanes.js";
@@ -86,6 +87,23 @@ describe("test lanes", () => {
     // pin and this copy pointing at nothing while the lanes still looked healthy.
     const discovered = new Set(discoverTestFiles());
     for (const proof of EXHAUSTIVE_PROOF_FILES) expect(discovered.has(proof)).toBe(true);
+  });
+
+  it("keeps the fast bar identical to the full bar except for the test lane", () => {
+    // health and health:fast spell their eight shared checks out in full rather than
+    // delegating to a common script. That is deliberate: lint_tooling_wired.test.ts and
+    // rpg_validation_bar.test.ts assert on the LITERAL text of `health` to prove typecheck,
+    // lint, format:check and validate are still in the bar, and an extracted `health:checks`
+    // silently defeats both while reading as a tidy refactor. This assertion is what pays
+    // for the duplication: the only permitted difference between the two bars is which
+    // test lane they end with, so the fast bar cannot quietly shed a check.
+    const scripts = readPackageScripts();
+    const full = scripts["health"];
+    const fast = scripts["health:fast"];
+    expect(full).toBeDefined();
+    expect(fast).toBeDefined();
+    expect(fast).toContain("npm run test:fast");
+    expect(fast!.replace("npm run test:fast", "npm test")).toBe(full);
   });
 
   it("splits every discovered test file into exactly one lane", () => {
