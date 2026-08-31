@@ -108,6 +108,8 @@ export function upsertSubmission(
       ...submission,
       status: existing.status === "stale" ? "open" : existing.status,
       external: submission.external ?? existing.external,
+      mirrors:
+        submission.mirrors && submission.mirrors.length > 0 ? submission.mirrors : existing.mirrors,
       // The claim is the queue's, exactly like `status`: a source re-filing an item it
       // knows nothing about must not evict the lane that is working it, and a re-file
       // that changes nothing must stay byte-identical even while the item is claimed.

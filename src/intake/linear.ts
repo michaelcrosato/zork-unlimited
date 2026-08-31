@@ -272,18 +272,18 @@ export async function listTeamIssuesByPrefix(
   authorization: string,
   teamKey: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<LinearGraphqlResult<LinearExistingIssue[]>> {
+): Promise<LinearGraphqlResult<LinearIssueSnapshot[]>> {
   const result = await linearGraphql<{
     teams: {
       nodes: Array<{
-        issues: { nodes: LinearExistingIssue[] };
+        issues: { nodes: Array<Parameters<typeof snapshotIssue>[0]> };
       }>;
     };
   }>(
     authorization,
     `query TeamIssues($key: String!) {
       teams(filter: { key: { eq: $key } }) {
-        nodes { issues(first: 100) { nodes { id title } } }
+        nodes { issues(first: 250) { nodes ${ISSUE_FIELDS} } }
       }
     }`,
     { key: teamKey },
@@ -292,7 +292,7 @@ export async function listTeamIssuesByPrefix(
   if (!result.ok) return result;
   const team = result.data.teams.nodes[0];
   if (!team) return { ok: false, reason: `no Linear team with key ${teamKey}` };
-  return { ok: true, data: team.issues.nodes };
+  return { ok: true, data: team.issues.nodes.map(snapshotIssue) };
 }
 
 export type LinearWorkflowStateSnapshot = {

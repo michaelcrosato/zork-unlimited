@@ -39,7 +39,6 @@ import {
   listLinearLabels,
   listLinearWorkflowStates,
   listTeamIssuesByPrefix,
-  parseLinearTitleId,
   pushLinearIssue,
   readLinearMarker,
   resolveLinearProject,
@@ -49,6 +48,15 @@ import {
   type LinearIssueSnapshot,
   type LinearWorkflowStateSnapshot,
 } from "../src/intake/linear.js";
+
+// A repo-root .env is the documented home for LINEAR_API_KEY (see
+// docs/linear_workflow.md), so load it when present. Real environment variables
+// win over the file, a missing file is normal, and no other dotenv magic applies.
+try {
+  process.loadEnvFile();
+} catch {
+  // No .env in the working directory — the plain environment is authoritative.
+}
 
 function arg(flag: string): string | null {
   const index = process.argv.indexOf(flag);
@@ -61,7 +69,12 @@ function arg(flag: string): string | null {
 function requestedIds(): Set<string> | null {
   const raw = arg("--ids");
   if (!raw) return null;
-  return new Set(raw.split(",").map((id) => id.trim()).filter(Boolean));
+  return new Set(
+    raw
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean),
+  );
 }
 
 function issueName(issue: LinearIssueSnapshot): string {
@@ -231,7 +244,8 @@ async function main(): Promise<void> {
   const queueDir = arg("--queue") ?? DEFAULT_QUEUE_DIR;
   const ids = requestedIds();
   const initial = readQueue(queueDir);
-  for (const bad of initial.unreadable) console.error(`! unreadable submission ${bad.file}: ${bad.reason}`);
+  for (const bad of initial.unreadable)
+    console.error(`! unreadable submission ${bad.file}: ${bad.reason}`);
 
   try {
     const teamKey = arg("--team") ?? process.env.LINEAR_TEAM?.trim() ?? DEFAULT_LINEAR_TEAM;
@@ -292,14 +306,18 @@ async function main(): Promise<void> {
     for (const submission of selected) {
       const state = linearStateForStatus(states, submission.status);
       if (!state) {
-        console.error(`! push failed for ${submission.id}: no workflow state for ${submission.status}`);
+        console.error(
+          `! push failed for ${submission.id}: no workflow state for ${submission.status}`,
+        );
         failed += 1;
         continue;
       }
       const names = linearIssueLabels(submission);
       const missing = names.filter((name) => !labelIds.has(name));
       if (missing.length > 0) {
-        console.error(`! push failed for ${submission.id}: missing Linear label(s) ${missing.join(", ")}`);
+        console.error(
+          `! push failed for ${submission.id}: missing Linear label(s) ${missing.join(", ")}`,
+        );
         failed += 1;
         continue;
       }
@@ -319,7 +337,9 @@ async function main(): Promise<void> {
             queueDir,
           );
         }
-        console.log(`${dryRun ? "[dry-run] unchanged" : "unchanged"} ${submission.id} -> ${issueName(issue)}`);
+        console.log(
+          `${dryRun ? "[dry-run] unchanged" : "unchanged"} ${submission.id} -> ${issueName(issue)}`,
+        );
         continue;
       }
 
@@ -333,17 +353,14 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const result = await pushLinearIssue(
-        auth.header,
-        {
-          teamId: project.data.teamId,
-          projectId: project.data.projectId,
-          labelIds: names.map((name) => labelIds.get(name)!),
-          existing: issues,
-          submission,
-          stateId: state.id,
-        },
-      );
+      const result = await pushLinearIssue(auth.header, {
+        teamId: project.data.teamId,
+        projectId: project.data.projectId,
+        labelIds: names.map((name) => labelIds.get(name)!),
+        existing: issues,
+        submission,
+        stateId: state.id,
+      });
       if (!result.ok) {
         console.error(`! push failed for ${submission.id}: ${result.reason}`);
         failed += 1;
@@ -364,14 +381,20 @@ async function main(): Promise<void> {
           queueDir,
         );
       }
-      console.log(`${dryRun ? "[dry-run] would " : ""}${result.action} ${submission.id} -> ${issueName(remote)}`);
+      console.log(
+        `${dryRun ? "[dry-run] would " : ""}${result.action} ${submission.id} -> ${issueName(remote)}`,
+      );
       if (result.action === "created") issues.push(remote);
     }
-    console.log(`push: ${created} created, ${updated} updated, ${unchanged} unchanged, ${failed} failed.`);
+    console.log(
+      `push: ${created} created, ${updated} updated, ${unchanged} unchanged, ${failed} failed.`,
+    );
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     console.error(`Skipping Linear sync - ${reason}.`);
-    console.error("The local intake queue is unaffected; re-authenticate or fix the local credential and retry.");
+    console.error(
+      "The local intake queue is unaffected; re-authenticate or fix the local credential and retry.",
+    );
   }
 }
 
