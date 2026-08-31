@@ -35,6 +35,15 @@ import {
   submissionLabels,
   submissionMarker,
 } from "../../src/intake/github.js";
+import {
+  LINEAR_PRIORITY,
+  linearAuthorization,
+  linearIssueLabels,
+  linearIssueTitle,
+  linearUpsertPlan,
+  parseLinearTitleId,
+  pushLinearIssue,
+} from "../../src/intake/linear.js";
 import { submissionFromTicket, ticketPriority } from "../../src/qa/ticket_submission.js";
 import type { QaTicket } from "../../src/qa/ticket.js";
 
@@ -520,5 +529,100 @@ describe("grok-4.6 wave playtest intake", () => {
     expect(stored.labels).toContain("lane:content");
     expect(stored.evidence.observations).toBe(63);
     expect(stored.evidence.lineages).toContain("grok");
+  });
+});
+
+describe("Linear intake mapping", () => {
+  it("prefixes titles with the 16-hex join key and maps P0–P3 to Urgent/High/Medium/Low", () => {
+    expect(linearIssueTitle("33c83cbe8ead954b", "Steading Yard north blocked")).toBe(
+      "[33c83cbe8ead954b] Steading Yard north blocked",
+    );
+    expect(parseLinearTitleId("[33c83cbe8ead954b] edited by a human")).toBe("33c83cbe8ead954b");
+    expect(parseLinearTitleId("no prefix")).toBeNull();
+    expect(LINEAR_PRIORITY.P0).toBe(1);
+    expect(LINEAR_PRIORITY.P1).toBe(2);
+    expect(LINEAR_PRIORITY.P2).toBe(3);
+    expect(LINEAR_PRIORITY.P3).toBe(4);
+  });
+
+  it("emits intake-mirror, source:<source>, and lane:* labels", () => {
+    const labels = linearIssueLabels(make({ source: "playtest", labels: ["lane:content"] }));
+    expect(labels).toEqual(["intake-mirror", "source:playtest", "lane:content"]);
+  });
+
+  it("sends personal API keys raw and OAuth tokens as Bearer", () => {
+    expect(linearAuthorization({ apiKey: "lin_api_test" })).toEqual({
+      ok: true,
+      header: "lin_api_test",
+    });
+    expect(linearAuthorization({ oauthAccessToken: "tok" })).toEqual({
+      ok: true,
+      header: "Bearer tok",
+    });
+    expect(linearAuthorization({})).toMatchObject({ ok: false });
+  });
+
+  it("upserts by [16-hex] title prefix instead of opening a duplicate", () => {
+    const id = "33c83cbe8ead954b";
+    expect(linearUpsertPlan([], id)).toEqual({ action: "create" });
+    expect(
+      linearUpsertPlan([{ id: "issue-1", title: `[${id}] Steading Yard north blocked` }], id),
+    ).toEqual({ action: "update", issueId: "issue-1" });
+    expect(
+      linearUpsertPlan([{ id: "issue-1", title: `[${id}] title changed after filing` }], id),
+    ).toEqual({ action: "update", issueId: "issue-1" });
+    expect(linearUpsertPlan([{ id: "other", title: "[4806c6f8ade14c0b] room prose" }], id)).toEqual(
+      { action: "create" },
+    );
+  });
+
+  it("pushLinearIssue updates the existing Linear issue when the title prefix matches", async () => {
+    const submission = make({
+      source: "playtest",
+      kind: "bug",
+      priority: "P1",
+      labels: ["lane:content"],
+      title: "Steading Yard north blocked",
+    });
+    const calls: Array<{ query: string; variables: Record<string, unknown> }> = [];
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      const body = JSON.parse(String(init?.body)) as {
+        query: string;
+        variables: Record<string, unknown>;
+      };
+      calls.push(body);
+      const issue = {
+        id: "linear-issue-1",
+        identifier: "MIC-40",
+        url: "https://linear.app/michael-crosato/issue/MIC-40",
+        title: linearIssueTitle(submission.id, submission.title),
+        priority: 2,
+        state: { name: "Todo" },
+        labels: {
+          nodes: [{ name: "intake-mirror" }, { name: "source:playtest" }, { name: "lane:content" }],
+        },
+      };
+      return new Response(JSON.stringify({ data: { issueUpdate: { success: true, issue } } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+    const result = await pushLinearIssue(
+      "lin_api_test",
+      {
+        teamId: "team-1",
+        projectId: "proj-1",
+        labelIds: ["l1", "l2", "l3"],
+        existing: [{ id: "linear-issue-1", title: `[${submission.id}] old wording` }],
+        submission,
+      },
+      fetchImpl,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.action).toBe("updated");
+    expect(result.issue.identifier).toBe("MIC-40");
+    expect(calls[0]!.query).toContain("issueUpdate");
+    expect((calls[0]!.variables as { id: string }).id).toBe("linear-issue-1");
   });
 });

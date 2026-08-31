@@ -23,6 +23,15 @@
     "observations": 22
   },
   "created_at": "2026-08-31T02:14:25.353Z",
-  "updated_at": "2026-08-31T02:14:25.353Z",
-  "external": null
+  "updated_at": "2026-08-31T05:46:56.694Z",
+  "external": null,
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "549e178c-9fcc-498c-bf37-c8e619a0b1eb",
+      "identifier": "MIC-34",
+      "url": "https://linear.app/michael-crosato/issue/MIC-34/c3f6544dbf5cfa5b-store-shed-up-blocked-with-yearling-combat-copy",
+      "synced_status": "open"
+    }
+  ]
 }
