@@ -445,6 +445,25 @@ PLAYTEST_MODELS="codex=gpt-5.6-terra" PLAYTEST_COHORT="codex:8,codex:2"
 Three expensive players total, not thirty. The reference cohort is a calibration
 instrument, not a second opinion.
 
+A worked, verified volume wave (2026-08-31: 100/100 recorded in ~65 minutes at
+~$2 nominal and ~3.5 minutes per player, corpus metrics-eligible went 0 → 80):
+
+```bash
+git worktree add ../zork-wave -b wave/<label> origin/main
+cd ../zork-wave
+PLAYTEST_STORE="C:/dev/zork-unlimited/ai-runs/playtest/sessions" \
+PLAYTEST_COHORT="claude_code:100" \
+PLAYTEST_MODELS="claude_code=claude-sonnet-5" \
+PLAYTEST_CONCURRENCY=10 \
+PLAYTEST_MAX_WAVES=1 \
+./playtest-loop.sh --once
+```
+
+The absolute `PLAYTEST_STORE` pools every worktree's sessions into one corpus
+(content addressing needs no lock), and concurrency 10 kept a consumer
+subscription under its rate limits; `npm run doctor` afterward shows the
+eligibility flip.
+
 ### What each agent is actually for
 
 The orchestrator model in each terminal is a **supervisor, not the fan-out mechanism**.
