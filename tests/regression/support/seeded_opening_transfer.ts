@@ -198,10 +198,21 @@ const WOLF_WINTER_CERTIFICATE: TransferCertificate = {
  * Advancing either hash is an explicit certification review, never an incidental
  * consequence of editing Wolf-Winter or the deterministic relabel oracle.
  */
+// Advanced for bug_0592 after the review this pin demands, not incidentally. The review:
+// the HEAD and post-fix packs were compiled and deep-diffed, and they differ in exactly
+// one node — `rooms[0].exits[0].locked_msg_variants` on the steading_yard north exit, a
+// blocked-message presentation field. No seeded-opening flag, condition, effect, skill
+// check, var, win condition, ending, or enemy differs, and the certificate's own derived
+// surface was already whole against the new pack: it reported the unchanged 22 mechanical
+// and 49 presentation reads with the hash as its ONLY diagnostic. The dependency paths
+// this certificate closes are therefore untouched.
 const CERTIFIED_WOLF_WINTER_PACK_HASH =
-  "a75b266898ff45a388d455ad400c04b678ab3415895e7ff9eb42266278dbae06";
+  "e91d4b8e575a8000e0741d363e8364ec18b6d794cd6cc89d6c380989a92823fa";
+// Advanced for bug_0592 under the same review: the twin is the deterministic relabeling
+// of the pack diffed above, and it likewise reported the unchanged 22 mechanical and 49
+// presentation reads with the hash as its only diagnostic.
 const CERTIFIED_WOLF_WINTER_RELABELED_PACK_HASH =
-  "4eed7f84e133e725c1289784995106826b6530bf6b722cf18315f61e323524c3";
+  "d3701eadc8309c97e6e5a755b19bd8b8aea6eae31aa8f7cfa02f66cd46bcfe86";
 
 const pathText = (path: readonly PathPart[]): string =>
   path

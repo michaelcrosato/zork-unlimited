@@ -859,7 +859,16 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
         });
       });
       const replay = replayTrace(trace, rules);
-      const d = diagnose(rules, trace.initial_state, trace.actions);
+      // `diagnose` defaults to "any ending wins", so without this predicate a run that
+      // ended on a DEATH ending is summarized as `no_failure` (low) and the debugger's
+      // one high-severity ending verdict, `death_unrecoverable`, can never be reached
+      // from this surface. The pack already knows: EndingSchema carries `death`. This
+      // mirrors bin/inspect.ts, which is the same tool over the same traces; the two
+      // disagreeing about whether a death run failed is worse than either answer.
+      const d = diagnose(rules, trace.initial_state, trace.actions, {
+        isWinningEnding: (endingId) =>
+          index.pack.endings.find((e) => e.id === endingId)?.death !== true,
+      });
       const compactSummary = args.compact_summary !== false;
       return {
         ok: true,

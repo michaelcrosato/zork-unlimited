@@ -84,6 +84,11 @@ const CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH =
   "99afa4a376f7c18a6871a784473d375773661032000cabe7171bfbe1742755fa";
 const CLEAR_PROSE_REWRITE_SOURCE_HASH =
   "a75b266898ff45a388d455ad400c04b678ab3415895e7ff9eb42266278dbae06";
+// bug_0592: the steading_yard north exit gained locked_msg_variants so a one-road player
+// is no longer told both approach routes are selected. New current revision; the outgoing
+// hash above joins the distinctness list below.
+const APPROACH_BLOCK_NAMES_ROAD_SOURCE_HASH =
+  "e91d4b8e575a8000e0741d363e8364ec18b6d794cd6cc89d6c380989a92823fa";
 const CADE_PEER_PLAN_PARITY_SOURCE_HASH =
   "08ddb7ce41d319fa34db896ba032cbf69edcf0b0d2a5fd413c457b28091be777";
 const YEARLING_DEFEAT_JOURNAL = "The yearling wolf is dead at the Broken Paling.";
@@ -561,7 +566,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(CLEAR_PROSE_REWRITE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(APPROACH_BLOCK_NAMES_ROAD_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(CLEAR_PROSE_REWRITE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(CADE_PEER_PLAN_PARITY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(OPENING_CLARITY_SOURCE_HASH);

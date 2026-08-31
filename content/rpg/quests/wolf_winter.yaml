@@ -221,7 +221,27 @@ rooms:
               - all_of:
                   - { not_flag: approach_exposed_ridge }
                   - { not_flag: approach_sheltered_stockway }
+        # The base text describes the both-flags fail-closed state ONLY. Once the two
+        # single-approach variants below match, that malformed-save case is the sole
+        # blocked state the base can still reach, so its "both routes" clause is finally
+        # true wherever it is shown. Without the variants the base fired on the ordinary
+        # one-road path and named a condition that was never true there: the launch
+        # selects at most one road, so a player who took the ridge OR the stockway was
+        # told both were selected. That was the loudest cluster of the grok-4.6 MCP wave
+        # (63 bugs[] rows across 82 completed interviews). The exit is still correctly
+        # locked in that state — the last mile is walked with DESCEND/FOLLOW, not "north" —
+        # so the fix is to name the road the player actually holds and the verb that walks
+        # it, not to unlock the exit.
         locked_msg: "Choose the single approach named by Hayden's dispatch. You cannot descend while both approach routes are selected."
+        locked_msg_variants:
+          - when:
+              - { has_flag: approach_exposed_ridge }
+              - { not_flag: approach_sheltered_stockway }
+            text: "Hayden's dispatch named the exposed ridge. DESCEND exposed ridge last mile to walk it down to the byre-yard."
+          - when:
+              - { has_flag: approach_sheltered_stockway }
+              - { not_flag: approach_exposed_ridge }
+            text: "Hayden's dispatch named the sheltered stockway. FOLLOW sheltered stockway last mile to walk it down to the byre-yard."
 
   - id: byre_yard
     name: "The Byre-Yard"

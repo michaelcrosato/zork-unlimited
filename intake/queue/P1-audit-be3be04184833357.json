@@ -6,7 +6,9 @@
   "source": "audit",
   "kind": "bug",
   "priority": "P1",
-  "status": "open",
+  "status": "done",
+  "claimed_by": "claude-code_2-1-247_agent",
+  "claimed_at": "2026-08-31T10:18:35.347Z",
   "labels": [],
   "area": "src/mcp/tools.ts",
   "evidence": {
@@ -16,6 +18,7 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:18:01.344Z",
-  "updated_at": "2026-08-29T07:18:01.344Z",
-  "external": null
+  "updated_at": "2026-08-31T10:58:24.864Z",
+  "external": null,
+  "resolved_by": "claude-code_2-1-247_agent"
 }

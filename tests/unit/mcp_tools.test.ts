@@ -1056,7 +1056,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
     // NPC display-name tuples add a small amount of actionable orientation;
     // the ceiling below remains the real transport budget.
-    expect(compactLaunchBytes).toBe(6_658);
+    // +3 bytes for bug_0592: this launch selects the sheltered stockway, so the blocked
+    // north exit now carries that road's own 117-character message instead of the shared
+    // 114-character "both approach routes" text it used to be told. The exact pin moves
+    // with the deliberate copy fix; the 7,500-byte transport ceiling is untouched.
+    expect(compactLaunchBytes).toBe(6_661);
     expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
     const fieldHandoff = a.step_action({
       session_id: compactStartedQuest.rpg_session_id,

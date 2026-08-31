@@ -6,7 +6,9 @@
   "source": "playtest",
   "kind": "bug",
   "priority": "P1",
-  "status": "open",
+  "status": "done",
+  "claimed_by": "claude-code_2-1-247_agent",
+  "claimed_at": "2026-08-31T09:10:54.868Z",
   "labels": [
     "lane:content"
   ],
@@ -23,7 +25,7 @@
     "observations": 63
   },
   "created_at": "2026-08-31T02:14:24.657Z",
-  "updated_at": "2026-08-31T05:46:55.186Z",
+  "updated_at": "2026-08-31T10:17:31.033Z",
   "external": null,
   "mirrors": [
     {
@@ -33,5 +35,6 @@
       "url": "https://linear.app/michael-crosato/issue/MIC-33/33c83cbe8ead954b-steading-yard-north-blocked-both-approach-routes",
       "synced_status": "open"
     }
-  ]
+  ],
+  "resolved_by": "claude-code_2-1-247_agent"
 }
