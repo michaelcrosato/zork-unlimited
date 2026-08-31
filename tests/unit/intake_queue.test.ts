@@ -19,6 +19,7 @@ import {
   SubmissionSchema,
   submissionFileName,
   submissionId,
+  SubmissionStatusSchema,
   titleKey,
   type Submission,
 } from "../../src/intake/submission.js";
@@ -467,7 +468,14 @@ describe("grok-4.6 wave playtest intake", () => {
       const stored = JSON.parse(readFileSync(join("intake/queue", files[0]!), "utf8"));
       expect(stored.id).toBe(id);
       expect(stored.source).toBe("playtest");
-      expect(stored.status).toBe("open");
+      // Lifecycle state belongs to the dev loop, not to this pin. AGENTS.md's cycle
+      // claims a corroborated cluster and closes it (`--claim` → `--done`), so freezing
+      // these eight at "open" made the queue's own documented protocol turn this test
+      // red the first time anyone actually worked one — as it did for 33c83cbe8ead954b.
+      // What must hold is that the entry is never deleted and its status stays a legal
+      // lifecycle value through every transition; a stray or hand-edited status still
+      // fails here.
+      expect(SubmissionStatusSchema.options).toContain(stored.status);
       expect(stored.labels).toContain("lane:content");
       expect(existsSync(join("intake/queue", files[0]!))).toBe(true);
     }

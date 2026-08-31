@@ -21,8 +21,13 @@ import { replayTrace } from "../../src/trace/replay.js";
 import { GameSession } from "../../ui/src/engine.js";
 
 const SOURCE_PATH = "content/rpg/quests/wolf_winter.yaml";
-const PREDECESSOR_SOURCE_HASH = "8981df5bb46a5173e1dcc43b4560f07042e4e9a338e885433a68089fec328038";
-const SOURCE_HASH = "a75b266898ff45a388d455ad400c04b678ab3415895e7ff9eb42266278dbae06";
+// Rolled forward for bug_0592, which added `locked_msg_variants` to the steading_yard
+// north exit so a one-road player is no longer told both approach routes are selected.
+// That is a deliberate content change, so the drift pin moves with it and the outgoing
+// hash becomes the predecessor — the mismatch fixture below is now the immediately
+// preceding real pack, which is a stronger witness than an arbitrary stale digest.
+const PREDECESSOR_SOURCE_HASH = "a75b266898ff45a388d455ad400c04b678ab3415895e7ff9eb42266278dbae06";
+const SOURCE_HASH = "e91d4b8e575a8000e0741d363e8364ec18b6d794cd6cc89d6c380989a92823fa";
 const PALING_NORTH_GUIDANCE =
   "North is blocked. Complete the currently listed yearling or outer-seal action. During LURE, go south, west, and up, then CAST Cade's winter-feed sack THROUGH low wolf-hatch.";
 const loaded = loadRpgSourceFile(SOURCE_PATH);

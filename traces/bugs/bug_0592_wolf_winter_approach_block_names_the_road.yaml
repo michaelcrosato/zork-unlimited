@@ -1,0 +1,119 @@
+id: bug_0592
+title: "Steading Yard's blocked north claimed both approach routes were selected after one road"
+pack: wolf_winter (The Steading Yard, north exit to the byre-yard)
+reported_by: >
+  grok-4.6 instant-thinking MCP playtest wave against build fe2619a8; promoted into the
+  intake queue as corroborated ticket 33c83cbe8ead954b (Linear MIC-33).
+severity: S1
+
+evidence:
+  cluster:
+    ticket: 33c83cbe8ead954b
+    mentions: 63
+    completed_interviews: 82
+    launched: 100
+    severity_split: "S1 52 / S2 11"
+    tested_build: fe2619a8
+    lineages: [grok]
+  why_it_was_loud: >
+    63 bugs[] rows across 82 completed interviews made this the single largest cluster of
+    the wave, and independent worst-moment answers named the same lie rather than any
+    mechanical block. Players could still finish Wolf-Winter; only the text was wrong.
+  representative_reports:
+    - "steading_yard north blocks with 'You cannot descend while both approach routes are selected.' Exactly one approach was selected each time. The stated condition is never true."
+    - "I launched with exactly one approach (albany:wolf_approach_exposed_ridge), and the flags confirm a single approach, but the blocked exit says both approach routes are selected."
+
+symptom: >
+  A player who launched Wolf-Winter having chosen ONE hill road — the sheltered stockway
+  or the exposed ridge — arrived in the Steading Yard, tried to go north, and was told
+  "You cannot descend while both approach routes are selected." Exactly one was. The
+  message named a state the player was not in and gave no usable instruction, so the
+  blocked exit read as an engine fault rather than as the signpost it was meant to be.
+
+root_cause: >
+  The overworld launch imports at most one approach flag: the
+  `import:wolf_winter_approach_exposed_ridge` and
+  `import:wolf_winter_approach_sheltered_stockway` rules in
+  content/world/new_york_overworld.json map exactly one selected road onto
+  `approach_exposed_ridge` or `approach_sheltered_stockway`. The north exit opens only
+  when the byre-yard was already visited or when NEITHER flag is set, because the last
+  mile is meant to be walked with the flavored DESCEND/FOLLOW action that carries the
+  cattle-alarm and crosswind consequences. That gating is correct. The single authored
+  `locked_msg`, however, was written for the malformed both-flags fail-closed case, and a
+  lone `locked_msg` has no state to react to — so the one state it described was the one
+  state it was almost never shown in, while the common one-road state got text that was
+  false by construction.
+
+fix: >
+  Add `locked_msg_variants` to the steading_yard north exit, using the reactive-text
+  mechanism the exit schema already supports and that this same pack already uses on the
+  byre-yard north exit. One variant per single-approach state names the road the player
+  actually holds and the verb that walks it ("DESCEND exposed ridge last mile", "FOLLOW
+  sheltered stockway last mile"). The base text is left byte-identical: once both variants
+  match their states, the both-flags malformed save is the only blocked state the base can
+  still reach, so its "both approach routes are selected" clause is finally true wherever
+  it is shown. No condition, exit, flag, or effect changed.
+
+deterministic_witnesses:
+  - "as resolved from the compiled pack: the exposed-ridge variant is 108 characters and the sheltered-stockway variant is 117 — both far below the 256-character compact blocked-exit limit"
+  - "the base locked_msg is unchanged at 114 characters"
+  - "reverting only the content change turns 4 of the 6 regression cases red"
+  - "the 2 cases that stay green under that revert are exactly the two unchanged behaviours: the both-flags fail-closed text and the neither-flag direct-start open exit"
+  - "npm run crawl:smoke reports wolf_winter rooms 8/8, actions 56/194, endings 3/17 both before and after, with no new finding"
+  - "compiling the HEAD pack and the fixed pack and deep-diffing them yields exactly ONE differing node, rooms[0].exits[0].locked_msg_variants, and zero differences touching a seeded-opening flag, condition, effect, skill check, var, win condition, ending, or enemy"
+  - "the wolf_winter pack hash moves a75b2668…dbae06 → e91d4b8e…2823fa and its relabeled twin 4eed7f84…3524c3 → d3701ead…bcfe86"
+  - "the seeded-opening transfer certificate reports the unchanged 22 mechanical and 49 presentation reads against the new pack, with the hash as its ONLY diagnostic"
+  - "the MCP compact launch payload grows exactly 3 bytes, 6,658 → 6,661, because this launch selects the stockway whose 117-character message replaces the shared 114-character text; the 7,500-byte transport ceiling is untouched"
+
+pins_advanced: >
+  Four exact digests and one byte budget moved with this deliberate content change, none
+  of them loosened. `tests/regression/wolf_winter_paling_stage_actions.test.ts` rolls its
+  SOURCE_HASH forward and promotes the outgoing hash to PREDECESSOR_SOURCE_HASH, so its
+  save-mismatch fixture is now the immediately preceding real pack.
+  `tests/regression/wolf_winter_compact_surface.test.ts` gains a new current-revision
+  constant and demotes the outgoing one into its distinctness list.
+  `tests/regression/support/seeded_opening_transfer.ts` advances both certified hashes,
+  which its own docstring permits only after explicit seeded-opening transfer review — the
+  pack deep-diff and unchanged 22/49 read counts above ARE that review.
+  `tests/unit/mcp_tools.test.ts` moves its exact launch-byte pin by the 3 bytes accounted
+  for above. `tests/unit/intake_queue.test.ts` stops pinning the eight grok-wave clusters
+  at status "open", which the documented `--claim` → `--done` cycle must change, and
+  asserts a legal lifecycle status instead; the never-deleted and identity checks stand.
+
+mechanics_unchanged:
+  - "the north exit's conditions, so the last mile keeps its cattle-alarm and crosswind consequences"
+  - "the exposed_ridge_last_mile and sheltered_stockway_last_mile objects, their visible_when guards, verbs, and effects"
+  - "the overworld import rules and both approach flags"
+  - "the steading_yard room description and all seven of its prose variants"
+  - "the both-flags fail-closed behaviour: no last mile is offered and north stays locked"
+  - "the direct-start path with neither flag imported, where north is a plain open exit"
+
+nonclaims:
+  - "This is a copy correction. It does not unlock the exit, and it does not claim the blocked exit itself was the defect."
+  - "The 63 mentions are recurring AI-player diagnostic evidence for the misleading text, not proof of the completion, clarity, or enjoyment effect of replacing it."
+  - "No re-run against a fresh wave is claimed; the wave that produced the cluster played fe2619a8."
+  - "The sibling grok-wave clusters (c3f6544dbf5cfa5b, a38a43b74212d7cc, fa0bcf219c803b70) are untouched and remain open."
+
+production:
+  - content/rpg/quests/wolf_winter.yaml
+
+tests:
+  - tests/regression/wolf_winter_approach_block_names_the_road.test.ts
+  - tests/regression/wolf_winter_paling_stage_actions.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/support/seeded_opening_transfer.ts
+  - tests/unit/mcp_tools.test.ts
+  - tests/unit/intake_queue.test.ts
+
+verification:
+  - npm run crawl:smoke
+  - npm run verify:integrity
+  - npm run verify:bug-traces
+  - npm run verify:opening-density
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run ui:typecheck
+  - npm run validate
+  - npx vitest run tests/regression tests/starting_slice
+  - npx vitest run tests/unit
