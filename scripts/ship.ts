@@ -35,6 +35,8 @@ const PROTECTED_BRANCH = "main";
  *  until it passes, so this is a wait, not a second opinion. */
 const CHECK_POLL_SECONDS = 20;
 const CHECK_TIMEOUT_SECONDS = 60 * 60;
+/** How long "no checks reported yet" is treated as pending rather than as a failure. */
+const CHECK_STARTUP_GRACE_SECONDS = 5 * 60;
 
 export interface ShipOptions {
   message: string;
@@ -114,18 +116,44 @@ function step(label: string): void {
   console.log(`\n=== ${label} ===`);
 }
 
+/** Both halves of a rename. `src/core/engine.ts -> scripts/engine.ts` moves a file OUT of
+ *  census reach: keeping only the destination sees `scripts/` and picks the fast lane,
+ *  while the engine file it removed is exactly what the proofs read. The NUL-delimited
+ *  porcelain form is also the only one that survives a path containing a space or a
+ *  literal " -> ", which the arrow-splitting version silently mangled. */
+export function parsePorcelainPaths(porcelainZ: string): string[] {
+  const fields = porcelainZ.split("\0").filter((field) => field !== "");
+  const paths: string[] = [];
+  for (let index = 0; index < fields.length; index += 1) {
+    const entry = fields[index]!;
+    if (entry.length < 4) continue;
+    const status = entry.slice(0, 2);
+    paths.push(entry.slice(3));
+    // For a rename or copy, git emits the ORIGINAL path as the very next NUL-separated
+    // field. Consume it here so both sides reach the classifier.
+    if (/[RC]/.test(status)) {
+      const original = fields[index + 1];
+      if (original !== undefined) {
+        paths.push(original);
+        index += 1;
+      }
+    }
+  }
+  return paths;
+}
+
 /** Tracked-and-untracked changed paths, plus anything already committed on this branch
  *  but not yet on main — a resumed ship must weigh its whole diff, not just today's. */
 function changedPaths(branch: string): string[] {
-  const working = git(["status", "--porcelain"])
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => line.slice(3).trim())
-    .map((path) => (path.includes(" -> ") ? path.split(" -> ")[1]! : path));
+  const working = parsePorcelainPaths(
+    execFileSync("git", ["status", "--porcelain=v1", "-z"], { encoding: "utf8" }),
+  );
   let committed: string[] = [];
   if (branch !== PROTECTED_BRANCH) {
     try {
-      committed = git(["diff", "--name-only", `origin/${PROTECTED_BRANCH}...HEAD`])
+      // --no-renames so a rename is reported as the delete AND the add rather than as one
+      // destination path, for the same reason parsePorcelainPaths keeps both sides.
+      committed = git(["diff", "--name-only", "--no-renames", `origin/${PROTECTED_BRANCH}...HEAD`])
         .split("\n")
         .filter((line) => line.trim() !== "");
     } catch {
@@ -135,8 +163,16 @@ function changedPaths(branch: string): string[] {
   return [...new Set([...working, ...committed])];
 }
 
+/** gh reports "no required checks reported" as a plain error, not as pending, and that is
+ *  the normal state for the first seconds after a push while Actions registers the run.
+ *  Failing on it would abandon a perfectly healthy ship at the moment it starts. */
+function noChecksRegisteredYet(output: string): boolean {
+  return /no (required )?checks? reported/i.test(output);
+}
+
 function waitForChecks(branch: string): boolean {
-  const deadline = Date.now() + CHECK_TIMEOUT_SECONDS * 1000;
+  const started = Date.now();
+  const deadline = started + CHECK_TIMEOUT_SECONDS * 1000;
   while (Date.now() < deadline) {
     const result = spawnSync("gh", ["pr", "checks", branch, "--required"], {
       encoding: "utf8",
@@ -146,8 +182,15 @@ function waitForChecks(branch: string): boolean {
     // on a real failure. Treating "pending" as failure would abandon a healthy ship.
     if (result.status === 0) return true;
     if (result.status !== 8) {
-      console.error(output.trim());
-      return false;
+      const startingUp =
+        noChecksRegisteredYet(output) && Date.now() - started < CHECK_STARTUP_GRACE_SECONDS * 1000;
+      if (!startingUp) {
+        console.error(output.trim());
+        return false;
+      }
+      console.log("  …waiting for the required checks to register");
+      sleepSeconds(CHECK_POLL_SECONDS);
+      continue;
     }
     console.log(`  …required checks still running (${new Date().toISOString().slice(11, 19)})`);
     sleepSeconds(CHECK_POLL_SECONDS);
@@ -159,7 +202,11 @@ function waitForChecks(branch: string): boolean {
 function main(): void {
   const options = parseShipArguments(process.argv.slice(2));
 
-  git(["fetch", "origin", PROTECTED_BRANCH]);
+  // A dry run must not contact the remote. Fetching first made the "touch nothing" preview
+  // update git metadata, and fail outright when origin was unreachable — which is exactly
+  // when someone reaches for a preview. changedPaths already falls back cleanly when the
+  // local tracking ref is stale or missing.
+  if (!options.dryRun) git(["fetch", "origin", PROTECTED_BRANCH]);
   const startingBranch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
   const branch =
     startingBranch === PROTECTED_BRANCH
@@ -270,7 +317,15 @@ function main(): void {
     process.exit(1);
   }
   git(["checkout", PROTECTED_BRANCH]);
-  run("git", ["pull", "--ff-only", "origin", PROTECTED_BRANCH]);
+  // The merge already happened remotely, so a failure here is not fatal to the landing —
+  // but reporting success while leaving the operator on stale local main is worse than
+  // saying so. Exit nonzero and name the one command that fixes it.
+  if (!run("git", ["pull", "--ff-only", "origin", PROTECTED_BRANCH])) {
+    console.error(
+      `\nMerged, but refreshing local ${PROTECTED_BRANCH} failed. Your checkout is behind the landing; run: git pull --ff-only origin ${PROTECTED_BRANCH}`,
+    );
+    process.exit(1);
+  }
   console.log(`\nLanded on ${PROTECTED_BRANCH}. Only ${PROTECTED_BRANCH} remains.`);
 }
 

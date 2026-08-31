@@ -61,40 +61,53 @@ export const EXHAUSTIVE_PROOF_FILES: readonly string[] = [
 ];
 
 /**
- * The ONLY source scopes the census proofs can see.
+ * Every scope the census proofs can reach, TRANSITIVELY.
  *
- * Every file in EXHAUSTIVE_PROOF_FILES imports from these and nothing else, which is the
- * entire reason the fast lane is allowed to skip them: a change confined outside these
- * scopes cannot move a census verdict. Turn that around and it becomes the rule the
- * `ship` script enforces — a change that DOES touch one of these is a change the fast
- * lane cannot vouch for, and it has to run the full bar.
+ * This list is the whole basis for the fast lane being allowed to skip those proofs: a
+ * change confined outside these scopes cannot move a census verdict. Turn it around and it
+ * is the rule `ship` enforces — a change that DOES land in one has to run the full bar.
  *
- * `tests/unit/test_lanes.test.ts` re-derives this from the proofs' own import statements,
- * so a proof that grows a new dependency widens this list instead of silently escaping it.
+ * It must be the transitive closure, not the proofs' direct imports. The first version of
+ * this list was written from direct imports alone and missed four scopes reached one hop
+ * further out: `tests/regression/support/exhaustive_endings.ts` is a one-line re-export of
+ * `src/solve/exhaustive_endings.ts`, the solver every one of these proofs runs on, and
+ * editing it would have chosen the fast lane — the lane that does not run them.
+ * `tests/unit/ship.test.ts` now walks the real closure (89 files today) and fails on any
+ * file it finds outside this list, so the list cannot fall behind the imports again.
  */
 export const CENSUS_PROOF_SOURCE_SCOPES: readonly string[] = [
   "content/",
   "src/api/",
   "src/core/",
+  "src/gen/",
+  "src/persist/",
   "src/rpg/",
+  "src/solve/",
+  "src/trace/",
   "src/validate/",
   "src/world/",
   "tests/regression/support/",
   "vitest.config.ts",
 ];
 
-/** True when a changed path lands in something the census proofs read. */
+/**
+ * True when a changed path is something the census proofs read — including a proof file
+ * itself. Editing a proof and then running only the lane that excludes it is the most
+ * direct way to land an unexercised change, and the scope list alone does not catch it:
+ * the proofs live in `tests/regression/`, not in `tests/regression/support/`.
+ */
 export function touchesCensusProofScope(file: string): boolean {
   const normalized = file.split("\\").join("/");
+  if (EXHAUSTIVE_PROOF_FILES.includes(normalized)) return true;
   return CENSUS_PROOF_SOURCE_SCOPES.some((scope) =>
     scope.endsWith("/") ? normalized.startsWith(scope) : normalized === scope,
   );
 }
 
 /**
- * Which bar a changeset has to clear. `full` whenever ANY changed path is in a census
- * scope — the safe direction, since the cost of being wrong the other way is a regression
- * reaching main that only a nightly proof would catch.
+ * Which bar a changeset has to clear. `full` whenever ANY changed path is in census reach —
+ * the safe direction, since being wrong the other way lands a regression on main that only
+ * a nightly proof would catch.
  */
 export function barForChangedFiles(files: readonly string[]): "fast" | "full" {
   return files.some((file) => touchesCensusProofScope(file)) ? "full" : "fast";
