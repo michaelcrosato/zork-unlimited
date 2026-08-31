@@ -25,6 +25,7 @@
 import { readFileSync } from "node:fs";
 import {
   defaultPriority,
+  externalMirrors,
   SubmissionEvidenceSchema,
   SubmissionKindSchema,
   SubmissionPrioritySchema,
@@ -118,8 +119,16 @@ function main(): void {
   console.log(
     `${stored.priority} ${stored.source}/${stored.kind} ${stored.id} — ${stored.title}` +
       `\n  status ${stored.status}; queued in ${dir}` +
-      (stored.external ? `; mirrored as #${stored.external.number}` : "") +
-      `\n  run \`npm run intake:sync\` to mirror it to GitHub Issues`,
+      (externalMirrors(stored).length > 0
+        ? `; mirrored as ${externalMirrors(stored)
+            .map((mirror) =>
+              mirror.provider === "github"
+                ? `GitHub #${mirror.number}`
+                : `Linear ${mirror.identifier}`,
+            )
+            .join(", ")}`
+        : "") +
+      `\n  run \`npm run intake:sync\` or \`npm run intake:sync:linear\` to mirror it`,
   );
 }
 

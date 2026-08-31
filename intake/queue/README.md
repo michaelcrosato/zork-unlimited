@@ -12,6 +12,7 @@ npm run work                     # what to build next
 npm run work -- --list           # the whole open queue
 npm run submit -- --source research --kind feature --title "..." --body "..."
 npm run intake:sync              # mirror to / from GitHub Issues
+npm run intake:sync:linear -- --dry-run  # inspect the AdventureForge Linear mirror
 ```
 
 ## Why it is tracked in git
