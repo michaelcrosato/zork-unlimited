@@ -190,7 +190,10 @@ preflight_cohort() {
 # name. Personas remain available on the structural lanes.
 preflight_personas() {
   local list=() persona blocked=()
-  IFS=',' read -ra list <<< "$PERSONAS"
+  # ${PERSONAS:-default}: the harness in tests/unit/doctor_cli.test.ts runs this
+  # gate section standalone under `set -u` with only COHORT/MOCK defined, and an
+  # unset persona list must mean the safe default, not an unbound-variable abort.
+  IFS=',' read -ra list <<< "${PERSONAS:-default}"
   for persona in "${list[@]}"; do
     [[ -z "$persona" || "$persona" == "default" ]] && continue
     blocked+=("$persona")
