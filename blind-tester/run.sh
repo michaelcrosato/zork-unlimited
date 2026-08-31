@@ -211,6 +211,7 @@ PROVIDER_TRANSPORT_CONTRACT=""
 MODEL=""
 MODEL_TIER=""
 CATALOG_REASONING_EFFORT=""
+CATALOG_CONTEXT_WINDOW=""
 while IFS=$'\t' read -r provider_record_key provider_record_value; do
   case "$provider_record_key" in
     kind)                       PROVIDER_KIND="$provider_record_value" ;;
@@ -231,6 +232,7 @@ while IFS=$'\t' read -r provider_record_key provider_record_value; do
     model)                      MODEL="$provider_record_value" ;;
     model_tier)                 MODEL_TIER="$provider_record_value" ;;
     model_reasoning_effort)     CATALOG_REASONING_EFFORT="$provider_record_value" ;;
+    model_context_window)       CATALOG_CONTEXT_WINDOW="$provider_record_value" ;;
     *) ;;
   esac
 done <<< "$PROVIDER_RECORDS"
@@ -246,6 +248,13 @@ MODEL_REASONING_EFFORT="${REASONING_EFFORT:-${CATALOG_REASONING_EFFORT:-}}"
 if [[ -n "$MODEL_REASONING_EFFORT" && \
       ! "$MODEL_REASONING_EFFORT" =~ ^(minimal|low|medium|high|xhigh|max)$ ]]; then
   echo "--effort must be one of: minimal, low, medium, high, xhigh, max (got \"$MODEL_REASONING_EFFORT\")." >&2
+  exit 2
+fi
+# A catalog may pin the model's advertised context window (long max-effort
+# playthroughs fill the client default and die at the no-compaction rule). The
+# value crosses into provider config, so it must be a plain positive integer.
+if [[ -n "$CATALOG_CONTEXT_WINDOW" && ! "$CATALOG_CONTEXT_WINDOW" =~ ^[1-9][0-9]{0,8}$ ]]; then
+  echo "catalog settings.context_window must be a positive integer (got \"$CATALOG_CONTEXT_WINDOW\")." >&2
   exit 2
 fi
 
@@ -1469,6 +1478,10 @@ else
   CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
   CODEX_TRANSPORT_FEATURE_ARGS=(--enable code_mode_only --disable tool_suggest)
   CODEX_PLAYER_PROFILE_ARGS=()
+  CODEX_CONTEXT_WINDOW_ARGS=()
+  if [[ -n "$CATALOG_CONTEXT_WINDOW" ]]; then
+    CODEX_CONTEXT_WINDOW_ARGS=(--config "model_context_window=$CATALOG_CONTEXT_WINDOW")
+  fi
   if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" || \
         "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ]]; then
     CODEX_TRANSPORT_FEATURE_ARGS=(--disable code_mode_only --disable tool_suggest)
@@ -1551,6 +1564,7 @@ set +e
     --output-last-message "$CODEX_REPORT_ARG" \
     -c 'project_doc_max_bytes=0' \
     --config "model_reasoning_effort=\"${MODEL_REASONING_EFFORT:-xhigh}\"" \
+    "${CODEX_CONTEXT_WINDOW_ARGS[@]}" \
     --config 'features.shell_tool=false' \
     --config 'web_search="disabled"' \
     --config 'approval_policy="never"' \

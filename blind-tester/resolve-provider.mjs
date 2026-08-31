@@ -336,6 +336,13 @@ export function renderRecords(resolved) {
         ? resolved.modelSettings.reasoning_effort
         : null,
     ],
+    [
+      "model_context_window",
+      Number.isSafeInteger(resolved.modelSettings?.context_window) &&
+      resolved.modelSettings.context_window > 0
+        ? String(resolved.modelSettings.context_window)
+        : null,
+    ],
     ["catalog_path", resolved.catalogPath],
     ["transport_contract", resolved.transportContract],
   ];

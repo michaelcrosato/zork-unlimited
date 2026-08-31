@@ -23,8 +23,8 @@
       "id": "gpt-5.6-luna",
       "tier": "reference",
       "default": true,
-      "settings": { "reasoning_effort": "max" },
-      "notes": "The default codex blind player (no --model needed). Runs the strict-code-mode-v2 lane at reasoning effort max; the 0.151.0 models catalog advertises low/medium/high/xhigh/max for this id. Fleet cohorts pin their own effort explicitly and are unaffected by this default."
+      "settings": { "reasoning_effort": "max", "context_window": 872000 },
+      "notes": "The default codex blind player (no --model needed). Runs the strict-code-mode-v2 lane at reasoning effort max; the 0.151.0 models catalog advertises low/medium/high/xhigh/max for this id. context_window pins the model's advertised 872k maximum (verified live: the launch override yields an 828,400-token effective window) because max-effort playthroughs measured ~155 gameplay calls fill the 272k default and die at the deliberate no-compaction rule. Fleet cohorts pin their own effort explicitly and are unaffected by this default."
     }
   ]
 }

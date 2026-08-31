@@ -44,8 +44,24 @@ describe("blind provider catalog defaults", () => {
     expect(records).toContain("model\tgpt-5.6-luna\n");
     expect(records).toContain("model_default\t1\n");
     expect(records).toContain("model_reasoning_effort\tmax\n");
+    expect(records).toContain("model_context_window\t872000\n");
     const geminiRecords = renderRecords(resolveProvider("gemini_cli", undefined));
     expect(geminiRecords).not.toContain("model_reasoning_effort");
+    expect(geminiRecords).not.toContain("model_context_window");
+  });
+
+  it("wires the resolved effort and context-window records into the runner", () => {
+    const runner = readFileSync(join(REPO_ROOT, "blind-tester", "run.sh"), "utf8");
+    expect(runner).toContain("model_reasoning_effort)     CATALOG_REASONING_EFFORT=");
+    expect(runner).toContain("model_context_window)       CATALOG_CONTEXT_WINDOW=");
+    expect(runner).toContain(
+      '--config "model_reasoning_effort=\\"${MODEL_REASONING_EFFORT:-xhigh}\\""',
+    );
+    expect(runner).toContain(
+      'CODEX_CONTEXT_WINDOW_ARGS=(--config "model_context_window=$CATALOG_CONTEXT_WINDOW")',
+    );
+    expect(runner).toContain('--expected-effort "${MODEL_REASONING_EFFORT:-xhigh}"');
+    expect(runner).toContain('CLAUDE_LAUNCH_ARGS+=(--effort "$MODEL_REASONING_EFFORT")');
   });
 
   it("parses every shipped catalog with at most one typed default", () => {
