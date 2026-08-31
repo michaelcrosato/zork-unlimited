@@ -57,8 +57,10 @@ CLIENT_AUTHORITY_JSON=0                           # fleet-only machine-readable 
 POSITIONAL=()
 
 # `npm run blind` invokes this script with a non-login Bash, so per-user CLI install
-# dirs such as ~/.local/bin may be missing even when an interactive shell can see them.
-for dir in "$HOME/.local/bin" "$HOME/bin"; do
+# dirs such as ~/.local/bin (claude) and the Windows npm global prefix (codex,
+# gemini) may be missing even when an interactive shell can see them. This is the
+# recurring "vendor CLI not on PATH" first-run stumble; BLIND_*_BIN still wins.
+for dir in "$HOME/.local/bin" "$HOME/bin" "$HOME/AppData/Roaming/npm"; do
   if [[ -d "$dir" ]]; then
     PATH="$dir:$PATH"
   fi

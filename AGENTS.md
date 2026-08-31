@@ -211,5 +211,14 @@ deliberately NOT part of `health`.
   the charter is. (Enabling `enforce_admins` would make the two agree, at the cost
   of removing the owner's manual override.) Keep every landing green — the bar is
   `npm run health`.
+- **One agent, one checkout.** Two agents sharing a working directory will
+  eventually switch branches or reset the tree under each other mid-task (it has
+  happened). Interactive sessions follow the same rule the loops already
+  enforce: take your own worktree off `origin/main`
+  (`git worktree add ../zork-<lane> -b <lane> origin/main`) unless you are the
+  only writer in the checkout. See `docs/parallel_lanes.md`.
+- A local branch that outlives its merged PR may hold content the squash never
+  landed (#309 did). Before deleting or ignoring one, check
+  `git diff origin/main <branch>` — an empty diff is the only proof it is dead.
 - Never print or commit secrets. Use local env files only when a task explicitly needs
   credentials.

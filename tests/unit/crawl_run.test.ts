@@ -412,7 +412,11 @@ describe("runPlanInProcess seconds-budget truncation", () => {
     return { ...preparePack(generateRpgPack(3)), questId };
   }
 
-  const budgetedOpts = (seeds: number[], secondsBudget?: number): CrawlRunOptions => ({
+  const budgetedOpts = (
+    seeds: number[],
+    secondsBudget?: number,
+    now?: () => number,
+  ): CrawlRunOptions => ({
     root: process.cwd(),
     policy: "mixed",
     commit: "test",
@@ -426,19 +430,27 @@ describe("runPlanInProcess seconds-budget truncation", () => {
     workers: 1,
     prepareQuest: injectedPrepareQuest,
     ...(secondsBudget !== undefined ? { secondsBudget } : {}),
+    ...(now !== undefined ? { now } : {}),
   });
 
+  /** A deterministic clock: one scripted reading per `now()` call, holding the
+   *  last value forever. Kills the old race where a real 50ms budget bet that
+   *  the first crawl was slower than 50ms — true on a loaded machine, false on
+   *  an idle one. */
+  const scriptedClock = (ticks: number[]): (() => number) => {
+    let call = 0;
+    return () => ticks[Math.min(call++, ticks.length - 1)]!;
+  };
+
   it("still reports a zero-coverage row for a quest the budget skipped", () => {
-    // `secondsBudget` is a plain number on CrawlRunOptions (the CLI parses whole
-    // seconds, but a direct caller is not bound to that), so a fractional budget
-    // expires during the first item's own crawl without the test burning real wall
-    // time. 150 steps of a generated pack takes an order of magnitude longer than
-    // 50ms, so the second item is always the one that trips the check.
+    // The scripted clock reads 0 at wallStart, 10 at quest A's pre-check (under
+    // the 50ms deadline, so A runs), and 60 at quest B's pre-check (over it, so
+    // B is skipped) — the truncation path is forced, not raced.
     const items: CrawlPlanItem[] = [
       { kind: "quest", questId: QUEST_A, seeds: [11], stepsPerSeed: 150 },
       { kind: "quest", questId: QUEST_B, seeds: [11], stepsPerSeed: 150 },
     ];
-    const summary = runPlanInProcess(items, budgetedOpts([11], 0.05));
+    const summary = runPlanInProcess(items, budgetedOpts([11], 0.05, scriptedClock([0, 10, 60])));
 
     expect(summary.truncated).toBe(true);
     expect(summary.skippedItems).toEqual([`quest:${QUEST_B}`]);
@@ -466,7 +478,7 @@ describe("runPlanInProcess seconds-budget truncation", () => {
         { kind: "quest", questId: QUEST_A, seeds: [11], stepsPerSeed: 150 },
         { kind: "quest", questId: QUEST_B, seeds: [11], stepsPerSeed: 150 },
       ],
-      budgetedOpts([11], 0.05),
+      budgetedOpts([11], 0.05, scriptedClock([0, 10, 60])),
     );
     const fullShard = runPlanInProcess(
       [{ kind: "quest", questId: QUEST_B, seeds: [12], stepsPerSeed: 150 }],

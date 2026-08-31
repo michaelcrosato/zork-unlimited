@@ -71,6 +71,17 @@ export type CrawlRunOptions = {
    *  process's `opts.prepareQuest` was set to. Never set this from
    *  `bin/crawl.ts` or `parseCrawlArgs`; it exists purely for tests. */
   prepareQuest?: (root: string, questId: string) => PreparedQuest;
+  /** Test-only dependency-injection seam: the clock `runPlanInProcess` reads
+   *  for the soft `secondsBudget` cutoff, defaulting to `Date.now`. The two
+   *  budget-truncation regressions used to race a real 50ms budget against how
+   *  fast the first crawl happened to run — green on a loaded machine, red on
+   *  an idle one — so they script this clock instead and the skip path is
+   *  forced deterministically. IN-PROCESS ONLY, exactly like `prepareQuest`
+   *  above: `workerCloneableOptions` strips it before `workerData`'s
+   *  structured clone (which throws on functions), so worker shards always
+   *  keep the real wall clock. Never set this from `bin/crawl.ts` or
+   *  `parseCrawlArgs`; it exists purely for tests. */
+  now?: () => number;
 };
 
 export type QuestCoverageSummary = {
@@ -499,7 +510,8 @@ function runOverworldItem(
 
 /** Run a plan single-process (worker fan-out lands in Task 10). */
 export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions): CrawlRunSummary {
-  const wallStart = Date.now();
+  const now = opts.now ?? Date.now;
+  const wallStart = now();
   const deadline =
     opts.secondsBudget !== undefined && opts.secondsBudget > 0
       ? wallStart + opts.secondsBudget * 1000
@@ -557,7 +569,7 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
   for (const item of items) {
     // Soft wall-clock cutoff: checked BETWEEN plan items only, never mid-quest —
     // a (quest,seed) episode always finishes once started.
-    if (deadline !== null && Date.now() >= deadline) {
+    if (deadline !== null && now() >= deadline) {
       truncated = true;
       skippedItems.push(describePlanItem(item));
       if (item.kind === "quest") recordSkippedQuest(item);
@@ -609,7 +621,7 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
 
   const { findings, countsByCode } = finalizeFindings(allFindings);
 
-  const wallMs = Date.now() - wallStart;
+  const wallMs = now() - wallStart;
   const stepsPerSec = wallMs > 0 ? (totalSteps / wallMs) * 1000 : totalSteps;
 
   return {
@@ -791,8 +803,8 @@ export function mergeSummaries(
  */
 export function workerCloneableOptions(
   opts: CrawlRunOptions,
-): Omit<CrawlRunOptions, "prepareQuest"> {
-  const { prepareQuest: _inProcessOnly, ...cloneable } = opts;
+): Omit<CrawlRunOptions, "prepareQuest" | "now"> {
+  const { prepareQuest: _inProcessOnly, now: _testClockOnly, ...cloneable } = opts;
   return cloneable;
 }
 

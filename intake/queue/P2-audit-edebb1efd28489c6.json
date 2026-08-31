@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "edebb1efd28489c6",
+  "title": "Migrate spark/terra direct-MCP contracts to codex 0.15x (or formalize the pinned 0.146 client)",
+  "body": "The direct-MCP transports (spark-direct-mcp-v1, game-direct-mcp-v1) require exactly codex-cli 0.146.0; the installed client auto-updated to 0.151.0, so those lanes and the spark volume fleet refuse at preflight unless BLIND_CODEX_BIN points at a kept 0.146.0 binary (one is now installed at ~/.adventureforge-tools/codex-0146/node_modules/.bin/codex, verified codex-cli 0.146.0). Either migrate the direct contracts to the 0.15x rollout dialect the strict lane now speaks (evidence-first: probe, capture real rows, extend profiles — see the item-lifecycle dialect and luna_v1_current profile in blind-tester/codex-pure-envelope.mjs for the pattern), or formalize the pinned client as the permanent direct-lane runtime. Also unprobed: gpt-5.6-sol (multi-agent v2) on 0.15x fails closed until someone captures one real sol rollout.",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": null,
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [
+      "blind-tester/codex-pure-envelope.mjs",
+      "docs/blind_playtest_protocol.md"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-08-31T06:52:49.101Z",
+  "updated_at": "2026-08-31T06:52:49.101Z",
+  "external": null
+}
