@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "73d01a3a9b0c6538",
+  "title": "Spark 100-player fleet produced only 2 verified sessions at concurrency 4",
+  "body": "A live pure Spark fleet was run from clean build `f7753cd0e775a5888739fefd3c9194b55e41f335` with 100 fresh overworld seeds (`9200`–`9299`), `--no-resume`, `--max-retries 0`, and concurrency 4. The exact Codex CLI was `0.146.0`, and the required three-player Spark admission canary passed 3/3 at concurrency 1.\n\nThe 100-player wave produced only 2 evidence-verified sessions (seeds `9200` and `9207`) and 98 failed slots. Of the failures, 96 were exit 43 `strict stream rejected`; seeds `9201` and `9202` were exit 5 malformed reports missing the required Bugs/design-flaws section. There were no technical timeouts, retries, or build-drift failures. Only 2% of the requested cohort yielded usable gameplay evidence.\n\nThis is not a game finding: both valid sessions completed Wolf-Winter, rated clarity and enjoyment 4/5, and reported no bugs. It is a fleet reliability finding that prevents a volume cohort from producing trustworthy evidence. Investigate whether concurrency-4 transport/client behavior or Spark output handling causes the strict-stream rejects, preserve a bounded rejection reason per slot, and add a small regression/control proving the mass-fleet lane can sustain verified sessions before spending another 100-player cohort.\n\nEvidence: fleet `spark-100-20260830`, summary and manifest in the referenced ignored artifacts; admission receipt `spark-admission-20260830`.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [],
+  "area": "blind-tester/fleet.mjs",
+  "evidence": {
+    "summary": "100 Spark players yielded 2 verified and 98 failed slots; 96 strict-stream rejects and 2 malformed interviews",
+    "refs": [
+      "blind-tester/fleet.mjs",
+      "blind-tester/codex-strict-stream.mjs",
+      "ai-runs/fleet/spark-100-20260830/summary.json",
+      "ai-runs/fleet/spark-100-20260830/manifest.jsonl",
+      "ai-runs/fleet/spark-admission-20260830/admission.json"
+    ],
+    "lineages": [
+      "codex-spark"
+    ],
+    "observations": 98
+  },
+  "created_at": "2026-08-31T08:08:13.692Z",
+  "updated_at": "2026-08-31T08:08:13.692Z",
+  "external": null
+}
