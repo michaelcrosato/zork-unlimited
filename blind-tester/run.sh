@@ -1479,11 +1479,14 @@ else
   CODEX_STARTED_AT_MS="$("$NODE_CMD" -e 'process.stdout.write(String(Date.now()))')"
   CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
   CODEX_TRANSPORT_FEATURE_ARGS=(--enable code_mode_only --disable tool_suggest)
-  CODEX_PLAYER_PROFILE_ARGS=()
+  # Placed BEFORE the spark/terra profile block: the config-contract regression
+  # slices run.sh from the profile-args initializer to the next `fi` and reads
+  # that span as the direct-profile source, so nothing may sit inside it.
   CODEX_CONTEXT_WINDOW_ARGS=()
   if [[ -n "$CATALOG_CONTEXT_WINDOW" ]]; then
     CODEX_CONTEXT_WINDOW_ARGS=(--config "model_context_window=$CATALOG_CONTEXT_WINDOW")
   fi
+  CODEX_PLAYER_PROFILE_ARGS=()
   if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" || \
         "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ]]; then
     CODEX_TRANSPORT_FEATURE_ARGS=(--disable code_mode_only --disable tool_suggest)
