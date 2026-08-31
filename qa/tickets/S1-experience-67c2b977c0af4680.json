@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "67c2b977c0af4680",
+  "title": "Distinguishing inspect vs choose story actions took initial care @ Distinguishing inspect vs choose story actions took initial care",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Distinguishing inspect vs choose story actions took initial care",
+  "excerpts": [
+    "Distinguishing inspect vs choose story actions took initial care"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "9fc5a35bdc94d4db626cb00c137a2b1a6e75752ec751b0c4554f9824c485a999"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:33:22.286Z",
+    "last_seen_at": "2026-08-31T09:33:22.286Z"
+  },
+  "priority": 2
+}

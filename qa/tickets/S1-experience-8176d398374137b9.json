@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "8176d398374137b9",
+  "title": "Distinguishing review-only dialogue options from commit options in the… @ Distinguishing review-only dialogue options from commit options in the plan-choice menus took a moment",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Distinguishing review-only dialogue options from commit options in the plan-choice menus took a moment",
+  "excerpts": [
+    "Distinguishing review-only dialogue options from commit options in the plan-choice menus took a moment"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "5037c28a1df95a7c50ea9287f9f7ccf8a7d2dea6e95e77a812fdcc01e3a78077"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:55:08.457Z",
+    "last_seen_at": "2026-08-31T09:55:08.457Z"
+  },
+  "priority": 2
+}

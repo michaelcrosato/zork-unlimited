@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "ticket_id": "d8a6327f96992dbc",
+  "title": "Advertised easier DC 10 never appeared; DC 12 fail with no retry… @ paling_gap",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "paling_gap",
+  "excerpts": [
+    "Advertised easier DC 10 never appeared; DC 12 fail with no retry immediately raised cattle alarm by 2.",
+    "The calm/unseen approach hides the DC 10 crosswind and leaves a no-retry DC 12 Fieldcraft check.",
+    "Calmer stockway hides DC 10 and forces a no-retry DC 12 that immediately spikes cattle alarm.",
+    "Sheltered approach conceals the DC 10 crosswind; failed DC 12 is unretryable and drives cattle-loss ending."
+  ],
+  "evidence": {
+    "report_count": 4,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "07d9fef0608a42b09e0bdcff8134a3cb71ac293bf4084c970dca55b3bc6030ea",
+      "552bb45331836c2fcdd55acb8943c0ae07e60ab3e71ec7f62e3d40ce0ae69c19",
+      "5bae0534f00e71fc448227de25a392679c1b1c8da4a98a01d55a403c09b32681",
+      "99a26435f6e0b3d1909633259eb35ef7cb0b61effe87e7d17f5eb310e712e039"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.935Z",
+    "last_seen_at": "2026-08-31T01:10:41.260Z"
+  },
+  "priority": 19.931568569324174
+}

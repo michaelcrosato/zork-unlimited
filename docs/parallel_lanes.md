@@ -87,7 +87,7 @@ These are last-writer-wins or conflict-prone surfaces. One owner each:
 ## Landing protocol
 
 1. Lane finishes; its branch is green on the granular gates it touched.
-2. Full `npm run health` on the lane branch (the bar — ~50 min; budget it).
+2. Full `npm run health` on the lane branch (the bar — 33-40 min; budget it).
 3. **Independent review by an agent that didn't write the change** — proven
    necessary: a 552-cycle AFK branch once passed every gate with two major
    semantic bugs still in it (gate-green ≠ review-clean; see PR #84 history).

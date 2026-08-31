@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "a54bc0991491358d",
+  "title": "Text insists first LURE is Fieldcraft DC 12 and hedges do not skip it;… @ Steading Yard / Byre-Yard field condition vs sheltered stockway copy",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Steading Yard / Byre-Yard field condition vs sheltered stockway copy",
+  "excerpts": [
+    "Text insists first LURE is Fieldcraft DC 12 and hedges do not skip it; steady scent channel then auto-succeeds LAY."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "6bfe00e38d802bb0872f34f2c959d14766e6a31292911140d9b3d23a2c975e77"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:09:57.213Z",
+    "last_seen_at": "2026-08-31T01:09:57.213Z"
+  },
+  "priority": 12
+}

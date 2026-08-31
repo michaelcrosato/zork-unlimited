@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "d230301476223863",
+  "title": "Aid-Only last-feed skip vs actual cattle-alarm rise @ Aid-Only last-feed skip vs actual cattle-alarm rise",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Aid-Only last-feed skip vs actual cattle-alarm rise",
+  "excerpts": [
+    "Aid-Only last-feed skip vs actual cattle-alarm rise"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "37788292e3e77408efdde0d7750d3751c222969abfc643ad8f97c45de70dfbed"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:08.272Z",
+    "last_seen_at": "2026-08-31T01:10:08.272Z"
+  },
+  "priority": 6
+}

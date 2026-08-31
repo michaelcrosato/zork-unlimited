@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "8299ebdd6e0e47c9",
+  "title": "Exposed Ridge approach text implied fodder relief would prevent cattle… @ Exposed Ridge approach text implied fodder relief would prevent cattle alarm immediately on descent, but the suppression only applied at the final LURE feed cast",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Exposed Ridge approach text implied fodder relief would prevent cattle alarm immediately on descent, but the suppression only applied at the final LURE feed cast",
+  "excerpts": [
+    "Exposed Ridge approach text implied fodder relief would prevent cattle alarm immediately on descent, but the suppression only applied at the final LURE feed cast"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "e0ff5bd01c6c10f48eb3e2e7e2a35d6d26fa55e502a95ccc819c4bb41dbaad0a"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:35:43.793Z",
+    "last_seen_at": "2026-08-31T09:35:43.793Z"
+  },
+  "priority": 2
+}

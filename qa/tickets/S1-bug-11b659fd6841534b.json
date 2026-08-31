@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "ticket_id": "11b659fd6841534b",
+  "title": "Hayden frost-jammed BRACE fallen paling-rail never appeared as an… @ byre_yard",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "Hayden frost-jammed BRACE fallen paling-rail never appeared as an action despite room copy.",
+    "Firm frozen rail permanently cancels the frost-jammed door-brace the certified report advertised.",
+    "Hayden frost-jam door-brace advertised then made unavailable by firm frozen rail."
+  ],
+  "evidence": {
+    "report_count": 3,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "04d2beb9019f51e095ac9e02745ed1b2a441b454c06b8a0474f4c5542579298e",
+      "432097e0d28f2c64b2c98d09c74bb9c58f6cfab7cb2b82168522b67397128207",
+      "9efefa25550cc2d2741291c6ce96d5becd783ca4e2488d64fe3c985858b9bfbf"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:09:42.945Z",
+    "last_seen_at": "2026-08-31T01:11:37.780Z"
+  },
+  "priority": 9
+}

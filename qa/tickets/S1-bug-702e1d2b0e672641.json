@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "702e1d2b0e672641",
+  "title": "Background text claims 'Defense starts at 4 instead of 3' but the… @ wolf_winter",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "wolf_winter",
+  "excerpts": [
+    "Background text claims 'Defense starts at 4 instead of 3' but the quest's actual starting defense value was 2 before gear was equipped."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "1b82a3b3ec2c16e2065d1a11662943b6ccee7bba8ddd8dcc8b35e5345b98b474"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:55:15.763Z",
+    "last_seen_at": "2026-08-31T09:55:15.763Z"
+  },
+  "priority": 2
+}

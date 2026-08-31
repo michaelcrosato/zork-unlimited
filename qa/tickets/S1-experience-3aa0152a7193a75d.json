@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "3aa0152a7193a75d",
+  "title": "Station dispatch board reveal mechanism took extra calls to surface… @ Station dispatch board reveal mechanism took extra calls to surface fully",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Station dispatch board reveal mechanism took extra calls to surface fully",
+  "excerpts": [
+    "Station dispatch board reveal mechanism took extra calls to surface fully"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "7ff0d67c44c184ca7afb456cc5293096a1f20240fbeed7159556e4392a2851a4"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:30:50.618Z",
+    "last_seen_at": "2026-08-31T09:30:50.618Z"
+  },
+  "priority": 2
+}

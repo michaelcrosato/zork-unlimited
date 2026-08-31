@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "36b25031fb65535b",
+  "title": "Cattle-alarm fodder bonus text vs. @ Cattle-alarm fodder bonus text vs. actual application was unclear",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Cattle-alarm fodder bonus text vs. actual application was unclear",
+  "excerpts": [
+    "Cattle-alarm fodder bonus text vs. actual application was unclear"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "68d6956703ee37cc27f36557af9718afb06e236bcabeff8d91fb292d1ed0c4d9"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:26:31.889Z",
+    "last_seen_at": "2026-08-31T07:26:31.889Z"
+  },
+  "priority": 2
+}

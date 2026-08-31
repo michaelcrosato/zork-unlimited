@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "8242a95dcc7b7eb0",
+  "title": "Not always clear in advance which optional support choices (field kit… @ Not always clear in advance which optional support choices (field kit vs wagon vs rider) had real mechanical weight until inspected",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Not always clear in advance which optional support choices (field kit vs wagon vs rider) had real mechanical weight until inspected",
+  "excerpts": [
+    "Not always clear in advance which optional support choices (field kit vs wagon vs rider) had real mechanical weight until inspected"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "35447aad4e582dade07ae4f32b5f2b4c4b05b7de7e769a98ca29a6f2f6d8623b"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:22:04.519Z",
+    "last_seen_at": "2026-08-31T09:22:04.519Z"
+  },
+  "priority": 2
+}

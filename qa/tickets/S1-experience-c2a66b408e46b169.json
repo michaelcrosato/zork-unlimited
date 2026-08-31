@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c2a66b408e46b169",
+  "title": "Event/job scene prerequisites (POI scout, contact talk) not obvious… @ Event/job scene prerequisites (POI scout, contact talk) not obvious until encountered",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Event/job scene prerequisites (POI scout, contact talk) not obvious until encountered",
+  "excerpts": [
+    "Event/job scene prerequisites (POI scout, contact talk) not obvious until encountered"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "52840dd2bd1d7176a594d8457a5d5611987df3b3381b55f05228c4d895da4e5a"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:29:03.349Z",
+    "last_seen_at": "2026-08-31T07:29:03.349Z"
+  },
+  "priority": 2
+}

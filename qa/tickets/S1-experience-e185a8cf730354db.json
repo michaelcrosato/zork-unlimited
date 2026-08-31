@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "e185a8cf730354db",
+  "title": "Station dispatch slot naming (role/duty/evidence/etc.) required… @ Station dispatch slot naming (role/duty/evidence/etc.) required repeated legend cross-referencing",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Station dispatch slot naming (role/duty/evidence/etc.) required repeated legend cross-referencing",
+  "excerpts": [
+    "Station dispatch slot naming (role/duty/evidence/etc.) required repeated legend cross-referencing"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "70c3443a3413ab668a48ab09d07ff3db60e76f297559f953f2161e00071e1035"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:43:56.781Z",
+    "last_seen_at": "2026-08-31T09:43:56.781Z"
+  },
+  "priority": 2
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "d5f3e910b1998c3d",
+  "title": "four pre-quest menus before any wolf @ four pre-quest menus before any wolf",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "four pre-quest menus before any wolf",
+  "excerpts": [
+    "four pre-quest menus before any wolf"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "d16ac5528374f5235d2dbc860919a3e7f8c7cd44493550b1d943e7cb78aab37c"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.873Z",
+    "last_seen_at": "2026-08-31T01:04:44.873Z"
+  },
+  "priority": 6
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "bb9a16580267f353",
+  "title": "Talking to June Pike required an expected_snapshot_hash tied to the… @ Talking to June Pike required an expected_snapshot_hash tied to the Station board reveal, discovered only via error message",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Talking to June Pike required an expected_snapshot_hash tied to the Station board reveal, discovered only via error message",
+  "excerpts": [
+    "Talking to June Pike required an expected_snapshot_hash tied to the Station board reveal, discovered only via error message"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "203b9e59746aea123ba575d4813f61da26e9193b9bf49693143883b90f1f949c"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:52:53.011Z",
+    "last_seen_at": "2026-08-31T09:52:53.011Z"
+  },
+  "priority": 2
+}

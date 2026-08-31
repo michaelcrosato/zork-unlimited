@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "a10d707fe89191bb",
+  "title": "LURE recovery copy names a split-rail guard that is not in inventory @ LURE recovery copy names a split-rail guard that is not in inventory",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "LURE recovery copy names a split-rail guard that is not in inventory",
+  "excerpts": [
+    "LURE recovery copy names a split-rail guard that is not in inventory"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "0958bf8ea49a3e1860eb35b025de90a55f7c82658ca74deaa592db97d7c28b09"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:07:58.342Z",
+    "last_seen_at": "2026-08-31T01:07:58.342Z"
+  },
+  "priority": 6
+}

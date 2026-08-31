@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "ab0a0b388819254d",
+  "title": "Needed expected_snapshot_hash to talk to June Pike after a Station… @ Needed expected_snapshot_hash to talk to June Pike after a Station board reveal",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Needed expected_snapshot_hash to talk to June Pike after a Station board reveal",
+  "excerpts": [
+    "Needed expected_snapshot_hash to talk to June Pike after a Station board reveal"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "1b82a3b3ec2c16e2065d1a11662943b6ccee7bba8ddd8dcc8b35e5345b98b474"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:55:15.763Z",
+    "last_seen_at": "2026-08-31T09:55:15.763Z"
+  },
+  "priority": 2
+}

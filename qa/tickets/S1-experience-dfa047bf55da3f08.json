@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "dfa047bf55da3f08",
+  "title": "Cattle alarm rising on mere descent wasn't explained until after it… @ Cattle alarm rising on mere descent wasn't explained until after it happened",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Cattle alarm rising on mere descent wasn't explained until after it happened",
+  "excerpts": [
+    "Cattle alarm rising on mere descent wasn't explained until after it happened"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "6f9d60b47ee8d844048196aa1368d754291cb8e6bebe961e21a5d647f1b41d61"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:39:44.245Z",
+    "last_seen_at": "2026-08-31T07:39:44.245Z"
+  },
+  "priority": 2
+}

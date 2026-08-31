@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "8561a9d4b4457ada",
+  "title": "long registration/oath wall before the farm @ long registration/oath wall before the farm",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "long registration/oath wall before the farm",
+  "excerpts": [
+    "long registration/oath wall before the farm"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "e8fb794e20414885fdc2161cc23371da322882de89b4b4c863fcf75159f30ddb"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.448Z",
+    "last_seen_at": "2026-08-31T01:04:45.448Z"
+  },
+  "priority": 6
+}

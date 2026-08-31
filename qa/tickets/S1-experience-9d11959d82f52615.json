@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "9d11959d82f52615",
+  "title": "Cade dialogue is a plan-comparison spec @ Cade dialogue is a plan-comparison spec",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Cade dialogue is a plan-comparison spec",
+  "excerpts": [
+    "Cade dialogue is a plan-comparison spec"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "863ea424baa5742ddb1117c016b68cc2440d8fe441dad37bd43b00af5ec200c1"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:35.854Z",
+    "last_seen_at": "2026-08-31T01:10:35.854Z"
+  },
+  "priority": 6
+}

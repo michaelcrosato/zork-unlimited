@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "ed961ab9bc413c56",
+  "title": "Aid-Only still raises cattle alarm on the first LAY @ Aid-Only still raises cattle alarm on the first LAY",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Aid-Only still raises cattle alarm on the first LAY",
+  "excerpts": [
+    "Aid-Only still raises cattle alarm on the first LAY"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "161b0e95e9cc5ca788b083aa7656c15c54458c86fe271914a07d07d6d7632536"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:14.761Z",
+    "last_seen_at": "2026-08-31T01:10:14.761Z"
+  },
+  "priority": 6
+}

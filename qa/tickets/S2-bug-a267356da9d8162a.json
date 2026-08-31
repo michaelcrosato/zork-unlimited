@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "a267356da9d8162a",
+  "title": "Plans and steps are ALL-CAPS procedure tokens… @ byre_yard",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "Plans and steps are ALL-CAPS procedure tokens (LURE/DRIVE/FORTIFY/SEAT/HOLD) rather than playable scene language."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "4305fbd54b809d13d509cceb820f96ce6c9ead414a000d42ded351d6afa49f08"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:40.147Z",
+    "last_seen_at": "2026-08-31T01:10:40.147Z"
+  },
+  "priority": 12
+}

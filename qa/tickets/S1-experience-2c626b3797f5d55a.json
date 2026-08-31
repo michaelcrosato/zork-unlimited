@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "2c626b3797f5d55a",
+  "title": "Cade dialogue is a plan-compare UI @ Cade dialogue is a plan-compare UI",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Cade dialogue is a plan-compare UI",
+  "excerpts": [
+    "Cade dialogue is a plan-compare UI"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "ee111a8d2a64d7473679d1c3fdb4251023f2ef1f5d471fd509e524f34af5130c"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:08.141Z",
+    "last_seen_at": "2026-08-31T01:10:08.141Z"
+  },
+  "priority": 6
+}

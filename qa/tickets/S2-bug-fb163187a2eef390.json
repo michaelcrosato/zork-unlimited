@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "ticket_id": "fb163187a2eef390",
+  "title": "Primary text is dispatch procedure (LAY/CAST/PEN, listed actions)… @ byre_yard",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "Primary text is dispatch procedure (LAY/CAST/PEN, listed actions) rather than playable scene voice.",
+    "Plan comparison is LAY/CAST/DC/alarm procedure text instead of character speech.",
+    "Plan review is ALL-CAPS procedure text (LAY/CAST/BRACE) that reads like a spec, not a conversation.",
+    "Scene text is ALL-CAPS procedure and DC footnotes instead of a readable place.",
+    "NPC speech is procedure text listing DCs, closed plans, and ALL-CAPS verbs instead of character voice."
+  ],
+  "evidence": {
+    "report_count": 5,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "6d2f92d7668a9dc03712543d00e1bc74e13f56d0f30a640bf482515ee8a46c8e",
+      "7bfc937867e1b09fff339a5cc5d2fc0ff7844b5a5d3cccda7738bd590c997f36",
+      "91b2c6e7cb023e7611f0ee82fe2de8a993421cd200ed4187e8a6628b9df3fec5",
+      "be89b54d97de9a04f63afdd8f6ca8ef047f8e855d22420dd8bea183b2eca17a6",
+      "f18a720e8733cc936aee9d1121aa0ac826ece3c243a2e755ea802cfcd720a8b1"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.861Z",
+    "last_seen_at": "2026-08-31T01:11:27.787Z"
+  },
+  "priority": 21.509775004326936
+}

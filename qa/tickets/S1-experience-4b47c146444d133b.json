@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "4b47c146444d133b",
+  "title": "Cade dialogue is a rules briefing @ Cade dialogue is a rules briefing",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Cade dialogue is a rules briefing",
+  "excerpts": [
+    "Cade dialogue is a rules briefing"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "1bba31fd0a324a99a477ae8805e962ad47907dd6a150404c58dd34108f0f68d2"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:07:26.181Z",
+    "last_seen_at": "2026-08-31T01:07:26.181Z"
+  },
+  "priority": 6
+}

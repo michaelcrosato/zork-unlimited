@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "3411488c9ba637b1",
+  "title": "Exposed Ridge relief-fodder alarm-prevention applied inconsistently… @ Exposed Ridge relief-fodder alarm-prevention applied inconsistently across steps without clear upfront explanation",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Exposed Ridge relief-fodder alarm-prevention applied inconsistently across steps without clear upfront explanation",
+  "excerpts": [
+    "Exposed Ridge relief-fodder alarm-prevention applied inconsistently across steps without clear upfront explanation"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "f10a9e97193d2dd7965747f7e77cbb6f76112891da49a2711db1c463e9a826b2"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:33:00.919Z",
+    "last_seen_at": "2026-08-31T07:33:00.919Z"
+  },
+  "priority": 2
+}

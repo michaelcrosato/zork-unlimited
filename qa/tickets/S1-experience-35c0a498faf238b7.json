@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "35c0a498faf238b7",
+  "title": "Combat in Wolf-Winter is deliberately structured around exact follow-up… @ wolf_winter",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "wolf_winter",
+  "excerpts": [
+    "Combat in Wolf-Winter is deliberately structured around exact follow-up actions; it is understandable but can feel strict until the sequence is learned."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "gpt"
+    ],
+    "providers": [
+      "codex"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "55ccffca69e313f3d9c227f1f31af07d420f48fb309f94c987d1bdd4910bf93e"
+    ],
+    "first_seen_build": "f7753cd0e775a5888739fefd3c9194b55e41f335",
+    "last_seen_build": "f7753cd0e775a5888739fefd3c9194b55e41f335",
+    "first_seen_at": "2026-08-31T08:04:21.774Z",
+    "last_seen_at": "2026-08-31T08:04:21.774Z"
+  },
+  "priority": 2
+}

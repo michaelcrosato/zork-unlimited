@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "bee215df0fd2b028",
+  "title": "Recurring identical NPC names across different towns momentarily… @ Recurring identical NPC names across different towns momentarily suggested the same character was following me",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Recurring identical NPC names across different towns momentarily suggested the same character was following me",
+  "excerpts": [
+    "Recurring identical NPC names across different towns momentarily suggested the same character was following me"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "3b47ed1e796eb9cc376dbd4b7c966d15e61d51c64db78a8df6fe444e12fe580f"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:31:33.817Z",
+    "last_seen_at": "2026-08-31T09:31:33.817Z"
+  },
+  "priority": 2
+}

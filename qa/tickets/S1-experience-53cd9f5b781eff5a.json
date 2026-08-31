@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "53cd9f5b781eff5a",
+  "title": "stockway hides DC 10 but still requires DC 12 @ stockway hides DC 10 but still requires DC 12",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "stockway hides DC 10 but still requires DC 12",
+  "excerpts": [
+    "stockway hides DC 10 but still requires DC 12"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "9f45bf7ecd6500390a3ff99fe079f68f61f6e4a2b6779ccfc1a5dfd5d69ac3a0"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.851Z",
+    "last_seen_at": "2026-08-31T01:04:44.851Z"
+  },
+  "priority": 6
+}

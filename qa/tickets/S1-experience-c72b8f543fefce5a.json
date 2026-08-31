@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c72b8f543fefce5a",
+  "title": "Lengthy multi-step onboarding (background/promise/report/ally/approach)… @ Lengthy multi-step onboarding (background/promise/report/ally/approach) before first quest content begins",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Lengthy multi-step onboarding (background/promise/report/ally/approach) before first quest content begins",
+  "excerpts": [
+    "Lengthy multi-step onboarding (background/promise/report/ally/approach) before first quest content begins"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "5c191d0951f754bd473d83e9da48b0f8775a5008e4f6d133a8a3fab7bfedc6f5"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:23:47.039Z",
+    "last_seen_at": "2026-08-31T09:23:47.039Z"
+  },
+  "priority": 2
+}

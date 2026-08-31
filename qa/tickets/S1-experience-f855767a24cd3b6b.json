@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "f855767a24cd3b6b",
+  "title": "Aid-Only last-feed skip only applies after a successful first LAY @ Aid-Only last-feed skip only applies after a successful first LAY",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Aid-Only last-feed skip only applies after a successful first LAY",
+  "excerpts": [
+    "Aid-Only last-feed skip only applies after a successful first LAY"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "183acba0e3495f4f4e31584fd623bb392ebff75060394941886a0a22959c4fbd"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:27.575Z",
+    "last_seen_at": "2026-08-31T01:10:27.575Z"
+  },
+  "priority": 6
+}

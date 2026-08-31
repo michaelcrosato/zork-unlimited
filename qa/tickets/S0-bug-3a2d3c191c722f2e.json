@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "3a2d3c191c722f2e",
+  "title": "Check was framed as risking instant death on failure, but DC 9 vs a +8… @ moor_gully",
+  "kind": "bug",
+  "severity": "S0",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "moor_gully",
+  "excerpts": [
+    "Check was framed as risking instant death on failure, but DC 9 vs a +8 modifier made failure mathematically impossible, undercutting the tension."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "3a9a5af7e3f0e6afb6e38ef953a5997696f4f1ce8c7721e9ded8dc3cfd466dd8"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:41:46.281Z",
+    "last_seen_at": "2026-08-31T09:41:46.281Z"
+  },
+  "priority": 1
+}

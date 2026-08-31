@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "18e2cb0f0a14b280",
+  "title": "Inspect-vs-choose distinction for story options took a moment to grasp @ Inspect-vs-choose distinction for story options took a moment to grasp",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Inspect-vs-choose distinction for story options took a moment to grasp",
+  "excerpts": [
+    "Inspect-vs-choose distinction for story options took a moment to grasp"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "c0cd8871860394a4c30fcb2b5fb400c9ca4c19cee92d1f054455ff42b55eefbd"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:50:48.642Z",
+    "last_seen_at": "2026-08-31T09:50:48.642Z"
+  },
+  "priority": 2
+}

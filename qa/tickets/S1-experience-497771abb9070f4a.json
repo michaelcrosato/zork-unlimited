@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "497771abb9070f4a",
+  "title": "Dense pre-quest registration/promise/report/ally menu sequence before… @ Dense pre-quest registration/promise/report/ally menu sequence before gameplay begins",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dense pre-quest registration/promise/report/ally menu sequence before gameplay begins",
+  "excerpts": [
+    "Dense pre-quest registration/promise/report/ally menu sequence before gameplay begins"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "640fc6a22e5b26e325eae92bc4e8b3455ddd46855523b08f58655cd7dfcd40ce"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:37:31.452Z",
+    "last_seen_at": "2026-08-31T09:37:31.452Z"
+  },
+  "priority": 2
+}

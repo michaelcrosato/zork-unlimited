@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "9fdaf5251d3c7336",
+  "title": "blocked north claiming both routes selected @ blocked north claiming both routes selected",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "blocked north claiming both routes selected",
+  "excerpts": [
+    "blocked north claiming both routes selected"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "7b44fc19ae21ac2f91bf9a31dbfc3920a414ebe8e87ea0b185cd8ab3bde2ca6c"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:07:29.472Z",
+    "last_seen_at": "2026-08-31T01:07:29.472Z"
+  },
+  "priority": 6
+}

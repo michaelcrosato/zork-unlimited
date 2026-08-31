@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "902c1d194a7407f1",
+  "title": "Station dispatch board's multi-layer reveal/inspect/talk setup flow is… @ Station dispatch board's multi-layer reveal/inspect/talk setup flow is dense before a quest even begins",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Station dispatch board's multi-layer reveal/inspect/talk setup flow is dense before a quest even begins",
+  "excerpts": [
+    "Station dispatch board's multi-layer reveal/inspect/talk setup flow is dense before a quest even begins"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "7d3bad79092fc59d7a9f0820038131fa844d06a90d950a866e9ddb69e2a12b0a"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:55:26.971Z",
+    "last_seen_at": "2026-08-31T09:55:26.971Z"
+  },
+  "priority": 2
+}

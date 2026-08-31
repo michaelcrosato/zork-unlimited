@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "53cbf7d82d917916",
+  "title": "LURE/DRIVE/FORTIFY/HUNT terminology took a moment to parse @ LURE/DRIVE/FORTIFY/HUNT terminology took a moment to parse",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "LURE/DRIVE/FORTIFY/HUNT terminology took a moment to parse",
+  "excerpts": [
+    "LURE/DRIVE/FORTIFY/HUNT terminology took a moment to parse"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "27a00870769156eb48af9388461676f68ec4c362e0677798a66e8007a01bd4d2"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:23:25.311Z",
+    "last_seen_at": "2026-08-31T09:23:25.311Z"
+  },
+  "priority": 2
+}

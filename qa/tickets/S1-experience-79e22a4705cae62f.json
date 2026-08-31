@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "79e22a4705cae62f",
+  "title": "three sequential registration menus before the farm @ three sequential registration menus before the farm",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "three sequential registration menus before the farm",
+  "excerpts": [
+    "three sequential registration menus before the farm"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "15255b9536183a5806ebce1b625c098c300be2f9e46227beb955021d6ab97f96"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.371Z",
+    "last_seen_at": "2026-08-31T01:04:45.371Z"
+  },
+  "priority": 6
+}

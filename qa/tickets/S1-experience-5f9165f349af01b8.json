@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "5f9165f349af01b8",
+  "title": "Had to navigate back out of NPC dialogue menus (June, Cade) multiple… @ Had to navigate back out of NPC dialogue menus (June, Cade) multiple times before new options appeared",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Had to navigate back out of NPC dialogue menus (June, Cade) multiple times before new options appeared",
+  "excerpts": [
+    "Had to navigate back out of NPC dialogue menus (June, Cade) multiple times before new options appeared"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "2ee4ca1851f36e46cc0066ede1cb758c761f172835011cb2d7b8bbb376a7453c"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:21:01.299Z",
+    "last_seen_at": "2026-08-31T07:21:01.299Z"
+  },
+  "priority": 2
+}

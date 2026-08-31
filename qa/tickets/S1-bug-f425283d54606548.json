@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "f425283d54606548",
+  "title": "Three consecutive tradeoff walls name FORTIFY seals, loft drops, and DC… @ Rowan Quill background, oath, and source-report menus",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Rowan Quill background, oath, and source-report menus",
+  "excerpts": [
+    "Three consecutive tradeoff walls name FORTIFY seals, loft drops, and DC changes before those places exist."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "3afb317933dc8eefe64e6773616e1bfebb90b609335300e999be382622990f18"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:07:11.306Z",
+    "last_seen_at": "2026-08-31T01:07:11.306Z"
+  },
+  "priority": 6
+}

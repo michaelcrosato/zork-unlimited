@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "931a0ff015254c2c",
+  "title": "Dense compact JSON schema took a few actions to fully parse @ Dense compact JSON schema took a few actions to fully parse",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dense compact JSON schema took a few actions to fully parse",
+  "excerpts": [
+    "Dense compact JSON schema took a few actions to fully parse"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "6018dcb0a5f68d03f3354f4df929858fa1a9c31fbb599a7c3030ba4a89eed0ce"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:18:41.141Z",
+    "last_seen_at": "2026-08-31T09:18:41.141Z"
+  },
+  "priority": 2
+}

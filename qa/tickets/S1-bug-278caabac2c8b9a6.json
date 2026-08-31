@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "278caabac2c8b9a6",
+  "title": "Block message references a 'currently listed yearling action' that is… @ Wolf-Winter, Store-Shed loft ladder ('up' exit), before LURE is committed",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Wolf-Winter, Store-Shed loft ladder ('up' exit), before LURE is committed",
+  "excerpts": [
+    "Block message references a 'currently listed yearling action' that is never actually listed anywhere, obscuring the real prerequisite (commit to LURE through nested Cade dialogue)."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "faff2743023a2ff5a6dacc76f3e8a12021eb418af433bf35c703d90ddbba57fa"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:14:13.627Z",
+    "last_seen_at": "2026-08-31T07:14:13.627Z"
+  },
+  "priority": 2
+}

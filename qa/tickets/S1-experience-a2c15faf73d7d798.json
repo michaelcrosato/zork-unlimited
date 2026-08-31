@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "a2c15faf73d7d798",
+  "title": "Some review dialogue navigation felt repetitive when comparing strategy… @ Some review dialogue navigation felt repetitive when comparing strategy options",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Some review dialogue navigation felt repetitive when comparing strategy options",
+  "excerpts": [
+    "Some review dialogue navigation felt repetitive when comparing strategy options"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "2a02ed398b0d66c9315ee82d5ddd99cc709d11ba2cbe4b0ce0e6dd3718788b01"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:42:05.294Z",
+    "last_seen_at": "2026-08-31T07:42:05.294Z"
+  },
+  "priority": 2
+}

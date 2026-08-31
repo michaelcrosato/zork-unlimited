@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "f24996b946875b2b",
+  "title": "Skill-gated prep options (Repair/Streetwise/Mediation) offered at 0… @ wolf_winter",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "wolf_winter",
+  "excerpts": [
+    "Skill-gated prep options (Repair/Streetwise/Mediation) offered at 0 ranks vs DC12 with real time/money cost, with no explicit warning these are poor bets for an unskilled character"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "d9424bc0f0d141a4d5711b2db2f0c83d633bb60d66992d07516901481e77825d"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:34:25.962Z",
+    "last_seen_at": "2026-08-31T07:34:25.962Z"
+  },
+  "priority": 2
+}

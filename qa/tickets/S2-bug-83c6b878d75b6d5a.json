@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "83c6b878d75b6d5a",
+  "title": "Jamie's certified market report promised a fodder-loft route that never… @ Albany Station setup vs Cade Fortify",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "Albany Station setup vs Cade Fortify",
+  "excerpts": [
+    "Jamie's certified market report promised a fodder-loft route that never appeared on this Albany-seal Fortify run."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "18a1f4485395036b16d298d561f46c3a9b838547cc26c9a424df097afa19dc97"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:11:00.450Z",
+    "last_seen_at": "2026-08-31T01:11:00.450Z"
+  },
+  "priority": 12
+}

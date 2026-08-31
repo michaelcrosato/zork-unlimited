@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c561e6610823b482",
+  "title": "registration and oath stack before any farm scene @ registration and oath stack before any farm scene",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "registration and oath stack before any farm scene",
+  "excerpts": [
+    "registration and oath stack before any farm scene"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "7bfc937867e1b09fff339a5cc5d2fc0ff7844b5a5d3cccda7738bd590c997f36"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.910Z",
+    "last_seen_at": "2026-08-31T01:04:44.910Z"
+  },
+  "priority": 6
+}

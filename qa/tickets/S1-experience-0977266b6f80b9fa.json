@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "ticket_id": "0977266b6f80b9fa",
+  "title": "compact overworld arrays instead of prose @ compact overworld arrays instead of prose",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "compact overworld arrays instead of prose",
+  "excerpts": [
+    "compact overworld arrays instead of prose"
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "552bb45331836c2fcdd55acb8943c0ae07e60ab3e71ec7f62e3d40ce0ae69c19",
+      "ac188ac3d6fdebf32e9f12a7fe704a47f7f5513356f6d3387ccbb3218a0b4c76"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.463Z",
+    "last_seen_at": "2026-08-31T01:10:41.260Z"
+  },
+  "priority": 7.754887502163468
+}

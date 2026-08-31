@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "f08e97ba853990a4",
+  "title": "NPC lines are rules/UI dumps (LAY, CAST, DCs, score) rather than… @ byre_yard",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "byre_yard",
+  "excerpts": [
+    "NPC lines are rules/UI dumps (LAY, CAST, DCs, score) rather than in-character talk.",
+    "NPC lines are operator/help text ('Reviews choose nothing') instead of character dialogue."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "15255b9536183a5806ebce1b625c098c300be2f9e46227beb955021d6ab97f96",
+      "ec8abc45a481e1ac66f913329cd189e3bf67f0576f93f9f25e6a1abad02099a0"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.322Z",
+    "last_seen_at": "2026-08-31T01:04:45.371Z"
+  },
+  "priority": 7.754887502163468
+}

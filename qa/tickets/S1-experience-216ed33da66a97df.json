@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "216ed33da66a97df",
+  "title": "yearling-action block before that beat @ yearling-action block before that beat",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "yearling-action block before that beat",
+  "excerpts": [
+    "yearling-action block before that beat"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "6573709a359e3de86f875133a02e4319decec57b0ad511ecbdfcfa5296dbe6e0"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:11:26.438Z",
+    "last_seen_at": "2026-08-31T01:11:26.438Z"
+  },
+  "priority": 6
+}

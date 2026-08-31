@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "5d52e93d29a112f8",
+  "title": "Board displays an [\"inspect\", story_choice_id] action tuple but… @ albany_city",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "albany_city",
+  "excerpts": [
+    "Board displays an [\"inspect\", story_choice_id] action tuple but inspect_overworld_session_story rejects that literal tuple; only the bare id string works.",
+    "Passing 'inspect' as story_choice_id (misreading the ['inspect', id] tuple) gives an unhelpful generic rejection instead of guidance."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "6e07648c161d28091bbf30488143fba8b127a6188953f3a9d98df5e6a2470044",
+      "cad94d7efdcdbf9cfaecb342b270f3c43e6c0337b4bf6610ec6182103f5a056a"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T07:25:06.955Z",
+    "last_seen_at": "2026-08-31T09:27:31.366Z"
+  },
+  "priority": 2.584962500721156
+}

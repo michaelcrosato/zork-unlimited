@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "2a5f09a03a41ed2e",
+  "title": "June Pike talk requiring expected_snapshot_hash unlike other contacts @ June Pike talk requiring expected_snapshot_hash unlike other contacts",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "June Pike talk requiring expected_snapshot_hash unlike other contacts",
+  "excerpts": [
+    "June Pike talk requiring expected_snapshot_hash unlike other contacts"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "fdbb17ef29f9d5018bda9652cdfa61aeb30ea1e229878e73fd7a9e4e8c85aa52"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:16:41.942Z",
+    "last_seen_at": "2026-08-31T07:16:41.942Z"
+  },
+  "priority": 2
+}

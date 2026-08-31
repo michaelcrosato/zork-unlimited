@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "bc29cff51af0d0e0",
+  "title": "Heavy upfront setup (background/promise/report/kit/wagon/rider) before… @ Heavy upfront setup (background/promise/report/kit/wagon/rider) before reaching quest gameplay",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Heavy upfront setup (background/promise/report/kit/wagon/rider) before reaching quest gameplay",
+  "excerpts": [
+    "Heavy upfront setup (background/promise/report/kit/wagon/rider) before reaching quest gameplay"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "f009b582015bcc8da2aefcfc2b021d3cbd2c767f1b66b93397725384c99b0624"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:43:06.035Z",
+    "last_seen_at": "2026-08-31T07:43:06.035Z"
+  },
+  "priority": 2
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "5c24d3884297bc8e",
+  "title": "Many layered pre-quest customization menus before play started @ Many layered pre-quest customization menus before play started",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Many layered pre-quest customization menus before play started",
+  "excerpts": [
+    "Many layered pre-quest customization menus before play started"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "7899d81da1e128de179f2091d481a3a1a30a08afc1c5b1c683b45243362cba04"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:50:59.312Z",
+    "last_seen_at": "2026-08-31T07:50:59.312Z"
+  },
+  "priority": 2
+}

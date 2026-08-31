@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c027025408db76b9",
+  "title": "Nested registration/dispatch menus at the very start felt like… @ Nested registration/dispatch menus at the very start felt like paperwork before real play began",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Nested registration/dispatch menus at the very start felt like paperwork before real play began",
+  "excerpts": [
+    "Nested registration/dispatch menus at the very start felt like paperwork before real play began"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "d429102db9ebdcbddec591fe81e57cddb651cbd42ccf173cb4871c66a265d0bf"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:33:04.046Z",
+    "last_seen_at": "2026-08-31T07:33:04.046Z"
+  },
+  "priority": 2
+}

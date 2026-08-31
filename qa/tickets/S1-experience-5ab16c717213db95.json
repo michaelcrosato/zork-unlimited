@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "5ab16c717213db95",
+  "title": "Dense multi-layer registration/promise/report/ally setup before real… @ Dense multi-layer registration/promise/report/ally setup before real gameplay begins",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dense multi-layer registration/promise/report/ally setup before real gameplay begins",
+  "excerpts": [
+    "Dense multi-layer registration/promise/report/ally setup before real gameplay begins"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "5aa08e9e08c1d2fa388d477d28a87464750a0a8516a58daf5128bde30b9002d1"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:47:14.438Z",
+    "last_seen_at": "2026-08-31T07:47:14.438Z"
+  },
+  "priority": 2
+}

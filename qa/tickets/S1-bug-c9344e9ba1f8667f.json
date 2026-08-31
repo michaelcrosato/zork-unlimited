@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c9344e9ba1f8667f",
+  "title": "Recovery text tells you to PEN with a bound split-rail guard you never… @ paling_gap",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "paling_gap",
+  "excerpts": [
+    "Recovery text tells you to PEN with a bound split-rail guard you never have; offered action is wedge/turn the rail.",
+    "Recovery text tells you to PEN with a bound split-rail you never carried."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "0958bf8ea49a3e1860eb35b025de90a55f7c82658ca74deaa592db97d7c28b09",
+      "51ae2a59aa159b1d4a306cb92260cc69d7055c3eb11bbf71ba1429495ae05492"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:07:58.342Z",
+    "last_seen_at": "2026-08-31T01:09:09.848Z"
+  },
+  "priority": 7.754887502163468
+}

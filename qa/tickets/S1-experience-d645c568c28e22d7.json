@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "d645c568c28e22d7",
+  "title": "blocked exit claiming both approaches selected @ blocked exit claiming both approaches selected",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "blocked exit claiming both approaches selected",
+  "excerpts": [
+    "blocked exit claiming both approaches selected"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "ac188ac3d6fdebf32e9f12a7fe704a47f7f5513356f6d3387ccbb3218a0b4c76"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:45.463Z",
+    "last_seen_at": "2026-08-31T01:04:45.463Z"
+  },
+  "priority": 6
+}

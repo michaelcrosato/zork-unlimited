@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "0397513ffbdb1baa",
+  "title": "Station dispatch board terminology… @ Station dispatch board terminology (role/duty/evidence/preparation/relief_allocation/field_team) took a moment to map to background/promise/report/kit/wagon/rider",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Station dispatch board terminology (role/duty/evidence/preparation/relief_allocation/field_team) took a moment to map to background/promise/report/kit/wagon/rider",
+  "excerpts": [
+    "Station dispatch board terminology (role/duty/evidence/preparation/relief_allocation/field_team) took a moment to map to background/promise/report/kit/wagon/rider"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "457ac07c813c0500728da367db91b954fbc04cf5951f5c62dd70c0c5b9cfbafe"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:41:43.043Z",
+    "last_seen_at": "2026-08-31T07:41:43.043Z"
+  },
+  "priority": 2
+}

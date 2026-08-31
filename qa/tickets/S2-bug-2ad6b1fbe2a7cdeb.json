@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "ticket_id": "2ad6b1fbe2a7cdeb",
+  "title": "Copy says cattle alarm starts at 1 and cattle saw you; meter stays 0… @ steading_yard",
+  "kind": "bug",
+  "severity": "S2",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "steading_yard",
+  "excerpts": [
+    "Copy says cattle alarm starts at 1 and cattle saw you; meter stays 0 until descend; north block claims both approaches selected.",
+    "Text and overworld preview say the cattle see you and alarm starts at 1, but cattle_alarm stays 0 until you use the ridge.",
+    "Copy says cattle saw you and press the slats while cattle alarm is still 0 until you use the ridge.",
+    "Cattle already pressing slats and road preview alarm 1, but cattle_alarm stays 0 until use_ridge; north blocked as if both approaches selected.",
+    "North blocked as if both routes selected; cattle alarm 0 despite text and overworld promising alarm 1 until you descend."
+  ],
+  "evidence": {
+    "report_count": 6,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "0a705c270b144a05563584cb8c8883a96e58975939ee652cfe808ff0a1f0da69",
+      "37788292e3e77408efdde0d7750d3751c222969abfc643ad8f97c45de70dfbed",
+      "3ead98f831a37a2b0f808f20a78cf027e9344a582ef40aef42e01501491a94c7",
+      "40210093c94439fb83f0093058f111199d79cfeb8cc8490402f4e2f7ff6a7050",
+      "56f12bbcf1ec9aa10349ed35834de4c9b00cc8f545b80fe9cc0e7d350a734e12",
+      "9a3d5909a3168328733a248a635894b552d4ae5a5f3472411254af342b060198"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:04:44.840Z",
+    "last_seen_at": "2026-08-31T01:10:08.272Z"
+  },
+  "priority": 22.844129532345626
+}

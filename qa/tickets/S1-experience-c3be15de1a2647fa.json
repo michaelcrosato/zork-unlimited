@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "c3be15de1a2647fa",
+  "title": "Dense compact JSON responses take effort to parse as a raw… @ Dense compact JSON responses take effort to parse as a raw player-facing surface",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dense compact JSON responses take effort to parse as a raw player-facing surface",
+  "excerpts": [
+    "Dense compact JSON responses take effort to parse as a raw player-facing surface"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "a91521ccaf3356ce51eb416219069ad61e95502891724a548500d61c01d330c1"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:45:24.851Z",
+    "last_seen_at": "2026-08-31T09:45:24.851Z"
+  },
+  "priority": 2
+}

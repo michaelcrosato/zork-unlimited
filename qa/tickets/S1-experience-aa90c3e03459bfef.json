@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "aa90c3e03459bfef",
+  "title": "Dense jargon in the preparation/registration screens before quests… @ Dense jargon in the preparation/registration screens before quests (LURE/DRIVE/FORTIFY/HUNT, station dispatch board terminology) took extra reads to parse",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dense jargon in the preparation/registration screens before quests (LURE/DRIVE/FORTIFY/HUNT, station dispatch board terminology) took extra reads to parse",
+  "excerpts": [
+    "Dense jargon in the preparation/registration screens before quests (LURE/DRIVE/FORTIFY/HUNT, station dispatch board terminology) took extra reads to parse"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "5422b09e1493e5019f5e0bbc0d2bbb85f869ee7d24afd620bc35d71bf6699ad1"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:49:47.162Z",
+    "last_seen_at": "2026-08-31T09:49:47.162Z"
+  },
+  "priority": 2
+}

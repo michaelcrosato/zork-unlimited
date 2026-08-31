@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "30abcdb7c34973f5",
+  "title": "Dialogue trees required an explicit close/back action before other room… @ Dialogue trees required an explicit close/back action before other room actions became legal",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dialogue trees required an explicit close/back action before other room actions became legal",
+  "excerpts": [
+    "Dialogue trees required an explicit close/back action before other room actions became legal"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "27e1f73d13fe3b953cc29c4beb8ee5f7a7a636d44d6813b6095287d55a881a15"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:47:00.896Z",
+    "last_seen_at": "2026-08-31T09:47:00.896Z"
+  },
+  "priority": 2
+}

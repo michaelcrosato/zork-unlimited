@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "e9a812e221d8b379",
+  "title": "Fodder relief's cattle-alarm prevention text didn't match when it… @ Fodder relief's cattle-alarm prevention text didn't match when it actually applied",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Fodder relief's cattle-alarm prevention text didn't match when it actually applied",
+  "excerpts": [
+    "Fodder relief's cattle-alarm prevention text didn't match when it actually applied"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "afba7718aa68bd819ae8e4e4379a34a5a01b75e2e9e6e785d3b5547456a8edac"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:48:07.763Z",
+    "last_seen_at": "2026-08-31T09:48:07.763Z"
+  },
+  "priority": 2
+}

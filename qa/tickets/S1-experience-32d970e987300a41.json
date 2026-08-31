@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "ticket_id": "32d970e987300a41",
+  "title": "Comparing all four Wolf-Winter strategies required many inspect… @ wolf_winter",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "wolf_winter",
+  "excerpts": [
+    "Comparing all four Wolf-Winter strategies required many inspect round-trips before committing",
+    "Repetitive back-and-forth dialogue navigation when comparing Wolf-Winter's four plan options"
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "01ff2559c92132a9cfce34033bbb1c4324589d0de77c5963abe5af0af05eae02",
+      "7da723585f8effc2fecc17a6e3f48dc386e2885789fddf825b7cc2ae401c6378"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T07:22:59.370Z",
+    "last_seen_at": "2026-08-31T09:51:29.739Z"
+  },
+  "priority": 2.584962500721156
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "80a7d41d4696b3fa",
+  "title": "Multi-layer review/choose dialogue (BACK/LEAVE/ask_* pattern) took a… @ Multi-layer review/choose dialogue (BACK/LEAVE/ask_* pattern) took a moment to learn",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Multi-layer review/choose dialogue (BACK/LEAVE/ask_* pattern) took a moment to learn",
+  "excerpts": [
+    "Multi-layer review/choose dialogue (BACK/LEAVE/ask_* pattern) took a moment to learn"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "1f8115db86c5785b44a15b3c455a1f5e45409d1e734eb52f19674a4415cd4045"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:43:18.161Z",
+    "last_seen_at": "2026-08-31T07:43:18.161Z"
+  },
+  "priority": 2
+}

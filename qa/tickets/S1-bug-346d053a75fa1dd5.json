@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "ticket_id": "346d053a75fa1dd5",
+  "title": "Relief allocation text promised the fodder relief would prevent this… @ wolf_winter",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "wolf_winter",
+  "excerpts": [
+    "Relief allocation text promised the fodder relief would prevent this step's cattle-alarm increase, but alarm still rose by 1 here; the benefit apparently applied only to the later LURE feed action instead.",
+    "Consequence text said the fodder allocation prevents the ridge's +1 cattle-alarm increase, but alarm still rose from 0 to 1 immediately.",
+    "Consequence said fodder prevents Exposed Ridge's +1 cattle alarm, but alarm rose to 1 immediately anyway; the actual suppression happened on a later action instead.",
+    "Fodder allocation text claimed it would prevent Exposed Ridge's +1 cattle alarm, but cattle alarm still rose by 1 on that action.",
+    "Reward text promised fodder allocation prevents Exposed Ridge's +1 cattle alarm, but cattle alarm still rose to 1 on that action with no visible mitigation."
+  ],
+  "evidence": {
+    "report_count": 11,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "138e2f701c66fa42f15d14d09999be82e579c054a55a2497905e6107fc08dcd3",
+      "152b3e197e8cec0565a0a83f8fcbe86ffd8d995af663217311e3d11a2f282d7e",
+      "240642099d8b16cf3502769428657213b51366f946f1edf36b4977e799599b2c",
+      "2c38b37232bb6f87b769e9d30e3a47e7c95eb6b782f1da5a497d527e51e30094",
+      "4d5eff8877c24a055c962349894b9c782ac569ed20b61ff0a08f187c0c421c98",
+      "68d6956703ee37cc27f36557af9718afb06e236bcabeff8d91fb292d1ed0c4d9",
+      "91ad4bcc123fa4492438fc74ae087e22bdced91e9bda5b3f9d6f0b04c3e991c9",
+      "afba7718aa68bd819ae8e4e4379a34a5a01b75e2e9e6e785d3b5547456a8edac",
+      "cf365fe600d80301177744f2c40e3f819a2406960193db5fe7955559f402c706",
+      "e0ff5bd01c6c10f48eb3e2e7e2a35d6d26fa55e502a95ccc819c4bb41dbaad0a",
+      "e85381b270dee91e35e1e08113ee88a001dd7cbc11635cb68928f49aad5f81e9"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T07:12:33.785Z",
+    "last_seen_at": "2026-08-31T09:48:07.763Z"
+  },
+  "priority": 4.584962500721156
+}

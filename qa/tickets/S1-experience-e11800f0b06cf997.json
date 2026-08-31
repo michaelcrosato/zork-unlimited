@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "e11800f0b06cf997",
+  "title": "Cattle alarm rising immediately on Exposed Ridge felt momentarily… @ Cattle alarm rising immediately on Exposed Ridge felt momentarily inconsistent with the fodder relief's stated benefit",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Cattle alarm rising immediately on Exposed Ridge felt momentarily inconsistent with the fodder relief's stated benefit",
+  "excerpts": [
+    "Cattle alarm rising immediately on Exposed Ridge felt momentarily inconsistent with the fodder relief's stated benefit"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "71ec41f48d7ba1876824001b34ff2ebb0f4d3df2229f94ba9fc2ebdd9ea2721c"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:25:11.865Z",
+    "last_seen_at": "2026-08-31T09:25:11.865Z"
+  },
+  "priority": 2
+}

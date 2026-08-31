@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "02bcaace0359224a",
+  "title": "Long sequence of setup screens… @ Long sequence of setup screens (background/promise/report/ally/kit/wagon) before the quest map even opens",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Long sequence of setup screens (background/promise/report/ally/kit/wagon) before the quest map even opens",
+  "excerpts": [
+    "Long sequence of setup screens (background/promise/report/ally/kit/wagon) before the quest map even opens"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "e0ff5bd01c6c10f48eb3e2e7e2a35d6d26fa55e502a95ccc819c4bb41dbaad0a"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:35:43.793Z",
+    "last_seen_at": "2026-08-31T09:35:43.793Z"
+  },
+  "priority": 2
+}

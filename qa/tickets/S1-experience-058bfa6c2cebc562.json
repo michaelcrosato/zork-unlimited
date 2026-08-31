@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "058bfa6c2cebc562",
+  "title": "Dispatch board reveal/ally-modal snapshot-hash requirement for talking… @ Dispatch board reveal/ally-modal snapshot-hash requirement for talking to a companion wasn't obvious up front",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dispatch board reveal/ally-modal snapshot-hash requirement for talking to a companion wasn't obvious up front",
+  "excerpts": [
+    "Dispatch board reveal/ally-modal snapshot-hash requirement for talking to a companion wasn't obvious up front"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "2730e714240818a74243ac07f503812777ec885e63e8a14d7ef2e1b8c436fd70"
+    ],
+    "first_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "last_seen_build": "8669bb03f10eb3d44db8edaeaae1c59e0d710d3e",
+    "first_seen_at": "2026-08-31T09:23:10.881Z",
+    "last_seen_at": "2026-08-31T09:23:10.881Z"
+  },
+  "priority": 2
+}

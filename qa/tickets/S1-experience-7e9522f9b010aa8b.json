@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "7e9522f9b010aa8b",
+  "title": "Dense compact JSON per turn makes state tracking effortful, though… @ Dense compact JSON per turn makes state tracking effortful, though always resolvable via the text narration",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Dense compact JSON per turn makes state tracking effortful, though always resolvable via the text narration",
+  "excerpts": [
+    "Dense compact JSON per turn makes state tracking effortful, though always resolvable via the text narration"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "7ad1545dd606791d4427e6f93427405824447e9eaf33de869fd1d1a023158f24"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:08:43.945Z",
+    "last_seen_at": "2026-08-31T07:08:43.945Z"
+  },
+  "priority": 2
+}

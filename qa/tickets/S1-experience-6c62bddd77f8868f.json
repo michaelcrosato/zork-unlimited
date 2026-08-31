@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "6c62bddd77f8868f",
+  "title": "Station dispatch reveal/inspect/choose flow has heavy scaffolding text… @ Station dispatch reveal/inspect/choose flow has heavy scaffolding text before reaching a real decision",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "accumulating",
+  "location": "Station dispatch reveal/inspect/choose flow has heavy scaffolding text before reaching a real decision",
+  "excerpts": [
+    "Station dispatch reveal/inspect/choose flow has heavy scaffolding text before reaching a real decision"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "402db1c89486f57fe0d99f71372e2e832f4fbdc30c2f84ae998c1a8c36f69573"
+    ],
+    "first_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "last_seen_build": "4a984dff862275088a37fc1c0dc1417a1f2f8314",
+    "first_seen_at": "2026-08-31T07:43:28.372Z",
+    "last_seen_at": "2026-08-31T07:43:28.372Z"
+  },
+  "priority": 2
+}

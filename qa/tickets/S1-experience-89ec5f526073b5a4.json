@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "89ec5f526073b5a4",
+  "title": "blocked north still says both approaches selected @ blocked north still says both approaches selected",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "blocked north still says both approaches selected",
+  "excerpts": [
+    "blocked north still says both approaches selected"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "ebeda0fb3f33dc2ac2876425d1730a25926233e975e49ebaae6361dfd7e0399c"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:23.852Z",
+    "last_seen_at": "2026-08-31T01:10:23.852Z"
+  },
+  "priority": 6
+}

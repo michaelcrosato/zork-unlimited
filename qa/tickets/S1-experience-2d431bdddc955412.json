@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "ticket_id": "2d431bdddc955412",
+  "title": "LURE map vs verb list (east/north vs west/up hatch) @ LURE map vs verb list (east/north vs west/up hatch)",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "stale",
+  "promotion": "corroborated",
+  "location": "LURE map vs verb list (east/north vs west/up hatch)",
+  "excerpts": [
+    "LURE map vs verb list (east/north vs west/up hatch)"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "grok"
+    ],
+    "providers": [
+      "grok_cli"
+    ],
+    "tiers": [
+      "reference"
+    ],
+    "has_runner_enforced_report": false,
+    "session_ids": [
+      "7677f2f9f1c4f084f9251aece9b03bff32a32d696b4fbf42fd2a504534117d6a"
+    ],
+    "first_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "last_seen_build": "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+    "first_seen_at": "2026-08-31T01:10:16.454Z",
+    "last_seen_at": "2026-08-31T01:10:16.454Z"
+  },
+  "priority": 6
+}

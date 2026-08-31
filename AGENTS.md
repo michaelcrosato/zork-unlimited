@@ -33,8 +33,11 @@ Development and playtesting are **separate loops that run in parallel**, and
 - **Dev loop** — `loop.sh`. Makes changes and lands them against a mechanical
   bar. It does NOT play the game.
 - **Playtest loop** — `playtest-loop.sh`. Plays the published build over and
-  over, across as many vendors and personas as the operator's quota allows, and
-  promotes corroborated findings into the intake queue.
+  over, across as many provable vendors as the operator's quota allows, and
+  promotes corroborated findings into the intake queue. Live pure waves take only
+  the `default` persona — persona-directed play changes the thing retention
+  measures — so the persona library rotates on the structural lanes instead
+  (`PLAYTEST_MOCK=1`, or `npm run fleet:mock -- --personas …`).
 
 Other teams are optional and use the same intake: an audit agent, a research or
 design agent, the crawler, or a person. **Playtest feedback is not the only way
@@ -137,14 +140,15 @@ requirement on top of health.
 `npm run health` runs nine steps, in this order: verifier integrity, bug-trace
 integrity, the opening-density budget, typecheck, lint, format check, UI
 typecheck, pack validation, and finally the vitest suite. Everything cheap runs
-first on purpose — the suite is ~48 of the bar's ~50 minutes, so a broken pack or
-a UI type error that used to surface three quarters of an hour in now fails in
+first on purpose — the suite is the large majority of the bar's 33-40 minutes, so
+a broken pack or a UI type error that used to surface half an hour in now fails in
 about a minute. The UI typecheck means UI deps
 (`npm --prefix ui install`) are required for the bar, not just for running the
 UI server. Do not commit or merge red.
 
-Budget the wall clock: the vitest step dominates and the whole bar takes roughly
-50 minutes on a fast machine. Under load, a handful of subprocess-spawning CLI
+Budget the wall clock: the vitest step dominates and the whole bar takes 33-40
+minutes on a fast machine (measured 2026-08-31: 1,969s over 491 files / 4,514
+tests, and 2,364s over 492 / 4,516). Under load, a handful of subprocess-spawning CLI
 tests can exceed their 60s/120s timeouts and fail for reasons unrelated to the
 change under test — check what actually failed before assuming your work broke
 something.
@@ -172,10 +176,15 @@ deliberately NOT part of `health`.
   is: read the prompt from STDIN, edit files in `$PWD`, run non-interactively,
   and exit nonzero on failure.
 - Connecting to the engine MCP server. The repo ships `.mcp.json`, which any
-  client reading the standard project MCP config — Claude Code among them — picks
-  up automatically with no setup. A client that keeps its own registry instead
-  needs the server added there once; the command is always
-  `npm --silent run mcp` from the repo root.
+  client reading the standard project MCP config — Claude Code among them —
+  discovers automatically; the command is always `npm --silent run mcp` from the
+  repo root. Discovery is not approval: Claude Code asks once per checkout before
+  starting a server declared in project config and records the answer in the
+  gitignored `.claude/settings.local.json`, so a fresh clone or a new lane
+  worktree comes up with no engine tools until that approval — silently, since a
+  headless `-p` run has nobody to ask. Enabling all project MCP servers at the
+  user level stops project approval mattering. A client that keeps its own
+  registry instead needs the server added there once.
 - Codex needs one extra step, and it fails silently without it. `.codex/config.toml`
   registers the same server, but Codex loads project config **only when the project
   is trusted**, and trust does not cascade from a parent directory — trust this exact
@@ -215,8 +224,10 @@ deliberately NOT part of `health`.
   eventually switch branches or reset the tree under each other mid-task (it has
   happened). Interactive sessions follow the same rule the loops already
   enforce: take your own worktree off `origin/main`
-  (`git worktree add ../zork-<lane> -b <lane> origin/main`) unless you are the
-  only writer in the checkout. See `docs/parallel_lanes.md`.
+  (`git worktree add .claude/worktrees/<lane> -b lane/<lane> origin/main` — that
+  path is gitignored for exactly this, and `lane/` is the branch namespace in
+  use) unless you are the only writer in the checkout. See
+  `docs/parallel_lanes.md`.
 - A local branch that outlives its merged PR may hold content the squash never
   landed (#309 did). Before deleting or ignoring one, check
   `git diff origin/main <branch>` — an empty diff is the only proof it is dead.
