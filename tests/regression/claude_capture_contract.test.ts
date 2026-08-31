@@ -253,7 +253,12 @@ describe("claude_code earns runner_enforced from a reader that exists", () => {
   it("declares no model setting the launch cannot actually apply", () => {
     // Catalog `settings` are copied verbatim onto every sealed session record, so a
     // `thinking: on` that no flag in the argv above ever applies would put an unenforced
-    // claim about how a run was configured into the corpus.
+    // claim about how a run was configured into the corpus. Exactly one knob IS
+    // applied: run.sh appends `--effort <settings.reasoning_effort>` to the launch
+    // argv (claude 2.1.251 accepts low|medium|high|xhigh|max), so that key alone may
+    // appear here, and only with a value the flag accepts.
+    const appliedSettings = ["reasoning_effort"];
+    const claudeEffortLevels = ["low", "medium", "high", "xhigh", "max"];
     const provider = findPlaytestProvider("claude_code")!;
     const catalog = parsePlaytestCatalog(
       provider,
@@ -262,7 +267,13 @@ describe("claude_code earns runner_enforced from a reader that exists", () => {
       ),
     );
     for (const model of catalog.models) {
-      expect(Object.keys(model.settings), model.id).toEqual([]);
+      const unappliedKeys = Object.keys(model.settings).filter(
+        (key) => !appliedSettings.includes(key),
+      );
+      expect(unappliedKeys, model.id).toEqual([]);
+      if (Object.hasOwn(model.settings, "reasoning_effort")) {
+        expect(claudeEffortLevels, model.id).toContain(model.settings.reasoning_effort);
+      }
     }
     expect(catalog.models.some((model) => model.tier === "reference")).toBe(true);
   });
