@@ -1175,7 +1175,10 @@ describe("MCP pure play mode", () => {
       // +8 on 2026-08-28: reveal_station_dispatch_support's full-mode description
       // dropped an untrue "without changing state" claim — that path writes a durable
       // reveal receipt into the snapshot and moves the hash — and says so instead.
-      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_583);
+      // +95 on 2026-08-30: new_game's description stopped promising a "default pack"
+      // it actually refuses (generate_rpg_seed is required) and now points shipped
+      // quests at start_world_quest — found by playing during the full audit.
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_678);
       expect(fullRead?.description).toBe(
         "Read current context without acting. Station support uses the exact board[5] id.",
       );
