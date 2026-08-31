@@ -796,6 +796,46 @@ describe("thread-bound Codex rollout capture", () => {
     }
   });
 
+  it("treats the ≥0.147 per-row ordinal as bookkeeping in a compacted replay", () => {
+    // Codex 0.151.0 stamps every rollout row with `ordinal` (observed live,
+    // thread 01a055ad-69b1-7ad0-a6a3-cb8661bc6118): a replay necessarily
+    // carries a later value, which must not read as context drift.
+    const ordinalRoot = temporaryRoot("af-codex-ordinal-compaction-");
+    const ordinalHome = join(ordinalRoot, "home");
+    const ordinalPlayer = join(ordinalRoot, "player");
+    const ordinalPaths = capturePaths(ordinalRoot);
+    mkdirSync(ordinalHome);
+    mkdirSync(ordinalPlayer);
+    writeFileSync(ordinalPaths.events, providerEvents());
+    const withOrdinals = compactedCwdRollout(ordinalPlayer)
+      .replace(
+        '{"timestamp":"2026-07-19T09:26:51.354Z"',
+        '{"ordinal":5,"timestamp":"2026-07-19T09:26:51.354Z"',
+      )
+      .replace(
+        '{"timestamp":"2026-07-19T09:37:36.748Z"',
+        '{"ordinal":1033,"timestamp":"2026-07-19T09:37:36.748Z"',
+      );
+    writeRollout(ordinalHome, THREAD_ID, withOrdinals);
+    capture(ordinalHome, ordinalPaths, ordinalPlayer);
+
+    const bogusRoot = temporaryRoot("af-codex-ordinal-bogus-");
+    const bogusHome = join(bogusRoot, "home");
+    const bogusPlayer = join(bogusRoot, "player");
+    const bogusPaths = capturePaths(bogusRoot);
+    mkdirSync(bogusHome);
+    mkdirSync(bogusPlayer);
+    writeFileSync(bogusPaths.events, providerEvents());
+    writeRollout(
+      bogusHome,
+      THREAD_ID,
+      withOrdinals
+        .replace('"ordinal":1033', '"ordinal":"later"')
+        .replaceAll(ordinalPlayer.replaceAll("\\", "\\\\"), bogusPlayer.replaceAll("\\", "\\\\")),
+    );
+    expect(() => capture(bogusHome, bogusPaths, bogusPlayer)).toThrow(/exact compacted duplicate/i);
+  });
+
   it("rejects a matching linked rollout while ignoring unrelated session links", () => {
     const root = temporaryRoot("af-codex-linked-rollout-");
     const home = join(root, "home");

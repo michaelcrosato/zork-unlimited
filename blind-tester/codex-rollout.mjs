@@ -987,8 +987,18 @@ function isExactTurnContextReplay(initial, replay) {
   ) {
     return false;
   }
+  // Codex ≥0.147 stamps every rollout row with a per-row `ordinal`; a replay
+  // necessarily carries a later one, so like `timestamp` it is row bookkeeping
+  // rather than context drift — but it must still look like a row counter.
+  if (
+    Object.hasOwn(initial, "ordinal") &&
+    !(Number.isSafeInteger(initial.ordinal) && Number.isSafeInteger(replay.ordinal))
+  ) {
+    return false;
+  }
   return initialKeys.every(
-    (key) => key === "timestamp" || isDeepStrictEqual(replay[key], initial[key]),
+    (key) =>
+      key === "timestamp" || key === "ordinal" || isDeepStrictEqual(replay[key], initial[key]),
   );
 }
 
