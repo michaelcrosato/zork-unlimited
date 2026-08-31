@@ -622,6 +622,76 @@ describe("the launch envelope run.sh publishes as <out>.json", () => {
     expect(Object.keys(envelope)).not.toContain("isolation");
   });
 
+  it("recovers a closing reply the model split around its one permitted retry", () => {
+    // Observed live with claude-sonnet-5 (68 clean turns): the model wrote the
+    // report's prose sections, made the prompt's single permitted evidence-retry
+    // call, then emitted the exit-interview block alone — and Claude Code's own
+    // `result` field carries only that last message, so the report verifier
+    // rejected an otherwise-good run. The envelope's report is the model's full
+    // closing reply: trailing assistant texts tolerating AT MOST ONE tool
+    // interaction, with the final text still anchored to the client's own
+    // authenticated result event.
+    const { receipt, player } = fixtureReceipt();
+    const prose = "## Playthrough log\n\nsections…\n\n## Verdict\n\nyes";
+    const fence = "```json exit-interview\n{}\n```";
+    const assistantText = (text: string): Row =>
+      ({ type: "assistant", message: { content: [{ type: "text", text }] } }) as unknown as Row;
+    const toolUse: Row = {
+      type: "assistant",
+      message: { content: [{ type: "tool_use", id: "t1", name: "end", input: {} }] },
+    } as unknown as Row;
+    const toolResult: Row = {
+      type: "user",
+      message: { content: [{ type: "tool_result", tool_use_id: "t1", content: [] }] },
+    } as unknown as Row;
+    const build = (rows: readonly Row[]) =>
+      buildClaudeEnvelope({
+        receipt,
+        streamRows: streamRows(rows),
+        model: "claude-haiku-4-5-20251001",
+        cliVersion: "2.1.251",
+        transportContract: "game-direct-mcp-v1",
+      });
+
+    const split = build([
+      initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID }),
+      assistantText(prose),
+      toolUse,
+      toolResult,
+      assistantText(fence),
+      resultEvent({ result: fence }),
+    ]);
+    expect(split.result).toBe(`${prose}\n\n${fence}`);
+
+    // A second tool interaction inside the tail ends the reply: only what
+    // follows it is the report, so mid-game commentary can never leak in.
+    const twoGaps = build([
+      initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID }),
+      assistantText("mid-game commentary"),
+      toolUse,
+      toolResult,
+      assistantText(prose),
+      toolUse,
+      toolResult,
+      assistantText(fence),
+      resultEvent({ result: fence }),
+    ]);
+    expect(twoGaps.result).toBe(`${prose}\n\n${fence}`);
+    expect(twoGaps.result).not.toContain("commentary");
+
+    // If the last trailing text does not match the authenticated result, the
+    // recovery is discarded and the client's own text stands alone.
+    const anchorBroken = build([
+      initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID }),
+      assistantText(prose),
+      toolUse,
+      toolResult,
+      assistantText("something else entirely"),
+      resultEvent({ result: fence }),
+    ]);
+    expect(anchorBroken.result).toBe(fence);
+  });
+
   it("refuses a stream with no result event, or with two", () => {
     const { receipt, player } = fixtureReceipt();
     const init = initEvent({ cwd: player, sessionId: RECORDED_SESSION_ID });

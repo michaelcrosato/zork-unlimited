@@ -589,6 +589,61 @@ function finiteOrNull(value) {
 }
 
 /**
+ * The model's complete closing reply: every assistant text message after its
+ * last tool interaction, in stream order.
+ *
+ * Claude Code's own `result` field carries only the LAST assistant message, and
+ * a model may legitimately split its final report across messages — observed
+ * live with claude-sonnet-5 (68 clean turns): it wrote the prose sections, made
+ * the prompt's one permitted evidence-retry check, then emitted the closing
+ * JSON block alone, so `result` lost every earlier section and the report
+ * verifier rejected an otherwise-good run. The recovered prefix stays anchored
+ * to the event this envelope already authenticates: the final text of the
+ * closing reply must equal `result.result`, or the recovery is discarded and
+ * the client's own text stands alone.
+ */
+function closingReplyText(streamRows, resultText) {
+  // Flatten the stream into text items and tool breaks (one break per
+  // contiguous run of tool_use/tool_result rows — a call and its result are one
+  // interaction, not two).
+  const items = [];
+  for (const row of streamRows) {
+    if (row?.type === "result") continue;
+    const content = row?.message?.content;
+    if (!Array.isArray(content)) continue;
+    const touchesTools =
+      row.type !== "assistant" ||
+      content.some((block) => block?.type === "tool_use" || block?.type === "tool_result");
+    if (touchesTools) {
+      if (items.at(-1)?.kind !== "tool") items.push({ kind: "tool" });
+      continue;
+    }
+    const text = content
+      .filter((block) => block?.type === "text" && typeof block.text === "string")
+      .map((block) => block.text)
+      .join("\n\n");
+    if (text.trim().length > 0) items.push({ kind: "text", text });
+  }
+  // Walk back from the end: the closing reply is the trailing text messages,
+  // tolerating AT MOST ONE tool interaction inside it — the prompt's single
+  // permitted evidence-retry. A second interaction ends the reply.
+  const texts = [];
+  let toolGaps = 0;
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (item.kind === "tool") {
+      toolGaps += 1;
+      if (toolGaps > 1) break;
+      continue;
+    }
+    texts.unshift(item.text);
+  }
+  if (texts.length < 2) return resultText;
+  if (texts[texts.length - 1].trim() !== resultText.trim()) return resultText;
+  return texts.join("\n\n");
+}
+
+/**
  * The one artifact the generic tail of run.sh reads per run: the client's own final
  * `result` event, audited and stapled to the capture receipt.
  *
@@ -680,7 +735,7 @@ export function buildClaudeEnvelope({ receipt, streamRows, model, cliVersion, tr
       result.usage !== null && typeof result.usage === "object" && !Array.isArray(result.usage)
         ? result.usage
         : null,
-    result: result.result,
+    result: closingReplyText(streamRows, result.result),
     capture: receipt,
   };
 }
