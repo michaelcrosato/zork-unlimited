@@ -140,18 +140,58 @@ requirement on top of health.
 `npm run health` runs nine steps, in this order: verifier integrity, bug-trace
 integrity, the opening-density budget, typecheck, lint, format check, UI
 typecheck, pack validation, and finally the vitest suite. Everything cheap runs
-first on purpose — the suite is the large majority of the bar's 33-40 minutes, so
+first on purpose — the suite is the large majority of the bar's wall clock, so
 a broken pack or a UI type error that used to surface half an hour in now fails in
 about a minute. The UI typecheck means UI deps
 (`npm --prefix ui install`) are required for the bar, not just for running the
 UI server. Do not commit or merge red.
 
-Budget the wall clock: the vitest step dominates and the whole bar takes 33-40
-minutes on a fast machine (measured 2026-08-31: 1,969s over 491 files / 4,514
-tests, and 2,364s over 492 / 4,516). Under load, a handful of subprocess-spawning CLI
-tests can exceed their 60s/120s timeouts and fail for reasons unrelated to the
-change under test — check what actually failed before assuming your work broke
-something.
+### Two suite lanes
+
+The vitest step splits into two lanes. `vitest.config.ts` is UNCHANGED by the
+split — it still claims every discovered test file, and `detectSuiteCoverage`
+still proves it — so the lanes are only a choice of which named projects a script
+hands to vitest, exactly as `test:coverage` already did.
+
+| Script                        | Runs                             | When                         |
+| ----------------------------- | -------------------------------- | ---------------------------- |
+| `npm run test:fast`           | the `standard` project           | every commit                 |
+| `npm run test:exhaustive`     | 4 census-proof projects, 6 files | nightly                      |
+| `npm run health:fast`         | the nine checks, fast lane       | the pre-commit bar           |
+| `npm run health` / `npm test` | everything, unchanged            | before landing a lane branch |
+
+The exhaustive lane is the six whole-state-space census proofs
+(`rpg_metamorphic_observation_stream`, `rpg_action_id_unique`,
+`rpg_variant_liveness`, `rpg_score_economy_sound`, `rpg_metamorphic_relabel`,
+`rpg_all_endings_reachable`). Each BFSes the complete reachable region of every
+shipped pack; `scripts/ci-test-groups.ts` measured them at ~79 minutes of CI body
+time together, and `vitest.config.ts` deliberately serializes them one or two
+workers wide, so most of that is a single-threaded tail with the other cores idle.
+
+What licenses deferring them, and it is the ONLY thing that does: they import
+only `src/core`, `src/rpg`, `src/validate`, `src/world` and the `content/` packs.
+A change to the fleet runner, blind tester, feedback compiler, crawler, MCP layer,
+CLIs, docs or intake tooling cannot move their verdict. **If your change touches
+the engine, a validator, the world, or a shipped pack, run `npm run health`, not
+`health:fast`** — the fast lane is not evidence about that change.
+
+The trade is real and stated rather than buried: a content or engine regression
+that only a census proof catches can now sit on `main` until `deep-audit.yml`
+goes red overnight, instead of blocking the PR.
+
+Nothing is skipped, and the guard against that is mechanical. `test:fast` and
+`test:exhaustive` must PARTITION the config's projects — together every project,
+neither twice — because the dangerous failure here is silent and sits one level
+above the one `detectSuiteCoverage` catches: add a sixth project, name it in
+neither script, and it runs in NO lane while both still exit 0.
+`scripts/test-lanes.ts` parses the actual script bodies out of `package.json`
+rather than a parallel list, and `tests/unit/test_lanes.test.ts` asserts the
+partition on every suite run.
+
+Budget the wall clock: the vitest step dominates the full bar, and under load a
+handful of subprocess-spawning CLI tests can exceed their 60s/120s timeouts and
+fail for reasons unrelated to the change under test — check what actually failed
+before assuming your work broke something.
 
 `npm run crawl:smoke` is the mechanical gate (docs/testing_pyramid.md); it is
 deliberately NOT part of `health`.
