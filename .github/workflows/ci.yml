@@ -100,10 +100,16 @@ jobs:
       - name: Build UI (catch UI rot)
         run: npm run ui:build
 
+  # The FAST lane only. The exhaustive whole-state-space census proofs moved to
+  # deep-audit.yml: they were ~79 of the ~103 minutes of measured body time in this
+  # matrix, and they read only src/core, src/rpg, src/validate, src/world and content/,
+  # so nothing else a PR can touch is able to move their verdict. The trade is stated
+  # plainly: a content or engine regression that ONLY a census proof catches can now sit
+  # on main until the nightly deep audit goes red, instead of blocking the PR.
   test-shards:
-    name: Tests (${{ matrix.group }}/2)
+    name: Tests (fast lane ${{ matrix.group }}/2)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -123,13 +129,15 @@ jobs:
       # package-local React/Vite dependencies must exist in every test shard.
       - name: Install UI deps
         run: npm --prefix ui ci
-      - name: Tests (unit + property + determinism)
-        # Discover every current test file, then place it in exactly one of two
-        # deterministic groups. The allocator weights observed costly census
-        # proofs and gives future files a nonzero baseline, avoiding Vitest's
-        # opaque raw file-count split without freezing a hand-maintained list.
+      - name: Tests (fast lane — unit + property + determinism)
+        # Discover every current test file, keep this lane's, then place those in exactly
+        # one of two deterministic groups. The allocator weights observed costly files and
+        # gives future files a nonzero baseline, avoiding Vitest's opaque raw file-count
+        # split without freezing a hand-maintained list. --lane filters BEFORE allocating:
+        # letting vitest skip the other lane's files afterwards would leave their measured
+        # weight in whichever shard drew it and wreck the balance.
         run: |
-          mapfile -t test_files < <(npm exec -- tsx scripts/ci-test-groups.ts --count 2 --group ${{ matrix.group }})
+          mapfile -t test_files < <(npm exec -- tsx scripts/ci-test-groups.ts --count 2 --group ${{ matrix.group }} --lane fast)
           test "${#test_files[@]}" -gt 0
           npm exec -- vitest run --reporter=verbose "${test_files[@]}"
 

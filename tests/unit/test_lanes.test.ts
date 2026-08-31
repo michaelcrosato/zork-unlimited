@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { discoverTestFiles } from "../../scripts/ci-test-groups.js";
 import {
   detectLanePartition,
+  EXHAUSTIVE_PROOF_FILES,
+  filterTestFilesByLane,
   LANE_NAMES,
+  laneForTestFile,
   parseLaneProjects,
   readLaneProjects,
+  readVitestProjects,
   readVitestProjectNames,
 } from "../../scripts/test-lanes.js";
 
@@ -63,5 +68,36 @@ describe("test lanes", () => {
     // The fast lane is the pre-commit bar; the exhaustive lane is what it defers.
     expect(lanes.fast).toContain("standard");
     expect(lanes.exhaustive.length).toBeGreaterThan(0);
+  });
+  it("keeps the duplicated proof list byte-identical to the exhaustive projects' includes", () => {
+    // EXHAUSTIVE_PROOF_FILES cannot be imported INTO vitest.config.ts: the verifier's
+    // suite-coverage guard parses that config as text and resolves only const bindings
+    // declared in it, and it fails closed on a config it cannot read. So the list is
+    // duplicated, and this is the assertion that makes the duplication safe. If it fails,
+    // fix the copy in scripts/test-lanes.ts — do not relax the check.
+    const lanes = readLaneProjects();
+    const configured = readVitestProjects()
+      .filter((project) => lanes.exhaustive.includes(project.name))
+      .flatMap((project) => project.include);
+
+    expect(configured.length).toBeGreaterThan(0);
+    expect([...configured].sort()).toEqual([...EXHAUSTIVE_PROOF_FILES].sort());
+    // Every entry names a real file: a renamed proof would otherwise leave both the config
+    // pin and this copy pointing at nothing while the lanes still looked healthy.
+    const discovered = new Set(discoverTestFiles());
+    for (const proof of EXHAUSTIVE_PROOF_FILES) expect(discovered.has(proof)).toBe(true);
+  });
+
+  it("splits every discovered test file into exactly one lane", () => {
+    const files = discoverTestFiles();
+    const fast = filterTestFilesByLane(files, "fast");
+    const exhaustive = filterTestFilesByLane(files, "exhaustive");
+
+    expect(fast.length + exhaustive.length).toBe(files.length);
+    expect([...fast, ...exhaustive].sort()).toEqual([...files].sort());
+    expect(exhaustive.sort()).toEqual([...EXHAUSTIVE_PROOF_FILES].sort());
+    // A file nobody has classified is ordinary, so a new test joins the lane that runs on
+    // every commit rather than the one that runs once a night.
+    expect(laneForTestFile("tests/unit/a_future_test.test.ts")).toBe("fast");
   });
 });

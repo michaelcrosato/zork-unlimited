@@ -48,9 +48,23 @@ describe("CI test groups", () => {
   });
 
   it("accepts only an explicit valid one-based group request", () => {
-    expect(parseGroupArguments(["--count", "2", "--group", "2"])).toEqual({ count: 2, group: 2 });
+    // Sharding defaults to the fast lane: the lane a PR gate runs, so an invocation that
+    // forgets --lane shards the cheap half rather than silently re-adding the census proofs.
+    expect(parseGroupArguments(["--count", "2", "--group", "2"])).toEqual({
+      count: 2,
+      group: 2,
+      lane: "fast",
+    });
+    expect(parseGroupArguments(["--count", "1", "--group", "1", "--lane", "exhaustive"])).toEqual({
+      count: 1,
+      group: 1,
+      lane: "exhaustive",
+    });
     expect(() => parseGroupArguments(["--count", "2", "--group", "3"])).toThrow("Usage");
     expect(() => parseGroupArguments(["--group", "1"])).toThrow("Usage");
+    expect(() =>
+      parseGroupArguments(["--count", "1", "--group", "1", "--lane", "nightly"]),
+    ).toThrow("--lane");
   });
 
   it("wires both CI jobs to dynamic groups while retaining the required verify gate", () => {
@@ -59,8 +73,15 @@ describe("CI test groups", () => {
     expect(workflow).toMatch(
       /^ {2}test-shards:[\s\S]*?^ {10}fetch-depth: 0[\s\S]*?scripts\/ci-test-groups\.ts --count 2 --group/m,
     );
+    // The PR gate shards the FAST lane; deep-audit.yml carries the exhaustive complement.
+    // Without an explicit --lane the shards would silently re-acquire the census proofs.
+    expect(workflow).toContain("--lane fast");
     expect(workflow).not.toContain("--shard=");
     expect(workflow).toMatch(/^ {2}verify:$/m);
+
+    const deepAudit = readFileSync(resolve(".github/workflows/deep-audit.yml"), "utf8");
+    expect(deepAudit).toMatch(/^ {2}exhaustive-proofs:$/m);
+    expect(deepAudit).toContain("npm run test:exhaustive");
   });
 
   // AGENTS.md calls `crawl:smoke` a mandatory pre- and post-work gate and loop.sh treats a

@@ -30,6 +30,33 @@ jobs:
       - name: Deep deterministic quest and overworld crawl
         run: npm run crawl:deep
 
+  # The exhaustive whole-state-space census proofs, moved off the PR critical path.
+  # Each one BFSes the complete reachable region of every shipped pack; together they were
+  # ~79 minutes of measured body time in ci.yml's shard matrix, and vitest.config.ts
+  # deliberately serializes them one or two workers wide, so most of that is a
+  # single-threaded tail. They import only src/core, src/rpg, src/validate, src/world and
+  # content/ — nothing else a PR can touch changes their verdict — which is exactly what
+  # makes nightly the right cadence for them and NOT for the rest of the suite.
+  #
+  # This is the `test:exhaustive` lane in full. `non-player-audit` below separately runs
+  # the ending-render proof under its rolling soft budget; the few duplicated minutes buy
+  # a lane that is provably the complement of `test:fast` (tests/unit/test_lanes.test.ts),
+  # which is worth more here than trimming one overlap.
+  exhaustive-proofs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Exhaustive census proofs (the nightly complement of the fast lane)
+        run: npm run test:exhaustive
+
   non-player-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 120

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseVitestSuiteProjects } from "./verify-integrity.js";
+import { parseVitestSuiteProjects, type VitestSuiteProject } from "./verify-integrity.js";
 
 /**
  * Two vitest lanes over ONE unchanged project set.
@@ -34,6 +34,41 @@ export const LANE_SCRIPTS = {
 export type LaneName = keyof typeof LANE_SCRIPTS;
 
 export const LANE_NAMES = Object.keys(LANE_SCRIPTS) as LaneName[];
+
+/**
+ * The exhaustive census proofs, as `tests/`-relative paths.
+ *
+ * This list is DUPLICATED from vitest.config.ts on purpose, and the duplication is
+ * load-bearing rather than sloppy. The verifier's suite-coverage guard parses that
+ * config as TEXT with a deliberately restricted parser that resolves only `const`
+ * bindings declared IN THAT FILE; an identifier imported from here would resolve to
+ * null, and the guard fails CLOSED on a config it cannot read. So the config must keep
+ * its own literal arrays, and this copy earns its keep by being CHECKED against them:
+ * `tests/unit/test_lanes.test.ts` asserts this list equals the union of the exhaustive
+ * lane projects' include lists, so the two cannot drift.
+ *
+ * `scripts/ci-test-groups.ts` uses it to shard one lane at a time. That allocator stays
+ * a plain readdir walk independent of the vitest config — that independence is what lets
+ * the verifier treat it as a second opinion — so it needs this list, not the config.
+ */
+export const EXHAUSTIVE_PROOF_FILES: readonly string[] = [
+  "tests/regression/rpg_action_id_unique.test.ts",
+  "tests/regression/rpg_all_endings_reachable.test.ts",
+  "tests/regression/rpg_metamorphic_observation_stream.test.ts",
+  "tests/regression/rpg_metamorphic_relabel.test.ts",
+  "tests/regression/rpg_score_economy_sound.test.ts",
+  "tests/regression/rpg_variant_liveness.test.ts",
+];
+
+export function laneForTestFile(file: string): LaneName {
+  return EXHAUSTIVE_PROOF_FILES.includes(file) ? "exhaustive" : "fast";
+}
+
+/** Every discovered file belongs to exactly one lane, so the two filters partition the
+ *  suite: nothing is dropped by sharding a lane, and nothing is paid for twice. */
+export function filterTestFilesByLane(files: readonly string[], lane: LaneName): string[] {
+  return files.filter((file) => laneForTestFile(file) === lane);
+}
 
 /** Every `--project <name>` (and `--project=<name>`) a script body hands to vitest. */
 export function parseLaneProjects(scriptBody: string): string[] {
@@ -74,12 +109,16 @@ export function readLaneProjects(root = process.cwd()): Record<LaneName, string[
   return lanes;
 }
 
-export function readVitestProjectNames(root = process.cwd()): string[] {
+export function readVitestProjects(root = process.cwd()): VitestSuiteProject[] {
   const projects = parseVitestSuiteProjects(
     readFileSync(resolve(root, "vitest.config.ts"), "utf8"),
   );
   if (projects === null) throw new Error("Could not read the vitest project list.");
-  return projects.map((project) => project.name);
+  return projects;
+}
+
+export function readVitestProjectNames(root = process.cwd()): string[] {
+  return readVitestProjects(root).map((project) => project.name);
 }
 
 /**
