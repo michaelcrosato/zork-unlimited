@@ -4444,6 +4444,41 @@ describe("Codex ≥0.147 item-lifecycle rollout dialect", () => {
     });
   });
 
+  it("tolerates the exec front end's bare pragma-refusal string receipt", () => {
+    // Observed live (luna 0.151.0, gameplay call 73): a `yield_time` pragma
+    // typo drew a plain-string refusal and executed nothing.
+    const pragmaAttempt = inertAttemptPair(1) as Array<{
+      payload: Record<string, unknown>;
+    }>;
+    pragmaAttempt[0]!.payload.input =
+      '// @exec: {"yield_time": 120000}\n' +
+      'text(await tools.mcp__adventureforge__step_action({"session_id":"r3","action_id":"x","expected_state_hash":"h"}));\n';
+    pragmaAttempt[1]!.payload.output =
+      "exec pragma only supports `yield_time_ms` and `max_output_tokens`; got `yield_time`";
+    const rollout = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...pragmaAttempt,
+    ]);
+    expect(buildCodexPureEnvelope(currentLunaEnvelopeInput(rollout))).toMatchObject({ ok: true });
+
+    const arbitraryString = inertAttemptPair(2) as Array<{
+      payload: Record<string, unknown>;
+    }>;
+    arbitraryString[1]!.payload.output = "some other host prose";
+    expect(
+      inspectCodexGameplayResultForwarding(
+        completeCurrentLunaRollout([
+          ...currentForwardingRollout({ content: [] }),
+          ...arbitraryString,
+        ]),
+        strict,
+      ),
+    ).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden wrapper program"),
+    });
+  });
+
   it("keeps a live prefix pending until the refusal receipt row lands", () => {
     const rollout = completeCurrentLunaRollout([
       ...currentForwardingRollout({ content: [] }),

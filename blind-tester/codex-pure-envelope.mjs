@@ -826,6 +826,13 @@ const WRAPPER_FAILED_BANNER_RE = /^Script failed\nWall time \d+(?:\.\d+)? second
  * invalidating a whole otherwise-clean run.
  */
 function inertWrapperAttemptOutput(output) {
+  // The exec front end refuses a malformed pragma BEFORE creating any
+  // execution, as one bare refusal sentence. All three refusal forms were
+  // captured live from 0.151.0 (unknown key, unparseable JSON, wrong value
+  // type) and every one starts with this prefix while executing nothing.
+  if (typeof output === "string") {
+    return output.length <= 4096 && output.startsWith("exec pragma ");
+  }
   return (
     Array.isArray(output) &&
     output.length >= 2 &&
