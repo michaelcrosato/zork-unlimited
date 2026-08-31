@@ -25,6 +25,8 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+import { playtestFamilies } from "../../src/blind/providers.js";
+
 /** The gate's own two conditions, read from the resolver's `key<TAB>value` records. */
 function resolveProvider(id: string): { isolation: string; drivable: string; reason: string } {
   const result = spawnSync("node", ["blind-tester/resolve-provider.mjs", "--records", id], {
@@ -88,24 +90,28 @@ describe("playtest-loop documented cohort example", () => {
     }
   }, 120_000);
 
-  it("still documents a cohort of more than one DISTINCT provider", () => {
+  it("still documents a cohort spanning more than one provider FAMILY", () => {
     // The example carries the file's own "large volume cohort + small reference
     // cohort" argument, and that argument is about cross-vendor calibration: the
-    // reference cohort is only a reference because it is a different vendor.
+    // reference cohort is only a reference because it comes from somewhere else.
     //
-    // So the invariant is distinct providers, not a comma. `codex:8,codex:2` has
-    // the shape and none of the meaning — it launches one vendor family twice —
-    // and would sail through a `toContain(",")` check while silently retiring the
-    // calibration the header is there to describe.
+    // A comma does not establish that — `codex:8,codex:2` has the shape and none of
+    // the meaning. Neither do distinct ids: the registry supports rebadged clients,
+    // so two different ids can share one `family` and provide no independent
+    // reading at all. `playtestFamilies` is the registry's own answer to this
+    // question, and its docstring makes the same promise ("an unrecognized provider
+    // must never inflate apparent independence"), so ask it rather than counting
+    // strings.
     const cohort = documentedCohort();
-    const distinct = new Set(cohortProviderIds(cohort));
+    const families = playtestFamilies(cohortProviderIds(cohort));
 
     expect(
-      distinct.size,
-      `The header documents PLAYTEST_COHORT="${cohort}", which names ${distinct.size} ` +
-        `distinct provider(s): ${[...distinct].sort().join(", ")}. The example is meant to ` +
+      families.length,
+      `The header documents PLAYTEST_COHORT="${cohort}", which spans ${families.length} ` +
+        `provider family(ies): ${families.join(", ") || "(none)"}. The example is meant to ` +
         `show a large volume cohort alongside a small cross-vendor reference cohort, so it ` +
-        `needs at least two different providers.`,
+        `needs providers from at least two different families — two ids of the same family ` +
+        `are one vendor wearing two badges.`,
     ).toBeGreaterThan(1);
   });
 });
