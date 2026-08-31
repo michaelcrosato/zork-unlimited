@@ -813,6 +813,42 @@ export function parseCodexGameplayWrapper(input, options = {}) {
 }
 
 const WRAPPER_BANNER_RE = /^Script completed\nWall time \d+(?:\.\d+)? seconds\nOutput:\n$/u;
+const WRAPPER_FAILED_BANNER_RE = /^Script failed\nWall time \d+(?:\.\d+)? seconds\nOutput:\n$/u;
+
+/**
+ * A model-authored wrapper the code-mode host refused to RUN — a script error
+ * such as a typo'd string literal (observed live: luna 0.151.0 dropped a
+ * closing quote on gameplay call 20). The pair proves nothing executed: the
+ * failed banner replaces the completed banner, no MCP completion row sits
+ * between the wrapper and its output, and the script error text is exactly
+ * what the player saw. Such an attempt is tolerated as a visible rejected
+ * input — the same standing as a rejected in-game action — instead of
+ * invalidating a whole otherwise-clean run.
+ */
+function inertWrapperAttemptOutput(output) {
+  return (
+    Array.isArray(output) &&
+    output.length >= 2 &&
+    output.every(
+      (block) =>
+        isRecord(block) &&
+        hasOnlyKeys(block, ["type", "text"]) &&
+        block.type === "input_text" &&
+        typeof block.text === "string",
+    ) &&
+    WRAPPER_FAILED_BANNER_RE.test(output[0].text) &&
+    output[1].text.startsWith("Script error:\n")
+  );
+}
+
+function inertWrapperAttemptPair(wrapperPayload, nextRow) {
+  return (
+    nextRow?.type === "response_item" &&
+    nextRow?.payload?.type === "custom_tool_call_output" &&
+    nextRow.payload.call_id === wrapperPayload.call_id &&
+    inertWrapperAttemptOutput(nextRow.payload.output)
+  );
+}
 
 function exactForwardedOutput(output, result, emitter) {
   if (!Array.isArray(output) || output.length < 2) return false;
@@ -1923,6 +1959,25 @@ function scanCodexGameplayResultForwarding(
       codeModeContract,
     });
     if (!wrapperClassification.ok) {
+      // An unparseable wrapper is only fatal when something may have run. The
+      // host's own refusal receipt directly after it proves inertness; until
+      // that next row exists a live prefix stays pending rather than killing
+      // the run one poll before its refusal receipt lands.
+      const attemptReceipt = rows[index + 1];
+      if (attemptReceipt === undefined && allowIncompletePrefix) {
+        return {
+          ok: true,
+          completedGameplayCalls: gameplayCalls.length,
+          gameplayCalls,
+          pending: "wrapper_attempt_output",
+        };
+      }
+      if (inertWrapperAttemptPair(rowPayload, attemptReceipt)) {
+        wrapperCallIds.add(rowPayload.call_id);
+        wrapperItemIds.add(rowPayload.id);
+        index += 1;
+        continue;
+      }
       return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`, {
         kind: "wrapper",
         failure: wrapperClassification.failure,
@@ -2323,16 +2378,30 @@ function publicGameplayAssistantTimeline(rows) {
 }
 
 function privateGameplayAssistantTimeline(rows, directMcp) {
-  return rows.flatMap((row) => {
-    if (row?.type !== "response_item") return [];
+  const timeline = [];
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    if (row?.type !== "response_item") continue;
     const type = row.payload?.type;
-    if (type === "message" && row.payload?.role === "assistant") return ["assistant_message"];
-    if (type === (directMcp ? "function_call" : "custom_tool_call")) return ["gameplay_call"];
-    if (type === (directMcp ? "function_call_output" : "custom_tool_call_output")) {
-      return ["gameplay_output"];
+    if (type === "message" && row.payload?.role === "assistant") {
+      timeline.push("assistant_message");
+      continue;
     }
-    return [];
-  });
+    if (type === (directMcp ? "function_call" : "custom_tool_call")) {
+      // An inert refused wrapper attempt never reaches the public stream, so
+      // the pair is excluded here exactly as the forwarding audit excludes it.
+      if (!directMcp && inertWrapperAttemptPair(row.payload, rows[index + 1])) {
+        index += 1;
+        continue;
+      }
+      timeline.push("gameplay_call");
+      continue;
+    }
+    if (type === (directMcp ? "function_call_output" : "custom_tool_call_output")) {
+      timeline.push("gameplay_output");
+    }
+  }
+  return timeline;
 }
 
 function validCodeModeWarningRow(row, ordinal) {

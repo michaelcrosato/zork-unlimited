@@ -1021,7 +1021,19 @@ describe("Codex pure blind provider envelope", () => {
     rolloutPayload(malformed, 0).input =
       `// @exec: {"yield_time_ms":120000}\n` +
       "text(await tools.mcp__adventureforge__start_overworld({}));\n";
-    expect(inspectCodexGameplayResultForwardingPrefix(malformed.slice(0, 1), strict)).toEqual({
+    // A refused wrapper stays pending for exactly one row: the host's refusal
+    // receipt proves inertness, and anything else keeps the terminal rejection.
+    expect(inspectCodexGameplayResultForwardingPrefix(malformed.slice(0, 1), strict)).toMatchObject(
+      {
+        ok: true,
+        pending: "wrapper_attempt_output",
+      },
+    );
+    expect(inspectCodexGameplayResultForwardingPrefix(malformed.slice(0, 2), strict)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden wrapper program/i),
+    });
+    expect(inspectCodexGameplayResultForwarding(malformed.slice(0, 1), strict)).toEqual({
       ok: false,
       reason: expect.stringMatching(/forbidden wrapper program/i),
     });
@@ -4379,6 +4391,113 @@ describe("Codex ≥0.147 item-lifecycle rollout dialect", () => {
     expect(buildCodexPureEnvelope(currentLunaEnvelopeInput(rollout))).toMatchObject({
       ok: false,
       reason: expect.stringContaining("input and initial context lifecycle"),
+    });
+  });
+
+  // Observed live (luna 0.151.0, gameplay call 20): the model dropped a closing
+  // quote, the host refused the script, and the strict lane killed a 19-call
+  // clean run. The refusal pair below reproduces that rollout byte shape.
+  function inertAttemptPair(ordinal: number) {
+    return [
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call",
+          id: `ctc-inert-${ordinal}`,
+          status: "completed",
+          call_id: `call-inert-${ordinal}`,
+          name: "exec",
+          input:
+            '// @exec: {"yield_time_ms": 120000}\n' +
+            'text(await tools.mcp__adventureforge__step_action({"session_id":"r1","action_id":"oops));\n',
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1", create_time: 1.7 },
+        },
+      },
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call_output",
+          id: `ctco-inert-${ordinal}`,
+          call_id: `call-inert-${ordinal}`,
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1", create_time: 1.8 },
+          output: [
+            { type: "input_text", text: "Script failed\nWall time 0.0 seconds\nOutput:\n" },
+            {
+              type: "input_text",
+              text: "Script error:\nSyntaxError: Invalid or unexpected token",
+            },
+          ],
+        },
+      },
+    ];
+  }
+
+  it("tolerates a host-refused wrapper attempt as a visible rejected input", () => {
+    const rollout = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...inertAttemptPair(1),
+    ]);
+    expect(buildCodexPureEnvelope(currentLunaEnvelopeInput(rollout))).toMatchObject({ ok: true });
+    expect(inspectCodexGameplayResultForwarding(rollout, strict)).toMatchObject({
+      ok: true,
+      completedGameplayCalls: 1,
+    });
+  });
+
+  it("keeps a live prefix pending until the refusal receipt row lands", () => {
+    const rollout = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...inertAttemptPair(1),
+    ]);
+    const throughAttempt = rollout.slice(
+      0,
+      rollout.findIndex(
+        (row) => (row as { payload?: { id?: string } }).payload?.id === "ctc-inert-1",
+      ) + 1,
+    );
+    expect(inspectCodexGameplayResultForwardingPrefix(throughAttempt, strict)).toMatchObject({
+      ok: true,
+      pending: "wrapper_attempt_output",
+    });
+  });
+
+  it("still fails closed when a refused wrapper is not provably inert", () => {
+    const completedBanner = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...inertAttemptPair(1),
+    ]) as Array<{ payload?: { id?: string; output?: Array<{ text: string }> } }>;
+    const receipt = completedBanner.find((row) => row.payload?.id === "ctco-inert-1");
+    if (!receipt?.payload?.output) throw new Error("missing refusal receipt fixture");
+    receipt.payload.output[0].text = "Script completed\nWall time 0.0 seconds\nOutput:\n";
+    expect(inspectCodexGameplayResultForwarding(completedBanner, strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden wrapper program"),
+    });
+
+    const executedBetween = completeCurrentLunaRollout([
+      ...currentForwardingRollout({ content: [] }),
+      ...inertAttemptPair(2),
+    ]) as unknown[];
+    const attemptIndex = executedBetween.findIndex(
+      (row) => (row as { payload?: { id?: string } }).payload?.id === "ctc-inert-2",
+    );
+    executedBetween.splice(
+      attemptIndex + 1,
+      0,
+      itemEventRow({
+        type: "McpToolCall",
+        id: "exec-sneak",
+        server: "adventureforge",
+        tool: "step_action",
+        arguments: {},
+        status: "completed",
+        result: { content: [] },
+        duration: { secs: 0, nanos: 1 },
+      }),
+    );
+    expect(inspectCodexGameplayResultForwarding(executedBetween, strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("forbidden wrapper program"),
     });
   });
 });
