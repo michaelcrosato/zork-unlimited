@@ -4502,8 +4502,9 @@ describe("Codex ≥0.147 item-lifecycle rollout dialect", () => {
       ...inertAttemptPair(1),
     ]) as Array<{ payload?: { id?: string; output?: Array<{ text: string }> } }>;
     const receipt = completedBanner.find((row) => row.payload?.id === "ctco-inert-1");
-    if (!receipt?.payload?.output) throw new Error("missing refusal receipt fixture");
-    receipt.payload.output[0].text = "Script completed\nWall time 0.0 seconds\nOutput:\n";
+    const banner = receipt?.payload?.output?.[0];
+    if (!banner) throw new Error("missing refusal receipt fixture");
+    banner.text = "Script completed\nWall time 0.0 seconds\nOutput:\n";
     expect(inspectCodexGameplayResultForwarding(completedBanner, strict)).toMatchObject({
       ok: false,
       reason: expect.stringContaining("forbidden wrapper program"),
