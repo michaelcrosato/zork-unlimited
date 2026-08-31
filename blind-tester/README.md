@@ -108,7 +108,11 @@ transport fallback.
 The audited `spark-direct-mcp-v1` and Terra-only `game-direct-mcp-v1`
 transports require exact `codex-cli 0.146.0`. Any other version exits at client
 preflight with code 42 before the model starts; set `BLIND_CODEX_BIN` to the
-absolute path of the compatible executable. The strict lane pins no CLI version;
+absolute path of the compatible executable. On this machine a pinned client is
+kept at `~/.adventureforge-tools/codex-0146/node_modules/.bin/codex`
+(`npm install --prefix ~/.adventureforge-tools/codex-0146 @openai/codex@0.146.0`
+recreates it anywhere); the live client may auto-update, the pinned one never
+does. The strict lane pins no CLI version;
 it pins the exact rollout vocabulary instead, in two dialects. Codex ≤0.146
 wrote dedicated `user_message`/`agent_message`/`mcp_tool_call_end` event rows;
 ≥0.147 (verified live against 0.151.0) replaced them with `item_completed`
