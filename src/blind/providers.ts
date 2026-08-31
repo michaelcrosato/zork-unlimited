@@ -141,6 +141,12 @@ export const PlaytestCatalogModelSchema = z
      * its purpose is that a session is reproducible and comparable later.
      */
     settings: z.record(z.union([z.string(), z.number(), z.boolean()])).default({}),
+    /**
+     * At most one model per catalog may carry `default: true`; it is what a
+     * launch with no --model resolves to. Absent any marked default, the first
+     * volume-tier model keeps that role (the historical heuristic).
+     */
+    default: z.boolean().optional(),
     notes: z.string().optional(),
   })
   .strict();
@@ -674,6 +680,12 @@ export function parsePlaytestCatalog(provider: PlaytestProvider, raw: unknown): 
       throw new Error(`catalog ${provider.catalogPath} lists model "${model.id}" more than once`);
     }
     seen.add(model.id);
+  }
+  const defaults = catalog.models.filter((model) => model.default === true);
+  if (defaults.length > 1) {
+    throw new Error(
+      `catalog ${provider.catalogPath} marks ${defaults.length} models as default; at most one is allowed`,
+    );
   }
   return catalog;
 }

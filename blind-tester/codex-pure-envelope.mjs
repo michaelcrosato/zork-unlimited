@@ -24,6 +24,17 @@ const ALLOWED_ROLLOUT_NON_TOOL_EVENTS = new Set([
   "task_complete",
   "context_compacted",
 ]);
+// Codex ≥0.147 stopped writing user_message/agent_message/mcp_tool_call_* event
+// rows and instead mirrors every completed item as one `item_completed` event
+// (verified live against codex-cli 0.151.0). The plain-event vocabulary that
+// remains legal in that dialect is exactly this set; the item mirrors are
+// validated individually by item type.
+const CURRENT_ROLLOUT_NON_TOOL_EVENTS = new Set(["task_started", "token_count", "task_complete"]);
+// item_completed mirrors that carry no tool surface. McpToolCall mirrors are
+// legal ONLY as the audited gameplay-completion row; ContextCompaction is
+// compaction evidence; anything else fails closed.
+const BENIGN_ROLLOUT_ITEM_EVENT_TYPES = new Set(["UserMessage", "AgentMessage", "Reasoning"]);
+const CODEX_ITEM_LIFECYCLE_MIN_CLI = [0, 147, 0];
 const ALLOWED_ROLLOUT_METADATA_ROWS = new Set([
   "session_meta",
   "world_state",
@@ -265,6 +276,31 @@ function hasOnlyKeys(record, expected) {
 
 function validItemId(value) {
   return typeof value === "string" && value.length > 0 && value.length <= MAX_ITEM_ID_LENGTH;
+}
+
+function parsedCliVersionTriple(version) {
+  if (typeof version !== "string") return null;
+  const match = /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:[-+][0-9A-Za-z.-]+)?$/u.exec(version);
+  if (!match) return null;
+  const triple = [Number(match[1]), Number(match[2]), Number(match[3])];
+  return triple.every((part) => Number.isSafeInteger(part)) ? triple : null;
+}
+
+/**
+ * Which private-rollout event vocabulary a Codex CLI writes. Codex ≤0.146 wrote
+ * dedicated user_message/agent_message/mcp_tool_call_* event rows ("legacy");
+ * ≥0.147 replaced them with generic item_completed mirrors ("item_lifecycle",
+ * verified live against 0.151.0). An absent or malformed version is treated as
+ * legacy so unknown clients keep failing closed on the new rows.
+ */
+export function codexRolloutDialect(cliVersion) {
+  const triple = parsedCliVersionTriple(cliVersion);
+  if (triple === null) return "legacy";
+  const [major, minor, patch] = triple;
+  const [minMajor, minMinor, minPatch] = CODEX_ITEM_LIFECYCLE_MIN_CLI;
+  if (major !== minMajor) return major > minMajor ? "item_lifecycle" : "legacy";
+  if (minor !== minMinor) return minor > minMinor ? "item_lifecycle" : "legacy";
+  return patch >= minPatch ? "item_lifecycle" : "legacy";
 }
 
 function validMcpResult(value) {
@@ -803,10 +839,10 @@ function exactForwardedOutput(output, result, emitter) {
   return visible.length === 1 && visible[0] === JSON.stringify(result);
 }
 
-function privateGameplayLifecycle(payload, result) {
+function privateGameplayLifecycle(invocation, result) {
   return {
-    tool: payload.invocation.tool,
-    arguments: payload.invocation.arguments,
+    tool: invocation.tool,
+    arguments: invocation.arguments,
     status: result.isError === true ? "failed" : "completed",
     result: { content: result.content },
     error: null,
@@ -829,9 +865,7 @@ function validPrivateInputMessage(payload, role, turnId, requiresItemId = false)
     payload.role !== role ||
     !Array.isArray(payload.content) ||
     payload.content.length === 0 ||
-    !isRecord(payload.internal_chat_message_metadata_passthrough) ||
-    !hasOnlyKeys(payload.internal_chat_message_metadata_passthrough, ["turn_id"]) ||
-    payload.internal_chat_message_metadata_passthrough.turn_id !== turnId
+    !validTurnMetadata(payload.internal_chat_message_metadata_passthrough, turnId)
   ) {
     return false;
   }
@@ -855,12 +889,23 @@ function exactTaggedInputBlock(block, tag) {
   );
 }
 
-function validPermissionsAndSkillsMessage(payload, turnId, requiresItemId) {
+function validPermissionsAndSkillsMessage(payload, turnId, requiresItemId, dialect = "legacy") {
+  if (
+    !validPrivateInputMessage(payload, "developer", turnId, requiresItemId) ||
+    payload.content.length !== 2
+  ) {
+    return false;
+  }
+  // Codex ≥0.147 serializes the skills block before the permissions block
+  // (verified live on 0.151.0); older clients wrote the opposite order. The
+  // exact pair is still required either way.
+  const [firstTag, secondTag] =
+    dialect === "item_lifecycle"
+      ? ["skills_instructions", "permissions instructions"]
+      : ["permissions instructions", "skills_instructions"];
   return (
-    validPrivateInputMessage(payload, "developer", turnId, requiresItemId) &&
-    payload.content.length === 2 &&
-    exactTaggedInputBlock(payload.content[0], "permissions instructions") &&
-    exactTaggedInputBlock(payload.content[1], "skills_instructions")
+    exactTaggedInputBlock(payload.content[0], firstTag) &&
+    exactTaggedInputBlock(payload.content[1], secondTag)
   );
 }
 
@@ -925,9 +970,150 @@ function validPrivateUserEvent(payload) {
   );
 }
 
-function validNativeCollaborationMode(turnContext, expectedModel) {
+/**
+ * Shared envelope for the ≥0.147 `item_completed` rollout mirrors (verified
+ * live on 0.151.0). The mirror binds its own thread and turn identity, which
+ * the legacy dedicated events never carried.
+ */
+function validItemEventEnvelope(payload, turnId, threadId) {
+  return (
+    isRecord(payload) &&
+    hasOnlyKeys(payload, [
+      "type",
+      "thread_id",
+      "turn_id",
+      "item",
+      "started_at_ms",
+      "completed_at_ms",
+    ]) &&
+    payload.type === "item_completed" &&
+    (turnId === undefined || payload.turn_id === turnId) &&
+    (threadId === undefined || payload.thread_id === threadId) &&
+    typeof payload.thread_id === "string" &&
+    typeof payload.turn_id === "string" &&
+    nonNegativeInteger(payload.started_at_ms) &&
+    nonNegativeInteger(payload.completed_at_ms) &&
+    payload.completed_at_ms >= payload.started_at_ms &&
+    isRecord(payload.item)
+  );
+}
+
+/** The ≥0.147 spelling of the single prompt-echo user event. */
+function validUserMessageItemEvent(payload, turnId, threadId, promptText) {
+  if (!validItemEventEnvelope(payload, turnId, threadId)) return false;
+  const item = payload.item;
+  return (
+    hasOnlyKeys(item, ["type", "id", "content"]) &&
+    item.type === "UserMessage" &&
+    validItemId(item.id) &&
+    Array.isArray(item.content) &&
+    item.content.length === 1 &&
+    isRecord(item.content[0]) &&
+    hasOnlyKeys(item.content[0], ["type", "text", "text_elements"]) &&
+    item.content[0].type === "text" &&
+    typeof item.content[0].text === "string" &&
+    (promptText === undefined || item.content[0].text === promptText) &&
+    Array.isArray(item.content[0].text_elements) &&
+    item.content[0].text_elements.length === 0
+  );
+}
+
+/** The ≥0.147 assistant-message mirror; returns its bound phase and text. */
+function agentMessageItemEvent(payload, turnId, threadId) {
+  if (!validItemEventEnvelope(payload, turnId, threadId)) return null;
+  const item = payload.item;
   if (
-    turnContext.effort !== "xhigh" ||
+    !hasOnlyKeys(item, ["type", "id", "content", "phase"]) ||
+    item.type !== "AgentMessage" ||
+    !validItemId(item.id) ||
+    (item.phase !== "commentary" && item.phase !== "final_answer") ||
+    !Array.isArray(item.content) ||
+    item.content.length !== 1 ||
+    !isRecord(item.content[0]) ||
+    !hasOnlyKeys(item.content[0], ["type", "text"]) ||
+    item.content[0].type !== "Text" ||
+    typeof item.content[0].text !== "string" ||
+    item.content[0].text.length === 0
+  ) {
+    return null;
+  }
+  return { phase: item.phase, text: item.content[0].text };
+}
+
+/** The ≥0.147 reasoning mirror; visible summaries stay empty in pure runs. */
+function validReasoningItemEvent(payload, turnId, threadId) {
+  if (!validItemEventEnvelope(payload, turnId, threadId)) return false;
+  const item = payload.item;
+  return (
+    hasOnlyKeys(item, ["type", "id", "summary_text", "raw_content"]) &&
+    item.type === "Reasoning" &&
+    validItemId(item.id) &&
+    Array.isArray(item.summary_text) &&
+    item.summary_text.length === 0 &&
+    Array.isArray(item.raw_content) &&
+    item.raw_content.length === 0
+  );
+}
+
+/**
+ * The ≥0.147 spelling of the audited gameplay completion: the McpToolCall item
+ * carries the invocation and result directly instead of the legacy
+ * mcp_tool_call_end envelope's `invocation`/`result.Ok`. Returns the normalized
+ * completion the forwarding audit consumes, or null.
+ */
+function gameplayCompletionItemEvent(payload, threadId) {
+  if (!validItemEventEnvelope(payload, undefined, threadId)) return null;
+  const item = payload.item;
+  if (
+    !hasOnlyKeys(item, [
+      "type",
+      "id",
+      "server",
+      "tool",
+      "arguments",
+      "status",
+      "result",
+      "duration",
+    ]) ||
+    item.type !== "McpToolCall" ||
+    !validItemId(item.id) ||
+    typeof item.server !== "string" ||
+    typeof item.tool !== "string" ||
+    !isRecord(item.arguments) ||
+    (item.status !== "completed" && item.status !== "failed") ||
+    !isRecord(item.duration) ||
+    !isRecord(item.result)
+  ) {
+    return null;
+  }
+  const result = item.result;
+  if (
+    !(
+      hasOnlyKeys(result, ["content"]) ||
+      (hasOnlyKeys(result, ["content", "isError"]) && result.isError === true)
+    ) ||
+    (item.status === "failed") !== (result.isError === true) ||
+    !Array.isArray(result.content) ||
+    result.content.some(
+      (block) =>
+        !isRecord(block) ||
+        !hasOnlyKeys(block, ["type", "text"]) ||
+        block.type !== "text" ||
+        typeof block.text !== "string",
+    )
+  ) {
+    return null;
+  }
+  return {
+    callKey: item.id,
+    invocation: { server: item.server, tool: item.tool, arguments: item.arguments },
+    result,
+  };
+}
+
+function validNativeCollaborationMode(turnContext, expectedModel, expectedEffort = "xhigh") {
+  if (
+    turnContext.effort !== expectedEffort ||
     !isRecord(turnContext.collaboration_mode) ||
     !hasOnlyKeys(turnContext.collaboration_mode, ["mode", "settings"]) ||
     turnContext.collaboration_mode.mode !== "default" ||
@@ -976,10 +1162,15 @@ function codexCaptureProfile(
   expectedCliVersion,
   capturedCliVersion,
   transportContract,
+  expectedEffort = undefined,
+  capturedDialect = undefined,
 ) {
   if (!isRecord(turnContext) || typeof turnContext.model !== "string") return null;
   if (expectedModel !== undefined && turnContext.model !== expectedModel) return null;
-  if (!validNativeCollaborationMode(turnContext, expectedModel)) return null;
+  if (!validNativeCollaborationMode(turnContext, expectedModel, expectedEffort ?? "xhigh")) {
+    return null;
+  }
+  const dialect = capturedDialect ?? codexRolloutDialect(capturedCliVersion);
   if (transportContract === CODEX_GAME_DIRECT_MCP_CONTRACT) {
     return turnContext.model === "gpt-5.6-terra" &&
       turnContext.multi_agent_version === "disabled" &&
@@ -999,7 +1190,12 @@ function codexCaptureProfile(
     turnContext.multi_agent_version === "v1" &&
     !Object.hasOwn(turnContext, "multi_agent_mode")
   ) {
-    return { kind: "luna_v1", preludeCount: 2, requiresItemIds: false, exactModeBlock: null };
+    // Codex ≥0.147 stamps every response item with a unique id (verified live
+    // on 0.151.0); the historical Luna v1 profile predates response-item ids
+    // and stays reachable only for the legacy event dialect.
+    return dialect === "item_lifecycle"
+      ? { kind: "luna_v1_current", preludeCount: 2, requiresItemIds: true, exactModeBlock: null }
+      : { kind: "luna_v1", preludeCount: 2, requiresItemIds: false, exactModeBlock: null };
   }
   if (
     turnContext.model === SPARK_DISABLED_MODEL &&
@@ -1080,9 +1276,7 @@ function validPrivateAssistantMessage(payload, turnId) {
     payload.id.length > 0 &&
     payload.role === "assistant" &&
     (payload.phase === "commentary" || payload.phase === "final_answer") &&
-    isRecord(payload.internal_chat_message_metadata_passthrough) &&
-    hasOnlyKeys(payload.internal_chat_message_metadata_passthrough, ["turn_id"]) &&
-    payload.internal_chat_message_metadata_passthrough.turn_id === turnId &&
+    validTurnMetadata(payload.internal_chat_message_metadata_passthrough, turnId) &&
     Array.isArray(payload.content) &&
     payload.content.length > 0 &&
     payload.content.every(
@@ -1107,7 +1301,7 @@ function validPrivateAgentMessageEvent(payload) {
   );
 }
 
-function privateAssistantMessage(rows, index, turnId) {
+function privateAssistantMessage(rows, index, turnId, dialect = "legacy", threadId = undefined) {
   const payload = rows[index]?.payload;
   const event = rows[index - 1];
   const eventPayload = event?.payload;
@@ -1116,7 +1310,20 @@ function privateAssistantMessage(rows, index, turnId) {
     payload.content.length !== 1 ||
     typeof payload.content[0]?.text !== "string" ||
     payload.content[0].text.length === 0 ||
-    event?.type !== "event_msg" ||
+    event?.type !== "event_msg"
+  ) {
+    return null;
+  }
+  if (dialect === "item_lifecycle") {
+    const mirrored = agentMessageItemEvent(eventPayload, turnId, threadId);
+    if (
+      mirrored === null ||
+      mirrored.phase !== payload.phase ||
+      mirrored.text !== payload.content[0].text
+    ) {
+      return null;
+    }
+  } else if (
     !validPrivateAgentMessageEvent(eventPayload) ||
     eventPayload.phase !== payload.phase ||
     eventPayload.message !== payload.content[0].text
@@ -1135,6 +1342,8 @@ function inspectPrivateAssistantMessageLifecycle(
   turnId,
   userEventIndex,
   directMcp,
+  dialect = "legacy",
+  threadId = undefined,
 ) {
   if (
     assistantEventIndices.length !== assistantIndices.length ||
@@ -1142,7 +1351,9 @@ function inspectPrivateAssistantMessageLifecycle(
   ) {
     return rolloutReject("rollout assistant-message lifecycle is out of order");
   }
-  const messages = assistantIndices.map((index) => privateAssistantMessage(rows, index, turnId));
+  const messages = assistantIndices.map((index) =>
+    privateAssistantMessage(rows, index, turnId, dialect, threadId),
+  );
   if (messages.some((message) => message === null)) {
     return rolloutReject("rollout assistant-message lifecycle is out of order");
   }
@@ -1199,14 +1410,43 @@ function validPrivateReasoning(payload, turnId) {
     Array.isArray(payload.summary) &&
     payload.summary.length === 0 &&
     typeof payload.encrypted_content === "string" &&
-    isRecord(payload.internal_chat_message_metadata_passthrough) &&
-    hasOnlyKeys(payload.internal_chat_message_metadata_passthrough, ["turn_id"]) &&
-    payload.internal_chat_message_metadata_passthrough.turn_id === turnId
+    validTurnMetadata(payload.internal_chat_message_metadata_passthrough, turnId)
   );
 }
 
+/**
+ * Codex ≥0.147 adds bookkeeping fields to the per-item passthrough metadata
+ * (verified live on 0.151.0: `create_time` on tool rows, plus
+ * `content_item_kinds` on chat rows). They carry no player-visible content, so
+ * they are tolerated with shape checks while `turn_id` stays exactly bound.
+ */
 function validTurnMetadata(metadata, turnId) {
-  return isRecord(metadata) && hasOnlyKeys(metadata, ["turn_id"]) && metadata.turn_id === turnId;
+  if (!isRecord(metadata) || metadata.turn_id !== turnId) return false;
+  const allowed = ["content_item_kinds", "create_time", "turn_id"];
+  if (!Object.keys(metadata).every((key) => allowed.includes(key))) return false;
+  if (
+    Object.hasOwn(metadata, "create_time") &&
+    !(
+      typeof metadata.create_time === "number" &&
+      Number.isFinite(metadata.create_time) &&
+      metadata.create_time > 0
+    )
+  ) {
+    return false;
+  }
+  if (
+    Object.hasOwn(metadata, "content_item_kinds") &&
+    !(
+      Array.isArray(metadata.content_item_kinds) &&
+      metadata.content_item_kinds.length <= 32 &&
+      metadata.content_item_kinds.every(
+        (kind) => typeof kind === "string" && kind.length > 0 && kind.length <= 128,
+      )
+    )
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function validPrivateWrapperPayload(payload, turnId) {
@@ -1296,7 +1536,7 @@ function inspectCodexRolloutStructure(
   rows,
   expectedModel,
   expectedCliVersion,
-  { transportContract = null } = {},
+  { transportContract = null, expectedEffort = undefined } = {},
 ) {
   const directMcp = isDirectMcpContract(transportContract);
   if (!Array.isArray(rows) || rows.length === 0) return rolloutReject("rollout is empty");
@@ -1318,6 +1558,7 @@ function inspectCodexRolloutStructure(
     assistantMessageEvents: [],
     assistantMessages: [],
     reasoningItems: [],
+    reasoningEvents: [],
   };
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
@@ -1332,6 +1573,17 @@ function inspectCodexRolloutStructure(
       if (payload?.type === "user_message") indices.userEvents.push(index);
       if (payload?.type === "context_compacted") indices.contextCompactedEvents.push(index);
       if (payload?.type === "agent_message") indices.assistantMessageEvents.push(index);
+      // The ≥0.147 item_completed mirrors are indexed as the same lifecycle
+      // roles their dedicated legacy events used to fill; the dialect gate
+      // below decides which spelling this rollout is allowed to use.
+      if (payload?.type === "item_completed") {
+        if (payload?.item?.type === "UserMessage") indices.userEvents.push(index);
+        if (payload?.item?.type === "AgentMessage") indices.assistantMessageEvents.push(index);
+        if (payload?.item?.type === "Reasoning") indices.reasoningEvents.push(index);
+        if (payload?.item?.type === "ContextCompaction") {
+          indices.contextCompactedEvents.push(index);
+        }
+      }
     }
     if (
       row?.type === "response_item" &&
@@ -1400,6 +1652,7 @@ function inspectCodexRolloutStructure(
   const promptContent = promptMessage?.content;
   const promptBlock = Array.isArray(promptContent) ? promptContent[0] : null;
   const turnId = rows[initialTurnContext]?.payload?.turn_id;
+  const sessionThreadId = rows[indices.sessions[0]]?.payload?.id;
   const capturedCliVersion = rows[indices.sessions[0]]?.payload?.cli_version;
   if (
     directMcp &&
@@ -1409,12 +1662,39 @@ function inspectCodexRolloutStructure(
       `${transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT ? "Spark direct MCP" : "game direct MCP"} rollout requires authenticated and captured Codex CLI ${CODEX_0146_CLI_VERSION}`,
     );
   }
+  // One rollout speaks exactly one event dialect, and the dialect the captured
+  // client wrote must be the dialect the preflighted client implies. A
+  // mismatch means the rollout was not produced by the authenticated client.
+  const capturedDialect = codexRolloutDialect(capturedCliVersion);
+  if (
+    expectedCliVersion !== undefined &&
+    codexRolloutDialect(expectedCliVersion) !== capturedDialect
+  ) {
+    return rolloutReject("rollout event dialect differs from the authenticated client version");
+  }
+  if (capturedDialect === "legacy") {
+    if (indices.reasoningEvents.length !== 0) {
+      return rolloutReject("rollout reasoning lifecycle is out of order");
+    }
+  } else if (
+    indices.reasoningEvents.length !== indices.reasoningItems.length ||
+    indices.reasoningItems.some(
+      (itemIndex, ordinal) => indices.reasoningEvents[ordinal] !== itemIndex - 1,
+    ) ||
+    indices.reasoningEvents.some(
+      (eventIndex) => !validReasoningItemEvent(rows[eventIndex]?.payload, turnId, sessionThreadId),
+    )
+  ) {
+    return rolloutReject("rollout reasoning lifecycle is out of order");
+  }
   const profile = codexCaptureProfile(
     rows[initialTurnContext]?.payload,
     expectedModel,
     expectedCliVersion,
     capturedCliVersion,
     transportContract,
+    expectedEffort,
+    capturedDialect,
   );
   if (profile === null) {
     return rolloutReject("rollout model and multi-agent capture profile is unsupported");
@@ -1446,6 +1726,7 @@ function inspectCodexRolloutStructure(
         rows[preludeIndices[0]]?.payload,
         turnId,
         profile.requiresItemIds,
+        capturedDialect,
       ) &&
       (preludeCount === 2
         ? validEnvironmentMessage(rows[preludeIndices[1]]?.payload, turnId, profile.requiresItemIds)
@@ -1470,6 +1751,8 @@ function inspectCodexRolloutStructure(
     turnId,
     userEvent,
     directMcp,
+    capturedDialect,
+    sessionThreadId,
   );
   if (!assistantLifecycle.ok) return assistantLifecycle;
   if (
@@ -1529,8 +1812,9 @@ function inspectCodexRolloutStructure(
     !hasOnlyKeys(promptBlock, ["type", "text"]) ||
     promptBlock.type !== "input_text" ||
     typeof promptBlock.text !== "string" ||
-    promptBlock.text !== promptEvent?.message ||
-    !validPrivateUserEvent(promptEvent)
+    (capturedDialect === "item_lifecycle"
+      ? !validUserMessageItemEvent(promptEvent, turnId, sessionThreadId, promptBlock.text)
+      : promptBlock.text !== promptEvent?.message || !validPrivateUserEvent(promptEvent))
   ) {
     return rolloutReject("rollout input and initial context lifecycle is out of order");
   }
@@ -1555,6 +1839,19 @@ function scanCodexGameplayResultForwarding(
       : rolloutReject("rollout is empty");
   }
 
+  // The leading session_meta names the writing client, which decides whether
+  // this rollout speaks the legacy dedicated-event vocabulary or the ≥0.147
+  // item_completed mirror vocabulary. The full structure audit later binds the
+  // captured version against the preflighted client; here the in-band value
+  // only selects which exact vocabulary must hold.
+  const dialect =
+    rows[0]?.type === "session_meta"
+      ? codexRolloutDialect(rows[0]?.payload?.cli_version)
+      : "legacy";
+  const boundThreadId =
+    rows[0]?.type === "session_meta" && typeof rows[0]?.payload?.id === "string"
+      ? rows[0].payload.id
+      : undefined;
   const gameplayCalls = [];
   const gameplayCallIds = new Set();
   const wrapperCallIds = new Set();
@@ -1577,7 +1874,25 @@ function scanCodexGameplayResultForwarding(
       if (typeof rowPayload?.type === "string" && rowPayload.type.startsWith("mcp_tool_call_")) {
         return rolloutReject(`orphan or unexpected tool lifecycle at rollout row ${index + 1}`);
       }
-      if (!ALLOWED_ROLLOUT_NON_TOOL_EVENTS.has(rowPayload?.type)) {
+      if (rowPayload?.type === "item_completed") {
+        if (dialect !== "item_lifecycle") {
+          return rolloutReject(`forbidden private event at rollout row ${index + 1}`);
+        }
+        // Expected McpToolCall mirrors are consumed by the gameplay triplet
+        // below; one reaching this arm sits outside an audited wrapper.
+        if (rowPayload?.item?.type === "McpToolCall") {
+          return rolloutReject(`orphan or unexpected tool lifecycle at rollout row ${index + 1}`);
+        }
+        if (!BENIGN_ROLLOUT_ITEM_EVENT_TYPES.has(rowPayload?.item?.type)) {
+          return rolloutReject(`forbidden private event at rollout row ${index + 1}`);
+        }
+        continue;
+      }
+      const allowedPlainEvents =
+        dialect === "item_lifecycle"
+          ? CURRENT_ROLLOUT_NON_TOOL_EVENTS
+          : ALLOWED_ROLLOUT_NON_TOOL_EVENTS;
+      if (!allowedPlainEvents.has(rowPayload?.type)) {
         return rolloutReject(`forbidden private event at rollout row ${index + 1}`);
       }
       continue;
@@ -1631,31 +1946,57 @@ function scanCodexGameplayResultForwarding(
         pending: "mcp_completion",
       };
     }
-    if (completion?.type !== "event_msg" || payload?.type !== "mcp_tool_call_end") {
-      return rolloutReject(`gameplay call ${ordinal} has no immediate MCP completion`);
+    let normalizedCompletion;
+    if (dialect === "item_lifecycle") {
+      if (
+        completion?.type !== "event_msg" ||
+        payload?.type !== "item_completed" ||
+        payload?.item?.type !== "McpToolCall"
+      ) {
+        return rolloutReject(`gameplay call ${ordinal} has no immediate MCP completion`);
+      }
+      normalizedCompletion = gameplayCompletionItemEvent(payload, boundThreadId);
+      if (normalizedCompletion === null) {
+        return rolloutReject(`gameplay call ${ordinal} has no auditable immediate result`);
+      }
+    } else {
+      if (completion?.type !== "event_msg" || payload?.type !== "mcp_tool_call_end") {
+        return rolloutReject(`gameplay call ${ordinal} has no immediate MCP completion`);
+      }
+      if (
+        typeof payload.call_id !== "string" ||
+        payload.call_id.length === 0 ||
+        !isRecord(payload.invocation) ||
+        !isRecord(payload.invocation.arguments)
+      ) {
+        return rolloutReject(`gameplay call ${ordinal} has an invalid or duplicate MCP call id`);
+      }
+      const legacyResult = gameplayResult(payload);
+      if (!legacyResult) {
+        return rolloutReject(`gameplay call ${ordinal} has no auditable immediate result`);
+      }
+      normalizedCompletion = {
+        callKey: payload.call_id,
+        invocation: payload.invocation,
+        result: legacyResult,
+      };
     }
     if (
-      typeof payload.call_id !== "string" ||
-      payload.call_id.length === 0 ||
-      gameplayCallIds.has(payload.call_id) ||
-      wrapperCallIds.has(payload.call_id) ||
-      !isRecord(payload.invocation) ||
-      !isRecord(payload.invocation.arguments)
+      gameplayCallIds.has(normalizedCompletion.callKey) ||
+      wrapperCallIds.has(normalizedCompletion.callKey) ||
+      wrapperItemIds.has(normalizedCompletion.callKey)
     ) {
       return rolloutReject(`gameplay call ${ordinal} has an invalid or duplicate MCP call id`);
     }
-    gameplayCallIds.add(payload.call_id);
+    gameplayCallIds.add(normalizedCompletion.callKey);
     if (
-      payload.invocation.server !== "adventureforge" ||
-      payload.invocation.tool !== wrapper.tool ||
-      !sameJsonValue(payload.invocation.arguments, wrapper.arguments)
+      normalizedCompletion.invocation.server !== "adventureforge" ||
+      normalizedCompletion.invocation.tool !== wrapper.tool ||
+      !sameJsonValue(normalizedCompletion.invocation.arguments, wrapper.arguments)
     ) {
       return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`);
     }
-    const result = gameplayResult(payload);
-    if (!result) {
-      return rolloutReject(`gameplay call ${ordinal} has no auditable immediate result`);
-    }
+    const result = normalizedCompletion.result;
     const forwarded = rows[index + 2];
     if (forwarded === undefined && allowIncompletePrefix) {
       return {
@@ -1679,7 +2020,7 @@ function scanCodexGameplayResultForwarding(
         `gameplay call ${ordinal} has a missing, mismatched, or truncated output`,
       );
     }
-    gameplayCalls.push(privateGameplayLifecycle(payload, result));
+    gameplayCalls.push(privateGameplayLifecycle(normalizedCompletion.invocation, result));
     index += 2;
   }
 
@@ -1821,7 +2162,7 @@ function scanCodexDirectMcp(rows, { allowIncompletePrefix = false } = {}) {
           );
         }
         responseItemIds.add(output.payload.id);
-        gameplayCalls.push(privateGameplayLifecycle(completionPayload, result));
+        gameplayCalls.push(privateGameplayLifecycle(completionPayload.invocation, result));
         index += 2;
         continue;
       }
@@ -2298,12 +2639,18 @@ export function inspectCodexPureEvidence(
   publicRows,
   rolloutRows,
   expectedModel = undefined,
-  { codeModeContract = null, transportContract = codeModeContract, cliVersion = undefined } = {},
+  {
+    codeModeContract = null,
+    transportContract = codeModeContract,
+    cliVersion = undefined,
+    expectedEffort = undefined,
+  } = {},
 ) {
   const publicEvidence = inspectCodexPureEvents(publicRows, expectedModel, { transportContract });
   if (!publicEvidence.ok) return publicEvidence;
   const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel, cliVersion, {
     transportContract,
+    expectedEffort,
   });
   if (!rolloutStructure.ok) return rolloutStructure;
   const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows, { transportContract });
@@ -2346,6 +2693,7 @@ export function buildCodexPureEnvelope({
   codeModeContract = undefined,
   transportContract = codeModeContract,
   cliVersion = undefined,
+  expectedEffort = undefined,
 }) {
   if (typeof report !== "string" || report.trim().length === 0) {
     return reject("Codex pure run produced no final report");
@@ -2362,6 +2710,7 @@ export function buildCodexPureEnvelope({
   const inspected = inspectCodexPureEvidence(rows, rolloutRows, model, {
     transportContract: transportContract ?? null,
     cliVersion,
+    expectedEffort,
   });
   if (!inspected.ok) return inspected;
 
@@ -2431,6 +2780,7 @@ function main() {
   const startedAtMs = Number(option(argv, "--started-at-ms"));
   const codeModeContract = option(argv, "--code-mode-contract");
   const transportContract = option(argv, "--transport-contract");
+  const expectedEffort = option(argv, "--expected-effort");
   const effectiveTransportContract = transportContract ?? codeModeContract;
   if (
     !eventsPath ||
@@ -2440,12 +2790,13 @@ function main() {
     !cliVersion ||
     !nonNegativeInteger(startedAtMs) ||
     (codeModeContract !== undefined && transportContract !== undefined) ||
+    (expectedEffort !== undefined && !/^[a-z]{1,16}$/u.test(expectedEffort)) ||
     typeof effectiveTransportContract !== "string" ||
     !validCodexTransportContract(effectiveTransportContract) ||
     effectiveTransportContract === CODEX_HISTORICAL_STRICT_CONTRACT
   ) {
     console.error(
-      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --cli-version <semver> --started-at-ms <n> (--code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}|--transport-contract ${CODEX_SPARK_DIRECT_MCP_CONTRACT}|${CODEX_GAME_DIRECT_MCP_CONTRACT})`,
+      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --cli-version <semver> --started-at-ms <n> [--expected-effort <level>] (--code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}|--transport-contract ${CODEX_SPARK_DIRECT_MCP_CONTRACT}|${CODEX_GAME_DIRECT_MCP_CONTRACT})`,
     );
     process.exit(2);
   }
@@ -2459,6 +2810,7 @@ function main() {
       cliVersion,
       durationMs: Math.max(0, Date.now() - startedAtMs),
       transportContract: effectiveTransportContract,
+      expectedEffort,
     });
     if (!result.ok) {
       console.error(result.reason);

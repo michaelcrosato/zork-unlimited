@@ -35,6 +35,7 @@ const NPM_EATEN_FLAGS = [
   ["seed", "--seed", true],
   ["provider", "--provider", true],
   ["model", "--model", true],
+  ["effort", "--effort", true],
   ["out", "--out", true],
   ["delay_ms", "--delay-ms", true],
   ["persona", "--persona", true],

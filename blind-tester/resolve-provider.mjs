@@ -219,12 +219,20 @@ export function resolveProvider(providerId, requestedModel, repoRoot = REPO_ROOT
     );
   }
   if (models.length === 0) fail(`catalog ${provider.catalogPath} lists no models`);
+  const defaults = models.filter((candidate) => candidate.default === true);
+  if (defaults.length > 1) {
+    fail(
+      `catalog ${provider.catalogPath} marks ${defaults.length} models as default; at most one is allowed`,
+    );
+  }
 
   // An alias is refused on purpose: it resolves to different weights over time, so a
   // session recorded under one would stop meaning what its record says it means.
+  // With no model requested, the catalog's one explicit `default: true` entry wins;
+  // the volume-first heuristic remains only for catalogs that never marked one.
   const model = requestedModel
     ? models.find((candidate) => candidate.id === requestedModel)
-    : (models.find((candidate) => candidate.tier === "volume") ?? models[0]);
+    : (defaults[0] ?? models.find((candidate) => candidate.tier === "volume") ?? models[0]);
 
   if (!model) {
     const known = models.map((candidate) => candidate.id).join(", ");
@@ -277,6 +285,16 @@ export function resolveProvider(providerId, requestedModel, repoRoot = REPO_ROOT
       : null,
     model: model.id,
     modelTier: model.tier,
+    modelDefault: model.default === true,
+    // Catalog settings are operator-owned launch intent. Only the knobs the
+    // runner actually enforces are rendered as records; the JSON form carries
+    // the full block for tooling.
+    modelSettings:
+      model.settings !== null &&
+      typeof model.settings === "object" &&
+      !Array.isArray(model.settings)
+        ? model.settings
+        : {},
     catalogPath: provider.catalogPath,
     transportContract: provider.transportContract ?? null,
   };
@@ -311,6 +329,13 @@ export function renderRecords(resolved) {
     ...(resolved.launch?.argv ?? []).map((argument) => ["launch_argv", argument]),
     ["model", resolved.model],
     ["model_tier", resolved.modelTier],
+    ["model_default", resolved.modelDefault ? "1" : "0"],
+    [
+      "model_reasoning_effort",
+      typeof resolved.modelSettings?.reasoning_effort === "string"
+        ? resolved.modelSettings.reasoning_effort
+        : null,
+    ],
     ["catalog_path", resolved.catalogPath],
     ["transport_contract", resolved.transportContract],
   ];

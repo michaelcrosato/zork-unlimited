@@ -22,8 +22,9 @@
     {
       "id": "gpt-5.6-luna",
       "tier": "reference",
-      "settings": { "reasoning_effort": "xhigh" },
-      "notes": "Calibration instrument."
+      "default": true,
+      "settings": { "reasoning_effort": "max" },
+      "notes": "The default codex blind player (no --model needed). Runs the strict-code-mode-v2 lane at reasoning effort max; the 0.151.0 models catalog advertises low/medium/high/xhigh/max for this id. Fleet cohorts pin their own effort explicitly and are unaffected by this default."
     }
   ]
 }

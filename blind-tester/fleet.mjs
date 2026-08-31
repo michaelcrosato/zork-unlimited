@@ -1898,6 +1898,11 @@ export function codexFleetMemberEnv(environment, client) {
     BLIND_CODEX_BIN: client.selected_binary,
     BLIND_CODEX_EXPECTED_AUTHORITY: client.authority_token,
     BLIND_CODEX_EXPECTED_VERSION: client.cli_version,
+    // Fleet cohorts attest reasoning_effort xhigh (see the frozen admission
+    // configuration and attestation gates), so the launch effort is pinned here
+    // explicitly instead of inheriting whatever the catalog's interactive
+    // default happens to be.
+    BLIND_REASONING_EFFORT: "xhigh",
   };
 }
 

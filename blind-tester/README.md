@@ -106,8 +106,28 @@ transport fallback.
 The audited `spark-direct-mcp-v1` and Terra-only `game-direct-mcp-v1`
 transports require exact `codex-cli 0.146.0`. Any other version exits at client
 preflight with code 42 before the model starts; set `BLIND_CODEX_BIN` to the
-absolute path of the compatible executable. Strict Sol and Luna transports
-retain their existing version-pinning behavior.
+absolute path of the compatible executable. The strict lane pins no CLI version;
+it pins the exact rollout vocabulary instead, in two dialects. Codex ≤0.146
+wrote dedicated `user_message`/`agent_message`/`mcp_tool_call_end` event rows;
+≥0.147 (verified live against 0.151.0) replaced them with `item_completed`
+mirrors, stamped ids on every response item, added `create_time`/
+`content_item_kinds` passthrough bookkeeping, and serializes the skills block
+before the permissions block in the developer prelude. The strict audit selects
+the dialect from the captured `session_meta.cli_version`, requires it to agree
+with the preflighted client's version, and fails closed on any row outside the
+selected dialect — including `thread_settings_applied`, free-floating
+`McpToolCall` mirrors, and every tool-shaped or compaction item mirror.
+
+Every launch resolves one reasoning effort: `--effort <level>` (or
+`BLIND_REASONING_EFFORT`) wins, then the selected model's catalog
+`settings.reasoning_effort`, then the historical `xhigh` for codex. The value
+is whitelisted (`minimal|low|medium|high|xhigh|max`), passed to the codex
+player as `model_reasoning_effort`, appended to a claude_code launch as
+`--effort`, and bound in the terminal audit against the captured
+`turn_context.effort`. With no `--model`, the catalog's one `default: true`
+entry is launched — `gpt-5.6-luna` at `max` for codex, `claude-sonnet-5` at
+`medium` for claude_code — so `npm run blind` needs no flags. Fleet cohorts pin
+`BLIND_REASONING_EFFORT=xhigh` explicitly and keep their own model defaults.
 
 `--preflight-only`, used by a live fleet's shared gate, does not resolve, read,
 or enumerate `CODEX_HOME` and creates no report or player artifacts. It returns
