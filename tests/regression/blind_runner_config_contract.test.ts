@@ -1417,11 +1417,27 @@ printf 'codex-cli 0.144.1\\n'
       "utf8",
     );
 
-    // The default provider is a named constant with a stated reason, not an accident of
-    // parameter expansion. It is still `codex`, and it is still only a DEFAULT: the pure
-    // gate asks the registry what the chosen provider can prove, never what it is called.
-    expect(runner).toContain('DEFAULT_PROVIDER="codex"');
+    // The default provider is still a named constant with a stated reason, and still only
+    // a DEFAULT — the pure gate asks the registry what the chosen provider can PROVE,
+    // never what it is called. It is no longer the literal `codex`: the runner asks the
+    // registry for its first entry, so the vendor name lives in providers.json alone.
+    // Registry order is unchanged, so this still resolves to codex today.
+    expect(runner).toContain(
+      'DEFAULT_PROVIDER="$("$NODE_CMD" "$SCRIPT_DIR/resolve-provider.mjs" --default-provider',
+    );
+    expect(runner).not.toContain('DEFAULT_PROVIDER="codex"');
     expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-$DEFAULT_PROVIDER}"');
+    // …and it still resolves to codex, which is the half a source-text check cannot see.
+    expect(
+      spawnSync(
+        process.execPath,
+        [join("blind-tester", "resolve-provider.mjs"), "--default-provider"],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+        },
+      ).stdout.trim(),
+    ).toBe("codex");
     expect(runner).toContain("--provider)");
     // Provider and model are validated through the registry, never against a vendor
     // list embedded here: a runner that has to be edited to gain a vendor is a runner

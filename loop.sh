@@ -234,12 +234,19 @@ latest_prompt() {
 # duplicated here and there, in an order doctor.ts's output depended on, with nothing
 # checking the two copies agreed.
 DEV_AGENT_REGISTRY="$PWD/dev-agents.json"
+# The node used to read that JSON. An absolute override exists for the same reason
+# blind-tester/run.sh has BLIND_NODE_CMD: a caller that has node but cannot put its
+# directory on PATH must still be able to resolve an agent. It matters for the driver
+# gates in particular, which run agent selection with an EMPTY PATH so that only their
+# own stub functions can satisfy `command -v <agent>` — exposing node's directory there
+# would also expose whatever agent binaries share it.
+AI_LOOP_NODE_CMD="${AI_LOOP_NODE_CMD:-node}"
 
 # Read one field of one agent entry. Prints nothing and returns 1 for an unknown id, so
 # every caller keeps the "not a known dev agent" behaviour the case statements had.
 dev_agent_field() {
   local id="$1" field="$2"
-  node -e '
+  "$AI_LOOP_NODE_CMD" -e '
 const { readFileSync } = require("node:fs");
 const [file, id, field] = process.argv.slice(1);
 let agents;
@@ -261,7 +268,7 @@ process.stdout.write(agent[field]);
 # honest outcome. Silently falling back to a built-in list would mean a corrupted
 # registry still launched an agent the operator did not configure.
 dev_agent_ids() {
-  node -e '
+  "$AI_LOOP_NODE_CMD" -e '
 const { readFileSync } = require("node:fs");
 try {
   const parsed = JSON.parse(readFileSync(process.argv[1], "utf8"));
