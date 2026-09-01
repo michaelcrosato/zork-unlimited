@@ -89,8 +89,76 @@ export const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1";
 export const GAME_DIRECT_MCP_TRANSPORT_CONTRACT = CODEX_GAME_DIRECT_MCP_CONTRACT;
 export const SPARK_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0";
 export const GAME_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0";
-const SPARK_ADMISSION_CANARY_COUNT = 3;
-const SPARK_ADMISSION_CANARY_MODEL = "gpt-5.3-codex-spark";
+/**
+ * The model id the frozen v9 direct-MCP spark profile was recorded under.
+ *
+ * Used ONLY by the historical attestation discriminators below, which must keep matching
+ * records already sealed. It is deliberately NOT the admission-canary constant any more:
+ * those two happened to be the same string, which made one vendor's model id do two
+ * unrelated jobs — frozen history, and a live cost policy that should follow the volume
+ * role wherever it goes.
+ */
+const HISTORICAL_SPARK_DIRECT_MODEL = "gpt-5.3-codex-spark";
+
+/**
+ * The admission canary: which model needs one, and how many players must pass first.
+ *
+ * A COST guard, not an evidence gate — a large live wave of the cheap volume model is the
+ * one thing here that can burn a subscription in minutes, so it must first show a receipt
+ * proving N canary players completed. It was a pair of `SPARK_*` constants, i.e. a policy
+ * welded to one vendor's model id; declaring it as `admissionCanaryCount` on the catalog
+ * entry lets the guard follow the volume role to whatever model next holds it.
+ *
+ * Returns null when no certified model declares a canary — then no fleet requires a
+ * receipt, exactly as every non-Spark model behaved before.
+ *
+ * Exactly ONE model may declare it, because the receipt records a single model and count;
+ * two would make "the canary" ambiguous and silently pick whichever sorted first.
+ */
+function fleetAdmissionCanary() {
+  let declared = [];
+  try {
+    const provider = readFleetProviderRegistry().find((candidate) => candidate.id === "codex");
+    if (provider) {
+      declared = readFleetCatalog(provider)
+        .models.filter(
+          (model) => model.certified === true && Number.isInteger(model.admissionCanaryCount),
+        )
+        .map((model) => ({ model: model.id, count: model.admissionCanaryCount }));
+    }
+  } catch {
+    declared = [];
+  }
+  if (declared.length === 0) return null;
+  if (declared.length > 1) {
+    throw new Error(
+      `fleet: ${declared.length} certified models declare an admission canary ` +
+        `(${declared.map((entry) => entry.model).join(", ")}); exactly one may`,
+    );
+  }
+  return declared[0];
+}
+
+/**
+ * The canary in force, resolved once at load.
+ *
+ * Falls back to the frozen Spark values if the catalog cannot be read. That direction is
+ * deliberate: this is a spend guard, so an unreadable catalog must leave it STANDING
+ * rather than quietly removing the one thing that stops a mistyped `--count` from
+ * launching a hundred live players. Fail safe, not fail open.
+ *
+ * The names are unchanged so every call site reads the same as before; only where the
+ * numbers come from has moved.
+ */
+const RESOLVED_ADMISSION_CANARY = (() => {
+  try {
+    return fleetAdmissionCanary() ?? { model: HISTORICAL_SPARK_DIRECT_MODEL, count: 3 };
+  } catch {
+    return { model: HISTORICAL_SPARK_DIRECT_MODEL, count: 3 };
+  }
+})();
+const SPARK_ADMISSION_CANARY_MODEL = RESOLVED_ADMISSION_CANARY.model;
+const SPARK_ADMISSION_CANARY_COUNT = RESOLVED_ADMISSION_CANARY.count;
 // These tracked inputs are shared by every live player transport. Prompt and
 // model-catalog inputs are selected below because they are model-specific. Their
 // bytes never leave this process: summaries retain only one digest of each
@@ -2117,7 +2185,7 @@ function isExactPureFleetAttestation(attestation) {
     keys.every((key, index) => key === CURRENT_DIRECT_CODEX_ATTESTATION_KEYS[index]);
   const historicalTransportStrictCodex =
     attestation.schema_version === HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION &&
-    attestation.model !== SPARK_ADMISSION_CANARY_MODEL &&
+    attestation.model !== HISTORICAL_SPARK_DIRECT_MODEL &&
     keys.length === CURRENT_STRICT_CODEX_ATTESTATION_KEYS.length &&
     keys.every((key, index) => key === CURRENT_STRICT_CODEX_ATTESTATION_KEYS[index]);
   const historicalClientBoundCodex =
@@ -2183,7 +2251,7 @@ function isExactPureFleetAttestation(attestation) {
           /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
         : historicalTransportDirectCodex
           ? attestation.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT &&
-            attestation.model === SPARK_ADMISSION_CANARY_MODEL &&
+            attestation.model === HISTORICAL_SPARK_DIRECT_MODEL &&
             attestation.codex_cli_version === SPARK_DIRECT_MCP_CODEX_CLI_VERSION &&
             /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
           : historicalTransportStrictCodex || historicalClientBoundCodex
