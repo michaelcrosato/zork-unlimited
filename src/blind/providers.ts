@@ -251,6 +251,20 @@ export const PlaytestCatalogModelSchema = z
      * keeps existing sealed records readable without a migration. Absent, `id` is used.
      */
     certifiedAs: z.string().min(1).optional(),
+    /**
+     * Require an admission canary before a LIVE fleet of this model exceeds N players.
+     *
+     * A cost guard, not an evidence gate: the cheap mass-volume model is the one that can
+     * burn a subscription in a single wave, so a large live fleet of it must first show a
+     * receipt proving N canary players completed. It was `SPARK_ADMISSION_CANARY_COUNT`
+     * and `SPARK_ADMISSION_CANARY_MODEL` in blind-tester/fleet.mjs — a policy welded to
+     * one vendor's model id, so the guard could not follow the volume role to whatever
+     * model next holds it.
+     *
+     * Absent means no canary requirement, which is the honest default: most models are
+     * not run in waves large enough to need one.
+     */
+    admissionCanaryCount: z.number().int().positive().optional(),
     /** Per-model transport override; absent means "inherit the provider's". */
     transport: PlaytestModelTransportSchema.optional(),
     /**

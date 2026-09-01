@@ -5,7 +5,10 @@
       "id": "gpt-5.3-codex-spark",
       "tier": "volume",
       "certified": true,
-      "settings": { "reasoning_effort": "xhigh", "reasoning_summary": "none" },
+      "settings": {
+        "reasoning_effort": "xhigh",
+        "reasoning_summary": "none"
+      },
       "transport": {
         "kind": "direct_mcp",
         "contract": "spark-direct-mcp-v1",
@@ -14,13 +17,17 @@
         "playerCatalog": "codex-model-catalog-spark-v1.json",
         "fragment": "prompt-transports/spark-direct-mcp-v1.md"
       },
-      "notes": "Cheap, fast, the default volume player. Its transport differs from the rest of its own provider, which is why the block above exists: contract, pinned client version and components used to live in a model switch in fleet.mjs, an if-chain in run.sh and a pair of z.literal schemas in fleet_attestation.ts, and drifting between those three was a matter of time."
+      "notes": "Cheap, fast, the default volume player. Its transport differs from the rest of its own provider, which is why the block above exists: contract, pinned client version and components used to live in a model switch in fleet.mjs, an if-chain in run.sh and a pair of z.literal schemas in fleet_attestation.ts, and drifting between those three was a matter of time.",
+      "admissionCanaryCount": 3
     },
     {
       "id": "gpt-5.6-terra",
       "tier": "reference",
       "certified": true,
-      "settings": { "reasoning_effort": "xhigh", "reasoning_summary": "none" },
+      "settings": {
+        "reasoning_effort": "xhigh",
+        "reasoning_summary": "none"
+      },
       "transport": {
         "kind": "direct_mcp",
         "contract": "game-direct-mcp-v1",
@@ -35,7 +42,9 @@
       "id": "gpt-5.6-sol",
       "tier": "reference",
       "certified": true,
-      "settings": { "reasoning_effort": "xhigh" },
+      "settings": {
+        "reasoning_effort": "xhigh"
+      },
       "transport": {
         "kind": "code_mode",
         "contract": "strict-code-mode-v2",
@@ -49,7 +58,10 @@
       "tier": "reference",
       "certified": true,
       "default": true,
-      "settings": { "reasoning_effort": "max", "context_window": 872000 },
+      "settings": {
+        "reasoning_effort": "max",
+        "context_window": 872000
+      },
       "transport": {
         "kind": "code_mode",
         "contract": "strict-code-mode-v2",
