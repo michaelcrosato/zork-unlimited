@@ -16,17 +16,17 @@ const ALL_EXHAUSTIVE_RPG_PROOFS = [
   VARIANT_LIVENESS_PROOF,
   ...EXHAUSTIVE_RPG_PROOFS,
 ];
-// The CI cap was 2 while every project shared one job: the memory-heavy exhaustive BFS
-// proofs ran alongside the ordinary files, and a wider pool put them over their limits
-// (see the per-project notes below). Those proofs now run in their own deep-audit job, so
-// the standard pool no longer has to leave headroom for a peer that is not there. A
-// GitHub runner has 4 vCPU and 16 GB, and this project's files are ordinary; a measured
-// 2-worker shard spent 1,562s of wall clock on 243 files with 1,115s of that in per-file
-// module import, which is precisely the cost more workers absorb. The exhaustive caps
-// below are UNCHANGED — they are the ones that were load-bearing.
+// Deliberately 2 under CI, not 4. Raising it to 4 cut a shard from 1,562s to 959s (-38%)
+// and turned two subprocess-spawning tests red on the same run — crawl_workers_determinism
+// blew its 60s ceiling and rpg_validation_bar's `npm run validate` returned ETIMEDOUT with
+// a null status. Both spawn child processes and are starved by the extra concurrency, which
+// is the load artifact AGENTS.md's "budget the wall clock" note describes. The reachable
+// win is real but belongs to a change that first gives those tests headroom; buying 10
+// minutes with a flaky bar is a bad trade, and a flaky bar is the one thing that stops
+// people running it.
 const standardWorkerCap =
   process.env.CI === "true"
-    ? Math.min(4, availableParallelism())
+    ? Math.min(2, availableParallelism())
     : Math.min(8, availableParallelism());
 const exhaustiveWorkerCap = Math.min(2, availableParallelism());
 const commonProject = {
