@@ -23,6 +23,40 @@ import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
 import { publishRegularArtifact } from "../../blind-tester/publish-artifact.mjs";
 import { useCleanTrackedGitCheckout } from "./support/clean_git_checkout.js";
 
+/**
+ * The codex catalog, which is now where per-model transport lives.
+ *
+ * These contract tests used to assert that blind-tester/run.sh CONTAINED literal model
+ * ids, prompt filenames, contract ids and vendor catalog paths. That checked the right
+ * guarantee against the wrong file: those facts moved into the catalog, and asserting
+ * them here against the catalog (plus checking run.sh threads them through from the
+ * resolver) verifies the configuration a launch will actually use, not the presence of
+ * a string in a script.
+ */
+interface CodexCatalogModel {
+  id: string;
+  certified?: boolean;
+  transport?: {
+    kind: "direct_mcp" | "code_mode";
+    contract: string;
+    requiredCliVersion?: string;
+    promptTemplate?: string;
+    playerCatalog?: string;
+    fragment?: string;
+  };
+}
+
+function readCodexCatalog(): CodexCatalogModel[] {
+  const raw = readFileSync(join(process.cwd(), "blind-tester", "catalogs", "codex.json"), "utf8");
+  return (JSON.parse(raw) as { models: CodexCatalogModel[] }).models;
+}
+
+function codexCatalogModel(id: string): CodexCatalogModel {
+  const model = readCodexCatalog().find((candidate) => candidate.id === id);
+  if (!model) throw new Error(`codex catalog has no model "${id}"`);
+  return model;
+}
+
 const CODEX_LOGIN_FILENAME = ["auth", ".json"].join("");
 const RETIRED_CLAUDE_LOGIN_FILENAME = [".credentials", ".json"].join("");
 const RETIRED_CLAUDE_OAUTH_FIELD = ["claude", "AiOauth"].join("");
@@ -1287,7 +1321,11 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner).not.toContain('QUEST_ID="breaking_weir"');
     expect(runner).toContain("--overworld");
     expect(runner).toContain("prompt-overworld.md");
-    expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"');
+    // The spark prompt template is catalog data now; run.sh only threads it through.
+    expect(codexCatalogModel("gpt-5.3-codex-spark").transport?.promptTemplate).toBe(
+      "prompt-overworld-spark.md",
+    );
+    expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/$PROVIDER_TRANSPORT_PROMPT_TEMPLATE"');
     expect(runner).toContain("mcp__adventureforge__start_overworld");
     // The pure prompt carries only transport syntax. Gameplay objectives,
     // routes, coverage targets, and stopping are owned by the game itself.
@@ -1425,13 +1463,32 @@ printf 'codex-cli 0.144.1\\n'
     expect(codexLaunch).toContain("--disable code_mode_only");
     expect(codexLaunch).toContain("--disable tool_suggest");
     expect(codexLaunch).not.toContain("--enable tool_suggest");
-    expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="spark-direct-mcp-v1"');
-    expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="game-direct-mcp-v1"');
+    // run.sh takes the contract from the resolver rather than branching on model ids,
+    // and strict-code-mode remains the hardcoded fall-through for anything with no
+    // declared transport — a model must OPT IN to a direct-MCP lane.
+    expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="$PROVIDER_TRANSPORT_CONTRACT"');
     expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="strict-code-mode-v2"');
-    expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"');
-    expect(runner).toContain("prompt-transports/spark-direct-mcp-v1.md");
-    expect(runner).toContain("prompt-transports/game-direct-mcp-v1.md");
-    expect(runner).toContain("prompt-transports/strict-code-mode-v2.md");
+    expect(runner).not.toContain('CODEX_TRANSPORT_CONTRACT="spark-direct-mcp-v1"');
+    expect(runner).toContain('PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/$PROVIDER_TRANSPORT_FRAGMENT"');
+    // Every certified model's declared transport components must exist on disk. This is
+    // strictly stronger than the old string check: it covers models added after this
+    // test was written, and it fails on a fragment that was renamed but not repointed.
+    const declaredContracts = new Set<string>();
+    for (const model of readCodexCatalog()) {
+      if (model.certified !== true) continue;
+      const transport = model.transport;
+      expect(transport, `certified model ${model.id} declares no transport`).toBeDefined();
+      declaredContracts.add(transport!.contract);
+      for (const component of [transport!.promptTemplate, transport!.fragment]) {
+        expect(component, `certified model ${model.id} names an empty component`).toBeTruthy();
+        expect(existsSync(join(process.cwd(), "blind-tester", component!))).toBe(true);
+      }
+    }
+    expect([...declaredContracts].sort()).toEqual([
+      "game-direct-mcp-v1",
+      "spark-direct-mcp-v1",
+      "strict-code-mode-v2",
+    ]);
     expect(codexLaunch).toContain("--disable apps");
     expect(codexLaunch).toContain("--disable browser_use");
     expect(codexLaunch).toContain("--disable computer_use");
@@ -1485,18 +1542,28 @@ printf 'codex-cli 0.144.1\\n'
     expect(profileEnd).toBeGreaterThan(profileStart);
     const sparkProfile = runner.slice(profileStart, profileEnd);
 
-    expect(runner).toContain(
-      'if [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.3-codex-spark" ]]',
+    // The two vendor catalogs are still pinned to exact repo-owned files, but the pin
+    // now lives with the model that needs it instead of in a two-branch if-chain that a
+    // third direct-MCP model would have fallen straight through.
+    expect(codexCatalogModel("gpt-5.3-codex-spark").transport?.playerCatalog).toBe(
+      "codex-model-catalog-spark-v1.json",
     );
-    expect(sparkProfile).toContain('"$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" ||');
-    expect(sparkProfile).toContain('"$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1"');
-    expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"');
+    expect(codexCatalogModel("gpt-5.6-terra").transport?.playerCatalog).toBe(
+      "codex-model-catalog-terra-v1.json",
+    );
+    // Code-mode models take no injected vendor catalog, exactly as before.
+    for (const id of ["gpt-5.6-sol", "gpt-5.6-luna"]) {
+      expect(codexCatalogModel(id).transport?.playerCatalog).toBeUndefined();
+    }
+    // run.sh names no model and no catalog filename; it injects whatever the resolver
+    // handed it, from under blind-tester/ only.
+    expect(runner).not.toContain('"$MODEL" == "gpt-5.3-codex-spark"');
+    expect(runner).not.toContain("codex-model-catalog-spark-v1.json");
+    expect(runner).not.toContain("codex-model-catalog-terra-v1.json");
     expect(sparkProfile).toContain(
-      '--config "model_catalog_json=\\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-spark-v1.json\\""',
+      '--config "model_catalog_json=\\"$GAME_DIR_MCP/blind-tester/$PROVIDER_TRANSPORT_PLAYER_CATALOG\\""',
     );
-    expect(sparkProfile).toContain(
-      '--config "model_catalog_json=\\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-terra-v1.json\\""',
-    );
+    expect(sparkProfile).toContain('if [[ -n "$PROVIDER_TRANSPORT_PLAYER_CATALOG" ]]; then');
     expect(sparkProfile).toContain(`--config 'instructions="${SPARK_PLAYER_INSTRUCTIONS}"'`);
     for (const config of [
       "tools.update_plan.enabled=false",

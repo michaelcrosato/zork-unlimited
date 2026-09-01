@@ -278,7 +278,14 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   direct-quest/crawler/smoke/mock modes require explicit flags and are not pure
   retention evidence. Milestone fleets run 100 seed/model variants of the same
   neutral player contract; `fleet:mock` is a zero-token structural CI stand-in.
-  Current Codex runs authenticate the selected model-specific transport. Spark
+  Current Codex runs authenticate the selected model-specific transport, and
+  WHICH transport a model uses is catalog data rather than code: an entry in
+  `blind-tester/catalogs/<provider>.json` may declare a `transport` block naming
+  its contract, the exact client version it requires, and its prompt, player
+  catalog and fragment components. Certifying a model is likewise a catalog edit
+  (`certified: true`) and not a code change — subject to its provider deriving
+  `runner_enforced`, so the strongest label still arrives only alongside the
+  reader that can witness it. Spark
   uses direct-MCP capture receipt v4 (`spark-direct-mcp-v1`) and Terra uses
   game-direct capture receipt v5 (`game-direct-mcp-v1`); each direct model is
   launched through its own tracked game-only model catalog. Terra direct pins a
@@ -370,9 +377,12 @@ research proposal, the crawler, or a person all file the same submission, and
 `npm run intake:sync` mirrors the queue to GitHub Issues so people can file from
 anywhere.
 
-**The dev loop runs on any model.** It auto-detects an installed agent (`codex`,
-`claude`, `gemini`; `AI_AGENT` selects, `AI_AGENT_CMD` overrides anything), and
-asking for an absent one fails loudly rather than silently substituting a vendor.
+**The dev loop runs on any model.** It auto-detects an installed agent from
+`dev-agents.json` (`codex`, `claude`, `gemini` today; `AI_AGENT` selects,
+`AI_AGENT_CMD` overrides anything), and asking for an absent one fails loudly
+rather than silently substituting a vendor. That file is the single registry both
+`loop.sh` and `bin/doctor.ts` read, so the loop cannot auto-detect an agent the
+doctor does not report, or advertise one the loop would not launch.
 
 **The playtest loop's vendor privilege is derived, not declared.** Nothing in the
 gate names a vendor. A provider may produce a `runner_enforced` session only when

@@ -103,12 +103,30 @@ const FLEET_COMMON_TRANSPORT_COMPONENTS = Object.freeze({
   process_anchor: "codex-process-anchor.mjs",
 });
 export const SPARK_ADMISSION_RECEIPT_SCHEMA_VERSION = 2;
-export const CERTIFIED_CODEX_MODELS = [
-  "gpt-5.6-sol",
-  "gpt-5.6-terra",
-  "gpt-5.6-luna",
-  "gpt-5.3-codex-spark",
-];
+/**
+ * Certified Codex model ids, read from the catalog rather than duplicated here.
+ *
+ * This was a second copy of the four-id array that also lived in
+ * ../src/starting_slice/fleet_run_artifacts.ts, with no check that the two agreed. Both
+ * now answer from blind-tester/catalogs/codex.json.
+ *
+ * A function, not a const: catalogs are operator-editable and a long-running QA loop
+ * re-reads them between waves, so freezing the answer at import time would make an
+ * operator restart the fleet to pick up a model they just certified.
+ */
+export function certifiedCodexModels() {
+  try {
+    const provider = readFleetProviderRegistry().find((candidate) => candidate.id === "codex");
+    if (!provider) return [];
+    return readFleetCatalog(provider)
+      .models.filter((model) => model.certified === true)
+      .map((model) => model.id);
+  } catch {
+    // Fail closed: if the catalog cannot be read we know of no certified model, which
+    // must never be reported as "every model is fine".
+    return [];
+  }
+}
 export const FLEET_USAGE = `Usage: npm run fleet -- [options]
 
 Options:
@@ -474,40 +492,50 @@ function componentSha256(component) {
     .digest("hex");
 }
 
-export function fleetTransportProfile(model) {
-  if (model === SPARK_ADMISSION_CANARY_MODEL) {
-    return {
-      transportContract: SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
-      componentPaths: {
-        ...FLEET_COMMON_TRANSPORT_COMPONENTS,
-        prompt_template: "prompt-overworld-spark.md",
-        player_catalog: "codex-model-catalog-spark-v1.json",
-        transport_fragment: "prompt-transports/spark-direct-mcp-v1.md",
-      },
-    };
+/**
+ * One certified model's catalog entry, or null.
+ *
+ * This module is plain ESM by design — `blind-tester/run.sh` resolves providers in
+ * contexts with no TypeScript loader — so it cannot import ../src/blind/providers.ts and
+ * instead reads the same catalog JSON that module validates. The catalog is the shared
+ * source of truth; this is a second reader of it, not a second copy of it.
+ */
+function certifiedCatalogModel(modelId, providerId = "codex") {
+  const provider = readFleetProviderRegistry().find((candidate) => candidate.id === providerId);
+  if (!provider) return null;
+  const model = readFleetCatalog(provider).models.find((candidate) => candidate.id === modelId);
+  if (!model || model.certified !== true) return null;
+  return model;
+}
+
+/**
+ * The transport one model plays through, read from its catalog entry.
+ *
+ * Was a three-branch switch on exact model ids, holding a contract, a prompt template, a
+ * vendor model-catalog path and a transport fragment per model — the same four facts the
+ * runner's if-chain and two attestation schemas also spelled out, with nothing keeping
+ * the copies in step. Adding a certified model is now a catalog edit and this function
+ * needs no change.
+ *
+ * It still THROWS for a model with no certified catalog entry rather than inventing a
+ * default profile. A transport that nobody declared is not a transport this repo can
+ * witness, and quietly guessing one is how a run gets recorded under a surface no one
+ * audited.
+ */
+export function fleetTransportProfile(model, providerId = "codex") {
+  const entry = certifiedCatalogModel(model, providerId);
+  const transport = entry?.transport;
+  if (!transport) {
+    throw new Error(`fleet: no certified transport profile for model ${String(model)}`);
   }
-  if (model === "gpt-5.6-terra") {
-    return {
-      transportContract: GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
-      componentPaths: {
-        ...FLEET_COMMON_TRANSPORT_COMPONENTS,
-        prompt_template: "prompt-overworld.md",
-        player_catalog: "codex-model-catalog-terra-v1.json",
-        transport_fragment: "prompt-transports/game-direct-mcp-v1.md",
-      },
-    };
-  }
-  if (["gpt-5.6-sol", "gpt-5.6-luna"].includes(model)) {
-    return {
-      transportContract: PURE_FLEET_CODE_MODE_CONTRACT,
-      componentPaths: {
-        ...FLEET_COMMON_TRANSPORT_COMPONENTS,
-        prompt_template: "prompt-overworld.md",
-        transport_fragment: "prompt-transports/strict-code-mode-v2.md",
-      },
-    };
-  }
-  throw new Error(`fleet: no certified transport profile for model ${String(model)}`);
+  const componentPaths = { ...FLEET_COMMON_TRANSPORT_COMPONENTS };
+  if (transport.promptTemplate) componentPaths.prompt_template = transport.promptTemplate;
+  // Only clients that accept an injected vendor model catalog declare one; omitting the
+  // key entirely (rather than setting it null) keeps the hashed component-role set for
+  // code-mode models exactly what it has always been.
+  if (transport.playerCatalog) componentPaths.player_catalog = transport.playerCatalog;
+  if (transport.fragment) componentPaths.transport_fragment = transport.fragment;
+  return { transportContract: transport.contract, componentPaths };
 }
 
 /** A stable, non-secret profile key for transport-gate failures. It intentionally
@@ -515,7 +543,15 @@ export function fleetTransportProfile(model) {
  * component bytes so one broken transport is recognizable without publishing
  * player content or filesystem details. */
 export function createFleetTransportFingerprint({ provider, model, componentHashes } = {}) {
-  const profile = fleetTransportProfile(model);
+  // `provider` was pinned to the literal "codex" here, which made the fingerprint — and
+  // therefore the transport gate that consumes it — unavailable to any other vendor's
+  // fleet. It is now merely required to be a registered provider that certifies this
+  // model, which fleetTransportProfile establishes by throwing otherwise.
+  //
+  // The hashed payload is UNCHANGED: `provider` and `model` were already inputs, so
+  // every fingerprint a Codex fleet produced before this still reproduces byte for byte,
+  // and closed cohorts keep their duplicate-detection semantics.
+  const profile = fleetTransportProfile(model, provider);
   const componentPaths = profile.componentPaths;
   const components =
     componentHashes ??
@@ -524,7 +560,8 @@ export function createFleetTransportFingerprint({ provider, model, componentHash
     );
   const expectedRoles = Object.keys(componentPaths).sort();
   if (
-    provider !== "codex" ||
+    typeof provider !== "string" ||
+    provider === "" ||
     typeof model !== "string" ||
     !isDeepStrictEqual(Object.keys(components).sort(), expectedRoles) ||
     !Object.values(components).every(
@@ -532,7 +569,7 @@ export function createFleetTransportFingerprint({ provider, model, componentHash
     )
   ) {
     throw new Error(
-      "fleet: transport fingerprint requires one exact Codex model and component digest set",
+      "fleet: transport fingerprint requires one certified provider/model pair and component digest set",
     );
   }
   const canonicalComponents = Object.fromEntries(
@@ -1911,7 +1948,7 @@ function isFleetModel(model) {
 }
 
 function isCodexFleetModel(model) {
-  return CERTIFIED_CODEX_MODELS.includes(model);
+  return certifiedCodexModels().includes(model);
 }
 
 /**

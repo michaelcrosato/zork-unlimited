@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PureRunBuildSchema } from "../blind/run_evidence.js";
 import { parseJsonRejectingDuplicateKeys } from "../blind/strict_json.js";
 import { CertifiedCodexModelSchema } from "./fleet_run_artifacts.js";
+import { certifiedFleetModels, type CertifiedFleetEntry } from "../blind/providers.js";
 
 export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
 export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
@@ -450,15 +451,47 @@ function refineCurrentReceiptBinding(
   }
 }
 
-const CurrentSparkDirectMcpAttestationSchema = z
-  .object({
+/**
+ * Build the CURRENT attestation schema for one certified model, from its catalog entry.
+ *
+ * Replaces three hand-written literal schemas (`CurrentSparkDirectMcpAttestationSchema`
+ * plus a game-direct-MCP and a strict-code-mode factory, each instantiated per model id).
+ * Between them they hardcoded four model ids, two contract ids and a pinned client
+ * version, so certifying a newly available model meant editing this file, the four-id
+ * array in ./fleet_run_artifacts.ts, three z.enum lists in ./fleet_certifier.ts, a model
+ * switch in blind-tester/fleet.mjs and an if-chain in blind-tester/run.sh — five files
+ * that had to agree, with nothing enforcing that they did.
+ *
+ * Only the CURRENT schema is derived. Every `Historical*` schema below stays a frozen
+ * literal on purpose: those describe attestations already written to sealed corpus
+ * records, and a catalog edit must never retroactively change what an old record is
+ * allowed to say. New evidence follows the catalog; recorded evidence keeps the contract
+ * it was recorded under.
+ */
+function currentCodexAttestationSchemaFor(entry: CertifiedFleetEntry) {
+  const identity = {
     ...CurrentCodexAttestationBaseFields,
-    codex_cli_version: z.literal(PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION),
-    model: z.literal("gpt-5.3-codex-spark"),
-    actual_model: z.literal("gpt-5.3-codex-spark"),
-    transport_contract: z.literal(PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT),
-  })
-  .strict();
+    model: z.literal(entry.certifiedAs),
+    actual_model: z.literal(entry.certifiedAs),
+  } as const;
+  if (entry.transport.kind === "code_mode") {
+    return z
+      .object({ ...identity, code_mode_contract: z.literal(entry.transport.contract) })
+      .strict();
+  }
+  // A direct-MCP transport rides vendor config keys that move between client releases,
+  // so where the catalog pins a client version the attestation must match it exactly.
+  // Where it pins none, the base field's semver check is the whole requirement.
+  return z
+    .object({
+      ...identity,
+      ...(entry.transport.requiredCliVersion === null
+        ? {}
+        : { codex_cli_version: z.literal(entry.transport.requiredCliVersion) }),
+      transport_contract: z.literal(entry.transport.contract),
+    })
+    .strict();
+}
 
 function historicalTransportStrictCodeModeAttestationSchema<
   const Model extends "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna",
@@ -492,41 +525,49 @@ const HistoricalTransportPureFleetCodexAttestationSchema = z
   ])
   .superRefine(refineCurrentReceiptBinding);
 
-function currentGameDirectMcpAttestationSchema<
-  const Model extends "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna",
->(model: Model) {
-  return z
-    .object({
-      ...CurrentCodexAttestationBaseFields,
-      codex_cli_version: z.literal(PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION),
-      model: z.literal(model),
-      actual_model: z.literal(model),
-      transport_contract: z.literal(PURE_FLEET_GAME_DIRECT_MCP_TRANSPORT_CONTRACT),
-    })
-    .strict();
+/**
+ * The current union, one option per certified Codex model in this checkout's catalog.
+ *
+ * Built lazily and cached. Lazily because the catalog is read from disk and this module
+ * is imported by tools that never touch attestations; cached because the discriminated
+ * union is rebuilt identically every call and parsing is on the hot path of certification.
+ *
+ * A checkout whose catalog certifies no Codex model at all yields no options, and
+ * `z.discriminatedUnion` cannot express an empty union — so that case gets a schema that
+ * rejects everything with a readable reason. Failing closed is the only correct answer:
+ * "this checkout certifies no Codex model" must never read as "anything goes".
+ */
+let currentPureFleetCodexAttestationSchemaCache: z.ZodTypeAny | null = null;
+
+function currentPureFleetCodexAttestationSchema(): z.ZodTypeAny {
+  if (currentPureFleetCodexAttestationSchemaCache !== null) {
+    return currentPureFleetCodexAttestationSchemaCache;
+  }
+  const options = certifiedFleetModels()
+    .filter((entry) => entry.provider === "codex")
+    .map((entry) => currentCodexAttestationSchemaFor(entry));
+  const schema =
+    options.length === 0
+      ? z.never({
+          errorMap: () => ({
+            message:
+              "this checkout's catalogs certify no codex model, so no current codex " +
+              "attestation can be accepted",
+          }),
+        })
+      : z
+          .discriminatedUnion(
+            "model",
+            options as unknown as [(typeof options)[number], ...(typeof options)[number][]],
+          )
+          .superRefine(refineCurrentReceiptBinding);
+  currentPureFleetCodexAttestationSchemaCache = schema;
+  return schema;
 }
 
-function currentStrictCodeModeAttestationSchema<const Model extends "gpt-5.6-sol" | "gpt-5.6-luna">(
-  model: Model,
-) {
-  return z
-    .object({
-      ...CurrentCodexAttestationBaseFields,
-      model: z.literal(model),
-      actual_model: z.literal(model),
-      code_mode_contract: z.literal(PURE_FLEET_CODE_MODE_CONTRACT),
-    })
-    .strict();
-}
-
-const CurrentPureFleetCodexAttestationSchema = z
-  .discriminatedUnion("model", [
-    CurrentSparkDirectMcpAttestationSchema,
-    currentGameDirectMcpAttestationSchema("gpt-5.6-terra"),
-    currentStrictCodeModeAttestationSchema("gpt-5.6-sol"),
-    currentStrictCodeModeAttestationSchema("gpt-5.6-luna"),
-  ])
-  .superRefine(refineCurrentReceiptBinding);
+const CurrentPureFleetCodexAttestationSchema = z.lazy(() =>
+  currentPureFleetCodexAttestationSchema(),
+);
 
 export const PureFleetCodexAttestationSchema = z.union([
   HistoricalPureFleetCodexAttestationSchema,

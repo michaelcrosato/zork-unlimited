@@ -30,14 +30,6 @@ if [[ -n "$PACK" ]]; then
   exit 2
 fi
 SEED=7
-# The provider used when no --provider/BLIND_PROVIDER is given. It is `codex` because
-# codex is, today, the vendor this runner has a live launch path for — see the two pure
-# gates below, which decide that from the registry and from this file's own launch paths
-# rather than from this name. This is a DEFAULT, not a requirement, and it was previously
-# an unlabelled literal inside a parameter expansion, which is how a default quietly
-# becomes a requirement. Moving it is a one-line change here and nothing else.
-DEFAULT_PROVIDER="codex"
-PROVIDER="${BLIND_PROVIDER:-$DEFAULT_PROVIDER}"
 MODEL="${BLIND_MODEL:-}"
 # Reasoning effort for the launched player. An explicit --effort/BLIND_REASONING_EFFORT
 # wins; otherwise the selected model's catalog settings.reasoning_effort applies; a
@@ -78,6 +70,22 @@ if [[ -z "$NODE_CMD" ]]; then
     NODE_CMD="node"
   fi
 fi
+
+# The provider used when no --provider/BLIND_PROVIDER is given: the first entry in the
+# registry, asked for by name rather than written here.
+#
+# It used to be the literal `codex`, explained by a comment saying codex was "the vendor
+# this runner has a live launch path for". That ceased to be true when the claude_code
+# reader and its launch branch landed, and a stale justification beside a hardcoded vendor
+# name is how a DEFAULT quietly reads as a requirement. Registry order is unchanged, so
+# this still resolves to codex today; it is the runner's knowledge of the name that is
+# gone. Which providers may produce pure evidence is decided by the derived isolation
+# gates below, never by being first in a list.
+if ! DEFAULT_PROVIDER="$("$NODE_CMD" "$SCRIPT_DIR/resolve-provider.mjs" --default-provider 2>&1)"; then
+  echo "Cannot resolve a default provider from the registry: $DEFAULT_PROVIDER" >&2
+  exit 2
+fi
+PROVIDER="${BLIND_PROVIDER:-$DEFAULT_PROVIDER}"
 
 node_path_arg() {
   local path="$1"
@@ -210,6 +218,14 @@ PROVIDER_LAUNCH_EXECUTABLE=""
 PROVIDER_LAUNCH_BINARY_ENV=""
 PROVIDER_LAUNCH_ARGV=()
 PROVIDER_TRANSPORT_CONTRACT=""
+# The model's own transport, resolved from its catalog entry by resolve-provider.mjs.
+# These replace an if-chain on exact model ids plus a hardcoded client-version constant
+# and two hardcoded vendor catalog paths, all of which already existed as catalog data.
+PROVIDER_TRANSPORT_KIND=""
+PROVIDER_TRANSPORT_REQUIRED_CLI_VERSION=""
+PROVIDER_TRANSPORT_PROMPT_TEMPLATE=""
+PROVIDER_TRANSPORT_PLAYER_CATALOG=""
+PROVIDER_TRANSPORT_FRAGMENT=""
 MODEL=""
 MODEL_TIER=""
 CATALOG_REASONING_EFFORT=""
@@ -231,6 +247,11 @@ while IFS=$'\t' read -r provider_record_key provider_record_value; do
     # opt in ever read the array.
     launch_argv)                PROVIDER_LAUNCH_ARGV+=("$provider_record_value") ;;
     transport_contract)         PROVIDER_TRANSPORT_CONTRACT="$provider_record_value" ;;
+    transport_kind)             PROVIDER_TRANSPORT_KIND="$provider_record_value" ;;
+    transport_required_cli_version) PROVIDER_TRANSPORT_REQUIRED_CLI_VERSION="$provider_record_value" ;;
+    transport_prompt_template)  PROVIDER_TRANSPORT_PROMPT_TEMPLATE="$provider_record_value" ;;
+    transport_player_catalog)   PROVIDER_TRANSPORT_PLAYER_CATALOG="$provider_record_value" ;;
+    transport_fragment)         PROVIDER_TRANSPORT_FRAGMENT="$provider_record_value" ;;
     model)                      MODEL="$provider_record_value" ;;
     model_tier)                 MODEL_TIER="$provider_record_value" ;;
     model_reasoning_effort)     CATALOG_REASONING_EFFORT="$provider_record_value" ;;
@@ -620,13 +641,28 @@ if [[ "$OVERWORLD" == "1" ]]; then
     # direct MCP tool calls — and its instruction sheet must exist beside the others
     # or the prompt fill below refuses the run before any client is launched.
     PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/$PROVIDER_TRANSPORT_CONTRACT.md"
-  elif [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.3-codex-spark" ]]; then
-    CODEX_TRANSPORT_CONTRACT="spark-direct-mcp-v1"
-    PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"
-    PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/spark-direct-mcp-v1.md"
-  elif [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.6-terra" ]]; then
-    CODEX_TRANSPORT_CONTRACT="game-direct-mcp-v1"
-    PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/game-direct-mcp-v1.md"
+  elif [[ "$PLAY_MODE" == "pure" && -n "$PROVIDER_TRANSPORT_CONTRACT" ]]; then
+    # WHY THIS NO LONGER NAMES A MODEL. These four lines used to be a chain of equality
+    # tests against two exact Codex model ids (the spark volume player and the terra
+    # reference one), each setting a contract and a pair of prompt paths. Those ids are
+    # deliberately not repeated here: a config-contract regression asserts this script
+    # names no model at all. The same three facts were also written out in
+    # fleetTransportProfile() in fleet.mjs and in two z.literal attestation schemas, so a
+    # newly certified direct-MCP model needed the identical edit in three files and
+    # silently fell through to strict-code-mode if any one of them was missed — a run
+    # recorded under a transport it did not actually use.
+    #
+    # resolve-provider.mjs now hands us the model's catalog transport, so the model id
+    # appears nowhere in this script.
+    CODEX_TRANSPORT_CONTRACT="$PROVIDER_TRANSPORT_CONTRACT"
+    if [[ -n "$PROVIDER_TRANSPORT_PROMPT_TEMPLATE" ]]; then
+      PROMPT_FILE="$SCRIPT_DIR/$PROVIDER_TRANSPORT_PROMPT_TEMPLATE"
+    fi
+    if [[ -n "$PROVIDER_TRANSPORT_FRAGMENT" ]]; then
+      PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/$PROVIDER_TRANSPORT_FRAGMENT"
+    else
+      PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/$CODEX_TRANSPORT_CONTRACT.md"
+    fi
   else
     CODEX_TRANSPORT_CONTRACT="strict-code-mode-v2"
     PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/strict-code-mode-v2.md"
@@ -704,7 +740,14 @@ CODEX_PREFLIGHT_EXIT=42
 CODEX_STRICT_STREAM_REJECT_EXIT=43
 CODEX_VERSION_TIMEOUT_SECONDS=5
 CODEX_VERSION_MAX_BYTES=1024
-DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION="0.146.0"
+# The exact client version a version-sensitive transport demands, supplied by the model's
+# catalog entry via resolve-provider.mjs. Empty means the model's transport pins no
+# version, and the generic semver check above is then the whole requirement.
+#
+# This was the literal "0.146.0", one of four copies of that string (the others were two
+# constants in src/starting_slice/fleet_attestation.ts and two more in fleet.mjs). A
+# client upgrade meant finding all of them.
+DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION="$PROVIDER_TRANSPORT_REQUIRED_CLI_VERSION"
 SELECTED_CODEX_BIN=""
 SELECTED_CODEX_LAUNCHER=""
 CODEX_BIN_IDENTITY=""
@@ -875,8 +918,7 @@ preflight_codex_client() {
     echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": expected cli=$EXPECTED_CODEX_CLI_VERSION but observed cli=$version." >&2
     return "$CODEX_PREFLIGHT_EXIT"
   fi
-  if [[ ( "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" || \
-          "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ) && \
+  if [[ -n "$DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION" && \
         "$version" != "$DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION" ]]; then
     echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": $CODEX_TRANSPORT_CONTRACT requires exact codex-cli $DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION but observed cli=$version." >&2
     echo "Set $PROVIDER_LAUNCH_BINARY_ENV to one absolute codex-cli $DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION executable path; no provider was launched." >&2
@@ -1487,8 +1529,11 @@ else
     CODEX_CONTEXT_WINDOW_ARGS=(--config "model_context_window=$CATALOG_CONTEXT_WINDOW")
   fi
   CODEX_PLAYER_PROFILE_ARGS=()
-  if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" || \
-        "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ]]; then
+  # Direct-MCP vs code mode is a DECLARED property of the model's transport
+  # (`transport.kind` in its catalog entry), not something inferred by listing the two
+  # direct-MCP contract ids that happened to exist when this was written. A third
+  # direct-MCP contract would have silently taken the code-mode branch here.
+  if [[ "$PROVIDER_TRANSPORT_KIND" == "direct_mcp" && "$CODEX_TRANSPORT_CONTRACT" != "strict-code-mode-v2" ]]; then
     CODEX_TRANSPORT_FEATURE_ARGS=(--disable code_mode_only --disable tool_suggest)
     CODEX_PLAYER_PROFILE_ARGS=(
       --config 'tools.update_plan.enabled=false'
@@ -1500,13 +1545,16 @@ else
       --config 'include_collaboration_mode_instructions=false'
       --config 'instructions="You are an autonomous first-time player of an AdventureForge text TTRPG. Follow the user play request. Use only preloaded AdventureForge gameplay functions and exact current player-visible values. Never use coding, planning, search, or MCP resource tools."'
     )
-    if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" ]]; then
+    # The injected vendor model catalog is named by the MODEL's catalog entry, not by a
+    # branch on its transport contract holding two hardcoded filenames. A direct-MCP
+    # model that declares no player catalog simply gets none.
+    if [[ -n "$PROVIDER_TRANSPORT_PLAYER_CATALOG" ]]; then
       CODEX_PLAYER_PROFILE_ARGS+=(
-        --config "model_catalog_json=\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-spark-v1.json\""
+        --config "model_catalog_json=\"$GAME_DIR_MCP/blind-tester/$PROVIDER_TRANSPORT_PLAYER_CATALOG\""
       )
-    elif [[ "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ]]; then
+    fi
+    if [[ "$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1" ]]; then
       CODEX_PLAYER_PROFILE_ARGS+=(
-        --config "model_catalog_json=\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-terra-v1.json\""
         --config 'agents.enabled=false'
         --config 'model_reasoning_summary="none"'
       )

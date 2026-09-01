@@ -20,6 +20,11 @@ import {
   type PureBlindRunSidecar,
 } from "../blind/run_evidence.js";
 import { parseJsonRejectingDuplicateKeys } from "../blind/strict_json.js";
+import {
+  certifiedModelIdsForProvider,
+  certifiedModelTransport,
+  isCertifiedFleetModel,
+} from "../blind/providers.js";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 
@@ -37,17 +42,43 @@ export const PureFleetPrimaryClaudeEnvelopeSchema = z
   })
   .passthrough();
 
-export const CERTIFIED_CODEX_MODELS = [
-  "gpt-5.6-sol",
-  "gpt-5.6-terra",
-  "gpt-5.6-luna",
-  "gpt-5.3-codex-spark",
-] as const;
-export const CertifiedCodexModelSchema = z.enum(CERTIFIED_CODEX_MODELS);
-export type CertifiedCodexModel = z.infer<typeof CertifiedCodexModelSchema>;
-export type CertifiedClaudeModel = "haiku" | "sonnet" | "opus";
-export type PureFleetProvider = "claude" | "codex";
-export type CertifiedFleetModel = CertifiedClaudeModel | CertifiedCodexModel;
+/**
+ * Which models may produce certified pure-fleet evidence — DERIVED, not listed.
+ *
+ * This was four hardcoded model ids and two hardcoded vendor names, and the cost was not
+ * theoretical: a model an operator's subscription had just unlocked could not be
+ * certified without a TypeScript edit, a rebuild and a sweep of ~18k lines of tests, so
+ * in practice the certified fleet stayed frozen at whatever was current the day the array
+ * was written. That is precisely the homogeneity `familyDiversity` exists to prevent —
+ * forty runs of one model agreeing is one instrument sampled forty times.
+ *
+ * The authority is now `certifiedFleetModels()` in ../blind/providers.ts, which answers
+ * from two facts that cannot be asserted into existence: the model's catalog entry sets
+ * `certified: true`, AND its provider derives `runner_enforced` in this checkout (a
+ * capture reader for it is actually on disk). Adding a certified model is a catalog edit;
+ * adding a certified VENDOR still requires the reader module that can witness it, which
+ * is the guarantee this file must never trade away.
+ *
+ * The type widens to `string` as a consequence, and that is the honest type: the set is
+ * a fact about this checkout's catalogs, not about the compiler's view of the world.
+ * Runtime validation is unchanged in strength — every id is still checked against the
+ * certified set before any evidence is admitted.
+ */
+export const CertifiedCodexModelSchema = z
+  .string()
+  .min(1)
+  .refine((id) => isCertifiedFleetModel("codex", id), {
+    message: "model is not certified for the codex provider in this checkout's catalog",
+  });
+export type CertifiedCodexModel = string;
+export type CertifiedClaudeModel = string;
+export type PureFleetProvider = string;
+export type CertifiedFleetModel = string;
+
+/** Certified codex model ids, derived from the catalog. Kept for callers that enumerate. */
+export function certifiedCodexModels(): string[] {
+  return certifiedModelIdsForProvider("codex");
+}
 
 const PureFleetPrimaryCodexEnvelopeSchema = z
   .object({
@@ -635,23 +666,28 @@ function parseCodexAuthority(
     turn.data.cwd,
   );
   if (!capture.ok) return capture;
-  if (
-    capture.transportContract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT &&
-    expectedModel !== SPARK_DIRECT_MCP_MODEL
-  ) {
-    return {
-      ok: false,
-      reason: `${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} requires exact model ${SPARK_DIRECT_MCP_MODEL}`,
-    };
-  }
-  if (
-    capture.transportContract === GAME_DIRECT_MCP_TRANSPORT_CONTRACT &&
-    expectedModel !== "gpt-5.6-terra"
-  ) {
-    return {
-      ok: false,
-      reason: `${GAME_DIRECT_MCP_TRANSPORT_CONTRACT} requires exact model gpt-5.6-terra`,
-    };
+  // A direct-MCP receipt must name the transport its model's CATALOG declares.
+  //
+  // This was two hardcoded pairs — "spark-direct-mcp-v1 requires gpt-5.3-codex-spark",
+  // "game-direct-mcp-v1 requires gpt-5.6-terra" — which had to be extended by hand for
+  // every new direct-MCP model and, being a closed list, silently ADMITTED any pairing
+  // it did not enumerate. Asking the catalog instead is both general and strictly
+  // tighter: a model whose declared transport disagrees with the receipt is rejected
+  // whether or not anyone remembered to write its name here.
+  //
+  // Only direct-MCP receipts carry `transportContract`; strict-code-mode receipts record
+  // `codeModeContract` and leave this null, so they are not gated here — exactly as
+  // before, and deliberately, since historical v1 code-mode evidence must stay readable.
+  if (capture.transportContract !== null) {
+    const declared = certifiedModelTransport("codex", expectedModel)?.contract ?? null;
+    if (declared !== capture.transportContract) {
+      return {
+        ok: false,
+        reason:
+          `${capture.transportContract} receipt does not match the catalog transport for ` +
+          `model ${expectedModel} (declares ${declared ?? "no certified transport"})`,
+      };
+    }
   }
   const inspected:
     | { ok: true; threadId: string; usage: CodexAuthorityFacts["usage"] }

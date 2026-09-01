@@ -4,18 +4,22 @@
     {
       "id": "claude-haiku-4-5-20251001",
       "tier": "volume",
+      "certified": true,
+      "certifiedAs": "haiku",
       "settings": {},
-      "notes": "Cheap, fast volume player, and the one model the blind launch flags have actually been exercised against on this machine (claude 2.1.251). Settings are empty on purpose: with no settings.reasoning_effort the runner appends no --effort flag and the CLI's own default applies, so this block still claims nothing it does not enforce. Populate reasoning_effort only when that exact launch dial should be pinned (run.sh maps it to `--effort`)."
+      "notes": "Cheap, fast volume player, and the one model the blind launch flags have actually been exercised against on this machine (claude 2.1.251). Settings are empty on purpose: with no settings.reasoning_effort the runner appends no --effort flag and the CLI's own default applies, so this block still claims nothing it does not enforce. Populate reasoning_effort only when that exact launch dial should be pinned (run.sh maps it to `--effort`). certifiedAs records the launch alias its sealed pure-fleet records were written under."
     },
     {
       "id": "claude-fable-5",
       "tier": "volume",
       "settings": {},
-      "notes": "Fast volume player. Confirm availability against your subscription. Must stay a full model name — `--model` also accepts aliases like 'fable', and an alias resolves to different weights over time, so a session recorded under one stops meaning what its record says."
+      "notes": "Fast volume player. Confirm availability against your subscription. Must stay a full model name — `--model` also accepts aliases like 'fable', and an alias resolves to different weights over time, so a session recorded under one stops meaning what its record says. Not certified: playable is a weaker claim than certifiable, and this one has no pure-fleet evidence behind it yet."
     },
     {
       "id": "claude-sonnet-5",
       "tier": "volume",
+      "certified": true,
+      "certifiedAs": "sonnet",
       "default": true,
       "settings": { "reasoning_effort": "medium" },
       "notes": "The default claude_code blind player (no --model needed). settings.reasoning_effort is enforced at launch: run.sh appends `--effort medium` to the registry argv, and claude 2.1.251 accepts --effort (low, medium, high, xhigh, max). Verified live: `claude --model claude-sonnet-5 --effort medium --print` answers on this subscription."
@@ -23,6 +27,8 @@
     {
       "id": "claude-opus-5",
       "tier": "reference",
+      "certified": true,
+      "certifiedAs": "opus",
       "settings": {},
       "notes": "Calibration instrument: its job is not to find more bugs than the volume cohort but to say whether that cohort's silence means anything."
     }

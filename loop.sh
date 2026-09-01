@@ -230,24 +230,63 @@ latest_prompt() {
 # Flags are operator-verifiable: CLIs change, and a wrong flag here should be a
 # one-line fix rather than a reason to distrust the loop. Confirm yours once with
 # `AI_AGENT=<id> AI_LOOP_MAX_CYCLES=1 ./loop.sh`.
-DEV_AGENT_IDS=(codex claude gemini)
+# The list itself lives in dev-agents.json, which bin/doctor.ts reads too. It used to be
+# duplicated here and there, in an order doctor.ts's output depended on, with nothing
+# checking the two copies agreed.
+DEV_AGENT_REGISTRY="$PWD/dev-agents.json"
+
+# Read one field of one agent entry. Prints nothing and returns 1 for an unknown id, so
+# every caller keeps the "not a known dev agent" behaviour the case statements had.
+dev_agent_field() {
+  local id="$1" field="$2"
+  node -e '
+const { readFileSync } = require("node:fs");
+const [file, id, field] = process.argv.slice(1);
+let agents;
+try {
+  const parsed = JSON.parse(readFileSync(file, "utf8"));
+  agents = Array.isArray(parsed.agents) ? parsed.agents : null;
+} catch {
+  process.exit(2);
+}
+if (!agents) process.exit(2);
+const agent = agents.find((candidate) => candidate && candidate.id === id);
+if (!agent || typeof agent[field] !== "string" || agent[field] === "") process.exit(1);
+process.stdout.write(agent[field]);
+' "$DEV_AGENT_REGISTRY" "$id" "$field"
+}
+
+# Auto-detect precedence. A registry that cannot be read yields an EMPTY list rather than
+# a guessed one: the loop then reports "no supported dev agent" and stops, which is the
+# honest outcome. Silently falling back to a built-in list would mean a corrupted
+# registry still launched an agent the operator did not configure.
+dev_agent_ids() {
+  node -e '
+const { readFileSync } = require("node:fs");
+try {
+  const parsed = JSON.parse(readFileSync(process.argv[1], "utf8"));
+  const agents = Array.isArray(parsed.agents) ? parsed.agents : [];
+  process.stdout.write(agents.map((a) => a && a.id).filter((id) => typeof id === "string" && id).join("\n"));
+} catch {
+  process.exit(0);
+}
+' "$DEV_AGENT_REGISTRY"
+}
+
+mapfile -t DEV_AGENT_IDS < <(dev_agent_ids)
 
 dev_agent_binary() {
-  case "$1" in
-    codex)  echo "codex" ;;
-    claude) echo "claude" ;;
-    gemini) echo "gemini" ;;
-    *)      return 1 ;;
-  esac
+  dev_agent_field "$1" binary
 }
 
 dev_agent_command() {
-  case "$1" in
-    codex)  echo "codex -a never exec --sandbox ${AI_CODEX_SANDBOX:-workspace-write} --cd $PWD -" ;;
-    claude) echo "claude -p --permission-mode acceptEdits --add-dir $PWD" ;;
-    gemini) echo "gemini --yolo" ;;
-    *)      return 1 ;;
-  esac
+  local template
+  template="$(dev_agent_field "$1" command)" || return 1
+  # Exact token replacement only — never eval — so a path with a space or a shell
+  # metacharacter cannot expand into extra arguments.
+  template="${template//\{SANDBOX\}/${AI_CODEX_SANDBOX:-workspace-write}}"
+  template="${template//\{CWD\}/$PWD}"
+  printf '%s' "$template"
 }
 
 # Resolve the headless agent that does each cycle's WORK. Precedence:

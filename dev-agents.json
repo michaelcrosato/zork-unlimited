@@ -1,0 +1,52 @@
+{
+  "comment": [
+    "The dev-loop agent registry, read by BOTH loop.sh and bin/doctor.ts.",
+    "",
+    "It is one file because it was previously two: `DEV_AGENT_IDS` in loop.sh and",
+    "`DEV_AGENTS` in bin/doctor.ts, each an independent copy of the same list in the same",
+    "order. doctor.ts's own comment depended on that order ('loop.sh takes the first match",
+    "in DEV_AGENTS order'), so the two had to agree, and nothing checked that they did — a",
+    "vendor added to one would have been advertised or auto-detected inconsistently by the",
+    "other, silently.",
+    "",
+    "THE CONTRACT AN ENTRY MUST SATISFY. These are the only things the loop assumes, and",
+    "therefore everything needed to add a vendor:",
+    "",
+    "  1. reads its instructions from STDIN (never argv: the cycle prompt is long, and",
+    "     argv leaks it into the process table)",
+    "  2. can create and edit files in the repo, and run the repo's own commands",
+    "  3. runs to completion non-interactively, with no approval prompt",
+    "  4. exits 0 on success and nonzero on failure — a nonzero exit fails the cycle,",
+    "     because partial output is not evidence the requested work completed",
+    "",
+    "Anything meeting that contract works whether or not it is listed here: AI_AGENT_CMD",
+    "takes an arbitrary command. This list exists so the common cases need no",
+    "configuration, NOT to restrict the field. `order` is the auto-detect precedence when",
+    "no AI_AGENT is set; it is a tie-break among installed agents, not a ranking.",
+    "",
+    "Flags are operator-verifiable: CLIs change, and a wrong flag here should be a",
+    "one-line fix rather than a reason to distrust the loop. Confirm yours once with",
+    "`AI_AGENT=<id> AI_LOOP_MAX_CYCLES=1 ./loop.sh`.",
+    "",
+    "Substitution in `command` is exact token replacement, no shell and no globbing:",
+    "  {CWD}     — the repo root the cycle runs in",
+    "  {SANDBOX} — value of AI_CODEX_SANDBOX, defaulting to workspace-write"
+  ],
+  "agents": [
+    {
+      "id": "codex",
+      "binary": "codex",
+      "command": "codex -a never exec --sandbox {SANDBOX} --cd {CWD} -"
+    },
+    {
+      "id": "claude",
+      "binary": "claude",
+      "command": "claude -p --permission-mode acceptEdits --add-dir {CWD}"
+    },
+    {
+      "id": "gemini",
+      "binary": "gemini",
+      "command": "gemini --yolo"
+    }
+  ]
+}

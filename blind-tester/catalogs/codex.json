@@ -4,26 +4,58 @@
     {
       "id": "gpt-5.3-codex-spark",
       "tier": "volume",
+      "certified": true,
       "settings": { "reasoning_effort": "xhigh", "reasoning_summary": "none" },
-      "notes": "Cheap, fast, the default volume player. Uses the spark direct-MCP catalog."
+      "transport": {
+        "kind": "direct_mcp",
+        "contract": "spark-direct-mcp-v1",
+        "requiredCliVersion": "0.146.0",
+        "promptTemplate": "prompt-overworld-spark.md",
+        "playerCatalog": "codex-model-catalog-spark-v1.json",
+        "fragment": "prompt-transports/spark-direct-mcp-v1.md"
+      },
+      "notes": "Cheap, fast, the default volume player. Its transport differs from the rest of its own provider, which is why the block above exists: contract, pinned client version and components used to live in a model switch in fleet.mjs, an if-chain in run.sh and a pair of z.literal schemas in fleet_attestation.ts, and drifting between those three was a matter of time."
     },
     {
       "id": "gpt-5.6-terra",
       "tier": "reference",
+      "certified": true,
       "settings": { "reasoning_effort": "xhigh", "reasoning_summary": "none" },
+      "transport": {
+        "kind": "direct_mcp",
+        "contract": "game-direct-mcp-v1",
+        "requiredCliVersion": "0.146.0",
+        "promptTemplate": "prompt-overworld.md",
+        "playerCatalog": "codex-model-catalog-terra-v1.json",
+        "fragment": "prompt-transports/game-direct-mcp-v1.md"
+      },
       "notes": "Calibration instrument. Pins a disabled multi-agent topology."
     },
     {
       "id": "gpt-5.6-sol",
       "tier": "reference",
+      "certified": true,
       "settings": { "reasoning_effort": "xhigh" },
-      "notes": "Calibration instrument."
+      "transport": {
+        "kind": "code_mode",
+        "contract": "strict-code-mode-v2",
+        "promptTemplate": "prompt-overworld.md",
+        "fragment": "prompt-transports/strict-code-mode-v2.md"
+      },
+      "notes": "Calibration instrument. No requiredCliVersion: the strict-code-mode transport is not version-sensitive the way the direct-MCP ones are, and inventing a pin to fill the field would be the lie the registry exists to stop."
     },
     {
       "id": "gpt-5.6-luna",
       "tier": "reference",
+      "certified": true,
       "default": true,
       "settings": { "reasoning_effort": "max", "context_window": 872000 },
+      "transport": {
+        "kind": "code_mode",
+        "contract": "strict-code-mode-v2",
+        "promptTemplate": "prompt-overworld.md",
+        "fragment": "prompt-transports/strict-code-mode-v2.md"
+      },
       "notes": "The default codex blind player (no --model needed). Runs the strict-code-mode-v2 lane at reasoning effort max; the 0.151.0 models catalog advertises low/medium/high/xhigh/max for this id. context_window pins the model's advertised 872k maximum (verified live: the launch override yields an 828,400-token effective window) because max-effort playthroughs measured ~155 gameplay calls fill the 272k default and die at the deliberate no-compaction rule. Fleet cohorts pin their own effort explicitly and are unaffected by this default."
     }
   ]

@@ -12,12 +12,30 @@ import {
   type PureFleetProvider,
   type PureFleetRunArtifactBytes,
 } from "../starting_slice/fleet_run_artifacts.js";
+import { certifiedModelIdsForProvider } from "./providers.js";
 
 export type AdjacentPureArtifactGate =
   | { ok: true; provider: PureFleetProvider | "legacy" }
   | { ok: false; reason: string };
 
-const CLAUDE_MODEL_ALIASES = ["haiku", "sonnet", "opus"] as const;
+/**
+ * The identities a Claude pure-fleet run may be certified under.
+ *
+ * Was a hardcoded `["haiku", "sonnet", "opus"]`, which is the launch-ALIAS spelling of
+ * three models the catalog holds under their full names (`claude-sonnet-5` and friends).
+ * Two hand-kept spellings of one set, in different files, with nothing checking they
+ * agreed: certifying a fourth Claude model meant remembering to edit both, and forgetting
+ * the one here failed at the least legible point — "primary Claude envelope model is not
+ * a supported fleet model", for a model the operator had just certified.
+ *
+ * The catalog now carries the mapping explicitly on each entry (`certifiedAs`), so this
+ * derives. Read at call time rather than frozen at import, because catalogs are
+ * operator-editable and a long-running QA process should see an edit without a restart.
+ */
+function claudeCertifiedIdentities(): string[] {
+  return certifiedModelIdsForProvider("claude_code");
+}
+
 const utf8Decoder = new TextDecoder("utf-8", { fatal: true });
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -62,7 +80,7 @@ function inferProviderExpectation(
   if (actualModels.length !== 1) {
     return { ok: false, reason: "primary Claude envelope has ambiguous model authority" };
   }
-  const aliases = CLAUDE_MODEL_ALIASES.filter((alias) =>
+  const aliases = claudeCertifiedIdentities().filter((alias) =>
     pureFleetModelMatchesRequest(actualModels[0]!, alias),
   );
   if (aliases.length !== 1) {

@@ -53,7 +53,18 @@ if [[ "${PLAYTEST_ALLOW_SHARED_CHECKOUT:-0}" != "1" && -f "ai-runs/loop.pid" ]];
   exit 1
 fi
 
-COHORT="${PLAYTEST_COHORT:-codex:1}"
+# Default cohort: one player on the registry's first provider. The vendor name used to
+# be written here as `codex:1`; it is now asked for, for the same reason run.sh no longer
+# hardcodes its default provider — a default with a vendor's name baked in reads as a
+# preference the harness holds, and this one outlived the claim behind it. Registry order
+# is unchanged, so an operator who sets nothing gets exactly what they got before.
+DEFAULT_COHORT_PROVIDER="$(node blind-tester/resolve-provider.mjs --default-provider 2>/dev/null || true)"
+if [[ -z "$DEFAULT_COHORT_PROVIDER" ]]; then
+  echo "Cannot resolve a default provider from blind-tester/providers.json." >&2
+  echo "Set PLAYTEST_COHORT=\"<provider>:<count>\" explicitly." >&2
+  exit 1
+fi
+COHORT="${PLAYTEST_COHORT:-$DEFAULT_COHORT_PROVIDER:1}"
 PERSONAS="${PLAYTEST_PERSONAS:-default}"
 CONCURRENCY="${PLAYTEST_CONCURRENCY:-4}"
 DELAY="${PLAYTEST_DELAY_SECONDS:-30}"

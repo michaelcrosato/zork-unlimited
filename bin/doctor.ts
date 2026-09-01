@@ -26,7 +26,7 @@
  *   npm run doctor                       # uses the default corpus and queue
  *   npm run doctor -- --store /d/af-corpus
  */
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -102,7 +102,39 @@ export function onPath(binary: string): boolean {
  * changes the moment the checkout does — no edit here required.
  */
 
-const DEV_AGENTS = ["codex", "claude", "gemini"] as const;
+/**
+ * The dev-loop agents, read from the same file `loop.sh` resolves them from.
+ *
+ * This was a second copy of loop.sh's `DEV_AGENT_IDS`, in an order the output below
+ * depends on ("loop.sh takes the first match in this order"). Two hand-kept lists that
+ * must agree, with nothing checking that they do, is a promise this command cannot
+ * honour: an agent added to loop.sh alone would be auto-detected but never reported, and
+ * one added here alone would be advertised and never launched.
+ *
+ * A registry that cannot be read yields an empty list, and the "none on PATH" branch
+ * below then prints the actionable message. That is the same fail-closed answer loop.sh
+ * gives, rather than a built-in list that disagrees with what the loop would really do.
+ */
+function readDevAgents(): string[] {
+  try {
+    const raw = readFileSync(new URL("../dev-agents.json", import.meta.url), "utf8");
+    const parsed: unknown = JSON.parse(raw);
+    const agents =
+      typeof parsed === "object" && parsed !== null
+        ? (parsed as { agents?: unknown }).agents
+        : undefined;
+    if (!Array.isArray(agents)) return [];
+    return agents
+      .map((agent) =>
+        typeof agent === "object" && agent !== null ? (agent as { id?: unknown }).id : undefined,
+      )
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+  } catch {
+    return [];
+  }
+}
+
+const DEV_AGENTS = readDevAgents();
 
 function section(title: string): void {
   console.log(`\n${title}\n${"─".repeat(title.length)}`);

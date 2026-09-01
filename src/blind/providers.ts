@@ -129,6 +129,86 @@ export type PlaytestIsolation = z.infer<typeof PlaytestIsolationSchema>;
 export const PlaytestTierSchema = z.enum(["volume", "reference"]);
 export type PlaytestTier = z.infer<typeof PlaytestTierSchema>;
 
+/**
+ * How ONE model reaches the game, when that differs from its provider's default.
+ *
+ * This block exists because the transport was previously a switch statement on an exact
+ * model string in three places at once (`fleetTransportProfile` in blind-tester/fleet.mjs,
+ * a `$CODEX_TRANSPORT_CONTRACT` if-chain in blind-tester/run.sh, and a pair of
+ * `z.literal("gpt-5.3-codex-spark")` schemas in ../starting_slice/fleet_attestation.ts).
+ * Three hand-maintained copies of one fact is the shape that guarantees drift, and it
+ * made "certify a model we just unlocked" a code change in five files — the exact
+ * homogeneity `familyDiversity` exists to prevent.
+ *
+ * A model that needs nothing special omits the block entirely and inherits
+ * `provider.transportContract`. Only a model whose transport genuinely differs from its
+ * provider's default declares one, and it declares it as DATA, next to the model id it
+ * belongs to, where an operator editing a catalog can see it.
+ */
+export const PlaytestModelTransportSchema = z
+  .object({
+    /**
+     * Which attestation field this transport's contract is recorded under.
+     *
+     * Not cosmetic, and deliberately declared rather than sniffed from the contract
+     * name: a sealed attestation records a direct-MCP transport as `transport_contract`
+     * and a code-mode one as `code_mode_contract`, and those are separate keys with
+     * separate schemas. Deriving the distinction from a substring of the id would make
+     * every future contract name load-bearing in a way nobody would notice breaking.
+     */
+    kind: z.enum(["direct_mcp", "code_mode"]),
+    /** Transport contract id, overriding the provider default for this model only. */
+    contract: z.string().min(1),
+    /**
+     * Exact client CLI version this transport was verified against, when the transport
+     * is version-sensitive. Enforced as equality by the runner and the certifier: a
+     * direct-MCP transport rides vendor config keys that move between releases, so
+     * "close enough" is how a run gets recorded under a surface nobody audited.
+     *
+     * Optional because most transports are not version-pinned, and inventing a version
+     * to satisfy a required field would be the same lie the registry exists to stop.
+     */
+    requiredCliVersion: z.string().min(1).optional(),
+    /**
+     * Transport components, repo-relative to `blind-tester/`. Absent entries fall back
+     * to the fleet's common components. These are hashed into the transport fingerprint,
+     * so naming a file that does not exist fails the fleet before it spends tokens.
+     */
+    promptTemplate: z.string().min(1).optional(),
+    /** Vendor-format model-catalog file injected at launch, for clients that accept one. */
+    playerCatalog: z.string().min(1).optional(),
+    /** Prompt fragment describing this transport to the player. */
+    fragment: z.string().min(1).optional(),
+  })
+  .strict()
+  .superRefine((transport, ctx) => {
+    // Same containment rule the capture block gets: these strings become paths the
+    // fleet reads and hashes, so a catalog edit must not be able to walk out of the
+    // checkout and fingerprint an arbitrary file on the machine.
+    for (const [key, value] of [
+      ["promptTemplate", transport.promptTemplate],
+      ["playerCatalog", transport.playerCatalog],
+      ["fragment", transport.fragment],
+    ] as const) {
+      if (value === undefined) continue;
+      if (value.split(/[\\/]/u).includes("..")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `transport ${key} must not contain a ".." segment`,
+        });
+      }
+      if (/^(?:[/\\]|[A-Za-z]:)/u.test(value)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `transport ${key} must be relative to blind-tester/, not an absolute path`,
+        });
+      }
+    }
+  });
+export type PlaytestModelTransport = z.infer<typeof PlaytestModelTransportSchema>;
+
 /** One playable model within a provider's catalog. */
 export const PlaytestCatalogModelSchema = z
   .object({
@@ -141,6 +221,38 @@ export const PlaytestCatalogModelSchema = z
      * its purpose is that a session is reproducible and comparable later.
      */
     settings: z.record(z.union([z.string(), z.number(), z.boolean()])).default({}),
+    /**
+     * May this model's runs be admitted as CERTIFIED pure-fleet evidence?
+     *
+     * This replaces `CERTIFIED_CODEX_MODELS`, a closed four-id array in
+     * ../starting_slice/fleet_run_artifacts.ts that a newly unlocked model could not
+     * join without a TypeScript edit, a rebuild, and a test sweep — so in practice the
+     * certified fleet stayed frozen at whatever was current the day it was written.
+     *
+     * It is deliberately OPT-IN (default false). Adding a model to a catalog makes it
+     * playable; it does not make its evidence certifiable. Those are different claims,
+     * and the weaker one must never silently imply the stronger — that is the same
+     * laundering `isolation` exists to prevent, one level down. Certification also still
+     * requires the provider itself to be `runner_enforced`: see `certifiedFleetModels`.
+     */
+    certified: z.boolean().default(false),
+    /**
+     * The identity this model's evidence is certified UNDER, when it differs from `id`.
+     *
+     * Exists for one real case rather than as generality for its own sake. The Claude
+     * lane launches with a full model name (`claude-sonnet-5`) because an alias resolves
+     * to different weights over time and a session recorded under one stops meaning what
+     * its record says — but its pure-fleet plans and sealed records were written against
+     * the launch ALIASES (`haiku`/`sonnet`/`opus`), which is why
+     * ../blind/pure_artifact_gate.ts carried a second hardcoded `CLAUDE_MODEL_ALIASES`
+     * list that had to be kept in step with this catalog by hand.
+     *
+     * Declaring the mapping here makes the two names one fact with two spellings, and
+     * keeps existing sealed records readable without a migration. Absent, `id` is used.
+     */
+    certifiedAs: z.string().min(1).optional(),
+    /** Per-model transport override; absent means "inherit the provider's". */
+    transport: PlaytestModelTransportSchema.optional(),
     /**
      * At most one model per catalog may carry `default: true`; it is what a
      * launch with no --model resolves to. Absent any marked default, the first
@@ -700,6 +812,158 @@ export function findCatalogModel(catalog: PlaytestCatalog, modelId: string): Pla
     );
   }
   return model;
+}
+
+/** Read and validate one provider's catalog off disk. */
+export function loadPlaytestCatalog(provider: PlaytestProvider): PlaytestCatalog {
+  return parsePlaytestCatalog(
+    provider,
+    JSON.parse(readFileSync(new URL(provider.catalogPath, REPO_ROOT_URL), "utf8")),
+  );
+}
+
+/**
+ * The transport ONE model actually uses, provider default merged with any override.
+ *
+ * This is the single authority that replaced `fleetTransportProfile`'s model switch.
+ * Callers get a fully resolved answer — contract, required client version, component
+ * paths — so no consumer has to know that "spark uses a different transport from the
+ * rest of its own provider" is a thing that can be true.
+ */
+export interface ResolvedModelTransport {
+  kind: "direct_mcp" | "code_mode";
+  contract: string;
+  requiredCliVersion: string | null;
+  promptTemplate: string | null;
+  playerCatalog: string | null;
+  fragment: string | null;
+}
+
+export function resolveModelTransport(
+  provider: PlaytestProvider,
+  model: PlaytestCatalogModel,
+): ResolvedModelTransport {
+  const override = model.transport;
+  return {
+    // A model with no override inherits `provider.transportContract`, which is a
+    // direct-MCP contract for every registered provider. Code mode is only ever reached
+    // by a model that declares it, so the inherited default is direct_mcp.
+    kind: override?.kind ?? "direct_mcp",
+    contract: override?.contract ?? provider.transportContract,
+    requiredCliVersion: override?.requiredCliVersion ?? null,
+    promptTemplate: override?.promptTemplate ?? null,
+    playerCatalog: override?.playerCatalog ?? null,
+    fragment: override?.fragment ?? null,
+  };
+}
+
+/** One certified (provider, model) pair admitted to the pure fleet. */
+export interface CertifiedFleetEntry {
+  provider: string;
+  /** Launch id — the exact string handed to the client's `--model`. */
+  model: string;
+  /** Identity the evidence is certified under; equals `model` unless `certifiedAs` is set. */
+  certifiedAs: string;
+  tier: PlaytestTier;
+  transport: ResolvedModelTransport;
+}
+
+/**
+ * Every model this checkout will admit as CERTIFIED pure-fleet evidence.
+ *
+ * Replaces `CERTIFIED_CODEX_MODELS` + `CertifiedClaudeModel` + `PureFleetProvider`, which
+ * between them hard-coded two vendor names and seven model ids across three files. The
+ * answer is now computed from two facts that cannot be asserted into existence:
+ *
+ *   1. the model's catalog entry sets `certified: true` — an operator decision, recorded
+ *      in the catalog diff rather than buried in a TypeScript enum, and
+ *   2. its provider derives `runner_enforced` IN THIS CHECKOUT — i.e. a capture reader
+ *      for it actually exists on disk (`derivePlaytestIsolation`).
+ *
+ * (2) is the load-bearing half and is why this is a function rather than a constant. A
+ * catalog is operator-editable; if `certified: true` alone were enough, an operator could
+ * promote a hand-played vendor into certified evidence with a one-line JSON edit and the
+ * QA pipeline would let those sessions move experience metrics. Requiring the derived
+ * label means the strongest claim in the system still arrives only when the reader that
+ * can PROVE it is present — exactly the rule the isolation derivation already enforces
+ * one level up, now applied to models instead of vendors.
+ */
+export function certifiedFleetModels(): CertifiedFleetEntry[] {
+  const certified: CertifiedFleetEntry[] = [];
+  for (const provider of PLAYTEST_PROVIDERS) {
+    if (derivePlaytestIsolation(provider).isolation !== "runner_enforced") continue;
+    let catalog: PlaytestCatalog;
+    try {
+      catalog = loadPlaytestCatalog(provider);
+    } catch {
+      // A malformed or missing catalog means we cannot establish what this provider may
+      // play, so it contributes nothing. Fail closed, exactly as `runnerCanDriveProvider`
+      // does when it cannot read the launch-path list.
+      continue;
+    }
+    for (const model of catalog.models) {
+      if (!model.certified) continue;
+      certified.push({
+        provider: provider.id,
+        model: model.id,
+        certifiedAs: model.certifiedAs ?? model.id,
+        tier: model.tier,
+        transport: resolveModelTransport(provider, model),
+      });
+    }
+  }
+  return certified.sort(
+    (a, b) => a.provider.localeCompare(b.provider) || a.model.localeCompare(b.model),
+  );
+}
+
+/**
+ * Look up one certified entry by EITHER of its identities.
+ *
+ * Callers legitimately hold one or the other: a launch site has the `--model` id, while
+ * a sealed record or a fleet plan holds the certified identity. Accepting both is what
+ * lets `certifiedAs` stay an implementation detail of the catalog rather than something
+ * every consumer has to normalize for itself — the shape that produced the duplicate
+ * alias list in the first place.
+ */
+export function findCertifiedFleetModel(
+  providerId: string,
+  modelId: string,
+): CertifiedFleetEntry | null {
+  return (
+    certifiedFleetModels().find(
+      (entry) =>
+        entry.provider === providerId && (entry.model === modelId || entry.certifiedAs === modelId),
+    ) ?? null
+  );
+}
+
+/** Is this (provider, model) pair admitted as certified evidence here? */
+export function isCertifiedFleetModel(providerId: string, modelId: string): boolean {
+  return findCertifiedFleetModel(providerId, modelId) !== null;
+}
+
+/**
+ * The certified transport for one pair, or null if the pair is not certified.
+ *
+ * Callers use this instead of asking "is the model string equal to SPARK_DIRECT_MCP_MODEL".
+ */
+export function certifiedModelTransport(
+  providerId: string,
+  modelId: string,
+): ResolvedModelTransport | null {
+  return findCertifiedFleetModel(providerId, modelId)?.transport ?? null;
+}
+
+/**
+ * Certified identities for one provider, sorted — the derived replacement for the
+ * hardcoded `CERTIFIED_CODEX_MODELS` array and the `CertifiedClaudeModel` union.
+ */
+export function certifiedModelIdsForProvider(providerId: string): string[] {
+  return certifiedFleetModels()
+    .filter((entry) => entry.provider === providerId)
+    .map((entry) => entry.certifiedAs)
+    .sort();
 }
 
 /**
