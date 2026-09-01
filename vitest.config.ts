@@ -16,6 +16,14 @@ const ALL_EXHAUSTIVE_RPG_PROOFS = [
   VARIANT_LIVENESS_PROOF,
   ...EXHAUSTIVE_RPG_PROOFS,
 ];
+// Deliberately 2 under CI, not 4. Raising it to 4 cut a shard from 1,562s to 959s (-38%)
+// and turned two subprocess-spawning tests red on the same run — crawl_workers_determinism
+// blew its 60s ceiling and rpg_validation_bar's `npm run validate` returned ETIMEDOUT with
+// a null status. Both spawn child processes and are starved by the extra concurrency, which
+// is the load artifact AGENTS.md's "budget the wall clock" note describes. The reachable
+// win is real but belongs to a change that first gives those tests headroom; buying 10
+// minutes with a flaky bar is a bad trade, and a flaky bar is the one thing that stops
+// people running it.
 const standardWorkerCap =
   process.env.CI === "true"
     ? Math.min(2, availableParallelism())

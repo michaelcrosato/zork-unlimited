@@ -1,6 +1,7 @@
 import { readdirSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { filterTestFilesByLane, LANE_NAMES, type LaneName } from "./test-lanes.js";
 
 /**
  * File-level body-time samples from successful GitHub Actions run 30295854622
@@ -142,14 +143,35 @@ export function assignTestGroups(files: readonly string[], groupCount: number): 
   return groups;
 }
 
-export function parseGroupArguments(args: readonly string[]): { count: number; group: number } {
+const USAGE =
+  "Usage: tsx scripts/ci-test-groups.ts --count <n> --group <1..count> [--lane fast|exhaustive]";
+
+export function parseGroupArguments(args: readonly string[]): {
+  count: number;
+  group: number;
+  lane: LaneName;
+} {
   let count: number | undefined;
   let group: number | undefined;
+  // Sharding one lane at a time is what keeps the split balanced. Allocating over ALL
+  // files and then letting vitest skip the other lane's would leave the census proofs'
+  // measured weight — the large majority of this table — sitting in whichever shard drew
+  // it, so one job would be handed almost no real work and the other nearly all of it.
+  let lane: LaneName = "fast";
   for (let index = 0; index < args.length; index += 2) {
     const flag = args[index];
     const value = args[index + 1];
-    if ((flag !== "--count" && flag !== "--group") || value === undefined) {
-      throw new Error("Usage: tsx scripts/ci-test-groups.ts --count <n> --group <n>");
+    if ((flag !== "--count" && flag !== "--group" && flag !== "--lane") || value === undefined) {
+      throw new Error(USAGE);
+    }
+    if (flag === "--lane") {
+      if (!(LANE_NAMES as string[]).includes(value)) {
+        throw new Error(
+          `Expected one of ${LANE_NAMES.join(", ")} after --lane, received ${value}.`,
+        );
+      }
+      lane = value as LaneName;
+      continue;
     }
     const parsed = Number(value);
     if (!Number.isInteger(parsed)) {
@@ -159,20 +181,20 @@ export function parseGroupArguments(args: readonly string[]): { count: number; g
     if (flag === "--group") group = parsed;
   }
   if (count === undefined || group === undefined || count < 1 || group < 1 || group > count) {
-    throw new Error("Usage: tsx scripts/ci-test-groups.ts --count <n> --group <1..count>");
+    throw new Error(USAGE);
   }
-  return { count, group };
+  return { count, group, lane };
 }
 
 function main(): void {
-  const { count, group } = parseGroupArguments(process.argv.slice(2));
-  const groups = assignTestGroups(discoverTestFiles(), count);
+  const { count, group, lane } = parseGroupArguments(process.argv.slice(2));
+  const groups = assignTestGroups(filterTestFilesByLane(discoverTestFiles(), lane), count);
   const selected = groups[group - 1];
   if (selected === undefined || selected.files.length === 0) {
-    throw new Error(`Test group ${group}/${count} has no files.`);
+    throw new Error(`Test group ${group}/${count} of the ${lane} lane has no files.`);
   }
   console.error(
-    `CI test group ${group}/${count}: ${selected.files.length} files, estimated ${selected.estimatedMs}ms.`,
+    `CI ${lane}-lane test group ${group}/${count}: ${selected.files.length} files, estimated ${selected.estimatedMs}ms.`,
   );
   process.stdout.write(`${selected.files.join("\n")}\n`);
 }

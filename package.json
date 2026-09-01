@@ -18,6 +18,8 @@
     "format": "prettier --write src bin scripts agents tests blind-tester ui",
     "lint": "eslint src bin scripts agents tests blind-tester ui",
     "test": "vitest run --reporter=dot",
+    "test:fast": "vitest run --reporter=dot --project standard",
+    "test:exhaustive": "vitest run --reporter=dot --project exhaustive-rpg --project variant-liveness-proof --project ending-render-proof --project metamorphic-observation",
     "test:coverage": "vitest run --project standard --coverage --reporter=dot --testTimeout=300000",
     "test:ending-render-proof": "vitest run --project ending-render-proof --reporter=dot",
     "verify:integrity": "tsx scripts/verify-integrity.ts",
@@ -27,6 +29,7 @@
     "audit:standard-coverage": "tsx scripts/run-with-soft-budget.ts --label standard-suite --seconds 4200 --history ai-runs/performance-budget-history.json -- npm run test:coverage",
     "audit:non-player": "npm run verify:bug-traces && npm run verify:opening-density && npm run audit:ending-render-proof && npm run audit:standard-coverage",
     "health": "npm run verify:integrity && npm run verify:bug-traces && npm run verify:opening-density && npm run typecheck && npm run lint && npm run format:check && npm run ui:typecheck && npm run validate && npm test",
+    "health:fast": "npm run verify:integrity && npm run verify:bug-traces && npm run verify:opening-density && npm run typecheck && npm run lint && npm run format:check && npm run ui:typecheck && npm run validate && npm run test:fast",
     "test:watch": "vitest",
     "replay": "tsx bin/replay.ts",
     "validate": "tsx bin/validate.ts",
@@ -74,7 +77,8 @@
     "loop:status": "bash scripts/loop-status.sh",
     "loop:stop": "bash scripts/loop-stop.sh",
     "ui:typecheck": "tsc -p ui/tsconfig.json --noEmit && tsc -p ui/tsconfig.tests.json --noEmit",
-    "doctor": "tsx bin/doctor.ts"
+    "doctor": "tsx bin/doctor.ts",
+    "ship": "tsx scripts/ship.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

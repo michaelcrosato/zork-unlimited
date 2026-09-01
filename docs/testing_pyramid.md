@@ -13,6 +13,10 @@ reference for what each tier does, when it runs, and its exact shapes.
   proofs, bug-trace integrity, and the opening-density budget. Proves
   _structure_: tested endings reachable, progress-action liveness, sound
   scoring, valid evidence references, and no test/schema/density regressions.
+  The vitest part runs in two lanes over one unchanged project set — `test:fast`
+  (the `standard` project) on every commit and in the PR gate, `test:exhaustive`
+  (the six whole-state-space census proofs) nightly. §2's budget table gives the
+  split and §2.1 the reasoning; `npm run health` still runs both.
 - **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure
   engine in-process across every shipped quest plus a full overworld sweep,
   checking nine finding codes every step — eight true invariants (CRASH,
@@ -74,6 +78,8 @@ reference for what each tier does, when it runs, and its exact shapes.
 
 | Lane                          | Trigger                                                                                                     | Budget                                                                                                                                                                                                               | Cost                        |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `test:fast`                   | every commit (`health:fast`) and both PR shards                                                             | the `standard` project: every ordinary unit/property/regression/acceptance file; 60s per-test ceiling                                                                                                                | free                        |
+| `test:exhaustive`             | nightly (`deep-audit.yml`) / manual dispatch                                                                | the six census proofs, ~79 min of measured CI body time, serialized one or two workers wide by `vitest.config.ts`                                                                                                    | free, long-running          |
 | `crawl:smoke`                 | every loop cycle (pre- and post-work gate)                                                                  | fixed two-seed, 250-step-per-quest single-worker sweep; runtime is machine-dependent                                                                                                                                 | free                        |
 | `crawl:deep`                  | nightly (`deep-audit.yml`) / manual dispatch                                                                | 64 seeds, 2,000 steps per quest, 20,000-state solver budget, and eight workers with 900s soft cutoffs; runtime is machine-dependent, and any cutoff is loud via `truncated` / `skippedItems`                         | free                        |
 | `verify:bug-traces`           | every health/CI run; repeated nightly                                                                       | parse all `traces/bugs/*.yaml`; validate mapping/ID/narrative essentials and current-or-historical concrete path references                                                                                          | free                        |
@@ -88,6 +94,35 @@ reference for what each tier does, when it runs, and its exact shapes.
 | `fleet:mock`                  | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                         | zero tokens                 |
 | `feedback:status` / `compile` | status reports a bootstrap or ≥3 new accepted actionable reports (structural mocks excluded)                | seconds (deterministic verification, identity diff, and clustering)                                                                                                                                                  | free                        |
 
+## 2.1 Why the census proofs are the nightly half
+
+The split is not "slow tests are less important". It is that these six proofs
+cannot answer a question most changes ask. Each BFSes the complete reachable state
+region of every shipped pack, and each imports only `src/core`, `src/rpg`,
+`src/validate`, `src/world` and the `content/` packs — so a change to the fleet
+runner, blind tester, feedback compiler, crawler, MCP layer, CLIs, docs or intake
+tooling cannot move their verdict, while still costing the large majority of the
+bar's wall clock. Deferring them buys back that time for exactly the changes they
+say nothing about.
+
+The converse is the rule that matters: **a change to the engine, a validator, the
+world, or a shipped pack must run `npm run health`, not `health:fast`.** For those
+the proofs are the ground truth, and the fast lane is not evidence about the
+change.
+
+The accepted cost is that a content or engine regression only a census proof
+catches can sit on `main` until the nightly `Deep audit` goes red, rather than
+blocking the PR that introduced it.
+
+Nothing is skipped. The lanes must PARTITION the vitest projects — together every
+project, neither twice — because the dangerous failure here is silent and sits one
+level above the one `detectSuiteCoverage` catches: add a project, name it in
+neither lane script, and it runs in NO lane while both still exit 0.
+`scripts/test-lanes.ts` reads the actual `package.json` script bodies rather than
+a parallel list, and `tests/unit/test_lanes.test.ts` asserts the partition, the
+file-level split, and that the proof list it duplicates still equals the
+exhaustive projects' `include` lists in `vitest.config.ts`.
+
 ## 3. Exact commands
 
 ```bash
@@ -100,6 +135,12 @@ npm run crawl -- --workers 4 --seeds 7             # custom invocation (flags in
 npm run verify:bug-traces                          # strict YAML/identity/current-or-historical path gate
 npm run verify:opening-density                     # real compact opening against 732-token / 12-option ceilings
 npm run test:coverage                              # standard-project V8 report in coverage/
+
+# Tier 0 — the two suite lanes
+npm run test:fast                                  # the standard project (every commit)
+npm run test:exhaustive                            # the six census proofs (nightly)
+npm run health:fast                                # the nine checks over the fast lane
+npm run health                                     # the nine checks over both lanes
 npm run audit:non-player                           # all three checks above
 
 # Tier 2 — blind playtests

@@ -105,7 +105,15 @@ describe("bin/crawl --workers fan-out determinism", () => {
       questCoverage: unknown;
     };
     expect(workersSummary.questCoverage).toEqual(singleSummary.questCoverage);
-  });
+    // 180s, not the project's 60s default. Each of these spawns bin/crawl.ts through
+    // tsx TWICE, and the fan-out run starts two more worker processes, so four cold
+    // module loads are paid before any crawling begins. ci-test-groups.ts already
+    // measures this FILE at 84.7s — above the ceiling it was inheriting — and it has
+    // duly timed out on a loaded CI runner and on a contended local box, which is the
+    // subprocess-test load artifact AGENTS.md warns about under "budget the wall
+    // clock". Every assertion is unchanged; only the clock is, because the clock was
+    // never what these prove.
+  }, 180_000);
 
   it("workers=1 is itself repeatable byte-for-byte across two runs (baseline determinism)", () => {
     const outA = mkdtempSync(join(tmpdir(), "af-crawl-a-"));
@@ -132,7 +140,7 @@ describe("bin/crawl --workers fan-out determinism", () => {
     expect(readFileSync(join(outA, "findings.jsonl"), "utf8")).toBe(
       readFileSync(join(outB, "findings.jsonl"), "utf8"),
     );
-  });
+  }, 180_000);
 
   /**
    * Review fix (Task 10 follow-up): `findings.jsonl` was already proven safe
@@ -183,7 +191,7 @@ describe("bin/crawl --workers fan-out determinism", () => {
       readFileSync(join(outWorkers, "summary.json"), "utf8"),
     );
     expect(workersSummary).toBe(singleSummary);
-  });
+  }, 180_000);
 });
 
 /**

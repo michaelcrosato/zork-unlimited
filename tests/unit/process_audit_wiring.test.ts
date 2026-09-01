@@ -41,17 +41,26 @@ describe("non-player audit wiring", () => {
   it("keeps the deep crawl and coverage audit scheduled and manually dispatchable", () => {
     const deepAudit = workflow(".github/workflows/deep-audit.yml");
     const commands = runCommands(deepAudit);
-    const checkoutSteps = Object.values(deepAudit.jobs ?? {}).flatMap((job) =>
-      (job.steps ?? []).filter((step) => step.uses === "actions/checkout@v4"),
-    );
+    const jobs = Object.values(deepAudit.jobs ?? {});
 
     expect(deepAudit.on).toHaveProperty("schedule");
     expect(deepAudit.on).toHaveProperty("workflow_dispatch");
     expect(deepAudit.permissions).toEqual({ contents: "read" });
     expect(commands).toContain("npm run crawl:deep");
     expect(commands).toContain("npm run audit:non-player");
-    expect(checkoutSteps).toHaveLength(2);
-    expect(checkoutSteps.every((step) => step.with?.["fetch-depth"] === 0)).toBe(true);
+    // The exhaustive census proofs run ONLY here now — ci.yml shards the fast lane. That
+    // makes this the load-bearing assertion of the split: drop the job and the proofs stop
+    // running everywhere at once, with every lane still green.
+    expect(commands).toContain("npm run test:exhaustive");
+    // Per-job rather than a flat count. The old form pinned the total at 2 and checked
+    // fetch-depth with `.every`, which is vacuously true on an empty list; this way a job
+    // with no checkout, or a second one bolted into an existing job, both fail.
+    expect(jobs).toHaveLength(3);
+    for (const job of jobs) {
+      const checkouts = (job.steps ?? []).filter((step) => step.uses === "actions/checkout@v4");
+      expect(checkouts).toHaveLength(1);
+      expect(checkouts[0]?.with?.["fetch-depth"]).toBe(0);
+    }
   });
 
   it("keeps coverage scoped to the standard project and the audit command", () => {
