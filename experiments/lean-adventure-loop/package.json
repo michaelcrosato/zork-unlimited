@@ -1,0 +1,17 @@
+{
+  "name": "lean-adventure-loop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "mcp": "node src/mcp-server.mjs",
+    "playtest": "node src/playtest.mjs",
+    "aggregate": "node src/aggregate.mjs",
+    "loop": "node src/loop.mjs",
+    "measure": "node src/measure.mjs"
+  }
+}

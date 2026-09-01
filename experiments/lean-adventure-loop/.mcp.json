@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "lean-adventure": {
+      "command": "node",
+      "args": ["src/mcp-server.mjs"],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,5 @@
+artifacts/runs/*.json
+artifacts/summary.json
+NEXT_TASK.md
+node_modules/
+.DS_Store

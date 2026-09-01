@@ -1,0 +1,134 @@
+{
+  "id": "signal-house",
+  "title": "The Signal House",
+  "objective": "Relight the storm beacon before the supply boat leaves.",
+  "start": "jetty",
+  "maxTurns": 16,
+  "rooms": {
+    "jetty": {
+      "title": "Storm Jetty",
+      "text": "Rain needles the black water. The dark signal tower stands above a shuttered keeper's house.",
+      "actions": ["take_lantern", "enter_house", "leave_island"]
+    },
+    "keeper_room": {
+      "title": "Keeper's Room",
+      "text": "A cold stove, a wall log, and a sealed oil flask remain. Doors lead to the workshop and tower stair.",
+      "actions": ["read_log", "take_oil", "go_jetty", "go_workshop", "climb_tower"]
+    },
+    "workshop": {
+      "title": "Workshop",
+      "text": "Salt has eaten the old switchboard. One dry ceramic fuse rests in a drawer.",
+      "actions": ["take_fuse", "install_fuse", "return_keeper_from_workshop"]
+    },
+    "tower": {
+      "title": "Lantern Room",
+      "text": "The dead beacon lens faces the storm. The supply boat's horn sounds below.",
+      "actions": ["fill_lantern", "light_beacon", "return_keeper_from_tower"]
+    }
+  },
+  "items": {
+    "lantern": "brass lantern",
+    "oil": "sealed oil flask",
+    "fuse": "ceramic fuse"
+  },
+  "actions": {
+    "take_lantern": {
+      "label": "Take the brass lantern",
+      "when": [{ "lacks": "lantern" }],
+      "text": "You lift the lantern from a hook under the jetty roof.",
+      "effects": [{ "take": "lantern" }, { "score": 1 }]
+    },
+    "enter_house": {
+      "label": "Enter the keeper's house",
+      "text": "The swollen door gives way.",
+      "effects": [{ "move": "keeper_room" }]
+    },
+    "leave_island": {
+      "label": "Signal the supply boat and leave",
+      "text": "You abandon the dark station and board the waiting boat.",
+      "effects": [{ "end": "left" }]
+    },
+    "read_log": {
+      "label": "Read the wall log",
+      "when": [{ "notFlag": "read_log" }],
+      "text": "The last entry says: REPLACE FUSE, FILL HAND LANTERN, THEN TOUCH ITS FLAME TO THE BEACON.",
+      "effects": [{ "flag": "read_log" }, { "score": 1 }]
+    },
+    "take_oil": {
+      "label": "Take the oil flask",
+      "when": [{ "lacks": "oil" }],
+      "text": "You take the sealed oil flask.",
+      "effects": [{ "take": "oil" }]
+    },
+    "go_jetty": {
+      "label": "Return to the jetty",
+      "effects": [{ "move": "jetty" }]
+    },
+    "go_workshop": {
+      "label": "Enter the workshop",
+      "effects": [{ "move": "workshop" }]
+    },
+    "climb_tower": {
+      "label": "Climb to the lantern room",
+      "effects": [{ "move": "tower" }]
+    },
+    "take_fuse": {
+      "label": "Take the ceramic fuse",
+      "when": [{ "lacks": "fuse" }, { "notFlag": "fuse_installed" }],
+      "text": "You take the dry fuse from the drawer.",
+      "effects": [{ "take": "fuse" }]
+    },
+    "install_fuse": {
+      "label": "Install the fuse in the switchboard",
+      "when": [{ "has": "fuse" }, { "notFlag": "fuse_installed" }],
+      "text": "The fuse seats with a clean click. Current reaches the tower.",
+      "effects": [{ "remove": "fuse" }, { "flag": "fuse_installed" }, { "score": 2 }]
+    },
+    "return_keeper_from_workshop": {
+      "label": "Return to the keeper's room",
+      "effects": [{ "move": "keeper_room" }]
+    },
+    "fill_lantern": {
+      "label": "Fill the lantern with oil",
+      "when": [{ "has": "lantern" }, { "has": "oil" }, { "notFlag": "lantern_filled" }],
+      "text": "You fill and light the hand lantern. Its small flame holds steady.",
+      "effects": [{ "remove": "oil" }, { "flag": "lantern_filled" }, { "score": 2 }]
+    },
+    "light_beacon": {
+      "label": "Light the storm beacon",
+      "when": [{ "has": "lantern" }, { "flag": "lantern_filled" }, { "flag": "fuse_installed" }],
+      "text": "The great lens catches. A white beam cuts across the storm.",
+      "effects": [{ "score": 5 }, { "end": "beacon" }]
+    },
+    "return_keeper_from_tower": {
+      "label": "Descend to the keeper's room",
+      "effects": [{ "move": "keeper_room" }]
+    }
+  },
+  "endings": {
+    "beacon": {
+      "title": "Beacon Relit",
+      "text": "The supply boat answers with three horn blasts. The island has a keeper again."
+    },
+    "left": {
+      "title": "Station Abandoned",
+      "text": "The unlit tower vanishes behind rain as the boat turns for the mainland."
+    },
+    "timeout": {
+      "title": "Too Late",
+      "text": "The supply boat's last horn fades. The station remains dark."
+    }
+  },
+  "winningPlan": [
+    "take_lantern",
+    "enter_house",
+    "take_oil",
+    "go_workshop",
+    "take_fuse",
+    "install_fuse",
+    "return_keeper_from_workshop",
+    "climb_tower",
+    "fill_lantern",
+    "light_beacon"
+  ]
+}
