@@ -219,6 +219,37 @@ export function defaultProviderId(repoRoot = REPO_ROOT) {
   return first.id;
 }
 
+/**
+ * One transport component path, refused unless it stays inside `blind-tester/`.
+ *
+ * The typed schema (`PlaytestModelTransportSchema` in ../src/blind/providers.ts) already
+ * rejects an absolute path or a `..` segment. That is not enough on its own, because the
+ * LAUNCH path never goes through it: `blind-tester/run.sh` reads these records from this
+ * dependency-free resolver and hands the value to fill-prompt.mjs, which reads the named
+ * file into the player's prompt. A catalog typo — or an edit by someone who only ran the
+ * shell path — could therefore pull a file from outside the checkout into a prompt that
+ * gets sent to an external model, with the typed guard never consulted.
+ *
+ * So the rule is enforced in BOTH readers, the same way the isolation derivation is
+ * mirrored here rather than imported: whichever path resolves a provider has to be the
+ * one that applies the constraint. Same containment rule as the capture block above.
+ */
+function transportPath(provider, model, field) {
+  const value = model.transport?.[field];
+  if (typeof value !== "string" || value === "") return null;
+  if (value.split(/[\\/]/u).includes("..")) {
+    fail(
+      `provider "${provider.id}" model "${model.id}" transport ${field} must not contain a ".." segment`,
+    );
+  }
+  if (/^(?:[/\\]|[A-Za-z]:)/u.test(value)) {
+    fail(
+      `provider "${provider.id}" model "${model.id}" transport ${field} must be relative to blind-tester/, not an absolute path`,
+    );
+  }
+  return value;
+}
+
 export function resolveProvider(providerId, requestedModel, repoRoot = REPO_ROOT) {
   const registryPath = join(repoRoot, "blind-tester", "providers.json");
   const registry = readJson(registryPath);
@@ -327,9 +358,9 @@ export function resolveProvider(providerId, requestedModel, repoRoot = REPO_ROOT
     transportContract: model.transport?.contract ?? provider.transportContract ?? null,
     transportKind: model.transport?.kind ?? "direct_mcp",
     transportRequiredCliVersion: model.transport?.requiredCliVersion ?? null,
-    transportPromptTemplate: model.transport?.promptTemplate ?? null,
-    transportPlayerCatalog: model.transport?.playerCatalog ?? null,
-    transportFragment: model.transport?.fragment ?? null,
+    transportPromptTemplate: transportPath(provider, model, "promptTemplate"),
+    transportPlayerCatalog: transportPath(provider, model, "playerCatalog"),
+    transportFragment: transportPath(provider, model, "fragment"),
     modelCertified: model.certified === true,
   };
 }

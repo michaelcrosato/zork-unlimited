@@ -793,6 +793,37 @@ export function parsePlaytestCatalog(provider: PlaytestProvider, raw: unknown): 
     }
     seen.add(model.id);
   }
+  // Certified IDENTITIES must be unique too, and must not collide with any launch id.
+  //
+  // Checking launch ids alone was not enough once `certifiedAs` existed: two certified
+  // models could resolve to the same identity, and three separate things then break
+  // quietly. `findCertifiedFleetModel` returns whichever entry happens to be first;
+  // ../blind/pure_artifact_gate.ts sees more than one alias matching a Claude envelope
+  // and rejects a run that is in fact valid; and the derived Codex attestation union
+  // gets a duplicate `model` discriminator, which `z.discriminatedUnion` will not build.
+  // All three present as something other than "your catalog names one model twice", so
+  // the collision is refused here where the message can say so.
+  const identities = new Map<string, string>();
+  for (const model of catalog.models) {
+    if (!model.certified) continue;
+    const identity = model.certifiedAs ?? model.id;
+    const previous = identities.get(identity);
+    if (previous !== undefined) {
+      throw new Error(
+        `catalog ${provider.catalogPath} certifies "${previous}" and "${model.id}" under the ` +
+          `same identity "${identity}"; certified identities must be unique`,
+      );
+    }
+    // A certified identity that is another model's launch id is the same ambiguity wearing
+    // a different hat: a lookup by that string could mean either entry.
+    if (identity !== model.id && seen.has(identity)) {
+      throw new Error(
+        `catalog ${provider.catalogPath} certifies "${model.id}" as "${identity}", which is ` +
+          `already another model's id`,
+      );
+    }
+    identities.set(identity, model.id);
+  }
   const defaults = catalog.models.filter((model) => model.default === true);
   if (defaults.length > 1) {
     throw new Error(

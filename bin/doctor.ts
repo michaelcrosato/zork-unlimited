@@ -114,8 +114,21 @@ export function onPath(binary: string): boolean {
  * A registry that cannot be read yields an empty list, and the "none on PATH" branch
  * below then prints the actionable message. That is the same fail-closed answer loop.sh
  * gives, rather than a built-in list that disagrees with what the loop would really do.
+ *
+ * BOTH fields are kept, because they answer different questions and are not always the
+ * same string. `loop.sh` probes `binary` to decide whether an agent can run; an earlier
+ * version of this reader kept only `id` and probed THAT, so an entry whose executable is
+ * named differently from its id would have been reported unavailable here while the loop
+ * happily auto-detected it — reintroducing, in the reporting layer, exactly the
+ * disagreement the shared registry exists to remove. `id` is what an operator types into
+ * AI_AGENT, so it stays what gets displayed.
  */
-function readDevAgents(): string[] {
+interface DevAgentEntry {
+  id: string;
+  binary: string;
+}
+
+function readDevAgents(): DevAgentEntry[] {
   try {
     const raw = readFileSync(new URL("../dev-agents.json", import.meta.url), "utf8");
     const parsed: unknown = JSON.parse(raw);
@@ -124,11 +137,17 @@ function readDevAgents(): string[] {
         ? (parsed as { agents?: unknown }).agents
         : undefined;
     if (!Array.isArray(agents)) return [];
-    return agents
-      .map((agent) =>
-        typeof agent === "object" && agent !== null ? (agent as { id?: unknown }).id : undefined,
-      )
-      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    const entries: DevAgentEntry[] = [];
+    for (const agent of agents) {
+      if (typeof agent !== "object" || agent === null) continue;
+      const { id, binary } = agent as { id?: unknown; binary?: unknown };
+      if (typeof id !== "string" || id.length === 0) continue;
+      // A malformed entry falls back to the id rather than being dropped: an agent the
+      // loop might still run must not vanish from the report that is supposed to explain
+      // what the loop will do.
+      entries.push({ id, binary: typeof binary === "string" && binary.length > 0 ? binary : id });
+    }
+    return entries;
   } catch {
     return [];
   }
@@ -149,10 +168,11 @@ function main(): void {
   // Report ALL of them, not just the auto-detected one. loop.sh takes the first match in
   // DEV_AGENTS order, so an operator who wants a different installed agent has to know
   // that AI_AGENT selects it — and that is invisible if only the winner is printed.
-  const devAgents = DEV_AGENTS.filter(onPath);
+  // Probe the executable, report the id — see readDevAgents.
+  const devAgents = DEV_AGENTS.filter((agent) => onPath(agent.binary)).map((agent) => agent.id);
   if (devAgents.length === 0) {
     console.log(
-      `  ✗ none of ${DEV_AGENTS.join(", ")} is on PATH.\n` +
+      `  ✗ none of ${DEV_AGENTS.map((agent) => agent.id).join(", ")} is on PATH.\n` +
         `    Install one, or point AI_AGENT_CMD at any agent that reads STDIN.`,
     );
   } else {

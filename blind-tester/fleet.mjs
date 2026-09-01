@@ -32,6 +32,7 @@ import { clearTimeout, setTimeout } from "node:timers";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { codexClientAuthorityRecord, validateOutputPrefix } from "./codex-rollout.mjs";
+import { acceptedCodexProfiles } from "./frozen-v9-codex-profiles.mjs";
 import {
   CODEX_GAME_DIRECT_MCP_CONTRACT,
   CODEX_GAMEPLAY_WRAPPER_FAILURES,
@@ -522,20 +523,99 @@ function certifiedCatalogModel(modelId, providerId = "codex") {
  * witness, and quietly guessing one is how a run gets recorded under a surface no one
  * audited.
  */
+/**
+ * Every (model, contract, client-version) shape a CURRENT Codex attestation may carry.
+ *
+ * Frozen v9 profiles unioned with whatever the catalog certifies now — the same rule the
+ * TypeScript schema uses, from the same definition, so the runner and the certifier
+ * cannot disagree about what a valid record looks like.
+ *
+ * Fails to an EMPTY live half if the catalog cannot be read, which leaves the frozen
+ * profiles standing: unreadable catalogs must not widen what counts as valid evidence.
+ */
+function fleetAcceptedCodexProfiles() {
+  let live = [];
+  try {
+    const provider = readFleetProviderRegistry().find((candidate) => candidate.id === "codex");
+    if (provider) {
+      live = readFleetCatalog(provider)
+        .models.filter((model) => model.certified === true)
+        .map((model) => ({
+          model: model.id,
+          kind: model.transport?.kind ?? "direct_mcp",
+          contract: model.transport?.contract ?? provider.transportContract,
+          requiredCliVersion: model.transport?.requiredCliVersion ?? null,
+        }));
+    }
+  } catch {
+    live = [];
+  }
+  return acceptedCodexProfiles(live);
+}
+
+/**
+ * Does this attestation's (model, contract, version) triple match an accepted profile?
+ *
+ * Replaces a hardcoded pair of model/version equalities per contract. That form was a
+ * TRAP rather than merely stale: a newly certified model passed every planning gate and
+ * was then rejected here, at attestation time, AFTER a full playthrough's tokens had
+ * been spent — and the rejection named the transport, not the missing entry.
+ */
+function matchesAcceptedCodexProfile(attestation, kind) {
+  const contract =
+    kind === "direct_mcp" ? attestation.transport_contract : attestation.code_mode_contract;
+  return fleetAcceptedCodexProfiles().some(
+    (profile) =>
+      profile.kind === kind &&
+      profile.model === attestation.model &&
+      profile.contract === contract &&
+      (profile.requiredCliVersion === null ||
+        profile.requiredCliVersion === attestation.codex_cli_version),
+  );
+}
+
 export function fleetTransportProfile(model, providerId = "codex") {
+  const provider = readFleetProviderRegistry().find((candidate) => candidate.id === providerId);
+  if (!provider) {
+    throw new Error(`fleet: provider ${String(providerId)} is not in the registry`);
+  }
   const entry = certifiedCatalogModel(model, providerId);
-  const transport = entry?.transport;
-  if (!transport) {
+  if (!entry) {
     throw new Error(`fleet: no certified transport profile for model ${String(model)}`);
   }
+  // A model may OMIT `transport` and inherit its provider's contract — the catalog schema
+  // says so and ../src/blind/providers.ts implements the merge. An earlier version of this
+  // function read only the override and threw for anything without one, which made every
+  // inheriting model unlaunchable: a newly certified Codex model with no special transport
+  // would have died at the fingerprint gate with "no certified transport profile", naming
+  // the one thing that was not actually wrong with it.
+  const transport = entry.transport ?? null;
+  const transportContract = transport?.contract ?? provider.transportContract;
+  if (typeof transportContract !== "string" || transportContract === "") {
+    throw new Error(
+      `fleet: neither model ${String(model)} nor provider ${String(providerId)} declares a transport contract`,
+    );
+  }
+  // The shared component set below is CODEX-SPECIFIC — codex-strict-stream.mjs,
+  // codex-pure-envelope.mjs, codex-rollout.mjs, codex-process-anchor.mjs are four of its
+  // six entries. Resolving an inherited contract for another vendor would therefore hand
+  // back a profile whose fingerprint hashes another vendor's launch machinery: a wrong
+  // answer wearing the shape of a right one. Until a vendor has its own fleet component
+  // set, say that plainly instead.
+  if (providerId !== "codex") {
+    throw new Error(
+      `fleet: provider ${String(providerId)} has no fleet transport component set yet ` +
+        `(the shared set is Codex-specific), so no fleet profile can be built for ${String(model)}`,
+    );
+  }
   const componentPaths = { ...FLEET_COMMON_TRANSPORT_COMPONENTS };
-  if (transport.promptTemplate) componentPaths.prompt_template = transport.promptTemplate;
+  if (transport?.promptTemplate) componentPaths.prompt_template = transport.promptTemplate;
   // Only clients that accept an injected vendor model catalog declare one; omitting the
   // key entirely (rather than setting it null) keeps the hashed component-role set for
   // code-mode models exactly what it has always been.
-  if (transport.playerCatalog) componentPaths.player_catalog = transport.playerCatalog;
-  if (transport.fragment) componentPaths.transport_fragment = transport.fragment;
-  return { transportContract: transport.contract, componentPaths };
+  if (transport?.playerCatalog) componentPaths.player_catalog = transport.playerCatalog;
+  if (transport?.fragment) componentPaths.transport_fragment = transport.fragment;
+  return { transportContract, componentPaths };
 }
 
 /** A stable, non-secret profile key for transport-gate failures. It intentionally
@@ -2092,15 +2172,10 @@ function isExactPureFleetAttestation(attestation) {
     attestation.recovery_metadata_sha256 === null &&
     attestation.recovery_envelope_sha256 === null &&
     (currentDirectCodex
-      ? (attestation.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
-          ? attestation.model === SPARK_ADMISSION_CANARY_MODEL &&
-            attestation.codex_cli_version === SPARK_DIRECT_MCP_CODEX_CLI_VERSION
-          : attestation.transport_contract === GAME_DIRECT_MCP_TRANSPORT_CONTRACT &&
-            attestation.model === "gpt-5.6-terra" &&
-            attestation.codex_cli_version === GAME_DIRECT_MCP_CODEX_CLI_VERSION) &&
+      ? matchesAcceptedCodexProfile(attestation, "direct_mcp") &&
         /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
       : currentStrictCodex
-        ? ["gpt-5.6-sol", "gpt-5.6-luna"].includes(attestation.model) &&
+        ? matchesAcceptedCodexProfile(attestation, "code_mode") &&
           typeof attestation.codex_cli_version === "string" &&
           /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(
             attestation.codex_cli_version,
@@ -2119,8 +2194,9 @@ function isExactPureFleetAttestation(attestation) {
               /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
             : true) &&
     (currentDirectCodex
-      ? [SPARK_DIRECT_MCP_TRANSPORT_CONTRACT, GAME_DIRECT_MCP_TRANSPORT_CONTRACT].includes(
-          attestation.transport_contract,
+      ? fleetAcceptedCodexProfiles().some(
+          (profile) =>
+            profile.kind === "direct_mcp" && profile.contract === attestation.transport_contract,
         )
       : currentStrictCodex
         ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT

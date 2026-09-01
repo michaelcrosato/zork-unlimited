@@ -2,7 +2,18 @@ import { z } from "zod";
 import { PureRunBuildSchema } from "../blind/run_evidence.js";
 import { parseJsonRejectingDuplicateKeys } from "../blind/strict_json.js";
 import { CertifiedCodexModelSchema } from "./fleet_run_artifacts.js";
-import { certifiedFleetModels, type CertifiedFleetEntry } from "../blind/providers.js";
+import { certifiedFleetModels } from "../blind/providers.js";
+// @ts-expect-error -- frozen v9 profile set is intentionally plain ESM, read by the
+// runner-side modules and this layer from ONE definition.
+import { acceptedCodexProfiles } from "../../blind-tester/frozen-v9-codex-profiles.mjs";
+
+/** One accepted (model, contract, version) shape for a current-generation attestation. */
+interface AcceptedCodexProfile {
+  model: string;
+  kind: "direct_mcp" | "code_mode";
+  contract: string;
+  requiredCliVersion: string | null;
+}
 
 export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
 export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
@@ -468,27 +479,25 @@ function refineCurrentReceiptBinding(
  * allowed to say. New evidence follows the catalog; recorded evidence keeps the contract
  * it was recorded under.
  */
-function currentCodexAttestationSchemaFor(entry: CertifiedFleetEntry) {
+function currentCodexAttestationSchemaFor(profile: AcceptedCodexProfile) {
   const identity = {
     ...CurrentCodexAttestationBaseFields,
-    model: z.literal(entry.certifiedAs),
-    actual_model: z.literal(entry.certifiedAs),
+    model: z.literal(profile.model),
+    actual_model: z.literal(profile.model),
   } as const;
-  if (entry.transport.kind === "code_mode") {
-    return z
-      .object({ ...identity, code_mode_contract: z.literal(entry.transport.contract) })
-      .strict();
+  if (profile.kind === "code_mode") {
+    return z.object({ ...identity, code_mode_contract: z.literal(profile.contract) }).strict();
   }
   // A direct-MCP transport rides vendor config keys that move between client releases,
-  // so where the catalog pins a client version the attestation must match it exactly.
+  // so where the profile pins a client version the attestation must match it exactly.
   // Where it pins none, the base field's semver check is the whole requirement.
   return z
     .object({
       ...identity,
-      ...(entry.transport.requiredCliVersion === null
+      ...(profile.requiredCliVersion === null
         ? {}
-        : { codex_cli_version: z.literal(entry.transport.requiredCliVersion) }),
-      transport_contract: z.literal(entry.transport.contract),
+        : { codex_cli_version: z.literal(profile.requiredCliVersion) }),
+      transport_contract: z.literal(profile.contract),
     })
     .strict();
 }
@@ -543,9 +552,20 @@ function currentPureFleetCodexAttestationSchema(): z.ZodTypeAny {
   if (currentPureFleetCodexAttestationSchemaCache !== null) {
     return currentPureFleetCodexAttestationSchemaCache;
   }
-  const options = certifiedFleetModels()
+  // FROZEN ∪ LIVE. The frozen half is what v9 meant when it was cut; the live half is
+  // what the catalogs declare now. Their union is what a v9 record may look like, so a
+  // catalog edit only ever ADDS an accepted shape — a record sealed under the old pin
+  // keeps parsing. See blind-tester/frozen-v9-codex-profiles.mjs for why that matters.
+  const live: AcceptedCodexProfile[] = certifiedFleetModels()
     .filter((entry) => entry.provider === "codex")
-    .map((entry) => currentCodexAttestationSchemaFor(entry));
+    .map((entry) => ({
+      model: entry.certifiedAs,
+      kind: entry.transport.kind,
+      contract: entry.transport.contract,
+      requiredCliVersion: entry.transport.requiredCliVersion,
+    }));
+  const profiles = acceptedCodexProfiles(live) as AcceptedCodexProfile[];
+  const options = profiles.map((profile) => currentCodexAttestationSchemaFor(profile));
   const schema =
     options.length === 0
       ? z.never({
@@ -555,10 +575,16 @@ function currentPureFleetCodexAttestationSchema(): z.ZodTypeAny {
               "attestation can be accepted",
           }),
         })
-      : z
-          .discriminatedUnion(
-            "model",
-            options as unknown as [(typeof options)[number], ...(typeof options)[number][]],
+      : // A plain union, not discriminatedUnion: one model may legitimately have two
+        // accepted shapes (its frozen profile and a changed catalog profile), which
+        // means the `model` discriminator is no longer unique across options.
+        z
+          .union(
+            options as unknown as [
+              (typeof options)[number],
+              (typeof options)[number],
+              ...(typeof options)[number][],
+            ],
           )
           .superRefine(refineCurrentReceiptBinding);
   currentPureFleetCodexAttestationSchemaCache = schema;
