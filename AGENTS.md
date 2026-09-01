@@ -232,11 +232,15 @@ Ship small and often — every ship is another point to go back to.
 - Install root deps with `npm install`.
 - Install UI deps with `npm --prefix ui install` (required for `npm run health`).
 - Optional UI server: `npm run ui:dev` at `http://localhost:5173`.
-- Any supported coding agent can run the dev loop. `loop.sh` auto-detects the
-  first installed one (`codex`, `claude`, `gemini`); `AI_AGENT=<id>` selects one
-  explicitly and `AI_AGENT_CMD` overrides the command entirely. The only contract
-  is: read the prompt from STDIN, edit files in `$PWD`, run non-interactively,
-  and exit nonzero on failure.
+- Any supported coding agent can run the dev loop. The agent registry is
+  `dev-agents.json` at the repo root — one file, read by both `loop.sh` and
+  `bin/doctor.ts`, so the loop cannot auto-detect an agent the doctor fails to
+  report (it was previously a hand-kept list in each, in an order doctor's output
+  depended on). `loop.sh` auto-detects the first installed entry (`codex`,
+  `claude`, `gemini` today); `AI_AGENT=<id>` selects one explicitly and
+  `AI_AGENT_CMD` overrides the command entirely. Adding a vendor is one entry in
+  that file. The only contract is: read the prompt from STDIN, edit files in
+  `$PWD`, run non-interactively, and exit nonzero on failure.
 - Connecting to the engine MCP server. The repo ships `.mcp.json`, which any
   client reading the standard project MCP config — Claude Code among them —
   discovers automatically; the command is always `npm --silent run mcp` from the

@@ -351,14 +351,24 @@ describe("loop.sh provisional/final commit contracts", () => {
 
 describe("loop.sh agent selection", () => {
   const agentCommand = `${sectionBetween("agent_cmd() {", "\n}\n\nrun_agent()")}\n}`;
-  const registry = `${sectionBetween("dev_agent_binary() {", "\n}\n\ndev_agent_command()")}\n}\n${sectionBetween("dev_agent_command() {", "\n}\n\n# Resolve")}\n}`;
-  // Empty PATH so ONLY the stub functions below resolve. Without this the test
-  // inherits whatever agents happen to be installed on the machine running it, and
-  // "no agent available" becomes unassertable on a developer box.
+  // The whole registry block, not two functions picked out of it: the ids and the
+  // per-agent fields now come from dev-agents.json (which bin/doctor.ts also reads), so
+  // dev_agent_binary and dev_agent_command are no longer self-contained case statements.
+  // Slicing the block whole is also what keeps this harness honest — it exercises the
+  // real registry rather than a list retyped here that could drift from the file.
+  const registry = `${sectionBetween('DEV_AGENT_REGISTRY="', "\n}\n\n# Resolve")}\n}`;
+  // Empty PATH so ONLY the stub functions below resolve. Without this the test inherits
+  // whatever agents happen to be installed on the machine running it, and "no agent
+  // available" becomes unassertable on a developer box. That is not hypothetical: node's
+  // own directory turned out to hold a `claude` binary here, so putting it on PATH to
+  // reach node made the no-agent case resolve claude.
+  //
+  // loop.sh needs node to read dev-agents.json, so it is handed the interpreter by
+  // ABSOLUTE PATH instead — the AI_LOOP_NODE_CMD override exists for exactly this.
   const preamble = [
     "set -uo pipefail",
     'PATH=""',
-    "DEV_AGENT_IDS=(codex claude gemini)",
+    `AI_LOOP_NODE_CMD=${JSON.stringify(process.execPath)}`,
     registry,
   ].join("\n");
 

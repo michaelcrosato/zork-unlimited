@@ -2,6 +2,18 @@ import { z } from "zod";
 import { PureRunBuildSchema } from "../blind/run_evidence.js";
 import { parseJsonRejectingDuplicateKeys } from "../blind/strict_json.js";
 import { CertifiedCodexModelSchema } from "./fleet_run_artifacts.js";
+import { certifiedFleetModels } from "../blind/providers.js";
+// @ts-expect-error -- frozen v9 profile set is intentionally plain ESM, read by the
+// runner-side modules and this layer from ONE definition.
+import { acceptedCodexProfiles } from "../../blind-tester/frozen-v9-codex-profiles.mjs";
+
+/** One accepted (model, contract, version) shape for a current-generation attestation. */
+interface AcceptedCodexProfile {
+  model: string;
+  kind: "direct_mcp" | "code_mode";
+  contract: string;
+  requiredCliVersion: string | null;
+}
 
 export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
 export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
@@ -450,15 +462,45 @@ function refineCurrentReceiptBinding(
   }
 }
 
-const CurrentSparkDirectMcpAttestationSchema = z
-  .object({
+/**
+ * Build the CURRENT attestation schema for one certified model, from its catalog entry.
+ *
+ * Replaces three hand-written literal schemas (`CurrentSparkDirectMcpAttestationSchema`
+ * plus a game-direct-MCP and a strict-code-mode factory, each instantiated per model id).
+ * Between them they hardcoded four model ids, two contract ids and a pinned client
+ * version, so certifying a newly available model meant editing this file, the four-id
+ * array in ./fleet_run_artifacts.ts, three z.enum lists in ./fleet_certifier.ts, a model
+ * switch in blind-tester/fleet.mjs and an if-chain in blind-tester/run.sh — five files
+ * that had to agree, with nothing enforcing that they did.
+ *
+ * Only the CURRENT schema is derived. Every `Historical*` schema below stays a frozen
+ * literal on purpose: those describe attestations already written to sealed corpus
+ * records, and a catalog edit must never retroactively change what an old record is
+ * allowed to say. New evidence follows the catalog; recorded evidence keeps the contract
+ * it was recorded under.
+ */
+function currentCodexAttestationSchemaFor(profile: AcceptedCodexProfile) {
+  const identity = {
     ...CurrentCodexAttestationBaseFields,
-    codex_cli_version: z.literal(PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION),
-    model: z.literal("gpt-5.3-codex-spark"),
-    actual_model: z.literal("gpt-5.3-codex-spark"),
-    transport_contract: z.literal(PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT),
-  })
-  .strict();
+    model: z.literal(profile.model),
+    actual_model: z.literal(profile.model),
+  } as const;
+  if (profile.kind === "code_mode") {
+    return z.object({ ...identity, code_mode_contract: z.literal(profile.contract) }).strict();
+  }
+  // A direct-MCP transport rides vendor config keys that move between client releases,
+  // so where the profile pins a client version the attestation must match it exactly.
+  // Where it pins none, the base field's semver check is the whole requirement.
+  return z
+    .object({
+      ...identity,
+      ...(profile.requiredCliVersion === null
+        ? {}
+        : { codex_cli_version: z.literal(profile.requiredCliVersion) }),
+      transport_contract: z.literal(profile.contract),
+    })
+    .strict();
+}
 
 function historicalTransportStrictCodeModeAttestationSchema<
   const Model extends "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna",
@@ -492,41 +534,66 @@ const HistoricalTransportPureFleetCodexAttestationSchema = z
   ])
   .superRefine(refineCurrentReceiptBinding);
 
-function currentGameDirectMcpAttestationSchema<
-  const Model extends "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna",
->(model: Model) {
-  return z
-    .object({
-      ...CurrentCodexAttestationBaseFields,
-      codex_cli_version: z.literal(PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION),
-      model: z.literal(model),
-      actual_model: z.literal(model),
-      transport_contract: z.literal(PURE_FLEET_GAME_DIRECT_MCP_TRANSPORT_CONTRACT),
-    })
-    .strict();
+/**
+ * The current union, one option per certified Codex model in this checkout's catalog.
+ *
+ * Built lazily and cached. Lazily because the catalog is read from disk and this module
+ * is imported by tools that never touch attestations; cached because the discriminated
+ * union is rebuilt identically every call and parsing is on the hot path of certification.
+ *
+ * A checkout whose catalog certifies no Codex model at all yields no options, and
+ * `z.discriminatedUnion` cannot express an empty union — so that case gets a schema that
+ * rejects everything with a readable reason. Failing closed is the only correct answer:
+ * "this checkout certifies no Codex model" must never read as "anything goes".
+ */
+let currentPureFleetCodexAttestationSchemaCache: z.ZodTypeAny | null = null;
+
+function currentPureFleetCodexAttestationSchema(): z.ZodTypeAny {
+  if (currentPureFleetCodexAttestationSchemaCache !== null) {
+    return currentPureFleetCodexAttestationSchemaCache;
+  }
+  // FROZEN ∪ LIVE. The frozen half is what v9 meant when it was cut; the live half is
+  // what the catalogs declare now. Their union is what a v9 record may look like, so a
+  // catalog edit only ever ADDS an accepted shape — a record sealed under the old pin
+  // keeps parsing. See blind-tester/frozen-v9-codex-profiles.mjs for why that matters.
+  const live: AcceptedCodexProfile[] = certifiedFleetModels()
+    .filter((entry) => entry.provider === "codex")
+    .map((entry) => ({
+      model: entry.certifiedAs,
+      kind: entry.transport.kind,
+      contract: entry.transport.contract,
+      requiredCliVersion: entry.transport.requiredCliVersion,
+    }));
+  const profiles = acceptedCodexProfiles(live) as AcceptedCodexProfile[];
+  const options = profiles.map((profile) => currentCodexAttestationSchemaFor(profile));
+  const schema =
+    options.length === 0
+      ? z.never({
+          errorMap: () => ({
+            message:
+              "this checkout's catalogs certify no codex model, so no current codex " +
+              "attestation can be accepted",
+          }),
+        })
+      : // A plain union, not discriminatedUnion: one model may legitimately have two
+        // accepted shapes (its frozen profile and a changed catalog profile), which
+        // means the `model` discriminator is no longer unique across options.
+        z
+          .union(
+            options as unknown as [
+              (typeof options)[number],
+              (typeof options)[number],
+              ...(typeof options)[number][],
+            ],
+          )
+          .superRefine(refineCurrentReceiptBinding);
+  currentPureFleetCodexAttestationSchemaCache = schema;
+  return schema;
 }
 
-function currentStrictCodeModeAttestationSchema<const Model extends "gpt-5.6-sol" | "gpt-5.6-luna">(
-  model: Model,
-) {
-  return z
-    .object({
-      ...CurrentCodexAttestationBaseFields,
-      model: z.literal(model),
-      actual_model: z.literal(model),
-      code_mode_contract: z.literal(PURE_FLEET_CODE_MODE_CONTRACT),
-    })
-    .strict();
-}
-
-const CurrentPureFleetCodexAttestationSchema = z
-  .discriminatedUnion("model", [
-    CurrentSparkDirectMcpAttestationSchema,
-    currentGameDirectMcpAttestationSchema("gpt-5.6-terra"),
-    currentStrictCodeModeAttestationSchema("gpt-5.6-sol"),
-    currentStrictCodeModeAttestationSchema("gpt-5.6-luna"),
-  ])
-  .superRefine(refineCurrentReceiptBinding);
+const CurrentPureFleetCodexAttestationSchema = z.lazy(() =>
+  currentPureFleetCodexAttestationSchema(),
+);
 
 export const PureFleetCodexAttestationSchema = z.union([
   HistoricalPureFleetCodexAttestationSchema,

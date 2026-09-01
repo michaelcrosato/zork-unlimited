@@ -196,6 +196,60 @@ export function deriveProviderIsolation(provider, repoRoot = REPO_ROOT) {
  * One resolution, rendered three ways, so the legacy line and the richer formats can
  * never disagree about what was resolved.
  */
+/**
+ * The provider a launch uses when none is named: the FIRST registered one.
+ *
+ * run.sh carried `DEFAULT_PROVIDER="codex"` with a comment explaining that codex was
+ * "the vendor this runner has a live launch path for". That stopped being true when the
+ * claude_code reader and its launch branch landed, and a stale comment beside a hardcoded
+ * vendor name is how a default quietly reads as a requirement.
+ *
+ * Registry order is the tie-break, so the resolved value is unchanged today — this
+ * removes the vendor name from the runner, not the choice from the operator, who still
+ * has --provider and BLIND_PROVIDER. Which providers may actually produce pure evidence
+ * is decided downstream by the derived isolation gate, never by being first here.
+ */
+export function defaultProviderId(repoRoot = REPO_ROOT) {
+  const registry = readJson(join(repoRoot, "blind-tester", "providers.json"));
+  const providers = Array.isArray(registry?.providers) ? registry.providers : [];
+  const first = providers.find(
+    (candidate) => typeof candidate?.id === "string" && candidate.id !== "",
+  );
+  if (!first) fail("blind-tester/providers.json declares no providers");
+  return first.id;
+}
+
+/**
+ * One transport component path, refused unless it stays inside `blind-tester/`.
+ *
+ * The typed schema (`PlaytestModelTransportSchema` in ../src/blind/providers.ts) already
+ * rejects an absolute path or a `..` segment. That is not enough on its own, because the
+ * LAUNCH path never goes through it: `blind-tester/run.sh` reads these records from this
+ * dependency-free resolver and hands the value to fill-prompt.mjs, which reads the named
+ * file into the player's prompt. A catalog typo — or an edit by someone who only ran the
+ * shell path — could therefore pull a file from outside the checkout into a prompt that
+ * gets sent to an external model, with the typed guard never consulted.
+ *
+ * So the rule is enforced in BOTH readers, the same way the isolation derivation is
+ * mirrored here rather than imported: whichever path resolves a provider has to be the
+ * one that applies the constraint. Same containment rule as the capture block above.
+ */
+function transportPath(provider, model, field) {
+  const value = model.transport?.[field];
+  if (typeof value !== "string" || value === "") return null;
+  if (value.split(/[\\/]/u).includes("..")) {
+    fail(
+      `provider "${provider.id}" model "${model.id}" transport ${field} must not contain a ".." segment`,
+    );
+  }
+  if (/^(?:[/\\]|[A-Za-z]:)/u.test(value)) {
+    fail(
+      `provider "${provider.id}" model "${model.id}" transport ${field} must be relative to blind-tester/, not an absolute path`,
+    );
+  }
+  return value;
+}
+
 export function resolveProvider(providerId, requestedModel, repoRoot = REPO_ROOT) {
   const registryPath = join(repoRoot, "blind-tester", "providers.json");
   const registry = readJson(registryPath);
@@ -296,7 +350,18 @@ export function resolveProvider(providerId, requestedModel, repoRoot = REPO_ROOT
         ? model.settings
         : {},
     catalogPath: provider.catalogPath,
-    transportContract: provider.transportContract ?? null,
+    // The model's own transport wins over the provider default. Before this, run.sh
+    // recomputed the same distinction from an if-chain on `$CODEX_TRANSPORT_CONTRACT`
+    // and carried its own copy of the required client version and the two injected
+    // vendor catalog paths — facts that already lived in the catalog and had no business
+    // being restated in shell.
+    transportContract: model.transport?.contract ?? provider.transportContract ?? null,
+    transportKind: model.transport?.kind ?? "direct_mcp",
+    transportRequiredCliVersion: model.transport?.requiredCliVersion ?? null,
+    transportPromptTemplate: transportPath(provider, model, "promptTemplate"),
+    transportPlayerCatalog: transportPath(provider, model, "playerCatalog"),
+    transportFragment: transportPath(provider, model, "fragment"),
+    modelCertified: model.certified === true,
   };
 }
 
@@ -345,6 +410,12 @@ export function renderRecords(resolved) {
     ],
     ["catalog_path", resolved.catalogPath],
     ["transport_contract", resolved.transportContract],
+    ["transport_kind", resolved.transportKind],
+    ["transport_required_cli_version", resolved.transportRequiredCliVersion],
+    ["transport_prompt_template", resolved.transportPromptTemplate],
+    ["transport_player_catalog", resolved.transportPlayerCatalog],
+    ["transport_fragment", resolved.transportFragment],
+    ["model_certified", resolved.modelCertified ? "1" : "0"],
   ];
   let out = "";
   for (const [key, value] of rows) {
@@ -389,6 +460,11 @@ function main(argv) {
       format = value;
     } else if (argument === "--format=legacy") {
       format = "legacy";
+    } else if (argument === "--default-provider") {
+      // Answered without a provider argument, because the caller is asking WHICH
+      // provider to use.
+      process.stdout.write(`${defaultProviderId()}\n`);
+      return;
     } else if (typeof argument === "string" && argument.startsWith("--")) {
       fail(
         `unknown option "${argument}"; usage: resolve-provider.mjs [--records|--json] <provider> [model]`,

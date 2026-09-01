@@ -31,8 +31,6 @@ import {
   HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION,
   PURE_FLEET_CODE_MODE_CONTRACT,
   PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
-  PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION,
-  PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
   parsePureFleetAttestation,
   PureFleetAttestationSchema,
   pureFleetAttestationPathFor,
@@ -40,11 +38,11 @@ import {
 import { capturePureFleetBuild } from "./fleet_build.js";
 import {
   pureFleetRunArtifactPaths,
-  GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
   SPARK_DIRECT_MCP_MODEL,
   SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
   validatePureFleetRunArtifactBytes,
 } from "./fleet_run_artifacts.js";
+import { certifiedFleetModels, certifiedModelTransport } from "../blind/providers.js";
 import { WOLF_WINTER_CAMPAIGN_OUTCOMES } from "../world/journey_campaign.js";
 import { INITIAL_JOURNEY_GOAL } from "../world/journey_contract.js";
 import { loadOverworldManifest } from "../world/source.js";
@@ -504,6 +502,38 @@ const CodexClientAuthorityProofSchema = z
   })
   .strict();
 
+/**
+ * Any model identity this checkout will certify — derived, not listed.
+ *
+ * This replaces three hand-written `z.enum([...])` lists in this file, and the state
+ * they were found in is the argument for deriving them: the three had already drifted
+ * out of step with each other. Two omitted `haiku` and the third omitted `opus`, so
+ * whether a given certified model was accepted depended on which of three schemas
+ * happened to parse the record — a difference nothing in the type system could catch,
+ * because each list was independently well-formed.
+ *
+ * The set now comes from `certifiedFleetModels()`, which answers from the catalogs plus
+ * the derived `runner_enforced` label, so all three sites agree by construction and a
+ * newly certified model needs no edit here at all.
+ *
+ * `HISTORICAL_FLEET_MODEL_IDS` keeps identities that appear in already-sealed records but
+ * are no longer in any catalog. Accepting them is not a loophole: certification still
+ * demands a matching attestation, receipt chain and build, and this schema only decides
+ * whether the identity STRING is one the certifier recognizes. Dropping them would make
+ * historical evidence unreadable, which the corpus rules forbid.
+ */
+const HISTORICAL_FLEET_MODEL_IDS = ["haiku", "sonnet", "opus"] as const;
+
+const CertifiedFleetModelIdSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (id) =>
+      (HISTORICAL_FLEET_MODEL_IDS as readonly string[]).includes(id) ||
+      certifiedFleetModels().some((entry) => entry.certifiedAs === id || entry.model === id),
+    { message: "model is not a certified or historical fleet model identity" },
+  );
+
 const FleetUsageRecordSchema = z
   .object({
     source: z.enum([
@@ -582,13 +612,7 @@ const FleetSummarySchema = z
     receipt_bound_runs: z.number().int().nonnegative().optional(),
     seed_base: z.number().int().safe(),
     provider: z.enum(["claude", "codex"]).optional(),
-    model: z.enum([
-      "sonnet",
-      "gpt-5.6-sol",
-      "gpt-5.6-terra",
-      "gpt-5.6-luna",
-      "gpt-5.3-codex-spark",
-    ]),
+    model: CertifiedFleetModelIdSchema,
     personas: z.literal("default"),
     target: z.literal("overworld"),
     resume_enabled: z.boolean(),
@@ -683,13 +707,7 @@ function auditedFleetSummarySchema<
       receipt_bound_runs: z.number().int().nonnegative().optional(),
       seed_base: z.number().int().safe(),
       provider: z.enum(["claude", "codex"]).optional(),
-      model: z.enum([
-        "sonnet",
-        "gpt-5.6-sol",
-        "gpt-5.6-terra",
-        "gpt-5.6-luna",
-        "gpt-5.3-codex-spark",
-      ]),
+      model: CertifiedFleetModelIdSchema,
       personas: z.literal("default"),
       target: z.literal("overworld"),
       resume_enabled: z.boolean(),
@@ -783,14 +801,7 @@ const FleetManifestRowSchema = z
     seed: z.number().int().safe(),
     persona: z.literal("default"),
     provider: z.enum(["claude", "codex"]).optional(),
-    model: z.enum([
-      "haiku",
-      "sonnet",
-      "gpt-5.6-sol",
-      "gpt-5.6-terra",
-      "gpt-5.6-luna",
-      "gpt-5.3-codex-spark",
-    ]),
+    model: CertifiedFleetModelIdSchema,
     target: z.literal("overworld"),
     report: z.string().min(1),
     status: z.enum(["verified", "skipped-resume"]),
@@ -1695,18 +1706,23 @@ function validateAuthenticatedStartingSliceCohort(
   if (expectedProvider === "codex" && !isV9) {
     errors.push(`current Codex ${options.cohortKind} certification requires fleet summary v9`);
   }
-  if (
-    expectedProvider === "codex" &&
-    (summary.model === SPARK_DIRECT_MCP_MODEL || summary.model === "gpt-5.6-terra") &&
-    authenticatedCodexClient !== null &&
-    authenticatedCodexClient.cli_version !==
-      (summary.model === SPARK_DIRECT_MCP_MODEL
-        ? PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION
-        : PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION)
-  ) {
-    errors.push(
-      `current direct-MCP certification requires exact Codex CLI ${PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION}`,
-    );
+  // A direct-MCP model must have been played by the exact client version its CATALOG
+  // pins. This was two model ids and two identical version constants spelled out here;
+  // the pin now travels with the model that needs it, so a client upgrade is a catalog
+  // edit rather than a hunt through five files for every copy of "0.146.0". Models whose
+  // catalog pins no version (strict-code-mode) are unaffected, exactly as before.
+  if (expectedProvider === "codex" && authenticatedCodexClient !== null) {
+    const requiredCliVersion =
+      certifiedModelTransport("codex", summary.model)?.requiredCliVersion ?? null;
+    if (
+      requiredCliVersion !== null &&
+      authenticatedCodexClient.cli_version !== requiredCliVersion
+    ) {
+      errors.push(
+        `current direct-MCP certification requires exact Codex CLI ${requiredCliVersion} ` +
+          `for model ${summary.model}`,
+      );
+    }
   }
   const fleetBasename = basename(fleetDir);
   const labelBoundToDirectory = summary.label === fleetBasename;
@@ -2397,26 +2413,28 @@ function validateAuthenticatedStartingSliceCohort(
     const attestation = parsedAttestation.attestation;
     const attestationRecord = attestation as unknown as Record<string, unknown>;
     if (summary.model_attestation_schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION) {
-      if (row.model === SPARK_DIRECT_MCP_MODEL) {
+      // Current (v9) evidence must carry exactly the transport its model's CATALOG
+      // declares, recorded under the field that transport's `kind` dictates.
+      //
+      // This was an if/else chain naming Spark and Terra, with everything else falling
+      // through to the code-mode branch. That fall-through is what made it a forward
+      // gate rather than a check: a newly certified direct-MCP model would have been
+      // required to produce strict-code-mode evidence it never generates, and the
+      // failure would have read "attestation lacks exact strict-code-mode-v2 evidence"
+      // for a run that was correct.
+      //
+      // A model with no declared transport is treated as code mode, exactly as the old
+      // final `else` did.
+      const declaredTransport = certifiedModelTransport("codex", row.model);
+      if (declaredTransport !== null && declaredTransport.kind === "direct_mcp") {
         if (
-          artifactFacts.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+          artifactFacts.transport_contract !== declaredTransport.contract ||
           artifactFacts.code_mode_contract !== null ||
-          attestationRecord.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+          attestationRecord.transport_contract !== declaredTransport.contract ||
           Object.hasOwn(attestationRecord, "code_mode_contract")
         ) {
           errors.push(
-            `seed ${seed}: current Spark attestation lacks exact ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} evidence`,
-          );
-        }
-      } else if (row.model === "gpt-5.6-terra") {
-        if (
-          artifactFacts.code_mode_contract !== null ||
-          artifactFacts.transport_contract !== GAME_DIRECT_MCP_TRANSPORT_CONTRACT ||
-          attestationRecord.transport_contract !== GAME_DIRECT_MCP_TRANSPORT_CONTRACT ||
-          Object.hasOwn(attestationRecord, "code_mode_contract")
-        ) {
-          errors.push(
-            `seed ${seed}: current Terra attestation lacks exact ${GAME_DIRECT_MCP_TRANSPORT_CONTRACT} evidence`,
+            `seed ${seed}: current ${row.model} attestation lacks exact ${declaredTransport.contract} evidence`,
           );
         }
       } else if (

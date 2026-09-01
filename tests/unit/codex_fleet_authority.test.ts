@@ -1160,7 +1160,12 @@ describe("Codex certified fleet rollout authority", () => {
       }),
     ).toEqual({
       ok: false,
-      reason: expect.stringMatching(/spark-direct-mcp-v1 requires exact model/i),
+      // The pairing is now checked against the model's catalog transport rather than a
+      // hardcoded "spark-direct-mcp-v1 requires gpt-5.3-codex-spark" pair, so the reason
+      // names both halves of the disagreement. The rejection itself is unchanged.
+      reason: expect.stringMatching(
+        /spark-direct-mcp-v1 receipt does not match the catalog transport for model gpt-5\.6-terra/i,
+      ),
     });
   });
 
