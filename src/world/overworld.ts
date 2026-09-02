@@ -644,8 +644,16 @@ export function overworldQuestCampaignEffectsForCharacter(
   ];
 }
 
+const overworldNodesByIdCache = new WeakMap<OverworldManifest, Map<string, OverworldNode>>();
+
 export function overworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
-  return new Map(world.nodes.map((node) => [node.id, node]));
+  let map = overworldNodesByIdCache.get(world);
+  if (!map) {
+    // Cache the node lookup map keyed by OverworldManifest instance to avoid O(N) rebuilds on repeated queries
+    map = new Map(world.nodes.map((node) => [node.id, node]));
+    overworldNodesByIdCache.set(world, map);
+  }
+  return map;
 }
 
 export function overworldEdgesFrom(world: OverworldManifest, nodeId: string): OverworldExit[] {
