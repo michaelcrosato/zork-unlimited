@@ -39,7 +39,7 @@ import { DEFAULT_SESSION_STORE } from "../src/qa/session_store.js";
 import { readQueue, summarizeQueue } from "../src/intake/queue.js";
 import { DEFAULT_QUEUE_DIR } from "../src/intake/submission.js";
 import { readTickets } from "../src/qa/ticket_store.js";
-import { DEFAULT_TICKET_DIR } from "../src/qa/ticket.js";
+import { DEFAULT_TICKET_DIR, isActionable } from "../src/qa/ticket.js";
 
 process.stdout.on("error", () => process.exit(0));
 
@@ -272,20 +272,49 @@ function reportBlockers(
   byTier: Record<string, number> = {},
 ): void {
   const { tickets } = readTickets(ticketDir);
-  const actionable = tickets.filter(
-    (t) => t.promotion === "verified" || t.promotion === "corroborated",
+  // `isActionable`, not a promotion-only filter. The dev loop's gate is a CONJUNCTION —
+  // corroborated/verified AND still open — and this command used only the second half.
+  // So a bucket whose every corroborated ticket had aged out to `stale` was reported
+  // here as hundreds of actionable tickets while `qa:triage` promoted zero and
+  // `npm run work` saw nothing: 633 tickets, "351 actionable", 0 submissions, on the one
+  // command whose whole job is question 3 above. `summarizeBucket` has always used the
+  // real predicate; using it here too means the two surfaces cannot disagree again.
+  const actionable = tickets.filter(isActionable);
+  // Promotion-eligible but held back by status. This is the number that EXPLAINS the
+  // gap, so it is printed rather than left for someone to derive from two commands.
+  const agedOut = tickets.filter(
+    (t) => !isActionable(t) && (t.promotion === "verified" || t.promotion === "corroborated"),
   );
   const queue = summarizeQueue(readQueue(queueDir).submissions);
 
   section("Can anything reach the dev loop?");
   console.log(`  tickets ${tickets.length} (${actionable.length} actionable)`);
+  if (agedOut.length > 0) {
+    console.log(
+      `          ${agedOut.length} reached corroborated/verified and then aged out to \`stale\``,
+    );
+  }
   console.log(`  queue   ${queue.total} (${queue.open} open)`);
 
+  const playtestContributesNothing = tickets.length > 0 && actionable.length === 0;
   if (queue.open > 0) {
     console.log(`\n  ✓ The dev loop has work. \`npm run work -- --list\` shows it.`);
-    return;
+    // An open queue is NOT evidence that the playtest side is feeding it. The queue
+    // takes audit, human and research submissions too, so a single open audit chore
+    // used to end this report right here — swallowing the paragraphs below, which are
+    // the only ones that answer question 3. A dead playtest flywheel therefore looked
+    // identical to a healthy one, and did for hundreds of tickets.
+    if (!playtestContributesNothing) return;
+    console.log(
+      `\n  ! Not from the playtest side, though: ${tickets.length} ticket(s) in the bucket,` +
+        ` none actionable.`,
+    );
   }
-  if (sessions === 0) {
+  // Only an EMPTY bucket means "nothing has happened yet". A corpus that lives in
+  // another worktree (or an ignored one this checkout cannot see) still leaves its
+  // tickets behind, and telling that operator "no sessions yet" would describe the
+  // store while the bucket in front of them holds hundreds of findings.
+  if (sessions === 0 && tickets.length === 0) {
     console.log(`\n  No sessions yet, so nothing can promote. Run a cohort, or file work`);
     console.log(`  directly: npm run submit -- --source human --kind feature --title "..."`);
     return;
@@ -296,6 +325,22 @@ function reportBlockers(
     return;
   }
   if (actionable.length === 0) {
+    // Two different stalls wear the same "none actionable" face, and they need opposite
+    // actions. Aged-out tickets already CLEARED corroboration — adding a second family
+    // would change nothing, and re-running triage here cannot revive them either, since
+    // staleness is re-derived against THIS checkout's HEAD every pass. Only fresh play
+    // on a current build does. Say that instead of the corroboration advice below.
+    if (agedOut.length > 0) {
+      console.log(
+        `\n  ${agedOut.length} of ${tickets.length} ticket(s) DID reach corroborated/verified,` +
+          ` then aged out:`,
+      );
+      console.log(`  their last-seen build is more than STALE_AFTER_BUILDS commits behind this`);
+      console.log(`  checkout's HEAD, and \`isActionable\` excludes a stale ticket. Re-running`);
+      console.log(`  triage here will NOT revive them — staleness is recomputed against HEAD`);
+      console.log(`  every pass. Only fresh sessions on the build under test will.`);
+      return;
+    }
     const hasReference = (byTier.reference ?? 0) > 0;
     console.log(`\n  ${tickets.length} ticket(s), none actionable yet. That is a real state, not`);
     console.log(`  a fault: promotion needs corroboration, and this corpus has neither rung.`);
