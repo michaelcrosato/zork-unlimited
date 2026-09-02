@@ -59,6 +59,12 @@ export type BugTraceReport = Readonly<{
 export type BugTraceVerifierOptions = Readonly<{
   currentPaths?: ReadonlySet<string>;
   historicalPaths?: ReadonlySet<string>;
+  /**
+   * Override the git shallow-clone probe. Supplying explicit `historicalPaths`
+   * already bypasses it (the caller has stated the history); this exists so the
+   * regression can drive the truncated branch without building a shallow clone.
+   */
+  shallowHistory?: boolean;
 }>;
 
 function gitLines(root: string, args: readonly string[]): string[] {
@@ -72,9 +78,33 @@ function gitLines(root: string, args: readonly string[]): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Is this checkout's history TRUNCATED rather than merely old?
+ *
+ * `rev-list --objects --all` answers honestly for the commits a clone actually has,
+ * and a shallow clone has almost none — so the historical half of the catalog comes
+ * back near-empty with no error to notice. That is the one case where this gate's
+ * verdict is not wrong so much as unfounded, and it has to be told apart from a
+ * genuinely phantom path. `--is-shallow-repository` prints `true`/`false` and is the
+ * same probe `git fetch --unshallow` acts on.
+ *
+ * Answers `false` rather than throwing when the probe itself fails. This is a new
+ * question asked alongside an old, working catalog, and it decides only WHICH failure
+ * message a red run prints — so it must not be able to turn a checkout the gate could
+ * previously read into one it cannot.
+ */
+export function repositoryHistoryIsShallow(root: string): boolean {
+  try {
+    return gitLines(root, ["rev-parse", "--is-shallow-repository"])[0]?.trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
 export function repositoryPathCatalog(root: string): {
   currentPaths: ReadonlySet<string>;
   historicalPaths: ReadonlySet<string>;
+  shallowHistory: boolean;
 } {
   // Admit tracked/staged files plus intentional, non-ignored work in progress. Do not
   // let ignored runtime artifacts make a phantom trace reference pass locally while
@@ -87,7 +117,7 @@ export function repositoryPathCatalog(root: string): {
     const separator = row.indexOf(" ");
     if (separator >= 0) historicalPaths.add(row.slice(separator + 1));
   }
-  return { currentPaths, historicalPaths };
+  return { currentPaths, historicalPaths, shallowHistory: repositoryHistoryIsShallow(root) };
 }
 
 function hasSubstance(value: unknown): boolean {
@@ -166,6 +196,11 @@ export function verifyBugTraces(
   }
   const currentPaths = options.currentPaths ?? catalogs?.currentPaths ?? new Set<string>();
   const historicalPaths = options.historicalPaths ?? catalogs?.historicalPaths ?? new Set<string>();
+  // A caller that supplied its own historical set has ASSERTED the history; only the
+  // git-derived catalog can be truncated underneath us.
+  const historyTruncated =
+    options.historicalPaths === undefined &&
+    (options.shallowHistory ?? catalogs?.shallowHistory ?? false);
 
   const files = readdirSync(directory)
     .filter((name) => name.endsWith(".yaml"))
@@ -183,6 +218,9 @@ export function verifyBugTraces(
   let currentReferences = 0;
   let historicalReferences = 0;
   let generatedReferences = 0;
+  // References this run cannot ADJUDICATE because the history is truncated. Kept
+  // apart from the stats counters, which report only what was actually resolved.
+  let unprovableReferences = 0;
 
   for (const name of files) {
     const file = `${TRACE_DIRECTORY}/${name}`;
@@ -270,7 +308,14 @@ export function verifyBugTraces(
       if (kind === "current") currentReferences += 1;
       else if (kind === "historical") historicalReferences += 1;
       else if (kind === "generated") generatedReferences += 1;
-      else {
+      else if (historyTruncated) {
+        // "Never existed" is a claim about the whole history. This checkout does not
+        // HAVE the whole history, so the claim is unfounded here — count it and let the
+        // single GIT_HISTORY_TRUNCATED finding below carry the failure. Emitting one
+        // TRACE_REFERENCE_MISSING per reference would accuse the evidence corpus of
+        // corruption when the only defect is the clone.
+        unprovableReferences += 1;
+      } else {
         findings.push({
           file,
           code: "TRACE_REFERENCE_MISSING",
@@ -278,6 +323,20 @@ export function verifyBugTraces(
         });
       }
     }
+  }
+
+  // Fail, but for the real reason. This gate still has its teeth on a shallow clone —
+  // nothing lands while it is red — and the operator is pointed at the clone instead of
+  // at 771 traces that are perfectly sound. Sibling precedent: verify-integrity.ts's
+  // COUNT_BASELINE_UNREADABLE, which treats a guard it cannot run as a failure. Silent
+  // when nothing went unresolved: a truncated history that adjudicated every reference
+  // cost this run nothing, and failing then would be ceremony.
+  if (unprovableReferences > 0) {
+    findings.push({
+      file: TRACE_DIRECTORY,
+      code: "GIT_HISTORY_TRUNCATED",
+      message: `repository history is truncated (shallow clone), so ${unprovableReferences} unresolved path reference(s) could not be adjudicated and were NOT judged missing; run \`git fetch --unshallow\` (CI: actions/checkout with fetch-depth: 0), then re-run`,
+    });
   }
 
   return {

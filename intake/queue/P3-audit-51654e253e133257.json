@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "51654e253e133257",
+  "title": "npm run doctor diagnoses no checkout-level blocker: not a shallow clone, not missing deps",
+  "body": "Found by the 2026-09-02 repository audit, from this session's own start-up experience in a\nfresh remote checkout. Third item in the same family as bug_0594 and audit item\n`shallow-clone-disables-triage-staleness-aging`.\n\n## The gap\n\n`npm run doctor` is the environment doctor — the thing an agent or operator runs to learn\nwhy this checkout cannot do something. It reports three sections: which dev agents are on\nPATH, which playtest providers can launch here, and the state of the corpus/queue/bucket.\n\nIt checks NOTHING about the two conditions that actually stop a fresh checkout from\nworking, both of which this session hit before doing any work:\n\n1. **Truncated git history.** A shallow clone (Claude Code on the web clones this way,\n   and so does any `git clone --depth 1`) makes `npm run health` fail at step 2 with 771\n   TRACE_REFERENCE_MISSING findings. bug_0594 fixed the misdiagnosis inside that gate, so\n   the message now names the remedy — but only once you have already run the bar and\n   watched it fail. Doctor is where that should have been visible first, and\n   `git rev-parse --is-shallow-repository` is a one-line probe. The same truncation\n   silently disables triage's STALE_AFTER_BUILDS aging (filed separately).\n\n2. **Dependencies not installed.** AGENTS.md is explicit that `npm run health` needs UI\n   deps too (\"Install UI deps with `npm --prefix ui install` (required for\n   `npm run health`)\"), so a checkout with root deps but no `ui/node_modules` fails the\n   bar at the ui:typecheck step, well after the cheap checks pass. With no root\n   node_modules at all, `.mcp.json`'s server command (`npm --silent run mcp`) cannot\n   start, and a client discovers only a connection failure — the exact symptom this\n   session saw. Neither is reported anywhere.\n\nDoctor already has the right instincts everywhere else: it prints the honest middle state\nper provider and names the module doing the trusting. It just never looks at the checkout\nitself.\n\n## Suggested checks\n\nA short \"Checkout\" section, before \"Dev loop\":\n\n- `git rev-parse --is-shallow-repository` → if true: history is truncated; `npm run health`\n  and `npm run qa:triage` are both degraded; run `git fetch --unshallow`.\n- `node_modules` present at the repo root → if absent: `npm install`; the MCP server\n  declared in .mcp.json cannot start without it.\n- `ui/node_modules` present → if absent: `npm --prefix ui install`, required for\n  `npm run health`'s ui:typecheck step.\n- optionally the Node major version against the documented 22+ floor.\n\n## Testability\n\nUnlike bin/triage.ts, bin/doctor.ts guards its `main()` behind the argv check, so it is\nimportable and its helpers are already unit-tested directly (see the comment above that\nguard, and tests covering `onPath`). A checkout-facts helper taking the root as an\nargument can be tested against fixture directories without a clone, the same way\nbug_0594's `shallowHistory` option is driven.\n\nWorth doing together with the triage item, since both want the same shallow probe and a\nshared, testable git-history helper under src/ would serve\nscripts/verify-bug-traces.ts, bin/triage.ts and bin/doctor.ts at once — that shared module\nis the reason both were filed rather than patched in place.",
+  "source": "audit",
+  "kind": "feature",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": "bin/doctor.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-02T20:54:13.329Z",
+  "updated_at": "2026-09-02T20:54:13.329Z",
+  "external": null
+}
