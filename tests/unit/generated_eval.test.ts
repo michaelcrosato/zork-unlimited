@@ -44,7 +44,9 @@ describe("generated_eval pure seed wrappers", () => {
         generatedEvalSeedBase("<!--historical_cycle_count:15-->\n\n### Cycle result — test\n"),
       ).toBe(16);
       expect(
-        generatedEvalSeedBase("<!--   historical_cycle_count:   7   -->\n\n### Cycle result — test\n"),
+        generatedEvalSeedBase(
+          "<!--   historical_cycle_count:   7   -->\n\n### Cycle result — test\n",
+        ),
       ).toBe(8);
     });
 
