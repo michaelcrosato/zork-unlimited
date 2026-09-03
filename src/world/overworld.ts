@@ -615,6 +615,20 @@ function overworldQuestsById(world: OverworldManifest): Map<string, OverworldQue
   return map;
 }
 
+const overworldLocalJobsByIdCache = new WeakMap<
+  OverworldManifest,
+  Map<string, OverworldLocalJob>
+>();
+
+function overworldLocalJobsById(world: OverworldManifest): Map<string, OverworldLocalJob> {
+  let map = overworldLocalJobsByIdCache.get(world);
+  if (!map) {
+    map = new Map(world.local_jobs.map((job) => [job.id, job]));
+    overworldLocalJobsByIdCache.set(world, map);
+  }
+  return map;
+}
+
 /** Resolve a shipped quest by id from the overworld's quest registry (null if absent). */
 export function overworldQuestById(
   world: OverworldManifest,
@@ -1205,6 +1219,7 @@ function assertEntitiesIntegrity(
     ),
   );
   const authoredCharacterPredicates = authoredCampaignCharacterPredicateIndex(world);
+
   const seenPoi = new Set<string>();
   const poiAreas = new Set<string>();
   for (const poi of world.points_of_interest) {
@@ -2803,7 +2818,7 @@ function canonicalCampaignServiceLocationStateProjection(
     }
   }
   for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
-    const scene = world.local_jobs.find((job) => job.id === ref.job_id)?.authored_scene;
+    const scene = overworldLocalJobsById(world).get(ref.job_id)?.authored_scene;
     const option = scene?.options.find((candidate) => candidate.id === ref.option_id);
     if (!scene || !option) continue;
     scene.requires_completed_quests.forEach((questId) => completedQuestIds.add(questId));
@@ -2929,7 +2944,7 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
     }
   }
   for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
-    const job = world.local_jobs.find((candidate) => candidate.id === ref.job_id);
+    const job = overworldLocalJobsById(world).get(ref.job_id);
     const scene = job?.authored_scene;
     const option = scene?.options.find((candidate) => candidate.id === ref.option_id);
     if (!scene || !option) continue;
@@ -3141,7 +3156,7 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
   const storyChoiceKeys = new Set(state.selectedStoryChoices.map(campaignStoryChoiceRefKey));
   const requiredEventOptions = new Map<string, string>();
   const selected = selection.map((capability) => {
-    const job = world.local_jobs.find((candidate) => candidate.id === capability.job_id);
+    const job = overworldLocalJobsById(world).get(capability.job_id);
     const scene = job?.authored_scene;
     const option = scene?.options.find((candidate) => candidate.id === capability.option_id);
     if (!job || !scene || !option) return null;
@@ -3377,6 +3392,7 @@ function assertCampaignServiceRulesIntegrity(
   areaHomes: Map<string, string>,
 ): void {
   const rules = CampaignServiceRulesSchema.parse(world.campaign_service_rules ?? []);
+  const localJobsById = overworldLocalJobsById(world);
   const authoredWorldFactIds = new Set(
     world.quests.flatMap((quest) =>
       (quest.campaign_exports ?? []).flatMap((campaignExport) =>
@@ -3424,7 +3440,7 @@ function assertCampaignServiceRulesIntegrity(
       ...(rule.requires_all_local_job_options ?? []),
       ...(rule.forbids_any_local_job_options ?? []),
     ]) {
-      const job = world.local_jobs.find((candidate) => candidate.id === requirement.job_id);
+      const job = localJobsById.get(requirement.job_id);
       if (!job?.authored_scene) {
         throw new Error(
           `Campaign service rule "${rule.id}" references local job "${requirement.job_id}" without an authored scene.`,
