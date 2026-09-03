@@ -4,7 +4,6 @@ import {
   CAMPAIGN_CHARACTER_MAX_MONEY,
   CampaignCharacterIdSchema,
   evolveCampaignCharacterState,
-  parseCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
 import {
@@ -206,17 +205,15 @@ export function openingLeadSourceTerms(
   option: OpeningLeadSourceOption,
   character: CampaignCharacterState,
 ): OpeningLeadSourceTerms {
-  const parsedOption = OpeningLeadSourceOptionSchema.parse(option);
-  const parsedCharacter = parseCampaignCharacterState(character);
   const sponsored =
-    parsedOption.sponsor !== undefined &&
-    characterHasMemory(parsedCharacter, parsedOption.sponsor.memory_id);
-  const terms = sponsored ? parsedOption.sponsor! : parsedOption.terms;
+    option.sponsor !== undefined &&
+    characterHasMemory(character, option.sponsor.memory_id);
+  const terms = sponsored ? option.sponsor! : option.terms;
   return Object.freeze({
     minutes: terms.minutes,
     money: terms.money,
     sponsored,
-    sponsorNote: sponsored ? parsedOption.sponsor!.note : null,
+    sponsorNote: sponsored ? option.sponsor!.note : null,
   });
 }
 
@@ -235,8 +232,8 @@ export function applyOpeningLeadSourceOption(args: {
   character: CampaignCharacterState;
   optionId: string;
 }): OpeningLeadSourceApplication {
-  const scene = parseOpeningLeadSource(args.scene);
-  const character = parseCampaignCharacterState(args.character);
+  const scene = args.scene;
+  const character = args.character;
   const option = scene.options.find((candidate) => candidate.id === args.optionId);
   if (!option) throw new Error(`Unknown opening lead-source option "${args.optionId}".`);
   const terms = openingLeadSourceTerms(option, character);

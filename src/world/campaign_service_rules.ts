@@ -9,8 +9,10 @@ import {
   CampaignCharacterConditionsSchema,
   CampaignConsequenceEffectsSchema,
   CampaignPromiseConditionsSchema,
-  campaignCharacterMatchesConditions,
+  buildCampaignCharacterConditionsIndex,
+  campaignCharacterMatchesIndexedConditions,
   type CampaignCharacterConditions,
+  type CampaignCharacterConditionsIndex,
 } from "./campaign_consequences.js";
 import {
   CampaignStoryChoiceRefSchema,
@@ -402,7 +404,7 @@ function ruleIsActive(
   worldFactIds: ReadonlySet<string>,
   selectedStoryChoiceKeys: ReadonlySet<string>,
   consumedRuleIds: ReadonlySet<string>,
-  character: CampaignCharacterState | undefined,
+  characterIndex: CampaignCharacterConditionsIndex | undefined,
   regionRenown: ReadonlyMap<string, number> | undefined,
   completedLocalJobOptionKeys: ReadonlySet<string>,
 ): boolean {
@@ -430,17 +432,17 @@ function ruleIsActive(
       completedLocalJobOptionKeys.has(campaignServiceLocalJobOptionKey(option)),
     ) &&
     (!hasCharacterConditions ||
-      (character !== undefined &&
+      (characterIndex !== undefined &&
         (rule.requires_all_companions === undefined ||
-          campaignCharacterMatchesConditions(character, {
+          campaignCharacterMatchesIndexedConditions(characterIndex, {
             requires_all_companions: rule.requires_all_companions,
           })) &&
         (rule.requires_all_promises === undefined ||
-          campaignCharacterMatchesConditions(character, {
+          campaignCharacterMatchesIndexedConditions(characterIndex, {
             requires_all_promises: rule.requires_all_promises,
           })) &&
         (rule.character_conditions === undefined ||
-          campaignCharacterMatchesConditions(character, rule.character_conditions))))
+          campaignCharacterMatchesIndexedConditions(characterIndex, rule.character_conditions))))
   );
 }
 
@@ -460,6 +462,9 @@ export function resolveParsedActiveCampaignServiceRules(
   const completedLocalJobOptionKeys = new Set(
     (state.completedLocalJobOptions ?? []).map(campaignServiceLocalJobOptionKey),
   );
+  const characterIndex = state.character
+    ? buildCampaignCharacterConditionsIndex(state.character)
+    : undefined;
   const offers = state.rules
     .filter(
       (rule) =>
@@ -470,7 +475,7 @@ export function resolveParsedActiveCampaignServiceRules(
           worldFactIds,
           selectedStoryChoiceKeys,
           consumedRuleIds,
-          state.character,
+          characterIndex,
           state.regionRenown,
           completedLocalJobOptionKeys,
         ),

@@ -289,12 +289,12 @@ export function parseCampaignCharacterState(input: unknown): CampaignCharacterSt
 }
 
 export function cloneCampaignCharacterState(state: CampaignCharacterState): CampaignCharacterState {
-  return parseCampaignCharacterState(state);
+  return structuredClone(state);
 }
 
 /** Stable compact JSON: schema order plus canonical arrays makes bytes deterministic. */
 export function serializeCampaignCharacterState(state: CampaignCharacterState): string {
-  return JSON.stringify(parseCampaignCharacterState(state));
+  return JSON.stringify(state);
 }
 
 export function deserializeCampaignCharacterState(serialized: string): CampaignCharacterState {

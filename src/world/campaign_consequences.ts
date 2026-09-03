@@ -353,48 +353,71 @@ export const CampaignCharacterConditionsSchema = z
 
 export type CampaignCharacterConditions = z.infer<typeof CampaignCharacterConditionsSchema>;
 
-/** Resolve reusable party/promise predicates against canonical campaign state. */
-export function campaignCharacterMatchesConditions(
+export type CampaignCharacterConditionsIndex = Readonly<{
+  companions: ReadonlySet<string>;
+  promises: ReadonlyMap<string, string>;
+  relationshipMemories: ReadonlySet<string>;
+  wounds: ReadonlySet<string>;
+}>;
+
+export function buildCampaignCharacterConditionsIndex(
   character: CampaignCharacterState,
-  input: CampaignCharacterConditions,
-): boolean {
-  const conditions = CampaignCharacterConditionsSchema.parse(input);
-  const companions = new Set(character.companions);
-  const promises = new Map(
-    character.promises.map((promise) => [promise.promiseId, promise.status] as const),
-  );
-  const relationshipMemories = new Set(
-    character.relationships.flatMap((relationship) =>
-      relationship.memories.map((memoryId) =>
-        relationshipMemoryConditionKey({
-          npc_id: relationship.npcId,
-          memory_id: memoryId,
+): CampaignCharacterConditionsIndex {
+  return {
+    companions: new Set(character.companions),
+    promises: new Map(
+      character.promises.map((promise) => [promise.promiseId, promise.status] as const),
+    ),
+    relationshipMemories: new Set(
+      character.relationships.flatMap((relationship) =>
+        relationship.memories.map((memoryId) =>
+          relationshipMemoryConditionKey({
+            npc_id: relationship.npcId,
+            memory_id: memoryId,
+          }),
+        ),
+      ),
+    ),
+    wounds: new Set(
+      character.wounds.map((wound) =>
+        woundConditionKey({
+          wound_id: wound.woundId,
+          treatment: wound.treatment,
         }),
       ),
     ),
-  );
-  const wounds = new Set(
-    character.wounds.map((wound) =>
-      woundConditionKey({
-        wound_id: wound.woundId,
-        treatment: wound.treatment,
-      }),
-    ),
-  );
+  };
+}
+
+export function campaignCharacterMatchesIndexedConditions(
+  index: CampaignCharacterConditionsIndex,
+  conditions: CampaignCharacterConditions,
+): boolean {
   return (
-    (conditions.requires_all_companions ?? []).every((id) => companions.has(id)) &&
-    !(conditions.forbids_any_companions ?? []).some((id) => companions.has(id)) &&
+    (conditions.requires_all_companions ?? []).every((id) => index.companions.has(id)) &&
+    !(conditions.forbids_any_companions ?? []).some((id) => index.companions.has(id)) &&
     (conditions.requires_all_promises ?? []).every(
-      (promise) => promises.get(promise.promise_id) === promise.status,
+      (promise) => index.promises.get(promise.promise_id) === promise.status,
     ) &&
     (conditions.requires_all_relationship_memories ?? []).every((memory) =>
-      relationshipMemories.has(relationshipMemoryConditionKey(memory)),
+      index.relationshipMemories.has(relationshipMemoryConditionKey(memory)),
     ) &&
     !(conditions.forbids_any_relationship_memories ?? []).some((memory) =>
-      relationshipMemories.has(relationshipMemoryConditionKey(memory)),
+      index.relationshipMemories.has(relationshipMemoryConditionKey(memory)),
     ) &&
-    (conditions.requires_all_wounds ?? []).every((wound) => wounds.has(woundConditionKey(wound))) &&
-    !(conditions.forbids_any_wounds ?? []).some((wound) => wounds.has(woundConditionKey(wound)))
+    (conditions.requires_all_wounds ?? []).every((wound) => index.wounds.has(woundConditionKey(wound))) &&
+    !(conditions.forbids_any_wounds ?? []).some((wound) => index.wounds.has(woundConditionKey(wound)))
+  );
+}
+
+/** Resolve reusable party/promise predicates against canonical campaign state. */
+export function campaignCharacterMatchesConditions(
+  character: CampaignCharacterState,
+  conditions: CampaignCharacterConditions,
+): boolean {
+  return campaignCharacterMatchesIndexedConditions(
+    buildCampaignCharacterConditionsIndex(character),
+    conditions,
   );
 }
 
@@ -403,22 +426,20 @@ export function campaignCharacterConditionsAreMutuallyExclusive(
   left: CampaignCharacterConditions,
   right: CampaignCharacterConditions,
 ): boolean {
-  const parsedLeft = CampaignCharacterConditionsSchema.parse(left);
-  const parsedRight = CampaignCharacterConditionsSchema.parse(right);
-  const leftRequiredCompanions = new Set(parsedLeft.requires_all_companions ?? []);
-  const rightRequiredCompanions = new Set(parsedRight.requires_all_companions ?? []);
+  const leftRequiredCompanions = new Set(left.requires_all_companions ?? []);
+  const rightRequiredCompanions = new Set(right.requires_all_companions ?? []);
   if (
-    (parsedLeft.forbids_any_companions ?? []).some((id) => rightRequiredCompanions.has(id)) ||
-    (parsedRight.forbids_any_companions ?? []).some((id) => leftRequiredCompanions.has(id))
+    (left.forbids_any_companions ?? []).some((id) => rightRequiredCompanions.has(id)) ||
+    (right.forbids_any_companions ?? []).some((id) => leftRequiredCompanions.has(id))
   ) {
     return true;
   }
 
   const leftPromises = new Map(
-    (parsedLeft.requires_all_promises ?? []).map((promise) => [promise.promise_id, promise.status]),
+    (left.requires_all_promises ?? []).map((promise) => [promise.promise_id, promise.status]),
   );
   if (
-    (parsedRight.requires_all_promises ?? []).some(
+    (right.requires_all_promises ?? []).some(
       (promise) =>
         leftPromises.has(promise.promise_id) &&
         leftPromises.get(promise.promise_id) !== promise.status,
@@ -428,16 +449,16 @@ export function campaignCharacterConditionsAreMutuallyExclusive(
   }
 
   const leftRequiredMemories = new Set(
-    (parsedLeft.requires_all_relationship_memories ?? []).map(relationshipMemoryConditionKey),
+    (left.requires_all_relationship_memories ?? []).map(relationshipMemoryConditionKey),
   );
   const rightRequiredMemories = new Set(
-    (parsedRight.requires_all_relationship_memories ?? []).map(relationshipMemoryConditionKey),
+    (right.requires_all_relationship_memories ?? []).map(relationshipMemoryConditionKey),
   );
   if (
-    (parsedLeft.forbids_any_relationship_memories ?? []).some((memory) =>
+    (left.forbids_any_relationship_memories ?? []).some((memory) =>
       rightRequiredMemories.has(relationshipMemoryConditionKey(memory)),
     ) ||
-    (parsedRight.forbids_any_relationship_memories ?? []).some((memory) =>
+    (right.forbids_any_relationship_memories ?? []).some((memory) =>
       leftRequiredMemories.has(relationshipMemoryConditionKey(memory)),
     )
   ) {
@@ -445,10 +466,10 @@ export function campaignCharacterConditionsAreMutuallyExclusive(
   }
 
   const leftRequiredWounds = new Map(
-    (parsedLeft.requires_all_wounds ?? []).map((wound) => [wound.wound_id, wound.treatment]),
+    (left.requires_all_wounds ?? []).map((wound) => [wound.wound_id, wound.treatment]),
   );
   const rightRequiredWounds = new Map(
-    (parsedRight.requires_all_wounds ?? []).map((wound) => [wound.wound_id, wound.treatment]),
+    (right.requires_all_wounds ?? []).map((wound) => [wound.wound_id, wound.treatment]),
   );
   if (
     [...rightRequiredWounds].some(
@@ -459,10 +480,10 @@ export function campaignCharacterConditionsAreMutuallyExclusive(
     return true;
   }
   if (
-    (parsedLeft.forbids_any_wounds ?? []).some(
+    (left.forbids_any_wounds ?? []).some(
       (wound) => rightRequiredWounds.get(wound.wound_id) === wound.treatment,
     ) ||
-    (parsedRight.forbids_any_wounds ?? []).some(
+    (right.forbids_any_wounds ?? []).some(
       (wound) => leftRequiredWounds.get(wound.wound_id) === wound.treatment,
     )
   ) {

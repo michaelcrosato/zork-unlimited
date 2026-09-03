@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import {
   CampaignCharacterIdSchema,
-  parseCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
 import {
@@ -290,8 +289,8 @@ export function applyOpeningAllyOption(args: {
   character: CampaignCharacterState;
   optionId: string;
 }): OpeningAllyApplication {
-  const scene = parseOpeningAlly(args.scene);
-  const character = parseCampaignCharacterState(args.character);
+  const scene = args.scene;
+  const character = args.character;
   const option = scene.options.find((candidate) => candidate.id === args.optionId);
   if (!option) throw new Error(`Unknown opening ally option "${args.optionId}".`);
   const consequences = applyCampaignConsequences({ character, effects: option.effects });

@@ -4,11 +4,13 @@ import { CampaignCharacterImportsSchema } from "../rpg/campaign_character_import
 import {
   CampaignCharacterConditionsSchema,
   CampaignConsequenceEffectsSchema,
+  buildCampaignCharacterConditionsIndex,
   campaignCharacterConditionsAreMutuallyExclusive,
-  campaignCharacterMatchesConditions,
+  campaignCharacterMatchesIndexedConditions,
   campaignConsequenceEffectKey,
   applyCampaignConsequences,
   type CampaignCharacterConditions,
+  type CampaignCharacterConditionsIndex,
   type CampaignConsequenceEffect,
 } from "./campaign_consequences.js";
 import {
@@ -635,11 +637,13 @@ export function overworldQuestCampaignExportForEnding(
 export function overworldQuestCampaignEffectsForCharacter(
   campaignExport: OverworldQuestCampaignExport,
   character: CampaignCharacterState,
+  characterIndex?: CampaignCharacterConditionsIndex,
 ): readonly CampaignConsequenceEffect[] {
+  const index = characterIndex ?? buildCampaignCharacterConditionsIndex(character);
   return [
     ...campaignExport.effects,
     ...(campaignExport.conditional_effects ?? [])
-      .filter((group) => campaignCharacterMatchesConditions(character, group.when))
+      .filter((group) => campaignCharacterMatchesIndexedConditions(index, group.when))
       .flatMap((group) => group.effects),
   ];
 }
@@ -656,51 +660,141 @@ export function overworldNodesById(world: OverworldManifest): Map<string, Overwo
   return map;
 }
 
+const overworldEdgesFromCache = new WeakMap<OverworldManifest, Map<string, OverworldExit[]>>();
+
+/** Cache exit lookup maps per node for fast O(1) retrieval on repeated queries */
 export function overworldEdgesFrom(world: OverworldManifest, nodeId: string): OverworldExit[] {
-  const nodes = overworldNodesById(world);
-  return world.edges
-    .filter((edge) => edge.from === nodeId || edge.to === nodeId)
-    .map((edge) => {
-      const destinationId = edge.from === nodeId ? edge.to : edge.from;
-      const destination = nodes.get(destinationId);
-      if (!destination)
-        throw new Error(`Overworld edge references missing node "${destinationId}".`);
-      return { ...edge, destination };
-    })
-    .sort(
-      (a, b) =>
-        a.travel_minutes - b.travel_minutes || a.destination.name.localeCompare(b.destination.name),
-    );
+  let cache = overworldEdgesFromCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    const nodes = overworldNodesById(world);
+    for (const edge of world.edges) {
+      const fromNode = nodes.get(edge.from);
+      if (!fromNode) throw new Error(`Overworld edge references missing node "${edge.from}".`);
+      const toNode = nodes.get(edge.to);
+      if (!toNode) throw new Error(`Overworld edge references missing node "${edge.to}".`);
+
+      let fromList = cache.get(edge.from);
+      if (!fromList) {
+        fromList = [];
+        cache.set(edge.from, fromList);
+      }
+      fromList.push({ ...edge, destination: toNode });
+
+      let toList = cache.get(edge.to);
+      if (!toList) {
+        toList = [];
+        cache.set(edge.to, toList);
+      }
+      toList.push({ ...edge, destination: fromNode });
+    }
+    for (const exits of cache.values()) {
+      exits.sort(
+        (a, b) =>
+          a.travel_minutes - b.travel_minutes || a.destination.name.localeCompare(b.destination.name),
+      );
+    }
+    overworldEdgesFromCache.set(world, cache);
+  }
+  return cache.get(nodeId) ?? [];
 }
 
+const overworldAreasAtCache = new WeakMap<OverworldManifest, Map<string, OverworldArea[]>>();
+
+/** Cache area lookup maps per node for fast O(1) retrieval on repeated queries */
 export function overworldAreasAt(world: OverworldManifest, nodeId: string): OverworldArea[] {
-  return world.areas
-    .filter((area) => area.home === nodeId)
-    .sort((a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name));
+  let cache = overworldAreasAtCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const area of world.areas) {
+      let list = cache.get(area.home);
+      if (!list) {
+        list = [];
+        cache.set(area.home, list);
+      }
+      list.push(area);
+    }
+    for (const list of cache.values()) {
+      list.sort((a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name));
+    }
+    overworldAreasAtCache.set(world, cache);
+  }
+  return cache.get(nodeId) ?? [];
 }
 
+const overworldCharactersAtCache = new WeakMap<OverworldManifest, Map<string, OverworldCharacter[]>>();
+
+/** Cache character lookup maps per node for fast O(1) retrieval on repeated queries */
 export function overworldCharactersAt(
   world: OverworldManifest,
   nodeId: string,
 ): OverworldCharacter[] {
-  return world.characters
-    .filter((character) => character.home === nodeId)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  let cache = overworldCharactersAtCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const character of world.characters) {
+      let list = cache.get(character.home);
+      if (!list) {
+        list = [];
+        cache.set(character.home, list);
+      }
+      list.push(character);
+    }
+    for (const list of cache.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    overworldCharactersAtCache.set(world, cache);
+  }
+  return cache.get(nodeId) ?? [];
 }
 
+const overworldEventsAtCache = new WeakMap<OverworldManifest, Map<string, OverworldLocalEvent[]>>();
+
+/** Cache local event lookup maps per node for fast O(1) retrieval on repeated queries */
 export function overworldEventsAt(world: OverworldManifest, nodeId: string): OverworldLocalEvent[] {
-  return world.local_events
-    .filter((event) => event.home === nodeId)
-    .sort((a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title));
+  let cache = overworldEventsAtCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const event of world.local_events) {
+      let list = cache.get(event.home);
+      if (!list) {
+        list = [];
+        cache.set(event.home, list);
+      }
+      list.push(event);
+    }
+    for (const list of cache.values()) {
+      list.sort((a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title));
+    }
+    overworldEventsAtCache.set(world, cache);
+  }
+  return cache.get(nodeId) ?? [];
 }
 
+const overworldJobsAtCache = new WeakMap<OverworldManifest, Map<string, OverworldLocalJob[]>>();
+
+/** Cache local job lookup maps per node for fast O(1) retrieval on repeated queries */
 export function overworldJobsAt(world: OverworldManifest, nodeId: string): OverworldLocalJob[] {
-  return world.local_jobs
-    .filter((job) => job.home === nodeId)
-    .sort(
-      (a, b) =>
-        a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
-    );
+  let cache = overworldJobsAtCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const job of world.local_jobs) {
+      let list = cache.get(job.home);
+      if (!list) {
+        list = [];
+        cache.set(job.home, list);
+      }
+      list.push(job);
+    }
+    for (const list of cache.values()) {
+      list.sort(
+        (a, b) =>
+          a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
+      );
+    }
+    overworldJobsAtCache.set(world, cache);
+  }
+  return cache.get(nodeId) ?? [];
 }
 
 const roadEventCache = new WeakMap<OverworldManifest, Map<string, OverworldRoadEvent>>();
@@ -718,28 +812,85 @@ export function overworldRoadEventFor(
   return cache.get(edgeId) ?? null;
 }
 
+const overworldExplorationSitesNearCache = new WeakMap<
+  OverworldManifest,
+  Map<string, OverworldExplorationSite[]>
+>();
+
+/** Cache exploration site lookup maps per nearest town for fast O(1) retrieval */
 export function overworldExplorationSitesNear(
   world: OverworldManifest,
   nodeId: string,
 ): OverworldExplorationSite[] {
-  return world.exploration_sites
-    .filter((site) => site.nearest_town === nodeId)
-    .sort((a, b) => b.danger - a.danger || a.title.localeCompare(b.title));
+  let cache = overworldExplorationSitesNearCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const site of world.exploration_sites) {
+      let list = cache.get(site.nearest_town);
+      if (!list) {
+        list = [];
+        cache.set(site.nearest_town, list);
+      }
+      list.push(site);
+    }
+    for (const list of cache.values()) {
+      list.sort((a, b) => b.danger - a.danger || a.title.localeCompare(b.title));
+    }
+    overworldExplorationSitesNearCache.set(world, cache);
+  }
+  return cache.get(nodeId) ?? [];
 }
 
+const overworldExplorationSitesInAreaCache = new WeakMap<
+  OverworldManifest,
+  Map<string, OverworldExplorationSite[]>
+>();
+
+/** Cache exploration site lookup maps per area for fast O(1) retrieval */
 export function overworldExplorationSitesInArea(
   world: OverworldManifest,
   areaId: string,
 ): OverworldExplorationSite[] {
-  return world.exploration_sites
-    .filter((site) => site.area === areaId)
-    .sort((a, b) => b.danger - a.danger || a.title.localeCompare(b.title));
+  let cache = overworldExplorationSitesInAreaCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const site of world.exploration_sites) {
+      let list = cache.get(site.area);
+      if (!list) {
+        list = [];
+        cache.set(site.area, list);
+      }
+      list.push(site);
+    }
+    for (const list of cache.values()) {
+      list.sort((a, b) => b.danger - a.danger || a.title.localeCompare(b.title));
+    }
+    overworldExplorationSitesInAreaCache.set(world, cache);
+  }
+  return cache.get(areaId) ?? [];
 }
 
+const overworldQuestsAtCache = new WeakMap<OverworldManifest, Map<string, OverworldQuest[]>>();
+
+/** Cache quest lookup maps per node for fast O(1) retrieval on repeated queries */
 export function overworldQuestsAt(world: OverworldManifest, nodeId: string): OverworldQuest[] {
-  return world.quests
-    .filter((quest) => quest.home === nodeId)
-    .sort((a, b) => a.title.localeCompare(b.title));
+  let cache = overworldQuestsAtCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const quest of world.quests) {
+      let list = cache.get(quest.home);
+      if (!list) {
+        list = [];
+        cache.set(quest.home, list);
+      }
+      list.push(quest);
+    }
+    for (const list of cache.values()) {
+      list.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    overworldQuestsAtCache.set(world, cache);
+  }
+  return cache.get(nodeId) ?? [];
 }
 
 export function planOverworldRoute(
@@ -2299,6 +2450,7 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
   const reachableAllyCharacters: Array<{
     optionId: string;
     character: CampaignCharacterState;
+    index: CampaignCharacterConditionsIndex;
   }> = [];
   const fieldCommitmentsByOption = new Map(
     scene.options.map((option) => [
@@ -2354,7 +2506,11 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
               character: afterPreparation,
               optionId: option.id,
             }).characterAfter;
-            reachableAllyCharacters.push({ optionId: option.id, character: afterAlly });
+            reachableAllyCharacters.push({
+              optionId: option.id,
+              character: afterAlly,
+              index: buildCampaignCharacterConditionsIndex(afterAlly),
+            });
           }
         }
       }
@@ -2363,8 +2519,8 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
   for (const campaignExport of quest.campaign_exports ?? []) {
     for (const group of campaignExport.conditional_effects ?? []) {
       if (
-        !reachableAllyCharacters.some(({ character }) =>
-          campaignCharacterMatchesConditions(character, group.when),
+        !reachableAllyCharacters.some(({ index }) =>
+          campaignCharacterMatchesIndexedConditions(index, group.when),
         )
       ) {
         throw new Error(
@@ -2375,7 +2531,7 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
     for (const reachable of reachableAllyCharacters) {
       const applied = applyCampaignConsequences({
         character: reachable.character,
-        effects: overworldQuestCampaignEffectsForCharacter(campaignExport, reachable.character),
+        effects: overworldQuestCampaignEffectsForCharacter(campaignExport, reachable.character, reachable.index),
       });
       const commitment = fieldCommitmentsByOption.get(reachable.optionId);
       for (const promiseId of commitment?.promiseIds ?? []) {
@@ -2745,6 +2901,34 @@ type CanonicalCampaignServiceLocationStateProjection = Readonly<{
   storyChoiceKeys: ReadonlySet<string>;
 }>;
 
+const overworldLocalJobsByIdCache = new WeakMap<
+  OverworldManifest,
+  Map<string, OverworldLocalJob>
+>();
+
+function overworldLocalJobsById(world: OverworldManifest): Map<string, OverworldLocalJob> {
+  let map = overworldLocalJobsByIdCache.get(world);
+  if (!map) {
+    map = new Map(world.local_jobs.map((job) => [job.id, job]));
+    overworldLocalJobsByIdCache.set(world, map);
+  }
+  return map;
+}
+
+const overworldLocalEventsByIdCache = new WeakMap<
+  OverworldManifest,
+  Map<string, OverworldLocalEvent>
+>();
+
+function overworldLocalEventsById(world: OverworldManifest): Map<string, OverworldLocalEvent> {
+  let map = overworldLocalEventsByIdCache.get(world);
+  if (!map) {
+    map = new Map(world.local_events.map((event) => [event.id, event]));
+    overworldLocalEventsByIdCache.set(world, map);
+  }
+  return map;
+}
+
 type CanonicalCampaignServiceRelevantQuestClosure = Readonly<{
   questIds: readonly string[];
   worldFactIds: ReadonlySet<string>;
@@ -2770,6 +2954,7 @@ function canonicalCampaignServiceLocationStateProjection(
     forbids?.forEach((factId) => worldFactIds.add(factId));
   };
 
+  const localJobsMap = overworldLocalJobsById(world);
   for (const rule of rules) {
     rememberFacts(rule.requires_all_world_facts, rule.forbids_any_world_facts);
     rule.requires_all_companions?.forEach((companionId) => companionIds.add(companionId));
@@ -2803,7 +2988,7 @@ function canonicalCampaignServiceLocationStateProjection(
     }
   }
   for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
-    const scene = world.local_jobs.find((job) => job.id === ref.job_id)?.authored_scene;
+    const scene = localJobsMap.get(ref.job_id)?.authored_scene;
     const option = scene?.options.find((candidate) => candidate.id === ref.option_id);
     if (!scene || !option) continue;
     scene.requires_completed_quests.forEach((questId) => completedQuestIds.add(questId));
@@ -2853,33 +3038,42 @@ function canonicalCampaignServiceLocationStateKey(
   state: CanonicalCampaignServiceIntegrityState,
   projection: CanonicalCampaignServiceLocationStateProjection,
 ): string {
-  return JSON.stringify({
-    companions: state.character.companions
-      .filter((companionId) => projection.companionIds.has(companionId))
-      .sort(),
-    promises: state.character.promises
-      .filter((promise) => projection.promiseIds.has(promise.promiseId))
-      .map((promise) => `${promise.promiseId}\u0000${promise.status}`)
-      .sort(),
-    relationshipMemories: state.character.relationships
-      .flatMap((relationship) =>
-        relationship.memories.map((memoryId) => `${relationship.npcId}\u0000${memoryId}`),
-      )
-      .filter((memoryKey) => projection.relationshipMemoryKeys.has(memoryKey))
-      .sort(),
-    wounds: state.character.wounds
-      .filter((wound) => projection.woundIds.has(wound.woundId))
-      .map((wound) => `${wound.woundId}\u0000${wound.treatment}`)
-      .sort(),
-    completedQuestIds: state.completedQuestIds
-      .filter((questId) => projection.completedQuestIds.has(questId))
-      .sort(),
-    worldFactIds: state.worldFactIds.filter((factId) => projection.worldFactIds.has(factId)).sort(),
-    selectedStoryChoices: state.selectedStoryChoices
-      .map(campaignStoryChoiceRefKey)
-      .filter((choiceKey) => projection.storyChoiceKeys.has(choiceKey))
-      .sort(),
-  });
+  const companions = state.character.companions
+    .filter((companionId) => projection.companionIds.has(companionId))
+    .sort()
+    .join(",");
+  const promises = state.character.promises
+    .filter((promise) => projection.promiseIds.has(promise.promiseId))
+    .map((promise) => `${promise.promiseId}:${promise.status}`)
+    .sort()
+    .join(",");
+  const memories = state.character.relationships
+    .flatMap((relationship) =>
+      relationship.memories.map((memoryId) => `${relationship.npcId}:${memoryId}`),
+    )
+    .filter((memoryKey) => projection.relationshipMemoryKeys.has(memoryKey))
+    .sort()
+    .join(",");
+  const wounds = state.character.wounds
+    .filter((wound) => projection.woundIds.has(wound.woundId))
+    .map((wound) => `${wound.woundId}:${wound.treatment}`)
+    .sort()
+    .join(",");
+  const quests = state.completedQuestIds
+    .filter((questId) => projection.completedQuestIds.has(questId))
+    .sort()
+    .join(",");
+  const facts = state.worldFactIds
+    .filter((factId) => projection.worldFactIds.has(factId))
+    .sort()
+    .join(",");
+  const choices = state.selectedStoryChoices
+    .map(campaignStoryChoiceRefKey)
+    .filter((choiceKey) => projection.storyChoiceKeys.has(choiceKey))
+    .sort()
+    .join(",");
+
+  return `${companions}|${promises}|${memories}|${wounds}|${quests}|${facts}|${choices}`;
 }
 
 /**
@@ -2928,8 +3122,9 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
       relevantWoundIds.add(wound.wound_id);
     }
   }
+  const localJobsMap = overworldLocalJobsById(world);
   for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
-    const job = world.local_jobs.find((candidate) => candidate.id === ref.job_id);
+    const job = localJobsMap.get(ref.job_id);
     const scene = job?.authored_scene;
     const option = scene?.options.find((candidate) => candidate.id === ref.option_id);
     if (!scene || !option) continue;
@@ -3096,7 +3291,7 @@ function canonicalCampaignServiceRelevantQuestStatesForLocation(
     const completedQuestIds = new Set(state.completedQuestIds);
     for (const questId of relevantQuestIds) {
       if (completedQuestIds.has(questId)) continue;
-      const quest = world.quests.find((candidate) => candidate.id === questId);
+      const quest = overworldQuestById(world, questId);
       if (!quest) continue;
       const exportedOutcomes = [...(quest.campaign_exports ?? [])].sort((left, right) =>
         left.ending_id.localeCompare(right.ending_id),
@@ -3135,13 +3330,16 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
   world: OverworldManifest,
   state: CanonicalCampaignServiceIntegrityState,
   selection: readonly CampaignServiceLocalJobOption[],
+  characterIndex?: CampaignCharacterConditionsIndex,
 ): boolean {
   const completedQuestIds = new Set(state.completedQuestIds);
   const worldFactIds = new Set(state.worldFactIds);
   const storyChoiceKeys = new Set(state.selectedStoryChoices.map(campaignStoryChoiceRefKey));
   const requiredEventOptions = new Map<string, string>();
+  const localJobsMap = overworldLocalJobsById(world);
+  const localEventsMap = overworldLocalEventsById(world);
   const selected = selection.map((capability) => {
-    const job = world.local_jobs.find((candidate) => candidate.id === capability.job_id);
+    const job = localJobsMap.get(capability.job_id);
     const scene = job?.authored_scene;
     const option = scene?.options.find((candidate) => candidate.id === capability.option_id);
     if (!job || !scene || !option) return null;
@@ -3155,10 +3353,11 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
   if (selected.some((entry) => entry === null)) return false;
 
   for (const [eventId, optionId] of requiredEventOptions) {
-    const event = world.local_events.find((candidate) => candidate.id === eventId);
+    const event = localEventsMap.get(eventId);
     if (!event?.authored_scene?.options.some((option) => option.id === optionId)) return false;
   }
 
+  const index = characterIndex ?? buildCampaignCharacterConditionsIndex(state.character);
   return selected.every((entry) => {
     if (!entry) return false;
     const { scene, option } = entry;
@@ -3167,7 +3366,7 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
       (scene.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
       !(scene.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId)) &&
       (scene.requires_resolved_events ?? []).every((eventId) =>
-        world.local_events.some((event) => event.id === eventId),
+        localEventsMap.has(eventId),
       ) &&
       (option.requires_event_options ?? []).every(
         (requirement) => requiredEventOptions.get(requirement.event_id) === requirement.option_id,
@@ -3181,7 +3380,7 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
         storyChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
       ) &&
       (option.character_conditions === undefined ||
-        campaignCharacterMatchesConditions(state.character, option.character_conditions))
+        campaignCharacterMatchesIndexedConditions(index, option.character_conditions))
     );
   });
 }
@@ -3202,19 +3401,20 @@ function canonicalCampaignServiceLocalJobOptionSelectionsForLocation(
     else refsByJobId.set(ref.job_id, [ref]);
   }
 
+  const characterIndex = buildCampaignCharacterConditionsIndex(state.character);
   let selections: readonly (readonly CampaignServiceLocalJobOption[])[] = [[]];
   for (const jobId of [...refsByJobId.keys()].sort()) {
     const reachableOptions = refsByJobId
       .get(jobId)!
       .filter((option) =>
-        canonicalCampaignServiceLocalJobSelectionIsReachable(world, state, [option]),
+        canonicalCampaignServiceLocalJobSelectionIsReachable(world, state, [option], characterIndex),
       );
     const next: (readonly CampaignServiceLocalJobOption[])[] = [];
     for (const selection of selections) {
       next.push(selection);
       for (const option of reachableOptions) {
         const candidate = [...selection, option];
-        if (canonicalCampaignServiceLocalJobSelectionIsReachable(world, state, candidate)) {
+        if (canonicalCampaignServiceLocalJobSelectionIsReachable(world, state, candidate, characterIndex)) {
           next.push(candidate);
         }
       }

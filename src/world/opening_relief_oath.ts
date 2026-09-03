@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import {
   CampaignCharacterIdSchema,
-  parseCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
 import {
@@ -262,8 +261,8 @@ export function applyOpeningReliefOathOption(args: {
   character: CampaignCharacterState;
   optionId: string;
 }): OpeningReliefOathApplication {
-  const scene = parseOpeningReliefOath(args.scene);
-  const character = parseCampaignCharacterState(args.character);
+  const scene = args.scene;
+  const character = args.character;
   const option = scene.options.find((candidate) => candidate.id === args.optionId);
   if (!option) {
     throw new Error(`Unknown opening relief oath option "${args.optionId}".`);

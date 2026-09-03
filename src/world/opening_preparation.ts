@@ -4,7 +4,6 @@ import {
   CAMPAIGN_CHARACTER_MAX_MONEY,
   CampaignCharacterIdSchema,
   evolveCampaignCharacterState,
-  parseCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
 import {
@@ -259,17 +258,15 @@ export function openingPreparationTerms(
   profile: OpeningPreparationProfile,
   character: CampaignCharacterState,
 ): OpeningPreparationTerms {
-  const parsedProfile = OpeningPreparationProfileSchema.parse(profile);
-  const parsedCharacter = parseCampaignCharacterState(character);
   const sponsored =
-    parsedProfile.sponsor !== undefined &&
-    characterHasMemory(parsedCharacter, parsedProfile.sponsor.memory_id);
-  const terms = sponsored ? parsedProfile.sponsor! : parsedProfile.terms;
+    profile.sponsor !== undefined &&
+    characterHasMemory(character, profile.sponsor.memory_id);
+  const terms = sponsored ? profile.sponsor! : profile.terms;
   return Object.freeze({
     minutes: terms.minutes,
     money: terms.money,
     sponsored,
-    sponsorNote: sponsored ? parsedProfile.sponsor!.note : null,
+    sponsorNote: sponsored ? profile.sponsor!.note : null,
   });
 }
 
@@ -288,8 +285,8 @@ export function applyOpeningPreparationProfile(args: {
   character: CampaignCharacterState;
   profileId: string;
 }): OpeningPreparationApplication {
-  const scene = parseOpeningPreparation(args.scene);
-  const character = parseCampaignCharacterState(args.character);
+  const scene = args.scene;
+  const character = args.character;
   const profile = scene.profiles.find((candidate) => candidate.id === args.profileId);
   if (!profile) throw new Error(`Unknown opening preparation profile "${args.profileId}".`);
   const terms = openingPreparationTerms(profile, character);
