@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  allGeneratedChecksClean,
   generatedEvalSeedBase,
   generatedEvalSeedBaseFromDisk,
 } from "../../src/afk/generated_eval.js";
@@ -62,6 +63,38 @@ describe("generated_eval pure seed wrappers", () => {
         "### Cycle result — arch 1\n### Cycle result — arch 2\n### Cycle result — arch 3\n",
       );
       expect(generatedEvalSeedBaseFromDisk(root)).toBe(5);
+    });
+  });
+  describe("allGeneratedChecksClean", () => {
+    it("returns true for an empty array of checks", () => {
+      expect(allGeneratedChecksClean([])).toBe(true);
+    });
+
+    it("returns true when all generated checks have zero findings", () => {
+      expect(
+        allGeneratedChecksClean([
+          { seed: 100, report: { source_id: "test1", ok: true, findings: [] } },
+          { seed: 101, report: { source_id: "test2", ok: true, findings: [] } },
+        ]),
+      ).toBe(true);
+    });
+
+    it("returns false when any generated check contains findings", () => {
+      expect(
+        allGeneratedChecksClean([
+          { seed: 100, report: { source_id: "test1", ok: true, findings: [] } },
+          {
+            seed: 101,
+            report: {
+              source_id: "test2",
+              ok: false,
+              findings: [
+                { severity: "error", code: "TEST_ERR", message: "Check failed", where: [] },
+              ],
+            },
+          },
+        ]),
+      ).toBe(false);
     });
   });
 });
