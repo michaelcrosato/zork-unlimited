@@ -5,6 +5,9 @@ mechanical structure, blind experience, and a compiler that turns the evidence
 into ranked fixes.
 `AGENTS.md` and `docs/afk_loop.md` wire this into the loop; this is the canonical
 reference for what each tier does, when it runs, and its exact shapes.
+[`test_duration_census.md`](./test_duration_census.md) is the companion: what each
+lane COSTS, measured per file rather than estimated, and what that implies for
+which tests are worth running on every commit.
 
 ## 1. The pyramid
 
