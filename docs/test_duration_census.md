@@ -351,6 +351,18 @@ commit gate removes flake as well as minutes. They cost 91 test cases at a slowe
 cadence — the one real trade in this list, and a much smaller one than any
 duration bucket would make.
 
+**Observed on a real runner.** CI run 33708077679 on this branch, on GitHub's
+own hardware at the config's CI worker count of 2:
+
+| shard                   |     duration |
+| ----------------------- | -----------: |
+| `Tests (fast lane 1/2)` |     26.5 min |
+| `Tests (fast lane 2/2)` | **33.2 min** |
+
+The two shards are 25% apart, and the PR gate's critical path is the slower one.
+That is the stale table's imbalance showing up directly in the merge queue, on
+hardware that has nothing to do with the box this census was taken on.
+
 **3. Re-price `MEASURED_TEST_COST_MS` from the census.** The allocator prices
 `mcp_tools` at 3s; it costs 56s alone. It prices `mcp_pure_play_mode` at 2.8 min;
 it costs 8 min alone. Sharding on those numbers is why one PR shard can be much
