@@ -5,6 +5,7 @@ import { parseRunEvidenceJsonl } from "../../src/blind/run_evidence.js";
 import { hashState } from "../../src/core/hash.js";
 import {
   validateCodexFleetProviderAuthority,
+  sha256ArtifactBytes,
   validatePureFleetRunArtifactBytes,
 } from "../../src/starting_slice/fleet_run_artifacts.js";
 import {
@@ -1722,5 +1723,28 @@ describe("Codex certified fleet rollout authority", () => {
         report: REPORT,
       }),
     ).toEqual({ ok: false, reason: expect.stringMatching(reason) });
+  });
+});
+
+
+describe("sha256ArtifactBytes", () => {
+  it("hashes empty byte array to standard SHA-256 digest", () => {
+    const empty = new Uint8Array(0);
+    expect(sha256ArtifactBytes(empty)).toBe(
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    );
+  });
+
+  it("hashes non-empty byte array to correct SHA-256 digest", () => {
+    const bytes = new TextEncoder().encode("hello world");
+    expect(sha256ArtifactBytes(bytes)).toBe(
+      "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+    );
+  });
+
+  it("produces identical hashes for identical Uint8Array content", () => {
+    const a = new Uint8Array([1, 2, 3, 4, 5]);
+    const b = new Uint8Array([1, 2, 3, 4, 5]);
+    expect(sha256ArtifactBytes(a)).toBe(sha256ArtifactBytes(b));
   });
 });
