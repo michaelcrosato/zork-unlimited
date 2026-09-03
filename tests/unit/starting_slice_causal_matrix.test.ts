@@ -67,10 +67,7 @@ describe("starting-slice causal matrix", () => {
       const matrix = loadStartingSliceCausalMatrix(process.cwd());
       const targetDir = join(tempDir, "docs");
       mkdirSync(targetDir, { recursive: true });
-      writeFileSync(
-        join(targetDir, "starting_slice_causal_matrix.json"),
-        JSON.stringify(matrix),
-      );
+      writeFileSync(join(targetDir, "starting_slice_causal_matrix.json"), JSON.stringify(matrix));
 
       const loadedCustom = loadStartingSliceCausalMatrix(tempDir);
       expect(loadedCustom.slice_id).toBe("albany_winter_relief_v1");
