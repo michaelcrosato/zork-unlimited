@@ -63,7 +63,7 @@ const CURRENT_PLAN_DOC = "docs/CURRENT_PLAN.md";
 const DECISION_LOG_DOC = "docs/DECISION_LOG.md";
 
 /** Pure decision: should THIS cycle run an ultraplan? Saturated AND off cooldown. */
-export function shouldRunUltraplan(
+function shouldRunUltraplan(
   saturated: boolean,
   cyclesSinceUltraplan: number,
   cooldown: number,
@@ -587,7 +587,7 @@ export function buildUltraplanPrompt(ctx: {
 }
 
 // Run a cycle only as the CLI entry point (npm run ai:loop), NOT when imported —
-// so tests can import shouldRunUltraplan without executing a real cycle.
+// so tests can import loop prompt functions without executing a real cycle.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main();
 }
