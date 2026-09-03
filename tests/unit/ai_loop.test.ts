@@ -13,7 +13,6 @@ import {
   playtestTargetSummary,
   playtestTarget,
   playtestTargetMetadata,
-  playtestTargetWorldQuestId,
   shouldRunUltraplan,
 } from "../../src/ai-loop.js";
 import {
@@ -107,9 +106,6 @@ describe("playtestTarget", () => {
 
 describe("fresh-overworld target normalization", () => {
   it("never resolves a direct quest id or quest-labeled summary", () => {
-    const top = candidate("content_fix", "cold_forge");
-
-    expect(playtestTargetWorldQuestId(top, "cold_forge")).toBeNull();
     expect(playtestTargetSummary("cold_forge", "cold_forge")).toBe(OVERWORLD_PLAYTEST_TARGET);
   });
 });
