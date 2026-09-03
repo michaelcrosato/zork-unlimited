@@ -351,17 +351,20 @@ commit gate removes flake as well as minutes. They cost 91 test cases at a slowe
 cadence — the one real trade in this list, and a much smaller one than any
 duration bucket would make.
 
-**Observed on a real runner.** CI run 33708077679 on this branch, on GitHub's
-own hardware at the config's CI worker count of 2:
+**Observed on a real runner.** Two consecutive CI runs on this branch, on
+GitHub's own hardware at the config's CI worker count of 2:
 
-| shard                   |     duration |
-| ----------------------- | -----------: |
-| `Tests (fast lane 1/2)` |     26.5 min |
-| `Tests (fast lane 2/2)` | **33.2 min** |
+| run                    | shard 1/2 |    shard 2/2 | gap |
+| ---------------------- | --------: | -----------: | --: |
+| 33708077679 (4ce10e32) |  26.5 min | **33.2 min** | 25% |
+| 33710706181 (557d531e) |  27.1 min | **31.9 min** | 18% |
 
-The two shards are 25% apart, and the PR gate's critical path is the slower one.
-That is the stale table's imbalance showing up directly in the merge queue, on
-hardware that has nothing to do with the box this census was taken on.
+Shard 2 is the slower one in both, by 18-25%, and the PR gate's critical path is
+whichever shard is slower. Shard 1 is stable across the two runs to within 0.6
+min, so the gap is the split rather than runner noise. That is the frozen table's
+imbalance showing up in the merge queue, on hardware that has nothing to do with
+the box this census was taken on — the part of the census that needs no trust in
+my measurements at all.
 
 **3. Re-price `MEASURED_TEST_COST_MS` from the census.** The allocator prices
 `mcp_tools` at 3s; it costs 56s alone. It prices `mcp_pure_play_mode` at 2.8 min;
