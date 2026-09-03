@@ -130,4 +130,68 @@ describe("bug trace integrity", () => {
     expect(codes).toContain("TRACE_NARRATIVE_MISSING");
     expect(codes).toContain("TRACE_REFERENCE_MISSING");
   });
+
+  // A shallow clone is the realistic failure here, not an exotic one: Claude Code on the
+  // web, `git clone --depth 1`, and any CI job that forgets fetch-depth: 0 all produce
+  // one. `rev-list --objects --all` then answers honestly for a history that is almost
+  // entirely absent, and every reference to a legitimately retired path looks phantom.
+  // Before this guard the gate reported 771 TRACE_REFERENCE_MISSING findings against a
+  // corpus in perfect health, which is a false accusation aimed at the wrong artifact.
+  it("blames the truncated clone, not the corpus, when history is shallow", () => {
+    const root = fixtureRoot();
+    execFileSync("git", ["init", "--quiet"], { cwd: root });
+    writeTrace(
+      root,
+      "bug_0001_retired_path.yaml",
+      ["id: bug_0001_retired_path", "title: retired runtime", "regression: src/retired.ts"].join(
+        "\n",
+      ),
+    );
+
+    const report = verifyBugTraces(root, { shallowHistory: true });
+
+    expect(report.findings).toEqual([
+      {
+        file: "traces/bugs",
+        code: "GIT_HISTORY_TRUNCATED",
+        message:
+          "repository history is truncated (shallow clone), so 1 unresolved path reference(s) could not be adjudicated and were NOT judged missing; run `git fetch --unshallow` (CI: actions/checkout with fetch-depth: 0), then re-run",
+      },
+    ]);
+  });
+
+  // The suppression is scoped to what truncation can actually explain. Everything the
+  // corpus asserts about ITSELF — parse, identity, narrative — is provable from the tree
+  // alone and must still fail on a shallow clone.
+  it("keeps every history-independent check live under a truncated clone", () => {
+    const root = fixtureRoot();
+    execFileSync("git", ["init", "--quiet"], { cwd: root });
+    writeTrace(root, "bug_0001_first.yaml", "id: bug_0002\ntitle: mismatched identity\n");
+    writeTrace(root, "bug_0002_no_story.yaml", "id: bug_0002_no_story\ncomponent: tooling\n");
+
+    const codes = verifyBugTraces(root, { shallowHistory: true }).findings.map((f) => f.code);
+
+    expect(codes).toContain("TRACE_ID_FILENAME_MISMATCH");
+    expect(codes).toContain("TRACE_NARRATIVE_MISSING");
+  });
+
+  // Truncation only matters when it left something unresolved. A shallow clone whose
+  // every reference still resolved lost this run nothing, and failing it would be
+  // ceremony rather than verification.
+  it("stays green when a truncated clone still resolved every reference", () => {
+    const root = fixtureRoot();
+    execFileSync("git", ["init", "--quiet"], { cwd: root });
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src", "present.ts"), "export {};\n");
+    writeTrace(
+      root,
+      "bug_0001_present_path.yaml",
+      ["id: bug_0001_present_path", "title: current path", "regression: src/present.ts"].join("\n"),
+    );
+
+    const report = verifyBugTraces(root, { shallowHistory: true });
+
+    expect(report.findings).toEqual([]);
+    expect(report.stats.currentReferences).toBe(1);
+  });
 });

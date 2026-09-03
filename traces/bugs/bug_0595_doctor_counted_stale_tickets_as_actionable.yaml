@@ -1,0 +1,96 @@
+id: bug_0595
+title: "npm run doctor reported 351 actionable tickets the dev loop could not work, then stopped before saying why"
+pack: n/a — tooling defect in the operator-facing diagnostic, not in content
+reported_by: >
+  2026-09-02 audit, prompted by an operator asking what became of the feedback from
+  100- and 200-agent playtest waves. Closes intake item 22203e35ab83fb34, which reported
+  the symptom on 2026-08-31 and left the cause explicitly unknown.
+severity: S2
+
+evidence:
+  ticket: 22203e35ab83fb34
+  reported_symptom: >
+    "playtest-loop's post-wave triage prints 'bucket: 0 actionable of 633-ish' and
+    'Nothing promoted to intake/queue' — while npm run doctor run moments later against
+    the same qa/tickets + intake/queue directories reports 'tickets 635 (351 actionable)'
+    and a dev loop that has work." The filer could not tell which surface was wrong:
+    "Either the loop's bucket/promotion check reads a different notion of 'actionable'
+    … or promotion is silently gated on something."
+  answer: >
+    Doctor was wrong, on both counts. `isActionable` is a CONJUNCTION — promotion is
+    corroborated/verified AND status is open/in_progress — and doctor filtered on the
+    first conjunct only. Measured on the committed bucket at b6daf779: 633 tickets, 351
+    corroborated, and all 633 `stale`, so the true actionable count is 0 and doctor's was
+    351. The stale count equalling the corroborated count is visible in the original
+    ticket's own numbers and was the thread that resolved it.
+
+symptom: >
+  `npm run doctor` — the command docs/two_loop_workflow.md sends an operator to first, and
+  whose own docstring names "if nothing is queued, why not" as the question that matters —
+  printed `tickets 633 (351 actionable)` followed by `✓ The dev loop has work.` over a
+  playtest bucket that had promoted nothing and could promote nothing. It then RETURNED,
+  swallowing the paragraphs that explain a stall. A dead playtest flywheel and a healthy
+  one produced identical output, which is the exact confusion the file was written to end.
+
+root_cause: >
+  Two independent defects in `reportBlockers` (bin/doctor.ts), stacked so that each hid
+  the other. First, the actionable filter was `t.promotion === "verified" || t.promotion
+  === "corroborated"` — a local re-implementation of half of `isActionable`
+  (src/qa/ticket.ts:177), so it counted aged-out tickets the dev loop is forbidden to
+  work. `summarizeBucket` (src/qa/ticket_store.ts:106) has always called the real
+  predicate, which is why `npm run qa:bucket` and the triage log were honest and only
+  doctor lied. Second, `if (queue.open > 0) { ...✓...; return; }` treated ANY open queue
+  item as proof the pipeline was healthy — but the queue also takes `audit`, `human` and
+  `research` submissions, and this repo's queue is majority audit, so a single unrelated
+  chore ended the report before the diagnosis.
+
+fix: >
+  Call `isActionable` — the same predicate the dev loop and the bucket summary use — so
+  the surfaces cannot disagree again. Count the promotion-eligible-but-not-actionable
+  tickets separately and print that number, because it is what explains the gap. Keep the
+  ✓ when the queue genuinely has work, but stop returning on it: when the bucket holds
+  tickets and none are actionable, say so and continue to the diagnosis. Give aged-out
+  tickets their own paragraph, since the existing "add a SECOND model family" advice is
+  for a different stall and is actively wrong here — those tickets already corroborated,
+  and re-running triage cannot revive them because staleness is recomputed against HEAD
+  on every pass. Also narrow the "No sessions yet" early return to an EMPTY BUCKET, so a
+  corpus living in another worktree no longer reports "nothing has happened" over
+  hundreds of committed tickets.
+
+deterministic_witnesses:
+  - "on the committed 633-ticket bucket, doctor goes from `tickets 633 (351 actionable)` to `tickets 633 (0 actionable)`"
+  - "0 is the number `isActionable`, `summarizeBucket`, `qa:triage` and `npm run work` already agreed on; doctor was the only outlier"
+  - "the new line `351 reached corroborated/verified and then aged out to stale` names the whole gap"
+  - "with an open audit item in the queue, doctor still prints the ✓ and now also prints `! Not from the playtest side`, where before it returned"
+  - "reverting only bin/doctor.ts turns exactly the 2 new cases red and leaves the other 20 in doctor_cli.test.ts green"
+  - "the pre-existing case `reports work waiting once a second family corroborates` stays green: those tickets are open AND corroborated, so the ✓ still short-circuits"
+
+mechanics_unchanged:
+  - "every provider/launchability section of doctor, which is the bulk of the command"
+  - "`isActionable` itself, `derivePromotion`, `STALE_AFTER_BUILDS`, and the promotion rungs — no gate moved"
+  - "`bin/triage.ts` and what it promotes; doctor is read-only and never writes the corpus, bucket or queue"
+  - "the corroboration advice for a genuine single-family stall, which still prints when nothing has aged out"
+
+nonclaims:
+  - "This does not make any ticket actionable. It reports the truth; the 351 aged-out tickets stay stale and unworkable until fresh sessions land on a current build."
+  - "It does not address why the automatic promotion path has never produced a queue item in this repository's history — every one of the 17 playtest submissions was hand-filed. That is filed separately as 9db38c7a5cdad624, together with the observation that npm run playtest:grok-wave has no triage step at all."
+  - "It does not touch the sibling promotion gaps: the unreachable `verified` rung (f26bbd36141140f0) and the reference-tier shortcut (7250b22cf399b109) both remain open and are unaffected."
+  - "Whether STALE_AFTER_BUILDS = 8 is the right threshold for a repo landing 12-36 commits between playtest waves is a product call this change deliberately does not make."
+
+production:
+  - bin/doctor.ts
+
+tests:
+  - tests/unit/doctor_cli.test.ts
+
+verification:
+  - npm run verify:integrity
+  - npm run verify:bug-traces
+  - npm run verify:opening-density
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run ui:typecheck
+  - npm run validate
+  - npm run crawl:smoke
+  - npx vitest run tests/unit/doctor_cli.test.ts

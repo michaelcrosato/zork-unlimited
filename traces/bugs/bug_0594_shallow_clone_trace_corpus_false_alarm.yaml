@@ -1,0 +1,89 @@
+id: bug_0594
+title: "A shallow clone made verify:bug-traces accuse 771 sound traces of referencing paths that never existed"
+pack: n/a — tooling defect in the verification bar, not in content
+reported_by: >
+  2026-09-02 repository audit. Found while establishing a baseline: the audit's own
+  checkout was a depth-1 clone, and the second step of `npm run health` failed with 771
+  findings against a corpus that is in perfect health.
+severity: S1
+
+symptom: >
+  On a shallow clone, `npm run verify:bug-traces` printed 771 TRACE_REFERENCE_MISSING
+  findings — one per reference to a legitimately retired path — each claiming the path
+  "never existed in the current tree or reachable Git history", then FAILED. Because that
+  gate is step 2 of `npm run health` and `npm run health:fast`, and because
+  tests/unit/bug_trace_integrity.test.ts asserts the same report is empty, the whole
+  repository was unlandable: `npm test`, `npm run ship` and every `loop.sh` cycle went
+  red at once. The presented diagnosis pointed at the evidence corpus, which was not the
+  defect; the defect was the clone. Reproduced from clean:
+  `git clone --depth 1 file://$PWD /tmp/x && cd /tmp/x && npm run verify:bug-traces`
+  → 771 findings; `git fetch --unshallow` in the same directory → OK, 0 findings.
+
+root_cause: >
+  `repositoryPathCatalog` (scripts/verify-bug-traces.ts) builds the historical half of
+  its path catalog from `git rev-list --objects --all`. That command answers honestly for
+  the commits a clone actually HAS, and a shallow clone has almost none, so the historical
+  set comes back near-empty with no error for the caller to notice — the silent-wrong-
+  answer case rather than the failure case. The verifier already handled the failure case
+  (GIT_HISTORY_UNAVAILABLE, raised when the git call throws); it had no way to tell
+  "this path never existed anywhere" apart from "this checkout cannot see whether it did".
+  "Never existed" is a claim about the whole history, and the run was making it while
+  holding one commit of history.
+
+fix: >
+  Probe `git rev-parse --is-shallow-repository` alongside the catalog. When history is
+  truncated AND the caller did not supply its own historicalPaths (an explicit set means
+  the caller has asserted the history), an unresolved reference is counted as unprovable
+  instead of being reported as missing, and one GIT_HISTORY_TRUNCATED finding carries the
+  failure while naming the remedy: `git fetch --unshallow`, or fetch-depth 0 in CI. The
+  gate still exits nonzero, so nothing lands from a shallow clone — only the diagnosis
+  changed, from 771 false accusations to one true statement. This is the same stance
+  scripts/verify-integrity.ts already takes for its own history-dependent guard
+  (COUNT_BASELINE_UNREADABLE, "a guard that cannot run is a failure, not a pass"), and it
+  is tested the same way that precedent is: by making the condition injectable
+  (`shallowHistory`) rather than by building a clone inside the suite.
+
+deterministic_witnesses:
+  - "on a real `git clone --depth 1`, the gate goes from 771 findings to exactly 1, and still exits 1"
+  - "that one finding is GIT_HISTORY_TRUNCATED on traces/bugs and states the 771 unresolved references and the remedy"
+  - "on full history the patched and pre-patch scripts print byte-identical output over the same tree (585 YAML files, 2213 references — 1441 current, 771 historical, 1 generated-output), both exit 0; checked by running the HEAD version of the script side by side with this one"
+  - "the 771 suppressed references are exactly the corpus's `historical` count on full history — the same set, adjudicated instead of accused"
+  - "reverting only scripts/verify-bug-traces.ts turns the three new cases red and leaves the four pre-existing ones green"
+
+mechanics_unchanged:
+  - "every finding code the gate already emitted, including TRACE_REFERENCE_MISSING on a full checkout"
+  - "the BugTraceStats shape and every counter in it; unprovable references are counted separately and deliberately not added to the stats"
+  - "the parse, identity, duplicate-id, filename and narrative checks, which are provable from the tree alone and stay live under a truncated clone"
+  - "callers that pass explicit currentPaths/historicalPaths, which never consult the git probe at all"
+  - "CI, which already checks out at fetch-depth 0 for exactly this reason and so never reaches the new branch"
+
+nonclaims:
+  - "This does not make a shallow clone a supported way to run the bar. It makes the failure legible; `git fetch --unshallow` is still required."
+  - "It does not audit the other history-dependent tools. bin/triage.ts has the same blind spot and degrades SILENTLY rather than loudly — its `buildHistory()` spine collapses to one commit, `buildsSince` returns null for every other build, and STALE_AFTER_BUILDS stops aging anything. That is filed separately rather than fixed here: bin/triage.ts runs main() at import, so making it testable needs a shared module and a CLI refactor in another subsystem."
+  - "tests/unit/qa_triage_cli.test.ts also fails on a shallow clone, at its own `expect(history.length).toBeGreaterThan(300)` guard. That guard is doing its job; it is named here only so the next reader knows it is the same cause."
+  - >
+    The adjacent GIT_HISTORY_UNAVAILABLE path is deliberately left as it was. When the
+    catalog cannot be built AT ALL — git missing, or not a repository — that finding is
+    still accompanied by one TRACE_REFERENCE_MISSING per reference in the corpus, which
+    is the same noise this change removes for the truncated case. It is arguably the same
+    defect, but it has a different trigger, no test exercises it today, and fixing it
+    here would mean shipping untested behaviour for a case this audit did not observe.
+    Noted rather than silently widened.
+
+production:
+  - scripts/verify-bug-traces.ts
+
+tests:
+  - tests/unit/bug_trace_integrity.test.ts
+
+verification:
+  - npm run verify:integrity
+  - npm run verify:bug-traces
+  - npm run verify:opening-density
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run ui:typecheck
+  - npm run validate
+  - npm run crawl:smoke
+  - npx vitest run tests/unit/bug_trace_integrity.test.ts

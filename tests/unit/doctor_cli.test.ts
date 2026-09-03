@@ -9,7 +9,7 @@
  * says the same thing in both states is worse than none — it teaches you to ignore it.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -238,6 +238,76 @@ describe("doctor", () => {
     // non-merging heuristic must stay silent or it teaches you to ignore it.
     const output = diagnose(corpusOf([CLAUDE]));
     expect(output).not.toContain("nothing merged at all");
+  });
+
+  // The failure this pair exists for, from the 2026-09-02 audit. A 100-player wave
+  // produced 633 committed tickets; 351 reached `corroborated` and were then aged out to
+  // `stale`. `isActionable` is a CONJUNCTION, so the dev loop could work none of them and
+  // `qa:triage` promoted zero — while doctor filtered on promotion alone and printed
+  // "351 actionable", then hit an open AUDIT item and stopped at "✓ The dev loop has
+  // work". The one command whose stated job is "if nothing is queued, why not" reported
+  // a healthy flywheel over a dead one, for hundreds of tickets.
+  function stalledBucket(): { tickets: string; queue: string } {
+    const tickets = temp("af-doc-stale-t-");
+    const real = readdirSync(join(ROOT, "qa", "tickets")).filter((f) => f.endsWith(".json"));
+    const source = JSON.parse(
+      readFileSync(join(ROOT, "qa", "tickets", real[0]!), "utf8"),
+    ) as Record<string, unknown>;
+    // Guard the fixture's premise rather than assuming it: this must be a ticket that
+    // cleared corroboration and is nonetheless not actionable.
+    expect(source["promotion"]).toBe("corroborated");
+    expect(source["status"]).toBe("stale");
+    writeFileSync(join(tickets, real[0]!), JSON.stringify(source), "utf8");
+    return { tickets, queue: temp("af-doc-stale-q-") };
+  }
+
+  it("counts a corroborated-but-stale ticket as NOT actionable", () => {
+    const { tickets, queue } = stalledBucket();
+    const output = run("bin/doctor.ts", [
+      "--store",
+      temp("af-doc-empty-"),
+      "--tickets",
+      tickets,
+      "--queue",
+      queue,
+    ]);
+
+    expect(output).toMatch(/tickets 1 \(0 actionable\)/);
+    expect(output).toContain("aged out");
+    // The corroboration advice is for a DIFFERENT stall and would be wrong here: this
+    // ticket already corroborated.
+    expect(output).not.toContain("Add a SECOND model family");
+  });
+
+  it("does not let an open audit item hide a playtest bucket that promotes nothing", () => {
+    const { tickets, queue } = stalledBucket();
+    run("bin/submit.ts", [
+      "--source",
+      "audit",
+      "--kind",
+      "bug",
+      "--title",
+      "an unrelated audit chore",
+      "--body",
+      "not from a playtest",
+      "--queue",
+      queue,
+    ]);
+
+    const output = run("bin/doctor.ts", [
+      "--store",
+      temp("af-doc-empty-"),
+      "--tickets",
+      tickets,
+      "--queue",
+      queue,
+    ]);
+
+    // The queue genuinely has work, so the checkmark is honest and stays...
+    expect(output).toContain("The dev loop has work");
+    // ...but it must no longer END the report and swallow the reason.
+    expect(output).toContain("Not from the playtest side");
+    expect(output).toContain("aged out");
   });
 
   it("distinguishes an empty corpus from a stalled one", () => {
