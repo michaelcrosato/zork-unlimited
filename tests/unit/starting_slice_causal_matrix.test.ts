@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assertProvenStartingSliceProofsExist,
@@ -52,6 +55,39 @@ describe("starting-slice causal matrix", () => {
       "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
     );
     expect(() => assertProvenStartingSliceProofsExist(matrix)).not.toThrow();
+  });
+
+  it("loads causal matrix from custom root directory and handles errors", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "ss-causal-matrix-test-"));
+    try {
+      // Missing file
+      expect(() => loadStartingSliceCausalMatrix(tempDir)).toThrow();
+
+      // Custom valid matrix
+      const matrix = loadStartingSliceCausalMatrix(process.cwd());
+      const targetDir = join(tempDir, "docs");
+      mkdirSync(targetDir, { recursive: true });
+      writeFileSync(
+        join(targetDir, "starting_slice_causal_matrix.json"),
+        JSON.stringify(matrix),
+      );
+
+      const loadedCustom = loadStartingSliceCausalMatrix(tempDir);
+      expect(loadedCustom.slice_id).toBe("albany_winter_relief_v1");
+
+      // Invalid JSON file
+      writeFileSync(join(targetDir, "starting_slice_causal_matrix.json"), "invalid json");
+      expect(() => loadStartingSliceCausalMatrix(tempDir)).toThrow(SyntaxError);
+
+      // Schema mismatch JSON file
+      writeFileSync(
+        join(targetDir, "starting_slice_causal_matrix.json"),
+        JSON.stringify({ schema_version: 999 }),
+      );
+      expect(() => loadStartingSliceCausalMatrix(tempDir)).toThrow();
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it("requires proof files for proven forks without imposing that requirement on partial proof", () => {
