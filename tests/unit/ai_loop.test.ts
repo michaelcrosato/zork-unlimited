@@ -107,6 +107,9 @@ describe("playtestTarget", () => {
 describe("fresh-overworld target normalization", () => {
   it("never resolves a direct quest id or quest-labeled summary", () => {
     expect(playtestTargetSummary("cold_forge", "cold_forge")).toBe(OVERWORLD_PLAYTEST_TARGET);
+    expect(playtestTargetMetadata("cold_forge", "cold_forge")).toEqual({
+      target: OVERWORLD_PLAYTEST_TARGET,
+    });
   });
 });
 
