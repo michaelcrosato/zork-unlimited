@@ -3094,9 +3094,10 @@ function canonicalCampaignServiceRelevantQuestStatesForLocation(
     }
 
     const completedQuestIds = new Set(state.completedQuestIds);
+    const questsById = overworldQuestsById(world);
     for (const questId of relevantQuestIds) {
       if (completedQuestIds.has(questId)) continue;
-      const quest = world.quests.find((candidate) => candidate.id === questId);
+      const quest = questsById.get(questId);
       if (!quest) continue;
       const exportedOutcomes = [...(quest.campaign_exports ?? [])].sort((left, right) =>
         left.ending_id.localeCompare(right.ending_id),
