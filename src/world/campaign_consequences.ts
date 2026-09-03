@@ -405,8 +405,12 @@ export function campaignCharacterMatchesIndexedConditions(
     !(conditions.forbids_any_relationship_memories ?? []).some((memory) =>
       index.relationshipMemories.has(relationshipMemoryConditionKey(memory)),
     ) &&
-    (conditions.requires_all_wounds ?? []).every((wound) => index.wounds.has(woundConditionKey(wound))) &&
-    !(conditions.forbids_any_wounds ?? []).some((wound) => index.wounds.has(woundConditionKey(wound)))
+    (conditions.requires_all_wounds ?? []).every((wound) =>
+      index.wounds.has(woundConditionKey(wound)),
+    ) &&
+    !(conditions.forbids_any_wounds ?? []).some((wound) =>
+      index.wounds.has(woundConditionKey(wound)),
+    )
   );
 }
 

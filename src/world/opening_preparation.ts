@@ -259,8 +259,7 @@ export function openingPreparationTerms(
   character: CampaignCharacterState,
 ): OpeningPreparationTerms {
   const sponsored =
-    profile.sponsor !== undefined &&
-    characterHasMemory(character, profile.sponsor.memory_id);
+    profile.sponsor !== undefined && characterHasMemory(character, profile.sponsor.memory_id);
   const terms = sponsored ? profile.sponsor! : profile.terms;
   return Object.freeze({
     minutes: terms.minutes,

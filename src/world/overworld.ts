@@ -691,7 +691,8 @@ export function overworldEdgesFrom(world: OverworldManifest, nodeId: string): Ov
     for (const exits of cache.values()) {
       exits.sort(
         (a, b) =>
-          a.travel_minutes - b.travel_minutes || a.destination.name.localeCompare(b.destination.name),
+          a.travel_minutes - b.travel_minutes ||
+          a.destination.name.localeCompare(b.destination.name),
       );
     }
     overworldEdgesFromCache.set(world, cache);
@@ -722,7 +723,10 @@ export function overworldAreasAt(world: OverworldManifest, nodeId: string): Over
   return cache.get(nodeId) ?? [];
 }
 
-const overworldCharactersAtCache = new WeakMap<OverworldManifest, Map<string, OverworldCharacter[]>>();
+const overworldCharactersAtCache = new WeakMap<
+  OverworldManifest,
+  Map<string, OverworldCharacter[]>
+>();
 
 /** Cache character lookup maps per node for fast O(1) retrieval on repeated queries */
 export function overworldCharactersAt(
@@ -2531,7 +2535,11 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
     for (const reachable of reachableAllyCharacters) {
       const applied = applyCampaignConsequences({
         character: reachable.character,
-        effects: overworldQuestCampaignEffectsForCharacter(campaignExport, reachable.character, reachable.index),
+        effects: overworldQuestCampaignEffectsForCharacter(
+          campaignExport,
+          reachable.character,
+          reachable.index,
+        ),
       });
       const commitment = fieldCommitmentsByOption.get(reachable.optionId);
       for (const promiseId of commitment?.promiseIds ?? []) {
@@ -3365,9 +3373,7 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
       scene.requires_completed_quests.every((questId) => completedQuestIds.has(questId)) &&
       (scene.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
       !(scene.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId)) &&
-      (scene.requires_resolved_events ?? []).every((eventId) =>
-        localEventsMap.has(eventId),
-      ) &&
+      (scene.requires_resolved_events ?? []).every((eventId) => localEventsMap.has(eventId)) &&
       (option.requires_event_options ?? []).every(
         (requirement) => requiredEventOptions.get(requirement.event_id) === requirement.option_id,
       ) &&
@@ -3407,14 +3413,26 @@ function canonicalCampaignServiceLocalJobOptionSelectionsForLocation(
     const reachableOptions = refsByJobId
       .get(jobId)!
       .filter((option) =>
-        canonicalCampaignServiceLocalJobSelectionIsReachable(world, state, [option], characterIndex),
+        canonicalCampaignServiceLocalJobSelectionIsReachable(
+          world,
+          state,
+          [option],
+          characterIndex,
+        ),
       );
     const next: (readonly CampaignServiceLocalJobOption[])[] = [];
     for (const selection of selections) {
       next.push(selection);
       for (const option of reachableOptions) {
         const candidate = [...selection, option];
-        if (canonicalCampaignServiceLocalJobSelectionIsReachable(world, state, candidate, characterIndex)) {
+        if (
+          canonicalCampaignServiceLocalJobSelectionIsReachable(
+            world,
+            state,
+            candidate,
+            characterIndex,
+          )
+        ) {
           next.push(candidate);
         }
       }

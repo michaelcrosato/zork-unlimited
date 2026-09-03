@@ -206,8 +206,7 @@ export function openingLeadSourceTerms(
   character: CampaignCharacterState,
 ): OpeningLeadSourceTerms {
   const sponsored =
-    option.sponsor !== undefined &&
-    characterHasMemory(character, option.sponsor.memory_id);
+    option.sponsor !== undefined && characterHasMemory(character, option.sponsor.memory_id);
   const terms = sponsored ? option.sponsor! : option.terms;
   return Object.freeze({
     minutes: terms.minutes,
