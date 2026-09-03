@@ -103,6 +103,11 @@ function main(): void {
     `  verified ${stats.verified}, corroborated ${stats.corroborated}, ` +
       `accumulating ${stats.accumulating}, stale ${stats.stale}`,
   );
+  // Retirement removes tracked files, so it is reported rather than left to be noticed
+  // in a diff.
+  if (stats.retired > 0) {
+    console.log(`  retired ${stats.retired} aged-out ticket(s) with no notes or decision`);
+  }
 
   const summary = summarizeBucket(result.tickets);
   console.log(`  bucket: ${summary.actionable} actionable of ${summary.total}`);

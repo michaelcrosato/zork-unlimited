@@ -200,6 +200,36 @@ function buildsSince(buildHistory: readonly string[], build: string): number | n
   return index === -1 ? null : index;
 }
 
+/**
+ * Whether a ticket the current corpus says nothing about may leave the bucket.
+ *
+ * Every condition here is a way of asking "is there anything in this file that
+ * re-triage could not reproduce?", and retirement happens only when the answer is no:
+ *
+ * - `status === "stale"` is the age test, already made. A ticket only reaches `stale`
+ *   by going more than `STALE_AFTER_BUILDS` builds without a fresh report while
+ *   unverified, and any fresh report revives it to `open` above — so a ticket that is
+ *   BOTH stale and absent from the current corpus has been silent for two independent
+ *   reasons. Every other status is somebody's live position and is never touched:
+ *   `wont_fix` and `verified_fixed` are decisions, `in_progress` and `fixed` are work
+ *   underway, `open` is the queue itself.
+ * - No `notes`. Notes are the one free-text field a human writes and nothing can
+ *   regenerate. A ticket carrying them is kept whatever its status.
+ * - Nothing else in the file is authored. `ticket_id` is derived from the cluster's
+ *   stable identity and `evidence` is recomputed from the contributing sessions on
+ *   every run, so if the finding recurs, triage rebuilds a byte-identical ticket under
+ *   the same filename — retirement costs a recurrence nothing.
+ *
+ * What it does cost is the audit trail of a finding nobody acted on, and that is a
+ * deliberate trade rather than an oversight: the retired file stays in Git history,
+ * which is where AGENTS.md ("Token Economy") already puts old detail, and a bucket
+ * nobody can read past is worse than one that forgets what it was never asked to
+ * remember.
+ */
+function isRetireable(ticket: QaTicket): boolean {
+  return ticket.status === "stale" && ticket.notes === undefined;
+}
+
 export type TriageResult = {
   tickets: QaTicket[];
   /** Tickets the dev loop may pick up right now, highest priority first. */
@@ -213,6 +243,8 @@ export type TriageResult = {
     corroborated: number;
     accumulating: number;
     stale: number;
+    /** Aged-out, undecided tickets dropped from the bucket this run. See `isRetireable`. */
+    retired: number;
   };
 };
 
@@ -225,6 +257,14 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
   const sessionById = new Map(input.sessions.map((s) => [s.record_id, s]));
   const { records: issues, confusionKeys } = sessionIssueRecords(input.sessions, idx);
   const clusters = clusterIssues(issues);
+
+  // Retirement is licensed by a corpus that actually said something. Triage runs
+  // routinely against an empty or half-synced store — a fresh clone, a lane worktree,
+  // a machine holding only its own shard — and in that state EVERY ticket falls to the
+  // carry-forward loop below, so an unguarded rule would empty the bucket in one pass
+  // and read as a corpus problem rather than a retirement policy. With no clusters,
+  // triage has no basis to conclude anything went quiet, and carries everything.
+  const corpusHasEvidence = clusters.length > 0;
 
   const tickets: QaTicket[] = [];
   for (const cluster of clusters) {
@@ -294,11 +334,24 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
   }
 
   // Tickets that exist on disk but have no evidence in the current corpus are carried
-  // forward untouched. They were filed for a reason and the corpus may simply have been
-  // pruned, re-cloned, or split across machines — dropping them would silently lose a
+  // forward. They were filed for a reason and the corpus may simply have been pruned,
+  // re-cloned, or split across machines — dropping them would silently lose a
   // maintainer's `wont_fix` decision.
+  //
+  // Carrying EVERY such ticket forward unconditionally, though, made the bucket
+  // monotonic: nothing ever left it. Four playtest waves left 633 tracked files in
+  // `qa/tickets/`, every one of them `stale` — 27% of the repository's file count for
+  // 3% of its bytes, and noise in every `ls`, `rg` and agent index, because a stale
+  // ticket is by definition one the dev loop is not allowed to pick up. So a narrow
+  // class retires instead; `isRetireable` states the exact conditions.
+  let retired = 0;
   for (const [id, prior] of existing) {
-    if (!tickets.some((t) => t.ticket_id === id)) tickets.push(prior);
+    if (tickets.some((t) => t.ticket_id === id)) continue;
+    if (corpusHasEvidence && isRetireable(prior)) {
+      retired += 1;
+      continue;
+    }
+    tickets.push(prior);
   }
 
   tickets.sort(compareTickets);
@@ -316,6 +369,7 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
       corroborated: tickets.filter((t) => t.promotion === "corroborated").length,
       accumulating: tickets.filter((t) => t.promotion === "accumulating").length,
       stale: tickets.filter((t) => t.status === "stale").length,
+      retired,
     },
   };
 }

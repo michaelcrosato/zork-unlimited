@@ -1145,3 +1145,105 @@ describe("playtest report save keeps interviews intact or fail-closed", () => {
     expect(roundTrip.transcript).toContain("spawn grok ENOENT");
   });
 });
+
+// `qa/tickets/` is tracked, and until this rule existed nothing ever left it: triage
+// carried every prior ticket forward unconditionally, so four playtest waves grew the
+// bucket to 633 files — every one `stale`, therefore invisible to the dev loop, and
+// 27% of the repository's tracked file count for 3% of its bytes. These tests pin both
+// halves of the rule: what retires, and the much longer list of what may not.
+describe("retiring aged-out tickets so the bucket stays bounded", () => {
+  const transcript = "line one\nline two\n";
+
+  function prior(over: Partial<QaTicket> = {}): QaTicket {
+    return {
+      schema_version: 1,
+      ticket_id: "9".repeat(16),
+      title: "an old finding nobody is chasing",
+      kind: "bug",
+      severity: "S2",
+      status: "stale",
+      promotion: "accumulating",
+      location: "somewhere_else",
+      excerpts: [],
+      evidence: {
+        report_count: 1,
+        families: ["gpt"],
+        providers: ["codex"],
+        tiers: ["volume"],
+        has_runner_enforced_report: true,
+        session_ids: ["s"],
+        first_seen_build: "b".repeat(40),
+        last_seen_build: "b".repeat(40),
+        first_seen_at: "2026-08-01T12:00:00.000Z",
+        last_seen_at: "2026-08-01T12:00:00.000Z",
+      },
+      priority: 4,
+      ...over,
+    };
+  }
+
+  /** Triage over a corpus that reports one real finding, plus the given prior tickets. */
+  function reTriage(existingTickets: readonly QaTicket[]) {
+    const store = tempDir();
+    writePlaytestSession(store, sealPlaytestSession(body()), transcript);
+    return triagePlaytestCorpus({
+      sessions: listPlaytestSessions(store).entries.map((entry) => entry.record),
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+      existingTickets,
+    });
+  }
+
+  it("drops a stale ticket the corpus no longer mentions", () => {
+    const { tickets, stats } = reTriage([prior()]);
+    expect(stats.retired).toBe(1);
+    expect(tickets.map((t) => t.ticket_id)).not.toContain("9".repeat(16));
+  });
+
+  // Everything below is a way of saying "this file holds something re-triage cannot
+  // rebuild". Each one is a separate way the old unconditional carry-forward was right.
+  it("keeps a stale ticket carrying a human's notes", () => {
+    const { tickets, stats } = reTriage([prior({ notes: "waiting on the map rewrite" })]);
+    expect(stats.retired).toBe(0);
+    expect(tickets.map((t) => t.ticket_id)).toContain("9".repeat(16));
+  });
+
+  it.each(["open", "in_progress", "fixed", "verified_fixed", "wont_fix"] as const)(
+    "keeps a ticket in the %s state, which is somebody's live position",
+    (status) => {
+      const { tickets, stats } = reTriage([prior({ status })]);
+      expect(stats.retired).toBe(0);
+      expect(tickets.map((t) => t.ticket_id)).toContain("9".repeat(16));
+    },
+  );
+
+  // The dangerous case. Triage runs routinely against a store that is empty or holds
+  // only one machine's shard — a fresh clone, a lane worktree, a half-synced corpus —
+  // and there EVERY ticket looks like it went quiet. Retiring on that evidence would
+  // empty the bucket in a single pass.
+  it("retires nothing when the corpus itself produced no clusters", () => {
+    const { tickets, stats } = triagePlaytestCorpus({
+      sessions: [],
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+      existingTickets: [prior(), prior({ ticket_id: "8".repeat(16) })],
+    });
+    expect(stats.clusters).toBe(0);
+    expect(stats.retired).toBe(0);
+    expect(tickets).toHaveLength(2);
+  });
+
+  // Retirement is not a decision about the finding, only about the file. Fresh evidence
+  // revives the ticket at its original id, so a recurrence costs nothing.
+  it("rebuilds the same ticket id when the finding comes back", () => {
+    const first = reTriage([]);
+    expect(first.tickets.length).toBeGreaterThan(0);
+    const ids = first.tickets.map((t) => t.ticket_id);
+
+    const again = reTriage(first.tickets.map((t) => ({ ...t, status: "stale" as const })));
+    // Present in the current corpus, so each revives rather than retires.
+    expect(again.stats.retired).toBe(0);
+    expect(again.tickets.map((t) => t.ticket_id)).toEqual(ids);
+    expect(again.tickets.every((t) => t.status === "open")).toBe(true);
+  });
+});
