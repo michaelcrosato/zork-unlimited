@@ -678,6 +678,228 @@ function sha256Text(text: string): string {
   return createHash("sha256").update(Buffer.from(text, "utf8")).digest("hex");
 }
 
+describe("validateStartingSlicePilot cohort validation and gate outputs", () => {
+  it("returns invalid certification result when fleetDir is non-existent", () => {
+    const result = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir: join(tmpdir(), "non_existent_fleet_dir_" + Date.now()),
+    });
+    expect(result.valid).toBe(false);
+    expect(result.passed).toBe(false);
+    expect(result.pilot_passed).toBe(false);
+    expect(result.cohort_kind).toBe("pilot");
+    expect(result.expected_count).toBe(10);
+    expect(result.authority_certified).toBe(false);
+    expect(result.validity_errors.join("\n")).toContain("fleet bundle unsafe");
+  });
+
+  it("evaluates pilot cohort gates and reports pilot_passed status accurately", () => {
+    const base = mkdtempSync(join(tmpdir(), "af-pilot-cert-test-"));
+    tempDirs.push(base);
+    const fleetDir = join(base, "fleet", "pilot-fleet");
+    const reportsDir = join(base, "reports");
+    mkdirSync(fleetDir, { recursive: true });
+    mkdirSync(reportsDir, { recursive: true });
+    const build = fixtureBuild;
+    const receipt = currentReceipt();
+
+    const outcomes = [
+      "ending_held",
+      "ending_held",
+      "ending_held",
+      "ending_held",
+      "ending_held",
+      "ending_held",
+      "ending_held",
+      "ending_pack_diverted",
+      "ending_drive_reserve_spent",
+      "ending_fortified_cade_terms",
+    ];
+
+    const rows = outcomes.map((outcome, index) => {
+      const seed = 600 + index;
+      const model = "sonnet" as const;
+      const prefix = join(reportsDir, `20260101T000000Z_overworld_seed${seed}`);
+      const report = `${prefix}.md`;
+      const sidecar = {
+        schema_version: 2,
+        report_schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        evidence_status: "verified",
+        session_id: `session-${seed}`,
+        run_seed: seed,
+        build,
+        quest_outcomes: [["wolf_winter", outcome]],
+        receipt,
+      };
+      const reportBody = reportText(receipt);
+      const sidecarBody = `${JSON.stringify(sidecar, null, 2)}\n`;
+      const claudeSessionId = `00000000-0000-4000-8000-${String(seed).padStart(12, "0")}`;
+      const actualModel = "claude-sonnet-4-5-20260716";
+      const evidenceBody = `${[
+        {
+          schema_version: 2,
+          play_mode: "pure",
+          event: "fresh_start",
+          start_surface: "fresh_overworld",
+          session_id: sidecar.session_id,
+          run_seed: seed,
+          build,
+        },
+        {
+          schema_version: 2,
+          play_mode: "pure",
+          event: "journey_exit",
+          start_surface: "fresh_overworld",
+          session_id: sidecar.session_id,
+          run_seed: seed,
+          build,
+          quest_outcomes: sidecar.quest_outcomes,
+          receipt,
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n")}\n`;
+      const primaryEnvelopeBody = `${JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: claudeSessionId,
+        result: reportBody,
+        stop_reason: "end_turn",
+        terminal_reason: "completed",
+        permission_denials: [],
+        modelUsage: { [actualModel]: {} },
+      })}\n`;
+      const modelAttestation = {
+        schema_version: 2,
+        run_seed: seed,
+        model,
+        persona: "default",
+        target: "overworld",
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        build,
+        game_session_id: sidecar.session_id,
+        claude_session_id: claudeSessionId,
+        actual_model: actualModel,
+        report_recovered: false,
+        receipt_hash: receipt.receiptHash,
+        report_sha256: sha256Text(reportBody),
+        run_sidecar_sha256: sha256Text(sidecarBody),
+        run_evidence_sha256: sha256Text(evidenceBody),
+        primary_envelope_sha256: sha256Text(primaryEnvelopeBody),
+        initial_report_sha256: null,
+        recovery_metadata_sha256: null,
+        recovery_envelope_sha256: null,
+      };
+      writeFileSync(report, reportBody);
+      writeFileSync(`${prefix}.run.json`, sidecarBody);
+      writeFileSync(`${prefix}.evidence.jsonl`, evidenceBody);
+      writeFileSync(`${prefix}.json`, primaryEnvelopeBody);
+      writeFileSync(`${prefix}.fleet.json`, `${JSON.stringify(modelAttestation, null, 2)}\n`);
+      return {
+        planned_index: index,
+        seed,
+        persona: "default",
+        model,
+        target: "overworld",
+        report,
+        status: "verified",
+        attempts: 1,
+        attempt_history: [
+          {
+            attempt: 1,
+            exit: 0,
+            classification: "verified",
+            report_recovered: false,
+            archive: null,
+          },
+        ],
+        report_recovered: false,
+        exit: 0,
+        log: null,
+        report_schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        evidence_status: "verified",
+        session_contract_version: 3,
+        baseline_decisions: 40,
+        accepted_decisions: receipt.acceptedDecisions,
+        retention_choices: receipt.retentionHistory,
+        checkpoint: receipt.checkpoint,
+        exit_reason: receipt.exitReason,
+        exit_reasons: receipt.exitReasons,
+        receipt_hash: receipt.receiptHash,
+        failure_reason: null,
+        evidence_schema_version: 2,
+        model_attestation: modelAttestation,
+        run_seed: seed,
+        build,
+        quest_outcomes: sidecar.quest_outcomes,
+      };
+    });
+
+    const summary = {
+      label: "pilot-fleet",
+      stamp: "20260101T000000Z",
+      count: 10,
+      concurrency: 4,
+      reportsDir,
+      report_schema_version: 2,
+      play_mode: "pure",
+      start_surface: "fresh_overworld",
+      retention_contract_eligible: true,
+      retention_eligible_verified_runs: 10,
+      retention_ineligible_or_unverified_runs: 0,
+      session_contract_version: 3,
+      baseline_decisions: 40,
+      verified: 10,
+      "skipped-resume": 0,
+      failed: 0,
+      total_attempts: 10,
+      failed_attempts: 0,
+      technical_timeouts: 0,
+      report_recovered_runs: 0,
+      seed_base: 600,
+      model: "sonnet",
+      personas: "default",
+      target: "overworld",
+      resume_enabled: false,
+      evidence_schema_version: 2,
+      model_attestation_schema_version: 2,
+      build,
+    };
+
+    writeFileSync(join(fleetDir, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
+    writeFileSync(
+      join(fleetDir, "manifest.jsonl"),
+      `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`,
+    );
+
+    const result = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.cohort_kind).toBe("pilot");
+    expect(result.expected_count).toBe(10);
+    expect(result.authority_certified).toBe(false);
+    expect(result.pilot_gates).toEqual({
+      all_10_recognized_wolf_outcomes: true,
+      at_least_3_top_level_strategies: true,
+      no_strategy_above_7_of_10: true,
+    });
+    expect(result.pilot_gate_failures).toEqual([]);
+    expect(result.pilot_passed).toBe(true);
+  });
+});
+
 describe("closed fleet filesystem integrity", () => {
   it("accepts client-pinned v9 Terra-direct and Spark pilots, then rejects historical and lifecycle tamper", () => {
     const base = mkdtempSync(join(tmpdir(), "af-codex-slice-certifier-"));
