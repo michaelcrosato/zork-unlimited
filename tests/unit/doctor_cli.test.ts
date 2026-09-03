@@ -9,7 +9,7 @@
  * says the same thing in both states is worse than none — it teaches you to ignore it.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -22,6 +22,7 @@ import {
 } from "../../src/blind/providers.js";
 import { sealPlaytestSession, type PlaytestSessionBody } from "../../src/qa/session_record.js";
 import { sha256Hex, writePlaytestSession } from "../../src/qa/session_store.js";
+import { isActionable, QaTicketSchema, ticketFileName } from "../../src/qa/ticket.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
@@ -249,15 +250,44 @@ describe("doctor", () => {
   // a healthy flywheel over a dead one, for hundreds of tickets.
   function stalledBucket(): { tickets: string; queue: string } {
     const tickets = temp("af-doc-stale-t-");
-    const real = readdirSync(join(ROOT, "qa", "tickets")).filter((f) => f.endsWith(".json"));
-    const source = JSON.parse(
-      readFileSync(join(ROOT, "qa", "tickets", real[0]!), "utf8"),
-    ) as Record<string, unknown>;
-    // Guard the fixture's premise rather than assuming it: this must be a ticket that
-    // cleared corroboration and is nonetheless not actionable.
-    expect(source["promotion"]).toBe("corroborated");
-    expect(source["status"]).toBe("stale");
-    writeFileSync(join(tickets, real[0]!), JSON.stringify(source), "utf8");
+    // State the premise here rather than borrowing a ticket out of `qa/tickets/`.
+    // Reading the live bucket coupled these two cases to whatever the committed corpus
+    // happened to hold, and the corpus is explicitly transient: `isRetireable` deletes
+    // aged-out tickets, so the retirement pass emptied the bucket of `.json` files and
+    // `real[0]!` became `undefined` — the fixture crashed on a TypeError before either
+    // assertion ran. A checkout with no tickets is a legitimate state, not a broken one.
+    const ticket = QaTicketSchema.parse({
+      schema_version: 1,
+      ticket_id: "1b46b06b7e15e3f7",
+      title: "Consequence text duplicated 'Cost: 10 minutes and $0'.",
+      kind: "bug",
+      severity: "S0",
+      status: "stale",
+      promotion: "corroborated",
+      location: "Road Warden quick-setup confirmation",
+      excerpts: ["Consequence text duplicated 'Cost: 10 minutes and $0'."],
+      evidence: {
+        report_count: 1,
+        families: ["grok"],
+        providers: ["grok_cli"],
+        tiers: ["reference"],
+        has_runner_enforced_report: false,
+        session_ids: ["552bb45331836c2fcdd55acb8943c0ae07e60ab3e71ec7f62e3d40ce0ae69c19"],
+        first_seen_build: "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+        last_seen_build: "fe2619a884e55cf24175d91764f030f07ff0ec9c",
+        first_seen_at: "2026-08-31T01:10:41.260Z",
+        last_seen_at: "2026-08-31T01:10:41.260Z",
+      },
+      priority: 3,
+    });
+    // Guard the premise with the predicate under test rather than with a status string:
+    // corroborated, and still not actionable. `QaTicketSchema.parse` keeps the fixture
+    // honest against the real shape — the reason the live bucket was read in the first
+    // place — and `isActionable` is the conjunction these two cases are about, so if it
+    // ever stops excluding a stale ticket this fails here instead of going vacuous.
+    expect(ticket.promotion).toBe("corroborated");
+    expect(isActionable(ticket)).toBe(false);
+    writeFileSync(join(tickets, ticketFileName(ticket)), JSON.stringify(ticket), "utf8");
     return { tickets, queue: temp("af-doc-stale-q-") };
   }
 
