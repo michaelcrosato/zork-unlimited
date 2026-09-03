@@ -56,7 +56,7 @@ describe("starting-slice causal matrix", () => {
     expect(() => assertCountedStartingSliceProofsExist(matrix)).not.toThrow();
   });
 
-it("requires proof files for counted forks and ignores missing proof files on uncounted forks", () => {
+  it("requires proof files for counted forks and ignores missing proof files on uncounted forks", () => {
     const matrix = loadStartingSliceCausalMatrix();
     const missingPath = "tests/starting_slice/definitely_missing_ss_f01_counterfactual.test.ts";
     const hostile = structuredClone(matrix);
