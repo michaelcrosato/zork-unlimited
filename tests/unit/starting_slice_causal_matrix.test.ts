@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertCountedStartingSliceProofsExist,
   assertProvenStartingSliceProofsExist,
   loadStartingSliceCausalMatrix,
   parseStartingSliceCausalMatrix,
@@ -52,6 +53,36 @@ describe("starting-slice causal matrix", () => {
       "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
     );
     expect(() => assertProvenStartingSliceProofsExist(matrix)).not.toThrow();
+    expect(() => assertCountedStartingSliceProofsExist(matrix)).not.toThrow();
+  });
+
+it("requires proof files for counted forks and ignores missing proof files on uncounted forks", () => {
+    const matrix = loadStartingSliceCausalMatrix();
+    const missingPath = "tests/starting_slice/definitely_missing_ss_f01_counterfactual.test.ts";
+    const hostile = structuredClone(matrix);
+    const countedFork = hostile.forks.find((fork) => fork.id === "SS-F01-character-background");
+    if (!countedFork) throw new Error("expected the counted SS-F01 fork");
+    countedFork.counterfactual_test = missingPath;
+
+    expect(() => assertCountedStartingSliceProofsExist(hostile)).toThrowError(
+      new Error(
+        `Counted starting-slice fork SS-F01-character-background is missing ${missingPath}.`,
+      ),
+    );
+
+    const uncountedHostile = structuredClone(matrix);
+    const uncountedFork = uncountedHostile.forks.find(
+      (fork) => fork.id === "SS-F19-witnessed-wound-care",
+    );
+    if (!uncountedFork) throw new Error("expected the uncounted SS-F19 fork");
+    uncountedFork.counterfactual_test = missingPath;
+
+    expect(() => assertProvenStartingSliceProofsExist(uncountedHostile)).toThrowError(
+      new Error(
+        `Proven starting-slice fork SS-F19-witnessed-wound-care is missing ${missingPath}.`,
+      ),
+    );
+    expect(() => assertCountedStartingSliceProofsExist(uncountedHostile)).not.toThrow();
   });
 
   it("requires proof files for proven forks without imposing that requirement on partial proof", () => {

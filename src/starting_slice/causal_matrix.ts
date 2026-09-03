@@ -150,3 +150,17 @@ export function assertProvenStartingSliceProofsExist(
     }
   }
 }
+
+export function assertCountedStartingSliceProofsExist(
+  matrix: StartingSliceCausalMatrix,
+  root = process.cwd(),
+): void {
+  for (const fork of matrix.forks) {
+    if (!fork.counts_toward_contract) continue;
+    if (!existsSync(resolve(root, fork.counterfactual_test))) {
+      throw new Error(
+        `Counted starting-slice fork ${fork.id} is missing ${fork.counterfactual_test}.`,
+      );
+    }
+  }
+}
