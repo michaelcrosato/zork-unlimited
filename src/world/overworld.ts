@@ -2378,14 +2378,16 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
         effects: overworldQuestCampaignEffectsForCharacter(campaignExport, reachable.character),
       });
       const commitment = fieldCommitmentsByOption.get(reachable.optionId);
+      const beforePromises = new Map(
+        reachable.character.promises.map((promise) => [promise.promiseId, promise]),
+      );
+      const afterPromises = new Map(
+        applied.characterAfter.promises.map((promise) => [promise.promiseId, promise]),
+      );
       for (const promiseId of commitment?.promiseIds ?? []) {
-        const before = reachable.character.promises.find(
-          (promise) => promise.promiseId === promiseId,
-        );
+        const before = beforePromises.get(promiseId);
         if (before?.status !== "active") continue;
-        const after = applied.characterAfter.promises.find(
-          (promise) => promise.promiseId === promiseId,
-        );
+        const after = afterPromises.get(promiseId);
         if (!after || after.status === "active") {
           throw new Error(
             `Opening ally target quest campaign export "${campaignExport.ending_id}" leaves field promise "${promiseId}" unresolved.`,
