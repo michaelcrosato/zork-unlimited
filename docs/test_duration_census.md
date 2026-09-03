@@ -268,15 +268,18 @@ checks separate "this file is expensive" from "this box was busy".
 
 **Contention costs 1.5–1.8x.** Re-running three files alone:
 
-| file                           | in the suite |   alone |           frozen table |
-| ------------------------------ | -----------: | ------: | ---------------------: |
-| `mcp_pure_play_mode`           |     14.1 min | 8.0 min |                2.8 min |
-| `overworld_snapshot_integrity` |      2.3 min | 1.5 min |                  37.4s |
-| `mcp_tools`                    |      1.5 min |     56s | _unlisted (priced 3s)_ |
+| file                           | in the suite |    alone |           frozen table |
+| ------------------------------ | -----------: | -------: | ---------------------: |
+| `overworld_cli`                |     22.4 min | 13.0 min |                4.8 min |
+| `mcp_pure_play_mode`           |     14.1 min |  8.0 min |                2.8 min |
+| `overworld_snapshot_integrity` |      2.3 min |  1.5 min |                  37.4s |
+| `mcp_tools`                    |      1.5 min |      56s | _unlisted (priced 3s)_ |
 
-Contention explains part of the gap and not the rest. `mcp_pure_play_mode` is
-**8 minutes alone against a 2.8-minute frozen price** — it grew, and it grew in
-the lane that runs on every commit. `mcp_tools` costs 56 seconds alone and the
+Contention explains part of the gap — a consistent 1.5-1.8x — and not the rest.
+`overworld_cli` is **13 minutes alone against a 4.8-minute frozen price** and
+`mcp_pure_play_mode` **8 minutes against 2.8**. Both grew, and both grew in the
+lane that runs on every commit. Run alone `overworld_cli` passes, and its slowest
+single test case still takes 92 seconds. `mcp_tools` costs 56 seconds alone and the
 allocator prices it at the 3-second default for unlisted files, which is the
 "packed as if trivial" failure the table's own comment predicts.
 
@@ -335,10 +338,11 @@ At 8 workers the same two moves take the lane from 27.1 min to **12.6 min**.
 **2. Deal with the four files that set the floor.** `overworld_cli` (22.4 min),
 `mcp_pure_play_mode` (14.1 min), `campus_archive_query_counterfactual` (7.5 min)
 and `crawl_workers_determinism` (5.4 min) are 0.8% of the fast lane and 23% of
-its cost. The floor matters more than the total: while `overworld_cli` is in the
-lane, **no worker count can take the lane below 22.4 minutes** — after move 1 the
-lane is bounded almost entirely by that one file (37.2 min wall against a 21.8
-min floor). Removing the four drops the floor to 4.6 min, which is what makes
+its cost. The floor matters more than the total: a lane can never finish
+faster than its longest single file, and **that file is `overworld_cli` — 22.4
+min under load, 13.0 min even with the machine to itself.** After move 1 the
+fast lane is bounded almost entirely by it (37.2 min wall against a 21.8 min
+floor). Removing the four drops the floor to 4.6 min, which is what makes
 more workers worth buying at all.
 
 Two of the four (`overworld_cli`, `crawl_workers_determinism`) are the
