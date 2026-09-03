@@ -1726,7 +1726,6 @@ describe("Codex certified fleet rollout authority", () => {
   });
 });
 
-
 describe("sha256ArtifactBytes", () => {
   it("hashes empty byte array to standard SHA-256 digest", () => {
     const empty = new Uint8Array(0);
