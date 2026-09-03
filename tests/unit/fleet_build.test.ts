@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import {
   captureFleetGitProvenance,
   requireCleanFleetGitProvenance,
+  runGit,
+  validateGitArgs,
 } from "../../src/starting_slice/fleet_build.js";
 
 function git(root: string, ...args: string[]): string {
@@ -56,6 +58,23 @@ describe("pure fleet Git provenance", () => {
     const root = mkdtempSync(join(tmpdir(), "af-fleet-build-no-git-"));
     try {
       expect(() => captureFleetGitProvenance(root)).toThrow(/could not identify HEAD/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("validates git arguments and rejects disallowed subcommands or flags", () => {
+    expect(() => validateGitArgs([])).toThrow(/empty arguments/i);
+    expect(() => validateGitArgs(["checkout"])).toThrow(/disallowed subcommand/i);
+    expect(() => validateGitArgs(["rev-parse", "--exec", "id"])).toThrow(/disallowed argument/i);
+    expect(() => validateGitArgs(["diff", "-c", "core.pager=cat"])).toThrow(/disallowed argument/i);
+
+    const root = mkdtempSync(join(tmpdir(), "af-fleet-build-args-"));
+    try {
+      expect(() => runGit(root, ["--exec=calc"])).toThrow(/disallowed subcommand/i);
+      expect(() => runGit(root, ["rev-parse", "--upload-pack=calc"])).toThrow(
+        /disallowed argument/i,
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

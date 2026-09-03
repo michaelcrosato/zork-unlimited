@@ -20,7 +20,34 @@ interface GitResult {
   stderr: string;
 }
 
-function runGit(root: string, args: readonly string[]): GitResult {
+const ALLOWED_GIT_SUBCOMMANDS = new Set(["rev-parse", "diff"]);
+const ALLOWED_GIT_FLAGS = new Set([
+  "--verify",
+  "--quiet",
+  "--ignore-submodules=untracked",
+  "--cached",
+  "--",
+]);
+const ALLOWED_GIT_POSITIONAL = new Set(["HEAD^{commit}"]);
+
+export function validateGitArgs(args: readonly string[]): void {
+  if (args.length === 0) {
+    throw new Error("pure fleet provenance Git wrapper received empty arguments");
+  }
+  const subcommand = args[0];
+  if (!subcommand || !ALLOWED_GIT_SUBCOMMANDS.has(subcommand)) {
+    throw new Error(`pure fleet provenance Git wrapper disallowed subcommand: ${subcommand}`);
+  }
+  for (let i = 1; i < args.length; i++) {
+    const arg = args[i]!;
+    if (!ALLOWED_GIT_FLAGS.has(arg) && !ALLOWED_GIT_POSITIONAL.has(arg)) {
+      throw new Error(`pure fleet provenance Git wrapper disallowed argument: ${arg}`);
+    }
+  }
+}
+
+export function runGit(root: string, args: readonly string[]): GitResult {
+  validateGitArgs(args);
   const result = spawnSync("git", ["-C", root, ...args], {
     encoding: "utf8",
     windowsHide: true,
