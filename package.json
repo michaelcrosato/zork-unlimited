@@ -22,6 +22,8 @@
     "test:exhaustive": "vitest run --reporter=dot --project exhaustive-rpg --project variant-liveness-proof --project ending-render-proof --project metamorphic-observation",
     "test:coverage": "vitest run --project standard --coverage --reporter=dot --testTimeout=300000",
     "test:ending-render-proof": "vitest run --project ending-render-proof --reporter=dot",
+    "test:durations": "tsx scripts/measure-test-durations.ts",
+    "test:census": "tsx scripts/test-duration-census.ts",
     "verify:integrity": "tsx scripts/verify-integrity.ts",
     "verify:bug-traces": "tsx scripts/verify-bug-traces.ts",
     "verify:opening-density": "tsx scripts/verify-opening-density.ts",
