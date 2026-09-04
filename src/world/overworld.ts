@@ -703,6 +703,22 @@ export function overworldJobsAt(world: OverworldManifest, nodeId: string): Overw
     );
 }
 
+const overworldLocalEventsByIdCache = new WeakMap<
+  OverworldManifest,
+  Map<string, OverworldLocalEvent>
+>();
+
+export function overworldLocalEventsById(
+  world: OverworldManifest,
+): Map<string, OverworldLocalEvent> {
+  let map = overworldLocalEventsByIdCache.get(world);
+  if (!map) {
+    map = new Map(world.local_events.map((event) => [event.id, event]));
+    overworldLocalEventsByIdCache.set(world, map);
+  }
+  return map;
+}
+
 const roadEventCache = new WeakMap<OverworldManifest, Map<string, OverworldRoadEvent>>();
 
 export function overworldRoadEventFor(
@@ -3154,8 +3170,9 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
   });
   if (selected.some((entry) => entry === null)) return false;
 
+  const localEvents = overworldLocalEventsById(world);
   for (const [eventId, optionId] of requiredEventOptions) {
-    const event = world.local_events.find((candidate) => candidate.id === eventId);
+    const event = localEvents.get(eventId);
     if (!event?.authored_scene?.options.some((option) => option.id === optionId)) return false;
   }
 
@@ -3166,9 +3183,7 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
       scene.requires_completed_quests.every((questId) => completedQuestIds.has(questId)) &&
       (scene.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
       !(scene.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId)) &&
-      (scene.requires_resolved_events ?? []).every((eventId) =>
-        world.local_events.some((event) => event.id === eventId),
-      ) &&
+      (scene.requires_resolved_events ?? []).every((eventId) => localEvents.has(eventId)) &&
       (option.requires_event_options ?? []).every(
         (requirement) => requiredEventOptions.get(requirement.event_id) === requirement.option_id,
       ) &&
