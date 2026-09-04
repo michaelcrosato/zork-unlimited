@@ -748,6 +748,13 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   // `use <obj> on <obj>`.
   for (const o of index.objectsWithUseInteractions) {
     for (const it of o.interactions) {
+      if (it.verb !== "USE" || it.target === undefined) continue;
+      // Fast presence check before string formatting, condition evaluation, or resolution:
+      // a USE interaction requires its target to be present (in room/inventory) and its
+      // optional required item to be held in inventory.
+      if (!present(index, state, it.target)) continue;
+      if (it.item !== undefined && !state.inventory.includes(it.item)) continue;
+
       const projection = projectUseAction(index, state, it);
       if (!projection || projection.action.type !== "USE") continue;
       if (!evalConditions(it.conditions, state)) continue;
