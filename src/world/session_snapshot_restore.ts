@@ -883,6 +883,9 @@ function assertCurrentLocalEventSceneProofs(args: {
   indexes: OverworldSnapshotManifestIndex;
   journalEntries: readonly OverworldJournalEntry[];
 }): void {
+  const journalEntriesById = new Map(
+    args.journalEntries.map((entry) => [entry.id, entry] as const),
+  );
   for (const investigation of args.journalEntries) {
     if (investigation.kind !== "event" || !investigation.id.startsWith("investigate:")) continue;
     const eventId = investigation.id.slice("investigate:".length);
@@ -890,9 +893,7 @@ function assertCurrentLocalEventSceneProofs(args: {
     const scene = event?.authored_scene;
     if (!scene) continue;
     for (const questId of scene.requires_completed_quests ?? []) {
-      const questCompletion = args.journalEntries.find(
-        (candidate) => candidate.id === `quest_done:${questId}`,
-      );
+      const questCompletion = journalEntriesById.get(`quest_done:${questId}`);
       if (
         !questCompletion ||
         parseTimeLabel(questCompletion.recordedAt) >= parseTimeLabel(investigation.recordedAt)
