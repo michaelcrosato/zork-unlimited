@@ -112,14 +112,6 @@ export function playtestTarget(
   return OVERWORLD_PLAYTEST_TARGET;
 }
 
-/** A fresh-overworld launch never carries a direct world quest id. */
-export function playtestTargetWorldQuestId(
-  _top: ImprovementCandidate | null,
-  _candidateWorldQuestId: string | null = null,
-): null {
-  return null;
-}
-
 type LatestCycleMetadata = {
   runId: string;
   target: typeof OVERWORLD_PLAYTEST_TARGET;
