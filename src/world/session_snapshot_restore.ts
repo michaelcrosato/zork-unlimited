@@ -851,6 +851,19 @@ function assertCurrentLocalJobSceneProofs(args: {
           : [],
       ),
     );
+    const earlierEventOptionIds = new Map<string, string>();
+    for (const candidate of earlierEntries) {
+      if (
+        candidate.kind === "resolution" &&
+        candidate.id.startsWith("resolve:") &&
+        candidate.localSceneProof?.optionId
+      ) {
+        earlierEventOptionIds.set(
+          candidate.id.slice("resolve:".length),
+          candidate.localSceneProof.optionId,
+        );
+      }
+    }
     const conditionState = {
       completedQuestIds: earlierCompletedQuestIds,
       resolvedEventIds: earlierResolvedEventIds,
@@ -863,9 +876,7 @@ function assertCurrentLocalJobSceneProofs(args: {
         boundary.acceptedDecisions,
       ),
       character: args.characterAt(entry, parseTimeLabel(entry.recordedAt)),
-      eventOptionIdFor: (eventId: string) =>
-        earlierEntries.find((candidate) => candidate.id === `resolve:${eventId}`)?.localSceneProof
-          ?.optionId ?? null,
+      eventOptionIdFor: (eventId: string) => earlierEventOptionIds.get(eventId) ?? null,
     };
     if (
       !localJobSceneRequirementsMet(scene, conditionState) ||
