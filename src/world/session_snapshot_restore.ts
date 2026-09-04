@@ -863,9 +863,18 @@ function assertCurrentLocalJobSceneProofs(args: {
         boundary.acceptedDecisions,
       ),
       character: args.characterAt(entry, parseTimeLabel(entry.recordedAt)),
-      eventOptionIdFor: (eventId: string) =>
-        earlierEntries.find((candidate) => candidate.id === `resolve:${eventId}`)?.localSceneProof
-          ?.optionId ?? null,
+      eventOptionIdFor: (() => {
+        const earlierEventOptionIds = new Map<string, string | null>();
+        for (const candidate of earlierEntries) {
+          if (candidate.kind === "resolution" && candidate.id.startsWith("resolve:")) {
+            const eventId = candidate.id.slice("resolve:".length);
+            if (!earlierEventOptionIds.has(eventId)) {
+              earlierEventOptionIds.set(eventId, candidate.localSceneProof?.optionId ?? null);
+            }
+          }
+        }
+        return (eventId: string) => earlierEventOptionIds.get(eventId) ?? null;
+      })(),
     };
     if (
       !localJobSceneRequirementsMet(scene, conditionState) ||
