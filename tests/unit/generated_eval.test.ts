@@ -5,6 +5,8 @@ import { join } from "node:path";
 import {
   generatedEvalSeedBase,
   generatedEvalSeedBaseFromDisk,
+  rpgGeneratorChecksForRoot,
+  GEN_EVAL_CHECK_COUNT,
 } from "../../src/afk/generated_eval.js";
 import { LOOP_STATE_FILE, LOOP_ARCHIVE_FILE } from "../../src/afk/loop_state.js";
 
@@ -23,6 +25,51 @@ describe("generated_eval pure seed wrappers", () => {
       expect(
         generatedEvalSeedBase("<!-- historical_cycle_count: 42 -->\n\n### Cycle result — one\n\n"),
       ).toBe(43);
+    });
+
+    it("ignores malformed historical marker values (non-numeric, negative, or invalid format)", () => {
+      expect(
+        generatedEvalSeedBase("<!-- historical_cycle_count: abc -->\n\n### Cycle result — one\n"),
+      ).toBe(1);
+      expect(
+        generatedEvalSeedBase("<!-- historical_cycle_count: -5 -->\n\n### Cycle result — one\n"),
+      ).toBe(1);
+      expect(
+        generatedEvalSeedBase("<!-- historical_cycle_count: 3.14 -->\n\n### Cycle result — one\n"),
+      ).toBe(1);
+    });
+
+    it("handles whitespace variations in historical markers", () => {
+      expect(
+        generatedEvalSeedBase("<!--historical_cycle_count:15-->\n\n### Cycle result — test\n"),
+      ).toBe(16);
+      expect(
+        generatedEvalSeedBase(
+          "<!--   historical_cycle_count:   7   -->\n\n### Cycle result — test\n",
+        ),
+      ).toBe(8);
+    });
+
+    it("counts cycle results correctly when interspersed with other markdown headers and text", () => {
+      const markdown = `
+# AI Loop State
+
+<!-- historical_cycle_count: 10 -->
+
+Some introductory summary text.
+
+## Section 1
+
+### Cycle result — 2026-03-01
+Details about cycle 1.
+
+### Some other header
+Not a cycle result.
+
+### Cycle result — 2026-03-02
+Details about cycle 2.
+`;
+      expect(generatedEvalSeedBase(markdown)).toBe(12);
     });
   });
 
@@ -62,6 +109,37 @@ describe("generated_eval pure seed wrappers", () => {
         "### Cycle result — arch 1\n### Cycle result — arch 2\n### Cycle result — arch 3\n",
       );
       expect(generatedEvalSeedBaseFromDisk(root)).toBe(5);
+    });
+  });
+
+  describe("rpgGeneratorChecksForRoot", () => {
+    let root: string;
+    beforeEach(() => {
+      root = mkdtempSync(join(tmpdir(), "geneval-rpg-"));
+    });
+    afterEach(() => {
+      rmSync(root, { recursive: true, force: true });
+    });
+
+    it("generates pack checks based on total cycle count from disk", () => {
+      writeFileSync(
+        join(root, LOOP_STATE_FILE),
+        "<!-- historical_cycle_count: 2 -->\n\n### Cycle result — one\n",
+      );
+      // total completed cycles = 3; GEN_EVAL_CHECK_COUNT = 4; expected seed base = 3 * 4 = 12
+      const checks = rpgGeneratorChecksForRoot(root);
+
+      expect(checks).toHaveLength(GEN_EVAL_CHECK_COUNT);
+      expect(checks[0]?.seed).toBe(12);
+      expect(checks[1]?.seed).toBe(13);
+      expect(checks[2]?.seed).toBe(14);
+      expect(checks[3]?.seed).toBe(15);
+
+      for (const check of checks) {
+        expect(check).toHaveProperty("seed");
+        expect(check).toHaveProperty("report");
+        expect(Array.isArray(check.report.findings)).toBe(true);
+      }
     });
   });
 });
