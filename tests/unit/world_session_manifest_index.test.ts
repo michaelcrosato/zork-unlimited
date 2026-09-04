@@ -80,6 +80,21 @@ function buildIndex() {
   });
 }
 
+describe("overworld node lookup", () => {
+  it("isolates cached node lookups from caller mutations", () => {
+    const isolatedWorld = structuredClone(world);
+    const first = overworldNodesById(isolatedWorld);
+    const startNode = first.get(isolatedWorld.start);
+
+    expect(startNode).toBeDefined();
+    first.delete(isolatedWorld.start);
+
+    const second = overworldNodesById(isolatedWorld);
+    expect(second).not.toBe(first);
+    expect(second.get(isolatedWorld.start)).toBe(startNode);
+  });
+});
+
 describe("overworld snapshot manifest index", () => {
   it("builds restore lookup sets and source town names from the overworld manifest", () => {
     const index = buildIndex();

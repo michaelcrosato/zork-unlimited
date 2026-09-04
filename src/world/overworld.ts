@@ -646,7 +646,7 @@ export function overworldQuestCampaignEffectsForCharacter(
 
 const overworldNodesByIdCache = new WeakMap<OverworldManifest, Map<string, OverworldNode>>();
 
-export function overworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
+function cachedOverworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
   let map = overworldNodesByIdCache.get(world);
   if (!map) {
     // Cache the node lookup map keyed by OverworldManifest instance to avoid O(N) rebuilds on repeated queries
@@ -656,8 +656,12 @@ export function overworldNodesById(world: OverworldManifest): Map<string, Overwo
   return map;
 }
 
+export function overworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
+  return new Map(cachedOverworldNodesById(world));
+}
+
 export function overworldEdgesFrom(world: OverworldManifest, nodeId: string): OverworldExit[] {
-  const nodes = overworldNodesById(world);
+  const nodes = cachedOverworldNodesById(world);
   return world.edges
     .filter((edge) => edge.from === nodeId || edge.to === nodeId)
     .map((edge) => {
@@ -748,7 +752,7 @@ export function planOverworldRoute(
   destinationId: string,
   allowedNodeIds?: ReadonlySet<string>,
 ): OverworldRoutePlan | null {
-  const nodes = overworldNodesById(world);
+  const nodes = cachedOverworldNodesById(world);
   const from = nodes.get(fromId);
   if (!from) throw new Error(`Unknown overworld route start "${fromId}".`);
   const destination = nodes.get(destinationId);
@@ -3667,7 +3671,7 @@ function assertGraphConnectivity(world: OverworldManifest): void {
 }
 
 export function assertOverworldIntegrity(world: OverworldManifest): void {
-  const nodes = overworldNodesById(world);
+  const nodes = cachedOverworldNodesById(world);
   assertNodesIntegrity(world, nodes);
 
   const regionNames = new Set<string>();
