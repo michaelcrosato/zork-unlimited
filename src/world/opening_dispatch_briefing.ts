@@ -1,5 +1,5 @@
 import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
-import type { OverworldManifest } from "./overworld.js";
+import { overworldCharacterById, type OverworldManifest } from "./overworld.js";
 
 const OPENING_DISPATCH_SUPPORT_DISCOVERY_MARKER = " The live dispatch has ";
 
@@ -70,7 +70,7 @@ export function resolveOpeningDispatchManifestChain(
     authoredAlly.after_preparation === preparation.id &&
     authoredAlly.home === preparation.home &&
     authoredAlly.area === preparation.area &&
-    world.characters.some((candidate) => candidate.id === authoredAlly.contact)
+    Boolean(overworldCharacterById(world, authoredAlly.contact))
       ? authoredAlly
       : null;
   return {
@@ -96,9 +96,7 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
     chain;
   const questCrisisPreview = openingDispatchCrisisPreview(quest.discovery);
   if (!questCrisisPreview) return null;
-  const allyContact = ally
-    ? world.characters.find((candidate) => candidate.id === ally.contact)
-    : null;
+  const allyContact = ally ? overworldCharacterById(world, ally.contact) : null;
   return {
     questTitle: quest.title,
     questCrisisPreview,

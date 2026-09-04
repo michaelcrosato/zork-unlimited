@@ -656,6 +656,29 @@ export function overworldNodesById(world: OverworldManifest): Map<string, Overwo
   return map;
 }
 
+const overworldCharactersByIdCache = new WeakMap<
+  OverworldManifest,
+  Map<string, OverworldCharacter>
+>();
+
+export function overworldCharactersById(world: OverworldManifest): Map<string, OverworldCharacter> {
+  let map = overworldCharactersByIdCache.get(world);
+  if (!map) {
+    // Cache the character lookup map keyed by OverworldManifest instance to avoid O(N) rebuilds on repeated queries
+    map = new Map(world.characters.map((character) => [character.id, character]));
+    overworldCharactersByIdCache.set(world, map);
+  }
+  return map;
+}
+
+/** Resolve a character by id from the overworld's character registry (null if absent). */
+export function overworldCharacterById(
+  world: OverworldManifest,
+  characterId: string,
+): OverworldCharacter | null {
+  return overworldCharactersById(world).get(characterId) ?? null;
+}
+
 export function overworldEdgesFrom(world: OverworldManifest, nodeId: string): OverworldExit[] {
   const nodes = overworldNodesById(world);
   return world.edges
@@ -1434,9 +1457,7 @@ function assertEntitiesIntegrity(
           `Authored local-event scene "${scene.id}" requires a point of interest in its event area.`,
         );
       }
-      const contact = world.characters.find(
-        (candidate) => candidate.id === scene.required_contact_id,
-      );
+      const contact = overworldCharacterById(world, scene.required_contact_id);
       if (!contact || contact.home !== event.home || contact.area !== event.area) {
         throw new Error(
           `Authored local-event scene "${scene.id}" requires a contact in its event area.`,
@@ -1516,9 +1537,7 @@ function assertEntitiesIntegrity(
           `Authored local-job scene "${scene.id}" requires a point of interest in its job area.`,
         );
       }
-      const contact = world.characters.find(
-        (candidate) => candidate.id === scene.required_contact_id,
-      );
+      const contact = overworldCharacterById(world, scene.required_contact_id);
       if (!contact || contact.home !== job.home || contact.area !== job.area) {
         throw new Error(
           `Authored local-job scene "${scene.id}" requires a contact in its job area.`,
@@ -1682,7 +1701,7 @@ function assertOpeningRegistrationIntegrity(
   if (!areaIds.has(registration.area) || areaHomes.get(registration.area) !== registration.home) {
     throw new Error("Overworld opening registration is anchored outside its home town.");
   }
-  const contact = world.characters.find((character) => character.id === registration.contact);
+  const contact = overworldCharacterById(world, registration.contact);
   if (!contact || contact.home !== registration.home || contact.area !== registration.area) {
     throw new Error(
       "Overworld opening registration contact must exist in its authored home and area.",
@@ -1796,7 +1815,7 @@ function assertOpeningReliefOathIntegrity(world: OverworldManifest): void {
       "Overworld opening relief oath must share the registration's home and Civic area.",
     );
   }
-  const contact = world.characters.find((character) => character.id === scene.contact);
+  const contact = overworldCharacterById(world, scene.contact);
   if (
     !contact ||
     contact.home !== scene.home ||
@@ -2272,7 +2291,7 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
       "Overworld opening ally must occupy the target quest's authored departure area.",
     );
   }
-  const contact = world.characters.find((character) => character.id === scene.contact);
+  const contact = overworldCharacterById(world, scene.contact);
   if (
     !contact ||
     contact.home !== scene.home ||
@@ -3488,9 +3507,7 @@ function assertCampaignServiceRulesIntegrity(
       }
     }
     if (rule.provider_character_id) {
-      const provider = world.characters.find(
-        (character) => character.id === rule.provider_character_id,
-      );
+      const provider = overworldCharacterById(world, rule.provider_character_id);
       if (!provider) {
         throw new Error(
           `Campaign service rule "${rule.id}" references missing provider "${rule.provider_character_id}".`,
