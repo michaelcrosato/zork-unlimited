@@ -16,7 +16,8 @@
  * independent sources that know nothing about each other, so a writer must be able to
  * add its own without stepping on anyone else's.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { writeFileAtomic } from "./atomic_file.js";
 import { hostname, userInfo } from "node:os";
 import { join, resolve } from "node:path";
 import { canonicalize } from "../core/hash.js";
@@ -133,10 +134,10 @@ export function upsertSubmission(
       rmSync(join(root, name));
     }
   }
-  writeFileSync(
+  writeFileAtomic(
     join(root, submissionFileName(merged)),
-    `${JSON.stringify(merged, null, 2)}\n`,
-    "utf8",
+    `${JSON.stringify(merged, null, 2)}
+`,
   );
   return merged;
 }
@@ -149,7 +150,11 @@ function rewriteSubmission(next: Submission, dir: string): Submission {
       rmSync(join(root, name));
     }
   }
-  writeFileSync(join(root, submissionFileName(next)), `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  writeFileAtomic(
+    join(root, submissionFileName(next)),
+    `${JSON.stringify(next, null, 2)}
+`,
+  );
   return next;
 }
 

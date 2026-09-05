@@ -20,6 +20,15 @@
     "observations": 2
   },
   "created_at": "2026-08-28T22:26:53.436Z",
-  "updated_at": "2026-08-29T07:18:23.635Z",
-  "external": null
+  "updated_at": "2026-08-31T16:36:26.692Z",
+  "external": null,
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "c8f7ebd3-b535-44b5-b8cc-09169e26e905",
+      "identifier": "MIC-58",
+      "url": "https://linear.app/michael-crosato/issue/MIC-58/43cfb6305bb20913-mcp-tool-inspect-overworld-session-story-advertises",
+      "synced_status": "done"
+    }
+  ]
 }

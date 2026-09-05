@@ -13,6 +13,7 @@ import type {
   JourneyOpportunityExplanation,
   JourneyOpportunityNextAction,
 } from "../world/journey_opportunity_explainer.js";
+import type { JourneyChoiceResult } from "../world/journey_contract.js";
 import { compactText } from "../core/compact_text.js";
 import {
   compactOverworldJournalEntries,
@@ -33,6 +34,8 @@ import {
 } from "../world/compact_view.js";
 
 export type OverworldCompactDiscoveryKey = "areas" | "jobs" | "sites" | "quests";
+
+export type OverworldCompactJourneyChoiceResult = Omit<JourneyChoiceResult, "journey">;
 
 // Immediate local-action prose is the player's consequence, not rolling context.
 // Keep enough room for every shipped contact line while bounding longer area/site copy.
@@ -244,12 +247,14 @@ type SelfDescribingCompactResultField =
   | "discovered_truncated"
   | "displaySummary"
   | "entry_text"
+  | "exitReceipt"
   | "fatigue_gained"
   | "goal"
   | "goal_id"
   | "journeyDecision"
   | "legs_truncated"
   | "renown_gained"
+  | "retentionEvent"
   | "stop_reason"
   | "stopped_at"
   | "storyChoiceId"
@@ -275,6 +280,9 @@ type UndefinedCompactResultPath<Value, Prefix extends string> = Exclude<
 type AssertEveryCompactResultPathDefined<Missing extends never> = Missing;
 
 type _CompactResultLegendCoverage = [
+  AssertEveryCompactResultPathDefined<
+    UndefinedCompactResultPath<OverworldCompactJourneyChoiceResult, "result">
+  >,
   AssertEveryCompactResultPathDefined<
     UndefinedCompactResultPath<OverworldCompactActionResult, "result">
   >,
@@ -346,6 +354,17 @@ function compactOverworldJournalEntry(entry: {
   recordedAt: string;
 }): OverworldCompactJournalEntry {
   return compactOverworldJournalEntries([entry])[0]!;
+}
+
+/** The response envelope already carries the current journey. Keep the choice's
+ * event and exact exit receipt here without repeating its full presentation. */
+export function compactOverworldJourneyChoiceResult(
+  result: JourneyChoiceResult,
+): OverworldCompactJourneyChoiceResult {
+  return {
+    retentionEvent: result.retentionEvent,
+    exitReceipt: result.exitReceipt,
+  };
 }
 
 /**

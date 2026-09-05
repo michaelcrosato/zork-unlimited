@@ -22,6 +22,15 @@
     "observations": 1
   },
   "created_at": "2026-08-29T00:49:07.828Z",
-  "updated_at": "2026-08-29T00:50:45.710Z",
-  "external": null
+  "updated_at": "2026-08-31T16:36:34.846Z",
+  "external": null,
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "0136f22b-ae4c-4488-97f8-58f04ed3d965",
+      "identifier": "MIC-25",
+      "url": "https://linear.app/michael-crosato/issue/MIC-25/f26bbd36141140f0-the-verified-rung-is-unreachable-nothing-supplies",
+      "synced_status": "open"
+    }
+  ]
 }

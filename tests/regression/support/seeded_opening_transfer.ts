@@ -198,21 +198,20 @@ const WOLF_WINTER_CERTIFICATE: TransferCertificate = {
  * Advancing either hash is an explicit certification review, never an incidental
  * consequence of editing Wolf-Winter or the deterministic relabel oracle.
  */
-// Advanced for bug_0592 after the review this pin demands, not incidentally. The review:
-// the HEAD and post-fix packs were compiled and deep-diffed, and they differ in exactly
-// one node — `rooms[0].exits[0].locked_msg_variants` on the steading_yard north exit, a
-// blocked-message presentation field. No seeded-opening flag, condition, effect, skill
-// check, var, win condition, ending, or enemy differs, and the certificate's own derived
-// surface was already whole against the new pack: it reported the unchanged 22 mechanical
-// and 49 presentation reads with the hash as its ONLY diagnostic. The dependency paths
-// this certificate closes are therefore untouched.
+// Advanced for bug_0604 after explicit seeded-opening transfer review. Compiled
+// predecessor/current packs differ only in June's keep_cattle_terms prompt and its
+// goto/end fields. The action now closes instead of visiting a second BACK screen;
+// all dialogue node ordinals and consequential effects remain unchanged. This edge
+// has no conditions or opening-dependent behavior. Removing one navigation step
+// moves later seeded dice coordinates, but the certificate's best/worst-roll bracket
+// and all opening-specific dependencies are unchanged: 22 mechanical and 49
+// presentation reads, with the whole-pack hash as the only diagnostic before renewal.
 const CERTIFIED_WOLF_WINTER_PACK_HASH =
-  "e91d4b8e575a8000e0741d363e8364ec18b6d794cd6cc89d6c380989a92823fa";
-// Advanced for bug_0592 under the same review: the twin is the deterministic relabeling
-// of the pack diffed above, and it likewise reported the unchanged 22 mechanical and 49
-// presentation reads with the hash as its only diagnostic.
+  "5df094221f64d819829b5218135d0c904917fbe3e7c4cfa396a1a0c74a2c3a2e";
+// Same review for the deterministic twin: its dialogue edge is renamed by the
+// existing bijection, with every seeded-opening dependency preserved.
 const CERTIFIED_WOLF_WINTER_RELABELED_PACK_HASH =
-  "d3701eadc8309c97e6e5a755b19bd8b8aea6eae31aa8f7cfa02f66cd46bcfe86";
+  "93de63e5b7ddd8eceb1d1c385239d3a5d806bb17c0b223ca75031a8a4c882d98";
 
 const pathText = (path: readonly PathPart[]): string =>
   path

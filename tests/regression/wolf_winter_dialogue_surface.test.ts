@@ -654,7 +654,7 @@ describe("Wolf-Winter dialogue surface", () => {
         /KEEP JUNE[^]*Keep her cattle-first help[^]*Going north chooses HUNT[^]*first wolf death ends her agreement/i,
       ),
       ask_keep_cattle_terms: expect.stringMatching(
-        /BACK[^]*Return to Cade's LURE, DRIVE, and FORTIFY reviews without choosing a plan/i,
+        /BACK[^]*Return to the Byre-Yard without choosing a plan[^]*Talk to Cade[^]*LURE, DRIVE, or FORTIFY/i,
       ),
     });
     expect(
@@ -678,19 +678,15 @@ describe("Wolf-Winter dialogue surface", () => {
       topic: "keep_cattle_terms",
     });
     const juneTerms = buildRpgObservation(index, deferredToCade);
-    expect(juneTerms.dialogue?.npc_text).toMatch(
-      /cattle-first terms already apply[^]*chooses nothing[^]*Return to Cade[^]*North remains blocked/i,
-    );
-    expect(dialogueActionIds(legalActionIds(deferredToCade))).toEqual(["ask_return_to_cade"]);
+    expect(juneTerms.dialogue).toBeNull();
+    expect(dialogueActionIds(legalActionIds(deferredToCade))).toEqual([]);
     expect(deferredToCade.flags.strategy_lure_committed).not.toBe(true);
     expect(deferredToCade.flags.strategy_drive_committed).not.toBe(true);
     expect(deferredToCade.flags.strategy_fortify_committed).not.toBe(true);
-    deferredToCade = act(deferredToCade, {
-      type: "ASK",
-      npc: "june_pike",
-      topic: "return_to_cade",
-    });
-    expect(buildRpgObservation(index, deferredToCade).dialogue).toBeNull();
+    expect(playerConsequenceState(deferredToCade)).toEqual(playerConsequenceState(state));
+    expect(deferredToCade.step).toBe(state.step + 1);
+    expect(legalActionIds(deferredToCade)).not.toContain("go_north");
+    expect(legalActionIds(deferredToCade)).toContain("talk_houndsman");
     deferredToCade = act(deferredToCade, { type: "TALK", npc: "houndsman" });
     expect(legalActionIds(deferredToCade)).toEqual(
       expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
