@@ -1,0 +1,58 @@
+id: bug_0597
+title: World integrity reapplied identical opening support prefixes
+severity: S3
+intake: aabd078582a02409
+
+symptom: >
+  Cold world loading spent seconds repeating the same opening support transitions.
+  The dispatch integrity proof enumerates every optional preparation, relief, and
+  ally subset in every order for every registration/oath/source state. Many orders
+  begin with identical choices, but each previously parsed and applied that prefix
+  again. This cost recurred in isolated tests and short-lived game tools.
+
+root_cause: >
+  src/world/overworld.ts restarted every permutation at its civic base, even when
+  the exact ordered prefix had already been evaluated for another subset or order.
+  Each step calls the validated runtime operator, which reparses scenes and creates
+  detached campaign states. The cost was repeated validation and allocation, rather
+  than additional proof coverage.
+
+fix: >
+  Keep a private map of exact ordered prefixes inside each registration/oath/source
+  iteration of the dispatch proof. The key serializes both choice kind and option
+  id in order; the value keeps the detached character and accumulated minutes.
+  Every subset and permutation is still enumerated and its complete character/time
+  signature compared. Unseen prefixes still use the existing runtime operators.
+  The map expires before the next civic base and is never retained between integrity
+  calls, so neither a new starting state nor an edited manifest inherits old results.
+
+measurements:
+  method: >
+    Six fresh Node v22.23.1 processes, alternating baseline/candidate order as
+    baseline, candidate, candidate, baseline, baseline, candidate. Each parsed the
+    same shipped 247-node world and timed the full assertOverworldIntegrity call.
+    Another worktree's test suite was active, so these are local measurements under
+    concurrent load, not a prediction of CI wall time. Raw profiles and benchmark
+    samples remain in ignored ai-runs directories.
+  baseline_validation_ms: [21014.793, 19908.732, 18922.424]
+  candidate_validation_ms: [18780.154, 17357.134, 16963.962]
+  baseline_median_cpu_ms: 28047
+  candidate_median_cpu_ms: 23141
+  result: >
+    Median full world-integrity wall time fell from 19.909s to 17.357s (12.8%).
+    Median process CPU time fell 17.5%. The world and verification cases are unchanged.
+
+regressions:
+  - >
+    tests/unit/world_opening_dispatch_integrity.test.ts validates the shipped world
+    without mutating it, then edits that same manifest so relief grants preparation
+    sponsorship. It rejects the changed ordering even when final character state and
+    money match and only elapsed time differs. No ally choice is needed to expose it.
+  - >
+    The same test file puts an already-sponsored background first, where every order
+    commutes, and confirms later unsponsored backgrounds still reveal the defect.
+
+required_verification:
+  - npm run crawl:smoke
+  - npm run health
+  - Independent review under docs/parallel_lanes.md

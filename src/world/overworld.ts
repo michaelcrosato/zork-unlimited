@@ -2485,6 +2485,12 @@ function assertOpeningDispatchHubIntegrity(world: OverworldManifest): void {
           character: afterOath,
           optionId: leadOption.id,
         }).characterAfter;
+        // Every subset/order still gets compared. Reuse only identical ordered
+        // prefixes from this civic state; the operators return detached states.
+        const appliedPrefixes = new Map<
+          string,
+          Readonly<{ character: CampaignCharacterState; minutes: number }>
+        >();
         for (const preparationOption of [null, ...preparation.profiles] as const) {
           for (const allocationOption of [null, ...reliefAllocation.options] as const) {
             for (const allyOption of [null, ...ally.options] as const) {
@@ -2506,7 +2512,14 @@ function assertOpeningDispatchHubIntegrity(world: OverworldManifest): void {
               for (const order of openingDispatchChoicePermutations(selected)) {
                 let character = afterSource;
                 let minutes = 0;
-                for (const choice of order) {
+                for (const [index, choice] of order.entries()) {
+                  const prefixKey = JSON.stringify(order.slice(0, index + 1));
+                  const cached = appliedPrefixes.get(prefixKey);
+                  if (cached) {
+                    character = cached.character;
+                    minutes = cached.minutes;
+                    continue;
+                  }
                   if (choice.kind === "preparation") {
                     const applied = applyOpeningPreparationProfile({
                       scene: preparation,
@@ -2532,6 +2545,7 @@ function assertOpeningDispatchHubIntegrity(world: OverworldManifest): void {
                     character = applied.characterAfter;
                     minutes += applied.terms.minutes;
                   }
+                  appliedPrefixes.set(prefixKey, { character, minutes });
                 }
                 const signature = JSON.stringify({
                   character: serializeCampaignCharacterState(character),
