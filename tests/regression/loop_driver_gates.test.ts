@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { classifyCycleBar } from "../../scripts/cycle-bar.js";
 
 const REPO_ROOT = process.cwd();
 const loopText = readFileSync("loop.sh", "utf8");
@@ -100,7 +101,10 @@ describe("loop.sh verification gates", () => {
       'require_provisional_commit "$start_ref"',
       "npm run --silent loop:rotate-state",
       "npm run crawl:smoke",
-      "npm run health",
+      // The bar is chosen off the cycle's diff and only then run, so both steps are
+      // pinned in order: a selector that ran after the bar would decide nothing.
+      'select_health_bar "$start_ref"',
+      'npm run "$health_script"',
       'npm run verify:integrity -- --against "$start_ref"',
       "require_final_ledger_only",
       "safe_commit_if_enabled",
@@ -120,7 +124,7 @@ describe("loop.sh verification gates", () => {
     const provisional = runCycle.indexOf('require_provisional_commit "$start_ref"');
     const rotation = runCycle.indexOf("npm run --silent loop:rotate-state", provisional);
     const postCrawl = runCycle.indexOf("npm run crawl:smoke", rotation);
-    const health = runCycle.indexOf("npm run health", rotation);
+    const health = runCycle.indexOf('npm run "$health_script"', rotation);
     const rotationBlock = runCycle.slice(rotation, postCrawl);
     const scripts = (
       JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")) as {
@@ -495,9 +499,21 @@ describe("the dev loop does not gate on a playtest", () => {
   });
 
   it("keeps the mechanical gates as the whole bar", () => {
-    expect(driver).toContain("crawl:smoke");
-    expect(driver).toContain("npm run health");
-    expect(driver).toContain("verify:integrity");
+    // Assert against the EXECUTABLE driver, not its prose. `npm run health` does still
+    // occur in loop.sh — but only inside a comment recounting an old wedged-loop
+    // incident, so a toContain over the whole file would keep passing even if the gate
+    // itself were deleted. A comment is exactly where a pin goes quietly vacuous.
+    const code = driver.replace(/^\s*#.*$/gmu, "");
+    expect(code).toContain("crawl:smoke");
+    // The bar is still blocking; WHICH health script runs is read off the cycle's diff
+    // (select_health_bar, below), the same way `npm run ship` chooses a landing's bar.
+    expect(code).toContain("select_health_bar");
+    expect(code).toContain('npm run "$health_script"');
+    // Those two are the selector's ONLY possible answers, so "the bar" cannot quietly
+    // become some third, weaker script.
+    expect(code).toContain("printf 'health\\n'");
+    expect(code).toContain("printf 'health:fast\\n'");
+    expect(code).toContain("verify:integrity");
   });
 
   it("still rejects a cycle whose outer gates go red", () => {
@@ -520,5 +536,74 @@ describe("the dev loop does not gate on a playtest", () => {
     const commit = `${sectionBetween("safe_commit_if_enabled() {", "\n}\n")}\n}`;
     expect(commit).toContain("loop:seal-feedback");
     expect(commit).not.toMatch(/playtest\.(?:md|run\.json|evidence\.jsonl)/u);
+  });
+});
+
+/**
+ * The driver runs the full `health` on every cycle, and the six whole-state-space census
+ * proofs inside it are the large majority of that wall clock — so a docs or tooling cycle
+ * spent most of its hour re-proving packs it never touched. `npm run ship` had already
+ * solved this for landings by reading the bar off the diff; these lock the loop doing the
+ * same thing, and — far more importantly — locking WHICH WAY it errs when it cannot tell.
+ */
+describe("loop.sh post-change bar selection", () => {
+  const selectBar = `${sectionBetween("select_health_bar() {", "\n}\n\nsafe_commit_if_enabled()")}\n}`;
+
+  /** The selector shells out to `npm run loop:bar`; stubbing npm controls its answer. */
+  function selectWith(npmStub: string, env: Record<string, string> = {}): string {
+    return runGateHarness(
+      `${npmStub}\n${selectBar}`,
+      env,
+      "select_health_bar 1111111111111111111111111111111111111111",
+    ).output.trim();
+  }
+
+  it("takes the fast bar only when the cycle's diff is out of census reach", () => {
+    expect(selectWith("npm() { printf 'fast\\n'; }")).toBe("health:fast");
+    expect(selectWith("npm() { printf 'full\\n'; }")).toBe("health");
+    // Whitespace and a stray CR must not read as an unrecognised answer and cost the
+    // cycle its whole point.
+    expect(selectWith("npm() { printf ' fast \\r\\n'; }")).toBe("health:fast");
+  });
+
+  it("defaults to the FULL bar whenever the classification is uncertain", () => {
+    // Wrong in this direction costs one cycle some wall clock. Wrong in the other lands an
+    // engine or content regression that only a nightly census proof would catch, on a
+    // branch where that nightly proof may never run.
+    expect(selectWith("npm() { return 1; }")).toBe("health");
+    expect(selectWith("npm() { printf 'boom\\n' >&2; return 3; }")).toBe("health");
+    expect(selectWith("npm() { printf 'maybe\\n'; }")).toBe("health");
+    expect(selectWith("npm() { printf ''; }")).toBe("health");
+    expect(selectWith("npm() { printf 'fast full\\n'; }")).toBe("health");
+  });
+
+  it("lets AI_LOOP_FULL_HEALTH=1 force the full bar over any verdict", () => {
+    expect(selectWith("npm() { printf 'fast\\n'; }", { AI_LOOP_FULL_HEALTH: "1" })).toBe("health");
+  });
+
+  it("weighs BOTH halves of a cycle's diff", () => {
+    // A cycle's change is split across the provisional commit (`<start-ref>..HEAD`) and
+    // whatever is still in the tree at gate time (the rotated ledger, at minimum).
+    expect(classifyCycleBar(" M AI_LOOP_STATE.md\0", "docs/afk_loop.md\nloop.sh\n")).toBe("fast");
+    expect(classifyCycleBar(" M AI_LOOP_STATE.md\0", "src/rpg/runner.ts\n")).toBe("full");
+    // An untracked pack the agent authored is part of the change even before it is added.
+    expect(classifyCycleBar("?? content/rpg/quests/new.yaml\0", "")).toBe("full");
+    // A rename OUT of census reach counts as the delete AND the add, or moving an engine
+    // file to scripts/ would read as a plain tooling edit.
+    expect(classifyCycleBar("R  scripts/engine.ts\0src/core/engine.ts\0", "")).toBe("full");
+    expect(classifyCycleBar("", "")).toBe("fast");
+  });
+
+  it("wires the selector into run_cycle ahead of the bar it chooses", () => {
+    const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    const chosen = runCycle.indexOf('select_health_bar "$start_ref"');
+    const ran = runCycle.indexOf('npm run "$health_script"');
+    const integrity = runCycle.indexOf("verify:integrity");
+
+    expect(chosen).toBeGreaterThanOrEqual(0);
+    expect(ran).toBeGreaterThan(chosen);
+    expect(integrity).toBeGreaterThan(ran);
+    // The bar is still blocking: a red one reverts the cycle rather than committing.
+    expect(runCycle).toContain('_reject_cycle "health"');
   });
 });

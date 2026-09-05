@@ -75,8 +75,10 @@ loop.sh  (outer driver — orchestration + the bar)
 ├─ 5. VERIFY        the bar, all blocking (a red gate reverts the cycle's scratch
 │                    to the pre-cycle ref, skips the commit, and the outer loop
 │                    continues under circuit breakers — see Failure handling):
-│       npm run health            (verify:integrity + typecheck + lint +
-│                                  format:check + tests + ui:typecheck + validate)
+│       npm run health / health:fast   (verify:integrity + typecheck + lint +
+│                                  format:check + tests + ui:typecheck + validate;
+│                                  which one is read off the cycle's diff — see
+│                                  "Which health bar" below)
 │       verify:integrity --against <pre-cycle ref>   (don't route around the verifier:
 │                                                      hard-block only on weakening —
 │                                                      deleted/disabled tests, dropped
@@ -96,6 +98,23 @@ loop.sh  (outer driver — orchestration + the bar)
        main is always rejected (the required 'verify' check can't have run yet) —
        land loop commits via a scratch branch/PR and leave AI_LOOP_PUSH=0.
 ```
+
+**Which health bar.** The bar is blocking either way, but not every cycle needs the
+full one, and the driver does not decide by hand. `select_health_bar` asks
+`npm run loop:bar` (`scripts/cycle-bar.ts`), which classifies the cycle's whole diff —
+the provisional commit _and_ whatever is still in the working tree — against
+`CENSUS_PROOF_SOURCE_SCOPES`, the same list `npm run ship` reads for a landing. Nothing
+in the census proofs' reach ⇒ `npm run health:fast`; one path inside it ⇒ the full
+`npm run health`. Every uncertain case resolves to the full bar: an unreadable ref, a
+failed helper, an empty answer, or any verdict the driver does not recognise, and
+`AI_LOOP_FULL_HEALTH=1` forces it outright. This is worth doing because the six census
+proofs are the large majority of a cycle's wall clock (~79 minutes of CI body time
+together), so a docs or tooling cycle used to spend most of its hour re-proving packs it
+never touched. The trade is the one the fast lane already states out loud: a regression
+only a census proof catches is not caught by that cycle. On `main` the nightly
+`deep-audit.yml` census is the backstop; **on a lane branch it is not**, so run
+`npm run test:exhaustive` against the branch head periodically and after any cycle that
+touched the engine or content.
 
 **Failure handling.** loop.sh refuses to start on a dirty tree (AI_LOOP_ALLOW_DIRTY=1
 overrides commit-mode startup only, accepting the risk below). Each cycle snapshots

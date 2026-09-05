@@ -30,6 +30,8 @@
 #   AI_AGENT_CMD="..."               explicit full agent command (overrides the registry)
 #   AI_CODEX_SANDBOX=...             sandbox for the codex entry only [workspace-write]
 #   AI_AGENT_TIMEOUT_SECONDS=N       hang-kill budget per agent turn [2400]
+#   AI_LOOP_FULL_HEALTH=1            force the FULL health bar even when the cycle's
+#                                    diff does not require it [0 = read it off the diff]
 #   AI_LOOP_MAX_CONSECUTIVE_FAILURES / AI_LOOP_MAX_TOTAL_FAILURES   breakers [5 / 15]
 #   AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES=N   retained durable failure records [100]
 #   AI_LOOP_ALLOW_DIRTY=1            allow risky dirty commit-mode start; never waives clean evidence [0]
@@ -427,6 +429,33 @@ require_final_ledger_only() {
   echo "✓ post-play changes are ledger-only"
 }
 
+# Which post-change bar THIS cycle has to clear. `npm run ship` already reads that off
+# the diff for a landing (scripts/ship.ts): the whole-state-space census proofs import
+# only CENSUS_PROOF_SOURCE_SCOPES, so a change confined outside them cannot move a census
+# verdict, while a change touching one gets the full bar because there the proofs ARE the
+# ground truth. Running the full bar on EVERY cycle spent the large majority of a docs or
+# tooling cycle's wall clock re-proving packs the cycle never touched. This asks the same
+# helper the same question, so the loop and the landing path cannot drift apart.
+#
+# It fails safe in exactly one direction. A nonzero exit, an unreadable ref, an empty
+# answer, or any word other than `fast` selects the FULL bar, and AI_LOOP_FULL_HEALTH=1
+# forces it outright. Being wrong the other way lands an engine or content regression that
+# only a nightly census proof would catch.
+select_health_bar() {
+  local start_ref="$1" verdict
+  if [[ "${AI_LOOP_FULL_HEALTH:-0}" == "1" ]]; then
+    printf 'health\n'
+    return 0
+  fi
+  verdict="$(npm run --silent loop:bar -- --against "$start_ref" 2>/dev/null | tr -d '[:space:]')" ||
+    verdict=""
+  if [[ "$verdict" == "fast" ]]; then
+    printf 'health:fast\n'
+  else
+    printf 'health\n'
+  fi
+}
+
 safe_commit_if_enabled() {
   # The implementation is already frozen in the provisional commit. Only after
   # post-crawl, health, integrity drift, and report checks pass do we land the
@@ -617,11 +646,16 @@ run_cycle() {
     _reject_cycle "crawl-post" "post-change crawl:smoke failed"
     return 1
   }
-  # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
-  # check too). A red check ⇒ no commit this cycle.
-  npm run health || {
-    echo "health failed — reverting cycle scratch, skipping commit"
-    _reject_cycle "health" "npm run health failed"
+  # Trust, but verify: the health bar is a BLOCKING gate (it runs the static
+  # verifier-integrity check too). A red check ⇒ no commit this cycle. WHICH health
+  # script runs is not a flag — select_health_bar reads it off this cycle's own diff,
+  # exactly as `npm run ship` does for a landing, and defaults to the full bar.
+  local health_script
+  health_script="$(select_health_bar "$start_ref")"
+  echo "post-change bar: npm run $health_script"
+  npm run "$health_script" || {
+    echo "$health_script failed — reverting cycle scratch, skipping commit"
+    _reject_cycle "health" "npm run $health_script failed"
     return 1
   }
   # Don't route around the verifier. A content cycle that re-pins a hash ALONGSIDE a
