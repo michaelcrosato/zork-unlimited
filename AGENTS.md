@@ -169,9 +169,13 @@ time together, and `vitest.config.ts` deliberately serializes them one or two
 workers wide, so most of that is a single-threaded tail with the other cores idle.
 
 What licenses deferring them, and it is the ONLY thing that does: they import
-only `src/core`, `src/rpg`, `src/validate`, `src/world` and the `content/` packs.
-A change to the fleet runner, blind tester, feedback compiler, crawler, MCP layer,
-CLIs, docs or intake tooling cannot move their verdict. **If your change touches
+only the engine scopes listed in `CENSUS_PROOF_SOURCE_SCOPES`
+(`scripts/test-lanes.ts`) — the `content/` packs, `src/api`, `src/core`, `src/gen`,
+`src/persist`, `src/rpg`, `src/solve`, `src/trace`, `src/validate`, `src/world`,
+`tests/regression/support/` and `vitest.config.ts`; that list is the source of
+truth, and `npm run ship` reads it off the diff. A change to the fleet runner,
+blind tester, feedback compiler, crawler, MCP layer, CLIs, docs or intake tooling
+cannot move their verdict. **If your change touches
 the engine, a validator, the world, or a shipped pack, run `npm run health`, not
 `health:fast`** — the fast lane is not evidence about that change.
 

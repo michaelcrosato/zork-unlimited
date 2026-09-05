@@ -10,7 +10,8 @@
  * One ticket per file, named by severity and id, so a plain `ls` is already a triaged
  * queue and two people editing different tickets never conflict.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { writeFileAtomic } from "../intake/atomic_file.js";
 import { join, resolve } from "node:path";
 import {
   compareTickets,
@@ -78,7 +79,11 @@ export function writeTickets(tickets: readonly QaTicket[], dir: string = DEFAULT
     rmSync(file);
   }
   for (const [name, ticket] of wanted) {
-    writeFileSync(join(root, name), `${JSON.stringify(ticket, null, 2)}\n`, "utf8");
+    writeFileAtomic(
+      join(root, name),
+      `${JSON.stringify(ticket, null, 2)}
+`,
+    );
   }
 }
 

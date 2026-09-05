@@ -1226,8 +1226,8 @@ Required proof:
   legality, journey proofs, and the documented structural v11/v10 snapshot
   boundary; content-only hash mismatch warns but never relaxes state proof;
 - `npm run crawl:smoke` before and after every increment;
-- one canonical pure fresh-overworld blind playtest and `npm run health` before
-  each green commit;
+- `npm run health` before each green commit; pure fresh-overworld blind playtests
+  come from the playtest loop's fleets on a frozen build, not from the dev cycle;
 - milestone `npm run crawl:deep -- --seconds 120 --workers 8` and a current
   100-player pure fleet.
 

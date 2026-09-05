@@ -210,7 +210,10 @@ remove_new_untracked_since_cycle_start() {
 
 latest_prompt() {
   # ai-loop.ts writes the cycle prompt as prompt.md (older runs used agent-prompt.md).
-  find ai-runs \( -path '*/prompt.md' -o -path '*/agent-prompt.md' \) -type f -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}'
+  # Newest first by mtime through POSIX `ls -t`: GNU find's printf action is absent on macOS
+  # and BSD, where the old form printed nothing and was misread as a missing agent
+  # prompt (bug_0613).
+  find ai-runs \( -path '*/prompt.md' -o -path '*/agent-prompt.md' \) -type f -exec ls -t {} + 2>/dev/null | head -n 1
 }
 
 # ── Dev-agent registry ───────────────────────────────────────────────────────────

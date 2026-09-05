@@ -5,7 +5,7 @@
  * layer, so the test suite has to lock it directly.
  */
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -176,6 +176,35 @@ describe("loop.sh verification gates", () => {
     expect(success).toBeGreaterThanOrEqual(0);
     expect(pending).toBeGreaterThan(success);
     expect(stop).toBeGreaterThan(pending);
+  });
+});
+
+describe("loop.sh latest_prompt (bug_0613)", () => {
+  const latestPrompt = `${sectionBetween("latest_prompt() {", "\n}\n\n# ── Dev-agent registry")}\n}`;
+
+  it("names the newest cycle prompt by mtime without GNU find extensions", () => {
+    const result = runGateHarness(latestPrompt, {}, "latest_prompt", (root) => {
+      mkdirSync(join(root, "ai-runs", "older"), { recursive: true });
+      mkdirSync(join(root, "ai-runs", "newer"), { recursive: true });
+      writeFileSync(join(root, "ai-runs", "older", "agent-prompt.md"), "old", "utf8");
+      writeFileSync(join(root, "ai-runs", "newer", "prompt.md"), "new", "utf8");
+      const past = new Date(Date.now() - 600_000);
+      utimesSync(join(root, "ai-runs", "older", "agent-prompt.md"), past, past);
+    });
+    expect(result.status, result.output).toBe(0);
+    expect(result.output.trim()).toBe("ai-runs/newer/prompt.md");
+  });
+
+  it("prints nothing when no cycle prompt exists", () => {
+    const result = runGateHarness(latestPrompt, {}, "latest_prompt", (root) => {
+      mkdirSync(join(root, "ai-runs"), { recursive: true });
+    });
+    expect(result.status, result.output).toBe(0);
+    expect(result.output.trim()).toBe("");
+  });
+
+  it("does not use the GNU-only -printf action", () => {
+    expect(latestPrompt).not.toContain("-printf");
   });
 });
 

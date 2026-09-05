@@ -1,0 +1,34 @@
+id: bug_0609
+title: Intake queue and QA ticket files were written in place, so a crash left a torn file
+reported_by: docs/REPO_AUDIT_2026-09.md (finding 4), verified 2026-09-05
+severity: S2
+
+symptom: >
+  upsertSubmission, rewriteSubmission and writeTickets used a bare writeFileSync, which
+  truncates the target before writing. A crash mid-write, or a second lane reading while
+  a claim was being written, saw an empty or half-written JSON file, and readQueue then
+  refused the whole intake directory rather than one item.
+
+cause: >
+  The stores were written before several lanes and the playtest loop shared them.
+  src/qa/session_store.ts already staged and renamed; the queue and ticket stores did not.
+
+reproduction:
+  - Interrupt a process inside writeFileSync on a queue file; the file is left truncated.
+  - npm run work then fails to parse the directory.
+
+fix: >
+  src/intake/atomic_file.ts writes the bytes to a staging file beside the target and
+  renames it into place, retrying briefly on the Windows share-violation codes a
+  concurrent reader can cause. Both stores route every write through it.
+
+production:
+  - src/intake/atomic_file.ts
+  - src/intake/queue.ts
+  - src/qa/ticket_store.ts
+regression:
+  - tests/unit/intake_atomic_file.test.ts
+verification:
+  - The atomic-writer tests failed before the module existed and pass after it.
+  - tests/unit/intake_queue.test.ts, tests/regression/intake_claim_lease.test.ts, tests/unit/qa_region_identity.test.ts and tests/unit/qa_triage_cli.test.ts pass unchanged.
+  - npm run health:fast

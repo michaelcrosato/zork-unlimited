@@ -1,0 +1,31 @@
+id: bug_0613
+title: loop.sh located the cycle prompt with a GNU-only find action
+reported_by: docs/REPO_AUDIT_2026-09.md (finding 10), confirmed against loop.sh 2026-09-05
+severity: S1
+
+symptom: >
+  latest_prompt used find -printf to list prompt files with their mtimes. BSD and macOS
+  find have no -printf, so on those hosts the pipeline printed nothing, run_agent
+  reported "No AFK agent prompt found; skipping agent handoff" and the cycle ran
+  agent-less although ai-loop.ts had written the prompt.
+
+cause: >
+  The driver was written and exercised on GNU userland (Linux CI and Git Bash on
+  Windows), where -printf exists.
+
+reproduction:
+  - On macOS, run a cycle; the agent handoff is skipped with the "No AFK agent prompt found" message.
+
+fix: >
+  find hands the matching files to POSIX ls -t, which prints them newest first, and the
+  first line is the prompt. The regression runs the extracted function in a temporary
+  root with an older agent-prompt.md and a newer prompt.md and expects the newer path.
+
+production:
+  - loop.sh
+regression:
+  - tests/regression/loop_driver_gates.test.ts
+verification:
+  - The extracted function names the newer prompt and prints nothing when none exists.
+  - The function text no longer contains -printf.
+  - npm run health:fast
