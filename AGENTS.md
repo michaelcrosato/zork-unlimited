@@ -188,6 +188,12 @@ neither script, and it runs in NO lane while both still exit 0.
 rather than a parallel list, and `tests/unit/test_lanes.test.ts` asserts the
 partition on every suite run.
 
+The shipped world is proved once per bar, not once per process: `npm run validate`
+records the integrity verdict under `ai-runs/world-integrity/` keyed on the world
+bytes and the engine source, and every later process that loads the same bytes
+reuses it (`src/world/source.ts`, bug_0611; `ADVENTUREFORGE_WORLD_INTEGRITY_CACHE`
+selects `use`, `refresh` or `off`).
+
 Budget the wall clock: the vitest step dominates the full bar, and under load a
 handful of subprocess-spawning CLI tests can exceed their 60s/120s timeouts and
 fail for reasons unrelated to the change under test — check what actually failed

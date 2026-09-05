@@ -1,0 +1,50 @@
+id: bug_0608
+title: World-layer ordering depended on the host locale through bare localeCompare
+reported_by: docs/REPO_AUDIT_2026-09.md (finding 6), measured on the shipped world 2026-09-05
+severity: S2
+
+symptom: >
+  src/world sorted roads, areas, characters, events, jobs, sites, quests, regional arcs,
+  route options, opportunity leads and the session snapshot's map keys with
+  String.prototype.localeCompare and no locale argument, so the order depended on the
+  host's ICU collation. Under Czech collation cicero_town sorted before cheektowaga_town
+  ("ch" is one letter after "h"); under Lithuanian collation "Yonkers city" sorted before
+  "New Rochelle city". Those orders are the indices a blind agent navigates by and the
+  key order the snapshot hash is built from, so the "same seed, byte-identical run"
+  claim did not hold across hosts. src/rpg had always refused localeCompare for this
+  reason; the world layer had 29 calls.
+
+cause: >
+  Each sort site reached for the convenient comparator; nothing in lint or tests pinned
+  the collation, and the determinism property test compares two runs inside one process,
+  which shares one locale.
+
+reproduction:
+  - Sort ["cicero_town", "cheektowaga_town"] with new Intl.Collator("cs").compare and with code-unit order.
+  - Sort ["Yonkers city", "New Rochelle city"] with new Intl.Collator("lt").compare and with code-unit order.
+
+fix: >
+  src/world/string_order.ts provides two pure code-unit comparators. compareCodeUnits
+  orders ids and keys; compareCaseFoldedCodeUnits (ASCII case folded first, code units as
+  the tiebreak) orders display strings, which on the shipped world reproduces the order
+  English collation produced, including the one tie where a lowercase event title and a
+  Title-Case job title share an area. Every localeCompare in src/world was replaced, and
+  an ESLint no-restricted-syntax rule keeps it out of that directory.
+
+production:
+  - src/world/string_order.ts
+  - src/world/compact_view.ts
+  - src/world/journey_opportunity_leads.ts
+  - src/world/overworld.ts
+  - src/world/session_collections.ts
+  - src/world/session_indices.ts
+  - src/world/session_regional_arcs.ts
+  - src/world/session_routes.ts
+  - eslint.config.js
+regression:
+  - tests/unit/world_string_order.test.ts
+verification:
+  - The comparator tests failed before the module existed and pass after it.
+  - A probe file with a localeCompare call under src/world fails lint with the bug_0608 message.
+  - On the shipped world every sorted collection keeps the order it had under English collation.
+  - npm run health

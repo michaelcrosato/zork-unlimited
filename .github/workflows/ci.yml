@@ -129,6 +129,12 @@ jobs:
       # package-local React/Vite dependencies must exist in every test shard.
       - name: Install UI deps
         run: npm --prefix ui ci
+      # Prove the shipped world once here so the ~115 test files that load it reuse the
+      # verdict (src/world/source.ts, bug_0611) instead of each re-proving it in their
+      # own isolated process. validate always re-proves; the marker it leaves under
+      # ai-runs/ is what the shard's processes then read.
+      - name: Warm the world-integrity verdict
+        run: npm run validate
       - name: Tests (fast lane — unit + property + determinism)
         # Discover every current test file, keep this lane's, then place those in exactly
         # one of two deterministic groups. The allocator weights observed costly files and

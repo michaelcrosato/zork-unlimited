@@ -1,4 +1,5 @@
 import { OVERWORLD_COMPACT_ID_LIST_LIMIT, type OverworldCompactIdBucket } from "./compact_view.js";
+import { compareCaseFoldedCodeUnits, compareCodeUnits } from "./string_order.js";
 
 const EMPTY_INDEX_LIST: readonly never[] = [];
 
@@ -18,11 +19,11 @@ export function sortedStringSetMap(
 }
 
 export function sortedStringMap(values: ReadonlyMap<string, string>): [string, string][] {
-  return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
+  return [...values.entries()].sort(([left], [right]) => compareCodeUnits(left, right));
 }
 
 export function sortedNumberMap(values: ReadonlyMap<string, number>): [string, number][] {
-  return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
+  return [...values.entries()].sort(([left], [right]) => compareCodeUnits(left, right));
 }
 
 export function sortedNumberRecord(values: ReadonlyMap<string, number>): Record<string, number> {
@@ -82,7 +83,10 @@ export function compareTownByPopulationThenName(
   left: { name: string; population_2025: number },
   right: { name: string; population_2025: number },
 ): number {
-  return right.population_2025 - left.population_2025 || left.name.localeCompare(right.name);
+  return (
+    right.population_2025 - left.population_2025 ||
+    compareCaseFoldedCodeUnits(left.name, right.name)
+  );
 }
 
 export function assertUnique(label: string, values: readonly string[]): Set<string> {

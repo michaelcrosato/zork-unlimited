@@ -97,12 +97,22 @@ which tests are worth running on every commit.
 | `fleet:mock`                  | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                         | zero tokens                 |
 | `feedback:status` / `compile` | status reports a bootstrap or ≥3 new accepted actionable reports (structural mocks excluded)                | seconds (deterministic verification, identity diff, and clustering)                                                                                                                                                  | free                        |
 
+The world-integrity verdict is cached across processes since 2026-09-05
+(`src/world/source.ts`, bug_0611): `npm run validate` proves the shipped world and
+leaves a marker under `ai-runs/world-integrity/` keyed on the world bytes and the
+engine source, and every later test process that loads the same bytes reuses it
+instead of spending 19 seconds re-proving it. That is why `validate` runs before
+the suite in both `health` scripts and in the CI test shards.
+
 ## 2.1 Why the census proofs are the nightly half
 
 The split is not "slow tests are less important". It is that these six proofs
 cannot answer a question most changes ask. Each BFSes the complete reachable state
-region of every shipped pack, and each imports only `src/core`, `src/rpg`,
-`src/validate`, `src/world` and the `content/` packs — so a change to the fleet
+region of every shipped pack, and each imports only the engine scopes named in
+`CENSUS_PROOF_SOURCE_SCOPES` (`scripts/test-lanes.ts`: the `content/` packs,
+`src/api`, `src/core`, `src/gen`, `src/persist`, `src/rpg`, `src/solve`, `src/trace`,
+`src/validate`, `src/world`, `tests/regression/support/` and `vitest.config.ts`) — so
+a change to the fleet
 runner, blind tester, feedback compiler, crawler, MCP layer, CLIs, docs or intake
 tooling cannot move their verdict, while still costing the large majority of the
 bar's wall clock. Deferring them buys back that time for exactly the changes they

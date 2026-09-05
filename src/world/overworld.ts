@@ -44,6 +44,7 @@ import {
 import { OpeningReliefOathSchema, applyOpeningReliefOathOption } from "./opening_relief_oath.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
 import { OverworldQuestLaunchSchema } from "./quest_launch.js";
+import { compareCaseFoldedCodeUnits, compareCodeUnits } from "./string_order.js";
 
 export const OverworldNodeKindSchema = z.enum([
   "metropolis",
@@ -673,14 +674,17 @@ export function overworldEdgesFrom(world: OverworldManifest, nodeId: string): Ov
     })
     .sort(
       (a, b) =>
-        a.travel_minutes - b.travel_minutes || a.destination.name.localeCompare(b.destination.name),
+        a.travel_minutes - b.travel_minutes ||
+        compareCaseFoldedCodeUnits(a.destination.name, b.destination.name),
     );
 }
 
 export function overworldAreasAt(world: OverworldManifest, nodeId: string): OverworldArea[] {
   return world.areas
     .filter((area) => area.home === nodeId)
-    .sort((a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name));
+    .sort(
+      (a, b) => a.travel_minutes - b.travel_minutes || compareCaseFoldedCodeUnits(a.name, b.name),
+    );
 }
 
 export function overworldCharactersAt(
@@ -689,13 +693,13 @@ export function overworldCharactersAt(
 ): OverworldCharacter[] {
   return world.characters
     .filter((character) => character.home === nodeId)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => compareCaseFoldedCodeUnits(a.name, b.name));
 }
 
 export function overworldEventsAt(world: OverworldManifest, nodeId: string): OverworldLocalEvent[] {
   return world.local_events
     .filter((event) => event.home === nodeId)
-    .sort((a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title));
+    .sort((a, b) => b.intensity - a.intensity || compareCaseFoldedCodeUnits(a.title, b.title));
 }
 
 export function overworldJobsAt(world: OverworldManifest, nodeId: string): OverworldLocalJob[] {
@@ -703,7 +707,9 @@ export function overworldJobsAt(world: OverworldManifest, nodeId: string): Overw
     .filter((job) => job.home === nodeId)
     .sort(
       (a, b) =>
-        a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
+        a.difficulty - b.difficulty ||
+        a.minutes - b.minutes ||
+        compareCaseFoldedCodeUnits(a.title, b.title),
     );
 }
 
@@ -728,7 +734,7 @@ export function overworldExplorationSitesNear(
 ): OverworldExplorationSite[] {
   return world.exploration_sites
     .filter((site) => site.nearest_town === nodeId)
-    .sort((a, b) => b.danger - a.danger || a.title.localeCompare(b.title));
+    .sort((a, b) => b.danger - a.danger || compareCaseFoldedCodeUnits(a.title, b.title));
 }
 
 export function overworldExplorationSitesInArea(
@@ -737,13 +743,13 @@ export function overworldExplorationSitesInArea(
 ): OverworldExplorationSite[] {
   return world.exploration_sites
     .filter((site) => site.area === areaId)
-    .sort((a, b) => b.danger - a.danger || a.title.localeCompare(b.title));
+    .sort((a, b) => b.danger - a.danger || compareCaseFoldedCodeUnits(a.title, b.title));
 }
 
 export function overworldQuestsAt(world: OverworldManifest, nodeId: string): OverworldQuest[] {
   return world.quests
     .filter((quest) => quest.home === nodeId)
-    .sort((a, b) => a.title.localeCompare(b.title));
+    .sort((a, b) => compareCaseFoldedCodeUnits(a.title, b.title));
 }
 
 export function planOverworldRoute(
@@ -2749,7 +2755,10 @@ function canonicalCampaignServiceLocalJobRefsForLocation(
     }
   }
   return [...uniqueRefs.values()].sort((left, right) =>
-    campaignServiceLocalJobOptionKey(left).localeCompare(campaignServiceLocalJobOptionKey(right)),
+    compareCodeUnits(
+      campaignServiceLocalJobOptionKey(left),
+      campaignServiceLocalJobOptionKey(right),
+    ),
   );
 }
 
@@ -3117,7 +3126,7 @@ function canonicalCampaignServiceRelevantQuestStatesForLocation(
       const quest = world.quests.find((candidate) => candidate.id === questId);
       if (!quest) continue;
       const exportedOutcomes = [...(quest.campaign_exports ?? [])].sort((left, right) =>
-        left.ending_id.localeCompare(right.ending_id),
+        compareCodeUnits(left.ending_id, right.ending_id),
       );
       const outcomes: readonly (OverworldQuestCampaignExport | null)[] = [
         ...(quest.id !== targetQuestId || exportedOutcomes.length === 0 ? [null] : []),
