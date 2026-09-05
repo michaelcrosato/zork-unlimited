@@ -35,8 +35,7 @@ const RESIDENT_SHELTER = "albany:relief_resident_shelter";
 const DEFAULT_OATH = "albany:oath_full_compact_duty";
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const FULL = { compact_context: false, compact_result: false } as const;
-const JUNE_CATTLE_TERMS_RESPONSE =
-  "My cattle-first terms already apply. This chooses nothing. Select BACK to return to Cade and review LURE, DRIVE, or FORTIFY. North remains blocked until you choose a plan or select my displayed HUNT option.";
+const JUNE_BACK_NARRATION = "(You end the conversation.)";
 
 function moveToArea(session: OverworldSession, targetAreaId: string): void {
   const currentAreaId = session.view().currentArea?.id;
@@ -458,7 +457,10 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     const campaign = selectAlly(ACCEPT).snapshot();
     const api = createToolApi({ root: process.cwd() });
     const restored = api.restore_overworld_session({ ...FULL, snapshot: campaign });
-    const seed = 8;
+    // BACK now closes in one step, moving the seeded checks one step earlier.
+    // Seed 40 keeps the same sound-frame opening and exercises failed LURE (d20 3)
+    // followed by a successful rail SET (d20 15).
+    const seed = 40;
     const launched = api.start_overworld_session_quest({
       ...FULL,
       compact_actions: false,
@@ -558,14 +560,11 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(termsUi.ok).toBe(true);
     expect(termsResponse.journeyDecision).toEqual({
       countsTowardJourney: false,
-      reason: "dialogue_navigation",
+      reason: "dialogue_closure",
     });
     expect(termsUi.journeyDecision).toEqual(termsResponse.journeyDecision);
-    expect(termsResponse.observation.dialogue).toEqual({
-      npc: "june_pike",
-      npc_text: JUNE_CATTLE_TERMS_RESPONSE,
-    });
-    expect(termsUi.narration).toEqual([`Road Warden June Pike: "${JUNE_CATTLE_TERMS_RESPONSE}"`]);
+    expect(termsResponse.observation.dialogue).toBeNull();
+    expect(termsUi.narration).toEqual([JUNE_BACK_NARRATION]);
     expect(browser.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
 
     const afterTerms = api.get_state({ session_id: rpgSessionId, include_state: true });
@@ -574,7 +573,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       step: beforeTerms.state.step + 1,
       vars: {
         ...beforeTerms.state.vars,
-        __dlg_june_pike: 3,
+        __dlg_june_pike: 0,
       },
     });
     const termsCompact = api.get_observation({
@@ -583,17 +582,16 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       hide_graph: true,
       include_actions: true,
     });
-    expect(termsCompact.context.dialogue).toEqual(["june_pike", JUNE_CATTLE_TERMS_RESPONSE]);
-    expect(termsCompact.context.actions?.filter((id) => id.startsWith("ask_"))).toEqual([
-      "ask_return_to_cade",
-    ]);
+    expect("dialogue" in termsCompact.context).toBe(false);
+    expect(termsCompact.context.actions?.filter((id) => id.startsWith("ask_"))).toEqual([]);
     expect(
       browser
         .view()
         .choices.map((choice) => choice.id)
         .filter((id) => id.startsWith("ask_")),
-    ).toEqual(["ask_return_to_cade"]);
+    ).toEqual([]);
     expect(termsCompact.context.actions).not.toContain("go_north");
+    expect(termsCompact.context.actions).toContain("talk_houndsman");
 
     const termsSave = api.save_game({
       session_id: rpgSessionId,
@@ -619,23 +617,22 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(loadedCompact.context.dialogue).toEqual(termsCompact.context.dialogue);
     expect(loadedCompact.context.actions).toEqual(termsCompact.context.actions);
 
-    const closeTerms = step("ask_return_to_cade");
-    expect(closeTerms.journeyDecision).toEqual({
+    const reopenCade = step("talk_houndsman");
+    expect(reopenCade.journeyDecision).toEqual({
       countsTowardJourney: false,
-      reason: "dialogue_closure",
+      reason: "dialogue_opening",
     });
-    const loadedClose = api.step_action({
+    const loadedCade = api.step_action({
       session_id: termsLoaded.session_id,
-      action_id: "ask_return_to_cade",
+      action_id: "talk_houndsman",
       compact_observation: false,
       compact_events: false,
     });
-    expect(loadedClose.ok).toBe(true);
-    expect(loadedClose.state_hash).toBe(closeTerms.state_hash);
-    expect(loadedClose.observation).toEqual(closeTerms.observation);
+    expect(loadedCade.ok).toBe(true);
+    expect(loadedCade.state_hash).toBe(reopenCade.state_hash);
+    expect(loadedCade.observation).toEqual(reopenCade.observation);
     expect(api.list_legal_actions({ session_id: rpgSessionId }).actions).not.toContain("go_north");
 
-    step("talk_houndsman");
     const cadeStrategies = api.list_legal_actions({ session_id: rpgSessionId }).actions;
     expect(cadeStrategies).toEqual(
       expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),

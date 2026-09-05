@@ -358,7 +358,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     const keepTermsAction = enumerateRpgActions(index, withJune).find(
       (candidate) => candidate.id === "ask_keep_cattle_terms",
     );
-    if (!keepTermsAction) throw new Error("June must offer her cattle-terms clarification");
+    if (!keepTermsAction) throw new Error("June must offer a way back to the yard");
     const keepTermsResult = makeStep(buildRpgRules(index, () => fixedRolls()))(
       withJune,
       keepTermsAction.action,
@@ -369,36 +369,38 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
         type: "state_change",
         effect: "set_var",
         name: "__dlg_june_pike",
-        value: 3,
+        value: 0,
       },
       {
         type: "narration",
-        text: `Road Warden June Pike: "My cattle-first terms already apply. This chooses nothing. Select BACK to return to Cade and review LURE, DRIVE, or FORTIFY. North remains blocked until you choose a plan or select my displayed HUNT option."`,
+        text: "(You end the conversation.)",
       },
     ]);
     const keepTerms = keepTermsResult.state;
     expect(keepTerms).toEqual({
       ...withJune,
       step: withJune.step + 1,
-      vars: { ...withJune.vars, __dlg_june_pike: 3 },
+      vars: { ...withJune.vars, __dlg_june_pike: 0 },
     });
-    expect(buildRpgObservation(index, keepTerms).dialogue).toEqual({
+    expect(buildRpgObservation(index, keepTerms).dialogue).toBeNull();
+    expect(keepTerms.flags.june_combat_line_acknowledged).not.toBe(true);
+    expect(actionIds(keepTerms)).not.toContain("go_north");
+    expect(actionIds(keepTerms).filter((id) => id.startsWith("ask_"))).toEqual([]);
+    expect(actionIds(keepTerms)).toContain("talk_houndsman");
+
+    // Existing saves may still point to the old confirmation node. Keep its
+    // ordinal and exit usable, even though a fresh BACK no longer visits it.
+    const legacyTerms = { ...withJune, vars: { ...withJune.vars, __dlg_june_pike: 3 } };
+    expect(buildRpgObservation(index, legacyTerms).dialogue).toEqual({
       npc: "june_pike",
       npc_text:
         "My cattle-first terms already apply. This chooses nothing. Select BACK to return to Cade and review LURE, DRIVE, or FORTIFY. North remains blocked until you choose a plan or select my displayed HUNT option.",
     });
-    expect(keepTerms.flags.june_combat_line_acknowledged).not.toBe(true);
-    expect(actionIds(keepTerms)).not.toContain("go_north");
-    expect(actionIds(keepTerms).filter((id) => id.startsWith("ask_"))).toEqual([
+    expect(actionIds(legacyTerms).filter((id) => id.startsWith("ask_"))).toEqual([
       "ask_return_to_cade",
     ]);
-
-    const backWithCade = act(keepTerms, "ask_return_to_cade");
-    expect(backWithCade).toEqual({
-      ...withJune,
-      step: withJune.step + 2,
-      vars: { ...withJune.vars, __dlg_june_pike: 0 },
-    });
+    const backWithCade = act(legacyTerms, "ask_return_to_cade");
+    expect(backWithCade).toEqual(keepTerms);
     expect(actionIds(backWithCade)).not.toContain("go_north");
     expect(actionIds(backWithCade)).toContain("talk_houndsman");
     const askingCade = act(backWithCade, "talk_houndsman");

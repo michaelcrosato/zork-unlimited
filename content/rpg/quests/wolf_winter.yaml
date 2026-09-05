@@ -5170,8 +5170,8 @@ npcs:
               goto: june_combat_line_disclosed
             - id: keep_cattle_terms
               aliases: [choose_living_plan, ask_cade]
-              prompt: "BACK — Return to Cade's LURE, DRIVE, and FORTIFY reviews without choosing a plan."
-              goto: june_cattle_terms_confirmed
+              prompt: "BACK — Return to the Byre-Yard without choosing a plan. Talk to Cade to review LURE, DRIVE, or FORTIFY."
+              end: true
         - id: june_combat_line_disclosed
           npc_text: >-
             During HUNT, go north and use the exact rail action shown at the Broken Paling.
@@ -5186,6 +5186,7 @@ npcs:
               aliases: [cross_to_paling, leave_june]
               prompt: "LEAVE — Do not choose HUNT yet. Going north permanently chooses HUNT; Cade's other plans stay open until then."
               end: true
+        # Preserve this node's position for saved conversations from before BACK exited directly.
         - id: june_cattle_terms_confirmed
           npc_text: >-
             My cattle-first terms already apply. This chooses nothing. Select BACK to return
