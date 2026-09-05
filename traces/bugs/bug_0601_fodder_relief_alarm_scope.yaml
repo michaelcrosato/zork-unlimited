@@ -1,0 +1,43 @@
+id: bug_0601
+title: Fodder relief preview blurred the ridge descent and first feed alarm costs
+pack: new_york_overworld
+reported_by: intake/queue/P3-audit-0799f44bf5003fe5.json
+severity: S0
+
+symptom: >
+  A pure Claude Sonnet 5 player reported uncertainty when cattle alarm rose on the
+  exposed ridge descent despite selecting fodder relief. The trigger said prevent
+  its +1 cattle alarm, and the preview began On the Exposed Ridge, although the
+  benefit applies to a successful first LURE feed after taking that approach.
+
+evidence:
+  game_build: 24a036e1b18f67850453bbe0df0655a504991f47
+  game_session: o-53896f15-6874-4ceb-a8d2-26cd11f885a5
+  report_sha256: 32cdc517f1472095a56e088954360bc78e5fddc205517ff9da8066ff4bdd15ef
+  scope: >
+    Four retained interviews (three Sonnet and one Opus) describe wording
+    uncertainty, all in the Claude lineage. Source review and captured action
+    results confirm that the ridge descent correctly increments cattle_alarm by
+    1 independently of fodder relief. This is not a mechanics defect.
+  additional_record: "https://github.com/michaelcrosato/zork-unlimited/blob/8dd46fc80b16f585f2dbb01b5ed3ae933740437a/20260905T095859Z__claude_code__claude-sonnet-5__400ba1f45bca/session.json"
+  captured_alarm_sequence: >
+    In the additional published 0d2ed693 session, ridge descent changes alarm
+    from 0 to 1; the successful first feed leaves it at 1; the second feed
+    raises it to 2; and the final feed leaves it at 2 under the separate
+    limited-duty herd-count benefit. The player's delayed-fodder/refund
+    interpretation is contradicted by the capture; the uncertainty is real.
+
+fix: >
+  Name the feed as the source of the prevented alarm increase. Say explicitly that
+  the ridge descent still adds 1 alarm, while retaining the successful-first-feed,
+  exposed-ridge, and relief-allocation conditions. No consequence or rule changes.
+
+production:
+  - content/world/new_york_overworld.json
+related_mechanics:
+  - content/rpg/quests/wolf_winter.yaml
+verification:
+  - npm run verify:opening-density
+  - npm run verify:bug-traces
+  - npm run crawl:smoke
+  - npm run health
