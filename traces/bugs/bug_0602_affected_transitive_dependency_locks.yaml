@@ -1,0 +1,47 @@
+id: bug_0602
+title: Dependency lockfiles retained affected transitive package versions
+reported_by: intake/queue/P2-audit-561a0d5ac76548e6.json
+severity: S2
+
+symptom: >
+  On 2026-09-05, npm audit reported four affected package entries in the root
+  lockfile (three high and one moderate) and two in the UI lockfile (both high).
+  Compatible patched releases were available for all four package names.
+
+evidence:
+  root_lockfile: package-lock.json
+  ui_lockfile: ui/package-lock.json
+  affected_versions:
+    browserslist: 4.28.2
+    fast-uri: 3.1.5
+    nanoid: 3.3.17
+    qs: 6.15.2
+  dependency_paths:
+    - MCP SDK through Ajv to fast-uri
+    - MCP SDK through Express and body-parser to qs
+    - Babel through compilation targets to browserslist
+    - Vite through PostCSS to nanoid
+  scope: >
+    Confirmed dependency inventory findings, not a demonstrated exploit in the
+    game. Application source does not directly import these four package APIs.
+  maintainer_references:
+    - https://github.com/browserslist/browserslist/security/advisories/GHSA-c83g-rgw3-j3cx
+    - https://github.com/fastify/fast-uri/security/advisories/GHSA-5jgf-p345-68v8
+    - https://github.com/ljharb/qs/security/advisories/GHSA-4mjr-xmp4-gh2g
+    - https://github.com/ai/nanoid/releases/tag/3.3.18
+
+fix: >
+  Refresh the affected transitive resolutions within existing dependency ranges:
+  browserslist 4.28.9, fast-uri 3.1.7, nanoid 3.3.18, and qs 6.16.0, together with
+  the browser-data and side-channel dependencies required by those releases.
+  Preserve both package manifests and all direct dependency versions.
+
+verification:
+  - npm ci
+  - npm --prefix ui ci
+  - npm audit --package-lock-only
+  - npm --prefix ui audit --package-lock-only
+  - npm run verify:bug-traces
+  - npm run crawl:smoke
+  - npm run ui:build
+  - npm run health
