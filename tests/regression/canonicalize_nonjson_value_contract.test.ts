@@ -199,3 +199,38 @@ describe('canonicalize — the "__proto__" state-key collision contract (bug_024
     expect(canonicalize({ constructor: 9, score: 1 })).toBe('{"constructor":9,"score":1}');
   });
 });
+
+describe("canonicalize — non-plain collections are REJECTED, never collapsed to `{}` (bug_0607)", () => {
+  // `Object.keys` of a Map, Set, Date or RegExp is empty, so before bug_0607 every one
+  // of them canonicalized to the string "{}" — the same string as the empty object —
+  // and two states differing only inside such a value hashed IDENTICALLY. The
+  // canonicalizer is not total (it already throws on BigInt); these join that class.
+  it.each([
+    ["Map", new Map([["a", 1]])],
+    ["Set", new Set([1, 2])],
+    ["Date", new Date(0)],
+    ["RegExp", /x/],
+    ["WeakMap", new WeakMap()],
+    ["WeakSet", new WeakSet()],
+  ])("a top-level %s throws instead of canonicalizing to `{}`", (_name, value) => {
+    expect(() => canonicalize(value)).toThrow(/canonicalize/);
+  });
+
+  it("the error names the key path of the offending value when it is nested", () => {
+    expect(() => canonicalize({ vars: { seen: new Set([1]) } })).toThrow(/vars\.seen/);
+  });
+
+  it("an offending element inside an array is caught and its index named", () => {
+    expect(() => canonicalize([{}, new Map()])).toThrow(/\[1\]/);
+  });
+
+  it("plain objects, null-prototype objects and arrays are unaffected (non-vacuity)", () => {
+    const nullProto = Object.assign(Object.create(null) as Record<string, unknown>, { z: 0 });
+    expect(canonicalize({ b: 1, a: [nullProto] })).toBe('{"a":[{"z":0}],"b":1}');
+  });
+
+  it("hashState refuses a Set-bearing state rather than returning the empty-object hash", () => {
+    expect(() => hashState({ s: new Set([1]) })).toThrow(/canonicalize/);
+    expect(canonicalize({ s: {} })).toBe('{"s":{}}');
+  });
+});

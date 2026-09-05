@@ -1,0 +1,39 @@
+id: bug_0611
+title: Every process re-proved the shipped world's integrity, a third of the fast lane
+reported_by: docs/test_duration_census.md (option 1) and docs/REPO_AUDIT_2026-09.md (finding 2)
+severity: S2
+
+symptom: >
+  loadOverworldManifest took about 20 seconds, of which assertOverworldIntegrity was
+  18.6 (measured 2026-09-05; JSON parse 24 ms, the zod parse 116 ms, the opening
+  preparation source check 625 ms). vitest isolates every test file in its own process,
+  so the ~115 files that load the world re-proved the identical bytes on every run, 69
+  minutes of summed worker time on a four-core box, and every CLI, MCP server and crawler
+  start paid the same 20 seconds.
+
+cause: >
+  The loader memoized per process only. The verdict is a pure function of the world bytes
+  and the engine source, but nothing recorded it where a later process could find it.
+
+reproduction:
+  - Time loadOverworldManifest in a fresh process twice; both calls take about 20 seconds.
+
+fix: >
+  After a successful integrity proof the loader writes a marker under
+  ai-runs/world-integrity/ named by the SHA-256 of the world bytes and of every .ts file
+  under src/. A later process whose key matches skips assertOverworldIntegrity and still
+  runs the cheap checks. ADVENTUREFORGE_WORLD_INTEGRITY_CACHE selects use (default),
+  refresh or off; bin/validate.ts forces refresh so the bar always re-proves and rewrites
+  the marker before the suite reads it, and the CI test shards run validate first for the
+  same reason. A build without src/ beside the loader gets no cache.
+
+production:
+  - src/world/source.ts
+  - bin/validate.ts
+  - .github/workflows/ci.yml
+regression:
+  - tests/unit/world_integrity_cache.test.ts
+verification:
+  - The cache tests failed before the marker logic existed and pass after it, including the case where a marker for other bytes is a miss and the case where refresh and off never trust a marker.
+  - A marker written for one world plus one engine source is a miss for any other world text.
+  - npm run health

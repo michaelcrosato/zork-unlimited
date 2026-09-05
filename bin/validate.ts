@@ -12,6 +12,11 @@
  */
 import { formatReport } from "../src/validate/report.js";
 import { RpgSourceRuntime, type RpgLoadResult } from "../src/mcp/rpg_source_runtime.js";
+import { WORLD_INTEGRITY_CACHE_ENV } from "../src/world/source.js";
+
+// The bar's validate step is what proves the shipped world: it never reuses a cached
+// verdict and always rewrites the marker the rest of the bar may then reuse (bug_0611).
+process.env[WORLD_INTEGRITY_CACHE_ENV] ??= "refresh";
 
 const ROOT = process.cwd();
 const rpgSources = new RpgSourceRuntime(ROOT);

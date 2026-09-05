@@ -1,0 +1,36 @@
+id: bug_0607
+title: canonicalize collapsed Map, Set and Date values to "{}" so divergent states hashed equal
+reported_by: docs/REPO_AUDIT_2026-09.md (finding 6), verified 2026-09-05
+severity: S2
+
+symptom: >
+  canonicalize of a Map, of a Set, of a Date and of the empty object were all the same
+  two-character string (an empty JSON object). A Set or Map that reached a hashed value
+  unconverted hashed as a constant, so two sessions differing only inside such a value
+  had identical hashes and the "equal hash implies equal state" invariant (§8.6) that the
+  save-integrity and snapshot-hash checks rest on failed silently.
+
+cause: >
+  sortDeep rebuilt every object from Object.keys(), which is empty for Map, Set, WeakMap,
+  WeakSet, Date and RegExp. The existing non-JSON-value contract pinned undefined,
+  functions, NaN, Infinity, BigInt and -0, but not these six kinds.
+
+reproduction:
+  - "canonicalize of an object holding new Set([1]) and canonicalize of the same object holding {} both returned the same string."
+  - "hashState of the two values was therefore identical."
+
+fix: >
+  sortDeep rejects the six kinds with a TypeError that names the key path of the offending
+  value, joining BigInt in the "not canonicalizable" class rather than inventing a
+  serialization for collections the engine's state never carries on purpose. Plain
+  objects, null-prototype objects and arrays are unchanged, so every existing hash is
+  byte-identical.
+
+production:
+  - src/core/hash.ts
+regression:
+  - tests/regression/canonicalize_nonjson_value_contract.test.ts
+verification:
+  - The nine new contract cases failed before the fix (every kind canonicalized to the empty-object string) and pass after it.
+  - tests/unit/hash_rng.test.ts still passes, so the JSON-safe happy path and shortHash slicing are unchanged.
+  - npm run health
