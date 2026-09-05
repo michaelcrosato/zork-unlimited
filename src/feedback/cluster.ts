@@ -219,10 +219,10 @@ export function jaccard(a: readonly string[], b: readonly string[]): number {
 /**
  * Stable string identity for a CanonicalLocation, used to decide which
  * issues are even ELIGIBLE to cluster together (pass 2 never merges across
- * locationKeys). Built from `kind|questId|node|sceneId` — deliberately
- * excludes `region`, which is redundant with `node` for overworld locations
- * and always null for quest/unmapped ones, so including it would add no
- * discriminating power.
+ * locationKeys). Built from `kind|questId|node|sceneId`, with the region added
+ * for overworld locations that resolve to a whole region rather than a node.
+ * Region is redundant when a node is known, so those existing identities stay
+ * independent of the region's display name.
  *
  * `unmapped` locations are the one exception: they carry no resolved
  * identity beyond their raw text, so two DIFFERENT unmapped raw strings must
@@ -237,7 +237,10 @@ function locationKey(location: CanonicalLocation): string {
     return `unmapped|${location.raw.join("\x01")}`;
   }
   const part = (value: string | null): string => value ?? "\x00";
-  return `${location.kind}|${part(location.questId)}|${part(location.node)}|${part(location.sceneId)}`;
+  const key = `${location.kind}|${part(location.questId)}|${part(location.node)}|${part(location.sceneId)}`;
+  return location.kind === "overworld" && location.node === null && location.region !== null
+    ? `${key}|region:${location.region}`
+    : key;
 }
 
 function unionTokens(a: readonly string[], b: readonly string[]): string[] {

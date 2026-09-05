@@ -27,7 +27,7 @@
 import { z } from "zod";
 import { hashState } from "../core/hash.js";
 
-export const QA_TICKET_SCHEMA_VERSION = 1 as const;
+export const QA_TICKET_SCHEMA_VERSION = 2 as const;
 
 /** Where tickets live. Tracked in git on purpose: this is the dev loop's inbox. */
 export const DEFAULT_TICKET_DIR = "qa/tickets";
@@ -117,7 +117,9 @@ export type TicketEvidence = z.infer<typeof TicketEvidenceSchema>;
 
 export const QaTicketSchema = z
   .object({
-    schema_version: z.literal(QA_TICKET_SCHEMA_VERSION),
+    // Keep v1 history readable. Supersession is v2 so an old reader fails closed
+    // instead of treating a replaced corroboration as actionable work.
+    schema_version: z.union([z.literal(1), z.literal(QA_TICKET_SCHEMA_VERSION)]),
     ticket_id: z.string().regex(/^[0-9a-f]{16}$/),
     title: z.string().min(1),
     kind: TicketKindSchema,
@@ -132,8 +134,27 @@ export const QaTicketSchema = z
     /** Ranking score at last triage. Higher is more urgent. */
     priority: z.number().nonnegative(),
     notes: z.string().optional(),
+    /** Corrected identities replacing this ticket; its authored history stays here. */
+    superseded_by: z
+      .array(z.string().regex(/^[0-9a-f]{16}$/))
+      .min(1)
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((ticket, ctx) => {
+    if (!ticket.superseded_by) return;
+    if (
+      ticket.schema_version !== QA_TICKET_SCHEMA_VERSION ||
+      ticket.superseded_by.includes(ticket.ticket_id) ||
+      new Set(ticket.superseded_by).size !== ticket.superseded_by.length
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["superseded_by"],
+        message: "supersession requires v2 and distinct successor ids other than this ticket",
+      });
+    }
+  });
 export type QaTicket = z.infer<typeof QaTicketSchema>;
 
 /**
@@ -175,6 +196,7 @@ export function derivePromotion(
  * and not already handled or aged out.
  */
 export function isActionable(ticket: QaTicket): boolean {
+  if (ticket.superseded_by) return false;
   if (ticket.status !== "open" && ticket.status !== "in_progress") return false;
   return ticket.promotion === "verified" || ticket.promotion === "corroborated";
 }

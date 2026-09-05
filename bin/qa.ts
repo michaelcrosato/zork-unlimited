@@ -44,7 +44,8 @@ function line(ticket: QaTicket): string {
       : `${ticket.evidence.report_count} report(s)`;
   return (
     `  ${ticket.severity} ${ticket.promotion.padEnd(13)} ${ticket.ticket_id}  ${ticket.title}\n` +
-    `        ${support}; tiers ${ticket.evidence.tiers.join("+") || "unknown"}; priority ${ticket.priority.toFixed(1)}`
+    `        ${support}; tiers ${ticket.evidence.tiers.join("+") || "unknown"}; priority ${ticket.priority.toFixed(1)}` +
+    (ticket.superseded_by ? `\n        superseded by ${ticket.superseded_by.join(", ")}` : "")
   );
 }
 
@@ -105,6 +106,8 @@ function main(): void {
     .sort()
     .map(([key, count]) => `${key} ${count}`);
   console.log(`  promotion: ${parts.join(", ")}`);
+  if (summary.superseded > 0)
+    console.log(`  superseded: ${summary.superseded} historical ticket(s)`);
 
   if (listed.length === 0) {
     console.log("  nothing actionable yet — reports are accumulating, waiting on corroboration.");
