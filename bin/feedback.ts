@@ -212,7 +212,13 @@ function rootRelativeRef(root: string, path: string): string {
 
 function currentCycleRunId(root: string): string {
   const metadataPath = join(root, "ai-runs", "latest-cycle.json");
-  if (!existsSync(metadataPath)) throw new Error("ai-runs/latest-cycle.json is missing");
+  if (!existsSync(metadataPath)) {
+    throw new Error(
+      "ai-runs/latest-cycle.json is missing; start a dev cycle with npm run ai:loop " +
+        "and AI_LOOP_COMMIT=1 in the environment (no coding-agent CLI is required), " +
+        "freeze its revision, then retry compilation. See docs/afk_loop.md for recovery and sealing.",
+    );
+  }
   const stat = lstatSync(metadataPath);
   if (!stat.isFile() || stat.isSymbolicLink()) {
     throw new Error("ai-runs/latest-cycle.json must be a regular non-symlink file");
@@ -233,8 +239,12 @@ function currentCycleRunId(root: string): string {
   return runId;
 }
 
-function writeCompilePointer(root: string, manifestPath: string, manifestSha256: string): string {
-  const runId = currentCycleRunId(root);
+function writeCompilePointer(
+  root: string,
+  runId: string,
+  manifestPath: string,
+  manifestSha256: string,
+): string {
   const manifestRef = rootRelativeRef(root, manifestPath);
   if (!/^ai-runs\/feedback\/\d{8}T\d{6}Z\/report-manifest\.json$/u.test(manifestRef)) {
     throw new Error(`authoritative feedback manifest has a noncanonical path: ${manifestRef}`);
@@ -267,6 +277,9 @@ function main(): void {
   const policy = authoritative
     ? authoritativePolicy(root, parsed.rebootstrap, committed!)
     : ({ kind: "standalone" } as const);
+  // Check the staging destination before the compiler writes its ignored bundle.
+  // Status and standalone forensic compiles do not need a dev-cycle handoff.
+  const cycleRunId = authoritative && !parsed.status ? currentCycleRunId(root) : null;
   const inputs = resolveFeedbackInputs(
     root,
     parsed.inputs,
@@ -350,9 +363,9 @@ function main(): void {
   console.log(`Wrote ${mdPath}`);
   console.log(`Wrote ${retentionPath}`);
   console.log(`Wrote ${manifestPath}`);
-  if (authoritative && manifest.kind !== "standalone") {
+  if (cycleRunId !== null && manifest.kind !== "standalone") {
     console.log(
-      `Staged feedback acceptance pointer ${writeCompilePointer(root, manifestPath, manifestSha256)}`,
+      `Staged feedback acceptance pointer ${writeCompilePointer(root, cycleRunId, manifestPath, manifestSha256)}`,
     );
   }
 }
