@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-05T09:58:59.034Z",
+  "game_session_id": "o-e30275e9-b214-4f22-8c3d-77b4ffb5d9c3",
+  "run_seed": 2026090505,
+  "build": {
+    "git_commit": "0d2ed693eb11d8d3ec72f43af6f94a11d21eb876",
+    "tracked_worktree_clean": true,
+    "world_id": "new_york_overworld",
+    "world_hash": "cc626df163d44d7ac20e5902c85580b0a7f40282cffb309b04b92f8bce7e971b"
+  },
+  "provider": {
+    "id": "claude_code",
+    "vendor": "anthropic",
+    "family": "claude",
+    "isolation": "runner_enforced",
+    "transport_contract": "game-direct-mcp-v1",
+    "client_evidence": {
+      "report_sha256": "123c18267d48d7397904c985516c0b46b3ab07de7b55b53bb27f1d45a156ca7a",
+      "run_sidecar_sha256": "da28659f6cfcfa7c033c04ea42de0428f729b51c143bfbd31cfb7ad846eda7fc",
+      "run_evidence_sha256": "e4571f49ba3e5b92789a9c132c501e9c36ff2a772c663243688f8ca86852609f",
+      "primary_envelope_sha256": "e876fac361d6cdf8ba15875874645c893fb6a4041504f28fbfe193559ee8bf76",
+      "game_session_id": "o-e30275e9-b214-4f22-8c3d-77b4ffb5d9c3",
+      "provider_session_id": "0b67f81f-1ee3-4bca-946a-cc546aa0dd70",
+      "model": "claude-sonnet-5",
+      "cli_version": "2.1.261",
+      "provider_capture_sha256": "046c5996e4f44999b84f96a3f71894d471a3a2db7285ec177fd7b60b609c108d",
+      "provider_events_sha256": "34a9624f7cc89321fc2be6930a268e476d3a32039f50b045cd0f60855f4651a7",
+      "provider_transcript_sha256": "843e5fd7da5c8318ea422812fd15f2fea2b6cbd15ef2a55c8950214edaffc2f0"
+    }
+  },
+  "model": {
+    "id": "claude-sonnet-5",
+    "tier": "volume",
+    "settings": {
+      "reasoning_effort": "medium"
+    }
+  },
+  "persona": {
+    "id": "default",
+    "title": "default",
+    "source_sha256": "3cea4943be7f5c6943191e5b19fb86f2da3b24f9d875eddfac3b3e87006cedea"
+  },
+  "outcome": "completed",
+  "log": {
+    "turns": 2,
+    "accepted_decisions": 73,
+    "transcript_filename": "transcript.jsonl",
+    "transcript_sha256": "e4571f49ba3e5b92789a9c132c501e9c36ff2a772c663243688f8ca86852609f",
+    "transcript_bytes": 2834
+  },
+  "exit_interview": {
+    "clarity": 4,
+    "enjoyment": 5,
+    "goal_understood": true,
+    "got_stuck": false,
+    "confusions": [
+      "Fodder relief's cattle-alarm prevention seemed to apply at the wrong step (alarm rose anyway on first action, refund only landed on the final action)",
+      "Station dispatch board slot naming (role/duty/evidence/preparation/relief_allocation/field_team) needed the legend to decode into plain terms"
+    ],
+    "bugs": [],
+    "best_moment": "Realizing the earlier conversation with Hedrick about his father's death had boosted my Lore just enough to guarantee survival on the wind-stone check that kills you outright on failure.",
+    "worst_moment": "The brief confusion when the Exposed Ridge route's cattle alarm rose by 1 immediately after I'd arranged relief fodder specifically to prevent that.",
+    "would_replay": true,
+    "verdict": "A real new player would likely want to keep playing: three quests in a row rewarded careful reading and non-violent problem-solving with perfect or near-perfect outcomes, character choices felt consequential (values, promises, allies), and the systems, while dense in terminology, were explained clearly enough via the legend to never cause a genuine soft-lock or dead end."
+  },
+  "journey_receipt": {
+    "contractVersion": 3,
+    "exitReason": "player_ended_at_choice",
+    "goalVersion": 3,
+    "goalId": "oneonta_tanners_fever",
+    "goalText": "Travel to Oneonta Market Streets. Find and complete The Tanner's Fever.",
+    "goalStatus": "completed",
+    "goalCompletedAtDecision": 73,
+    "completedGoals": [
+      {
+        "version": 1,
+        "id": "albany_local_lead",
+        "text": "Complete Wolf-Winter in Albany.",
+        "status": "completed",
+        "completedAtDecision": 25
+      },
+      {
+        "version": 2,
+        "id": "carry_hedricks_packet_north",
+        "text": "Take Hayden's packet to Hedrick Cradoc in Queensbury Market Streets. Complete The Gallowmere.",
+        "status": "completed",
+        "completedAtDecision": 51
+      },
+      {
+        "version": 3,
+        "id": "oneonta_tanners_fever",
+        "text": "Travel to Oneonta Market Streets. Find and complete The Tanner's Fever.",
+        "status": "completed",
+        "completedAtDecision": 73
+      }
+    ],
+    "acceptedDecisions": 73,
+    "exitReasons": [
+      "goal_completed"
+    ],
+    "checkpoint": null,
+    "decisionProofHash": "837c135c1233c8c499c56fd5c906faa113ab812c28468e63ffdbdd7681e55366",
+    "retentionHistory": [
+      {
+        "sequence": 1,
+        "atDecision": 25,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "cac445501dd0fab56eca56b4385c041780ff2c038a34b2ac77bfc475174525f0",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 1,
+        "goalId": "albany_local_lead"
+      },
+      {
+        "sequence": 2,
+        "atDecision": 40,
+        "checkpoint": 40,
+        "choice": "continue",
+        "decisionProofHash": "4448296d4d2872c8c038a348d1d64131665d920f6cf41d6fa4e26b2be3be68a8",
+        "reasons": [
+          "checkpoint"
+        ],
+        "goalVersion": null,
+        "goalId": null
+      },
+      {
+        "sequence": 3,
+        "atDecision": 51,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "944fd4a44f3b75f26ab8cc04bce1573a41c1887ab0bed852c64f3f4f583255b6",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 2,
+        "goalId": "carry_hedricks_packet_north"
+      },
+      {
+        "sequence": 4,
+        "atDecision": 73,
+        "checkpoint": null,
+        "choice": "end",
+        "decisionProofHash": "837c135c1233c8c499c56fd5c906faa113ab812c28468e63ffdbdd7681e55366",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 3,
+        "goalId": "oneonta_tanners_fever"
+      }
+    ],
+    "receiptHash": "33da70c2dae82f9034e315cef94391fa4b1da5223cf39b677e528e3dfda88440"
+  },
+  "failure_note": null,
+  "record_id": "400ba1f45bca79c71695e5d7910a74627cf59f0322e9a2f6f58fefde959b8dba"
+}
