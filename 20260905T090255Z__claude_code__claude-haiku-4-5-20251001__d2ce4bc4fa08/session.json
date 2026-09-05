@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-05T09:02:55.153Z",
+  "game_session_id": "unknown-ai-runs/playtest/runs/claude-haiku-main-b7dd890e-seed2026090503",
+  "run_seed": 2026090503,
+  "build": {
+    "git_commit": "b7dd890e2edf65a9d127b26a0d0b52a3a2021587",
+    "tracked_worktree_clean": true,
+    "world_id": "new_york_overworld",
+    "world_hash": "cc626df163d44d7ac20e5902c85580b0a7f40282cffb309b04b92f8bce7e971b"
+  },
+  "provider": {
+    "id": "claude_code",
+    "vendor": "anthropic",
+    "family": "claude",
+    "isolation": "operator_attested",
+    "transport_contract": "game-direct-mcp-v1",
+    "operator_attestation": {
+      "attested_by": "audit-playtest-loop",
+      "method": "Launched through the hardened repository runner on published b7dd890e with seed 2026090503; the report consistency guard rejected an S1 prose finding missing from bugs[]. Retained client artifacts and launch log; no verified report or sidecar was published.",
+      "attested_at": "2026-09-05T09:02:55.153Z"
+    }
+  },
+  "model": {
+    "id": "claude-haiku-4-5-20251001",
+    "tier": "volume",
+    "settings": {}
+  },
+  "persona": {
+    "id": "default",
+    "title": "default",
+    "source_sha256": "3cea4943be7f5c6943191e5b19fb86f2da3b24f9d875eddfac3b3e87006cedea"
+  },
+  "outcome": "malformed_report",
+  "log": {
+    "turns": 0,
+    "accepted_decisions": null,
+    "transcript_filename": "transcript.jsonl",
+    "transcript_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "transcript_bytes": 0
+  },
+  "exit_interview": null,
+  "journey_receipt": null,
+  "failure_note": "no report was published at ai-runs/playtest/runs/claude-haiku-main-b7dd890e-seed2026090503.md",
+  "record_id": "d2ce4bc4fa086408a22216e8b1986cfbef2aac54fbb79ce500cf0062574ade44"
+}

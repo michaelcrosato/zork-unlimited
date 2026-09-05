@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-05T07:41:46.886Z",
+  "game_session_id": "o-6160d8c8-b9dd-4d5f-8b29-9787b4575a9f",
+  "run_seed": 2026090502,
+  "build": {
+    "git_commit": "24a036e1b18f67850453bbe0df0655a504991f47",
+    "tracked_worktree_clean": true,
+    "world_id": "new_york_overworld",
+    "world_hash": "cc626df163d44d7ac20e5902c85580b0a7f40282cffb309b04b92f8bce7e971b"
+  },
+  "provider": {
+    "id": "claude_code",
+    "vendor": "anthropic",
+    "family": "claude",
+    "isolation": "runner_enforced",
+    "transport_contract": "game-direct-mcp-v1",
+    "client_evidence": {
+      "report_sha256": "9cc62c5e5170fa321d172960850d78aad24430454c250b7e65ea3efabf5a8a43",
+      "run_sidecar_sha256": "294b8aad3261650fe6151e81fe88f0844508fe087444224c8d35eb65fd8cfdb2",
+      "run_evidence_sha256": "4eb6a7c1b653c49cfe1e5ebcd12d13eaad1155054b60314f4205d6ae54247397",
+      "primary_envelope_sha256": "a4333bef7481ce23f040ad44cbe6a561ea313d0eb59b3c2ad0374b39cd0d4f45",
+      "game_session_id": "o-6160d8c8-b9dd-4d5f-8b29-9787b4575a9f",
+      "provider_session_id": "8791a92d-6e7e-4427-ae26-b16ab5f2017d",
+      "model": "claude-sonnet-5",
+      "cli_version": "2.1.261",
+      "provider_capture_sha256": "9a073f8748b8fff41b3a65c2a33e13527b2c7ba83991749ef3cf46f3f8b8411c",
+      "provider_events_sha256": "afe578ff0dacf06f3a9220a02c3051e18eb3348c274a1349d8ce5bf6c394aec0",
+      "provider_transcript_sha256": "194b1bc4d9a327926bc51591f6e9b1215a4c8ae4e46baa1064aad3a8af975550"
+    }
+  },
+  "model": {
+    "id": "claude-sonnet-5",
+    "tier": "volume",
+    "settings": {
+      "reasoning_effort": "medium"
+    }
+  },
+  "persona": {
+    "id": "default",
+    "title": "default",
+    "source_sha256": "3cea4943be7f5c6943191e5b19fb86f2da3b24f9d875eddfac3b3e87006cedea"
+  },
+  "outcome": "completed",
+  "log": {
+    "turns": 2,
+    "accepted_decisions": 50,
+    "transcript_filename": "transcript.jsonl",
+    "transcript_sha256": "4eb6a7c1b653c49cfe1e5ebcd12d13eaad1155054b60314f4205d6ae54247397",
+    "transcript_bytes": 2421
+  },
+  "exit_interview": {
+    "clarity": 4,
+    "enjoyment": 4,
+    "goal_understood": true,
+    "got_stuck": false,
+    "confusions": [
+      "Station-dispatch setup at start felt like paperwork before play began",
+      "Unclear which specific action a relief-allocation bonus applied to until after commitment"
+    ],
+    "bugs": [],
+    "best_moment": "Diverting all three wolves alive with the LURE plan and getting the full bloodless 'Pack Diverted Alive' ending.",
+    "worst_moment": "The dense multi-step registration/promise/report dispatch flow before Wolf-Winter actually begins.",
+    "would_replay": true,
+    "verdict": "A real new player would likely want to keep playing. The narrative choices felt meaningful (non-lethal vs. lethal resolutions, ally management, promise-keeping), the skill-check/preparation loop in 'The Gallowmere' was satisfying and fair, and the overworld travel/rest/resupply loop was simple enough to not get in the way of the story."
+  },
+  "journey_receipt": {
+    "contractVersion": 3,
+    "exitReason": "player_ended_at_choice",
+    "goalVersion": 2,
+    "goalId": "carry_hedricks_packet_north",
+    "goalText": "Take Hayden's packet to Hedrick Cradoc in Queensbury Market Streets. Complete The Gallowmere.",
+    "goalStatus": "completed",
+    "goalCompletedAtDecision": 50,
+    "completedGoals": [
+      {
+        "version": 1,
+        "id": "albany_local_lead",
+        "text": "Complete Wolf-Winter in Albany.",
+        "status": "completed",
+        "completedAtDecision": 25
+      },
+      {
+        "version": 2,
+        "id": "carry_hedricks_packet_north",
+        "text": "Take Hayden's packet to Hedrick Cradoc in Queensbury Market Streets. Complete The Gallowmere.",
+        "status": "completed",
+        "completedAtDecision": 50
+      }
+    ],
+    "acceptedDecisions": 50,
+    "exitReasons": [
+      "goal_completed"
+    ],
+    "checkpoint": null,
+    "decisionProofHash": "609d2e9bb7284d35371081311425afdb68577859e95a028de4c39fe79dfa243e",
+    "retentionHistory": [
+      {
+        "sequence": 1,
+        "atDecision": 25,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "4f3f71731a682a32232ce9609df5b29e2d674271ef3435144fa8db3759a5b560",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 1,
+        "goalId": "albany_local_lead"
+      },
+      {
+        "sequence": 2,
+        "atDecision": 40,
+        "checkpoint": 40,
+        "choice": "continue",
+        "decisionProofHash": "5079b3d7d0c6413a51ba54b89c9ed8f0cfbd52796f829c37905bb1a0fcf1391c",
+        "reasons": [
+          "checkpoint"
+        ],
+        "goalVersion": null,
+        "goalId": null
+      },
+      {
+        "sequence": 3,
+        "atDecision": 50,
+        "checkpoint": null,
+        "choice": "end",
+        "decisionProofHash": "609d2e9bb7284d35371081311425afdb68577859e95a028de4c39fe79dfa243e",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 2,
+        "goalId": "carry_hedricks_packet_north"
+      }
+    ],
+    "receiptHash": "1956fde6aa45b153d47210d01fe4472f0d049e4b95951f6db7ac563b7592571b"
+  },
+  "failure_note": null,
+  "record_id": "3072554411026cb59fa72e7f20fd995922cdfb274bb79ddc81b64dae2d11b99c"
+}

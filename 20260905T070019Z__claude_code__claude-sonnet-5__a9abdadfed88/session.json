@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-05T07:00:19.306Z",
+  "game_session_id": "o-53896f15-6874-4ceb-a8d2-26cd11f885a5",
+  "run_seed": 2026090501,
+  "build": {
+    "git_commit": "24a036e1b18f67850453bbe0df0655a504991f47",
+    "tracked_worktree_clean": true,
+    "world_id": "new_york_overworld",
+    "world_hash": "cc626df163d44d7ac20e5902c85580b0a7f40282cffb309b04b92f8bce7e971b"
+  },
+  "provider": {
+    "id": "claude_code",
+    "vendor": "anthropic",
+    "family": "claude",
+    "isolation": "runner_enforced",
+    "transport_contract": "game-direct-mcp-v1",
+    "client_evidence": {
+      "report_sha256": "32cdc517f1472095a56e088954360bc78e5fddc205517ff9da8066ff4bdd15ef",
+      "run_sidecar_sha256": "c87009ec9c01f4fceeac32dd89705fac014766c1027c7567da345fbfc43590f1",
+      "run_evidence_sha256": "6f386f69f793827b866a8ee9c014933066b5f128363146de0dc5a759d1926322",
+      "primary_envelope_sha256": "51c5b4df37e60ae74111b222519adae021646f2ac28ddbff5d6007a69ce95f7c",
+      "game_session_id": "o-53896f15-6874-4ceb-a8d2-26cd11f885a5",
+      "provider_session_id": "2a1c9e41-08c2-457d-b885-6ff842ccb84c",
+      "model": "claude-sonnet-5",
+      "cli_version": "2.1.261",
+      "provider_capture_sha256": "22042d0a4fac4bd992efab3dd30f01574cb6379df5f26c6756a8e8b3185e77a3",
+      "provider_events_sha256": "1bc8bf67de52fd88f01b6b55933cb22fc21ffabb7757bc5654d9834afd0c7686",
+      "provider_transcript_sha256": "3a88f1b52d37c4dee80ae1e39ee513e1bea4396b23e1585920b5495b178876e7"
+    }
+  },
+  "model": {
+    "id": "claude-sonnet-5",
+    "tier": "volume",
+    "settings": {
+      "reasoning_effort": "medium"
+    }
+  },
+  "persona": {
+    "id": "default",
+    "title": "default",
+    "source_sha256": "3cea4943be7f5c6943191e5b19fb86f2da3b24f9d875eddfac3b3e87006cedea"
+  },
+  "outcome": "completed",
+  "log": {
+    "turns": 2,
+    "accepted_decisions": 120,
+    "transcript_filename": "transcript.jsonl",
+    "transcript_sha256": "6f386f69f793827b866a8ee9c014933066b5f128363146de0dc5a759d1926322",
+    "transcript_bytes": 3774
+  },
+  "exit_interview": {
+    "clarity": 5,
+    "enjoyment": 5,
+    "goal_understood": true,
+    "got_stuck": false,
+    "confusions": [
+      "Parallel tool calls to the embedded quest occasionally raced and invalidated each other's state_hash",
+      "Fodder relief's 'prevent +1 cattle alarm' scope was ambiguous relative to the ridge-descent alarm increase"
+    ],
+    "bugs": [
+      {
+        "where": "Wolf-Winter quest, Exposed Ridge descent (Albany)",
+        "severity": "S0",
+        "note": "Fodder relief text implies preventing a cattle-alarm increase, but alarm still rose by 1 on the ridge descent itself; only the later LURE feed's increase was actually suppressed."
+      }
+    ],
+    "best_moment": "Reading the wind-stone with guaranteed-safe lore check before crossing the deadly Storm-Walk in The Breaking Weir, and clipping the life-line to survive the flood crossing.",
+    "worst_moment": "A parallel tool-call race condition caused one action to be rejected for a stale state hash, requiring a quick retry.",
+    "would_replay": true,
+    "verdict": "A real new player would very likely want to keep playing — the game reliably telegraphs risk, rewards careful preparation and non-violent problem-solving, and chains satisfying self-contained mysteries into a larger persistent-character campaign with real consequences (reputation, promises kept, permanent world-state choices). The pacing of one meaty quest per town, followed by a branching aftermath choice, kept momentum without ever feeling padded."
+  },
+  "journey_receipt": {
+    "contractVersion": 3,
+    "exitReason": "player_ended_at_choice",
+    "goalVersion": 5,
+    "goalId": "oswego_advocates_case_first",
+    "goalText": "Take Rome's charter packet to Oswego Market Streets. Complete The Advocate's Case.",
+    "goalStatus": "active",
+    "goalCompletedAtDecision": null,
+    "completedGoals": [
+      {
+        "version": 1,
+        "id": "albany_local_lead",
+        "text": "Complete Wolf-Winter in Albany.",
+        "status": "completed",
+        "completedAtDecision": 27
+      },
+      {
+        "version": 2,
+        "id": "carry_hedricks_packet_north",
+        "text": "Take Hayden's packet to Hedrick Cradoc in Queensbury Market Streets. Complete The Gallowmere.",
+        "status": "completed",
+        "completedAtDecision": 52
+      },
+      {
+        "version": 3,
+        "id": "oneonta_tanners_fever",
+        "text": "Travel to Oneonta Market Streets. Find and complete The Tanner's Fever.",
+        "status": "completed",
+        "completedAtDecision": 75
+      },
+      {
+        "version": 4,
+        "id": "rome_breaking_weir_public_warning",
+        "text": "Travel to Rome Market Streets and find The Breaking Weir. Oneonta's dosage warning is public.",
+        "status": "completed",
+        "completedAtDecision": 100
+      }
+    ],
+    "acceptedDecisions": 120,
+    "exitReasons": [
+      "checkpoint"
+    ],
+    "checkpoint": 120,
+    "decisionProofHash": "d4f5281ffefbdcf4c0e63c1bf55fc0a931df248da301a69bff9a3df506eb9e74",
+    "retentionHistory": [
+      {
+        "sequence": 1,
+        "atDecision": 27,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "0b79d723a12c22dca2f6ff771521ddabc837c67e12cf7851e4f5eab24edc40bc",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 1,
+        "goalId": "albany_local_lead"
+      },
+      {
+        "sequence": 2,
+        "atDecision": 40,
+        "checkpoint": 40,
+        "choice": "continue",
+        "decisionProofHash": "021f178c13b1018a1e7cc27a851d50a6c37380f50ff2753f17f63674b1cc7d63",
+        "reasons": [
+          "checkpoint"
+        ],
+        "goalVersion": null,
+        "goalId": null
+      },
+      {
+        "sequence": 3,
+        "atDecision": 52,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "b4793768ca3aee1064858f19985519daa6ae388d449a9342bf64e4339020e786",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 2,
+        "goalId": "carry_hedricks_packet_north"
+      },
+      {
+        "sequence": 4,
+        "atDecision": 75,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "171056f18f7c2e68b7c037455fec0d5c3969ca3b6a1f652978ca3e90146a105b",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 3,
+        "goalId": "oneonta_tanners_fever"
+      },
+      {
+        "sequence": 5,
+        "atDecision": 80,
+        "checkpoint": 80,
+        "choice": "continue",
+        "decisionProofHash": "cab96d1b7aec5b18c48fbb836d78881b87dd4ddf10a68fdfc6bb909a1d916cf2",
+        "reasons": [
+          "checkpoint"
+        ],
+        "goalVersion": null,
+        "goalId": null
+      },
+      {
+        "sequence": 6,
+        "atDecision": 100,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "2f02f4b92b9d84dc98e6b72541f271e405657ac03af7bc41f95d326ba2e7f79e",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 4,
+        "goalId": "rome_breaking_weir_public_warning"
+      },
+      {
+        "sequence": 7,
+        "atDecision": 120,
+        "checkpoint": 120,
+        "choice": "end",
+        "decisionProofHash": "d4f5281ffefbdcf4c0e63c1bf55fc0a931df248da301a69bff9a3df506eb9e74",
+        "reasons": [
+          "checkpoint"
+        ],
+        "goalVersion": null,
+        "goalId": null
+      }
+    ],
+    "receiptHash": "b0013491bd515092b9653c174e9c57f766a15aa062d218f65c42c867961f5b22"
+  },
+  "failure_note": null,
+  "record_id": "a9abdadfed8899f780ac07122031e82ab48d7f938925cf46338378d42835215b"
+}

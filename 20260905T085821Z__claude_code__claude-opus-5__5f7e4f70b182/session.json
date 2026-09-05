@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-05T08:58:21.798Z",
+  "game_session_id": "o-097cf98f-a815-4951-8f59-d65f0af8368c",
+  "run_seed": 2026090504,
+  "build": {
+    "git_commit": "b7dd890e2edf65a9d127b26a0d0b52a3a2021587",
+    "tracked_worktree_clean": true,
+    "world_id": "new_york_overworld",
+    "world_hash": "cc626df163d44d7ac20e5902c85580b0a7f40282cffb309b04b92f8bce7e971b"
+  },
+  "provider": {
+    "id": "claude_code",
+    "vendor": "anthropic",
+    "family": "claude",
+    "isolation": "runner_enforced",
+    "transport_contract": "game-direct-mcp-v1",
+    "client_evidence": {
+      "report_sha256": "474428b488f95560139ca20b793f2e25b358fc55f1214f6fb93d5a1d0bc7573c",
+      "run_sidecar_sha256": "5c52f98f465eb5dafc185d16cdbeb2fdf7332f04470ffb80bab537a7d4aafd9f",
+      "run_evidence_sha256": "bf31ad15de6b1d43ada5a658227df25bc341ce8bc38e2fa2a9aaae4ccdbae4d8",
+      "primary_envelope_sha256": "b263a417dd2b26fd866ae001ee095cd779fa5738dec4fbc34ee14f11d5b4991a",
+      "game_session_id": "o-097cf98f-a815-4951-8f59-d65f0af8368c",
+      "provider_session_id": "a07f42bd-d0a8-4b28-8dd0-8bf888616c14",
+      "model": "claude-opus-5",
+      "cli_version": "2.1.261",
+      "provider_capture_sha256": "41a024e9846d910a2a2730330a4e5bcc56c3f21977d894091d569b7abd8664c2",
+      "provider_events_sha256": "e9f3b4b36d285f5713a2067f7efa159f253fc3d3adb08c1715f2189258128786",
+      "provider_transcript_sha256": "97c94e9e13ae910a254c918e9d7960d25619ef5de6b1259172d50d49a853c7e6"
+    }
+  },
+  "model": {
+    "id": "claude-opus-5",
+    "tier": "reference",
+    "settings": {}
+  },
+  "persona": {
+    "id": "default",
+    "title": "default",
+    "source_sha256": "3cea4943be7f5c6943191e5b19fb86f2da3b24f9d875eddfac3b3e87006cedea"
+  },
+  "outcome": "completed",
+  "log": {
+    "turns": 2,
+    "accepted_decisions": 85,
+    "transcript_filename": "transcript.jsonl",
+    "transcript_sha256": "bf31ad15de6b1d43ada5a658227df25bc341ce8bc38e2fa2a9aaae4ccdbae4d8",
+    "transcript_bytes": 3046
+  },
+  "exit_interview": {
+    "clarity": 3,
+    "enjoyment": 4,
+    "goal_understood": true,
+    "got_stuck": false,
+    "confusions": [
+      "Cattle-alarm modifiers stacked from three sources with inconsistent wording",
+      "Fodder text implied it canceled the Exposed Ridge alarm, but it only applied to the LURE feed",
+      "Station support vocabulary (role/duty/evidence/preparation/relief_allocation/field_team) front-loaded before the first decision"
+    ],
+    "bugs": [
+      {
+        "where": "Albany Station — relief wagon option 'Send Fodder to Cade's Herd'",
+        "severity": "S1",
+        "note": "Consequence text implies it prevents the Exposed Ridge descent's +1 cattle alarm; it only applies to the first LURE feed, and the ridge still added +1."
+      },
+      {
+        "where": "Wolf-Winter, Byre-Yard — June Pike dialogue",
+        "severity": "S1",
+        "note": "Option labeled 'BACK — Return to Cade's reviews' does not return; it emits a no-op line and presents a second BACK."
+      },
+      {
+        "where": "Gallowmere and Tanner's Fever room/NPC text",
+        "severity": "S1",
+        "note": "Prose dictates literal action ids and exact command verbs, turning both quests into follow-the-instructions corridors."
+      },
+      {
+        "where": "Road encounters on Albany–Saratoga and Albany–Colonie",
+        "severity": "S1",
+        "note": "Both encounters presented identical option sets at identical time/supply/fatigue/renown costs; only flavor text differed."
+      },
+      {
+        "where": "Queensbury Market Streets — Hedrick Cradoc contact blurb",
+        "severity": "S1",
+        "note": "Grieving son returns the same generic 'wants help with local problems' line as an unrelated market broker, hours after his father's death."
+      }
+    ],
+    "best_moment": "Sending all three wolves into the high wood alive with the whole herd intact — a win with nothing killed.",
+    "worst_moment": "Reading a 'BACK' option in June's dialogue that refused to go back and demanded a second BACK.",
+    "would_replay": true,
+    "verdict": "Yes, a real new player would keep playing. The Wolf-Winter is a genuinely good opening: four field plans with honest tradeoffs, support choices that visibly change outcomes, and a bloodless victory that felt earned rather than granted. The standout is how consequences chain across scopes — asking Hedrick one extra question converted a lethal check into a certainty, and choosing the slower honest filing for Hayden cashed out hours later as a 15-minute rest instead of 180. That's real systemic reward for playing in character. The weakness is that quests two and three were far more on-rails than the first, with prose that reads out the exact commands, and the overworld's road encounters and contact blurbs are visibly templated. If the branching depth of Wolf-Winter is the norm and Gallowmere was the exception, this is very good; if it's the reverse, the seams show fast."
+  },
+  "journey_receipt": {
+    "contractVersion": 3,
+    "exitReason": "player_ended_at_choice",
+    "goalVersion": 3,
+    "goalId": "oneonta_tanners_fever",
+    "goalText": "Travel to Oneonta Market Streets. Find and complete The Tanner's Fever.",
+    "goalStatus": "completed",
+    "goalCompletedAtDecision": 85,
+    "completedGoals": [
+      {
+        "version": 1,
+        "id": "albany_local_lead",
+        "text": "Complete Wolf-Winter in Albany.",
+        "status": "completed",
+        "completedAtDecision": 31
+      },
+      {
+        "version": 2,
+        "id": "carry_hedricks_packet_north",
+        "text": "Take Hayden's packet to Hedrick Cradoc in Queensbury Market Streets. Complete The Gallowmere.",
+        "status": "completed",
+        "completedAtDecision": 62
+      },
+      {
+        "version": 3,
+        "id": "oneonta_tanners_fever",
+        "text": "Travel to Oneonta Market Streets. Find and complete The Tanner's Fever.",
+        "status": "completed",
+        "completedAtDecision": 85
+      }
+    ],
+    "acceptedDecisions": 85,
+    "exitReasons": [
+      "goal_completed"
+    ],
+    "checkpoint": null,
+    "decisionProofHash": "1569c06f7120143e961dbbcb4807be77740ab6a0ba0469a9cf0fa8ccc3124658",
+    "retentionHistory": [
+      {
+        "sequence": 1,
+        "atDecision": 31,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "0a733b0dbb7c97efc3e6c0d19d8e105005d911c5afe0bc9781615ce0a81bd711",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 1,
+        "goalId": "albany_local_lead"
+      },
+      {
+        "sequence": 2,
+        "atDecision": 40,
+        "checkpoint": 40,
+        "choice": "continue",
+        "decisionProofHash": "dd0a1c7f7d3c6d10f244a78e9e4df6fead9399c30a53f274fd84fc011e909025",
+        "reasons": [
+          "checkpoint"
+        ],
+        "goalVersion": null,
+        "goalId": null
+      },
+      {
+        "sequence": 3,
+        "atDecision": 62,
+        "checkpoint": null,
+        "choice": "continue",
+        "decisionProofHash": "2f9bc3a6dbf80dd243b140c5afaed70a336eec7a3f42bb31aabc9fe56f92270b",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 2,
+        "goalId": "carry_hedricks_packet_north"
+      },
+      {
+        "sequence": 4,
+        "atDecision": 80,
+        "checkpoint": 80,
+        "choice": "continue",
+        "decisionProofHash": "552e84178acb29224e84632647fdca1b185d8c03511e55caf55fbf362290131c",
+        "reasons": [
+          "checkpoint"
+        ],
+        "goalVersion": null,
+        "goalId": null
+      },
+      {
+        "sequence": 5,
+        "atDecision": 85,
+        "checkpoint": null,
+        "choice": "end",
+        "decisionProofHash": "1569c06f7120143e961dbbcb4807be77740ab6a0ba0469a9cf0fa8ccc3124658",
+        "reasons": [
+          "goal_completed"
+        ],
+        "goalVersion": 3,
+        "goalId": "oneonta_tanners_fever"
+      }
+    ],
+    "receiptHash": "326570f523e6d05ff483054e5bd497ae132d5579f630c0f6a00fb624a577e171"
+  },
+  "failure_note": null,
+  "record_id": "5f7e4f70b182121cbbf36b01a791be411d8afb3023c971e192a240c082981fa4"
+}
