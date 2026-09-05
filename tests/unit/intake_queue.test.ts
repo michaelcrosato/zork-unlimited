@@ -540,6 +540,112 @@ describe("grok-4.6 wave playtest intake", () => {
   });
 });
 
+/**
+ * Two-surface playtest visibility: Linear/intake is the short working board,
+ * qa/tickets is the idle shelf. These keys must stay unique so re-file updates
+ * rather than opening a 392-cluster dump.
+ */
+const TWO_SURFACE_TICKETS = [
+  {
+    source: "audit" as const,
+    kind: "bug" as const,
+    key: "grok-reference-tier-autocorroboration",
+    priority: "P1",
+  },
+  {
+    source: "research" as const,
+    kind: "feature" as const,
+    key: "two-surface-playtest-visibility",
+    priority: "P2",
+  },
+  {
+    source: "research" as const,
+    kind: "feature" as const,
+    key: "idle-qa-bucket-next",
+    priority: "P2",
+  },
+];
+
+describe("two-surface playtest visibility intake", () => {
+  it("keeps three distinct 16-hex ids whose bodies name the board/shelf split and the reference-tier leak", () => {
+    const ids = TWO_SURFACE_TICKETS.map(({ source, kind, key }) =>
+      submissionId({ source, kind, key }),
+    );
+    expect(new Set(ids).size).toBe(3);
+    for (const [index, spec] of TWO_SURFACE_TICKETS.entries()) {
+      const id = ids[index]!;
+      expect(id).toMatch(/^[0-9a-f]{16}$/);
+      const files = readdirSync("intake/queue").filter((name) => name.includes(id));
+      expect(files, `missing queue file for ${spec.key}`).toHaveLength(1);
+      const stored = JSON.parse(readFileSync(join("intake/queue", files[0]!), "utf8"));
+      expect(stored.id).toBe(id);
+      expect(["research", "audit"]).toContain(stored.source);
+      expect(stored.source).toBe(spec.source);
+      expect(stored.kind).toBe(spec.kind);
+      expect(stored.priority).toBe(spec.priority);
+      expect(SubmissionStatusSchema.options).toContain(stored.status);
+      const body = String(stored.body);
+      expect(body).toMatch(/intake\/queue|Linear/i);
+      expect(body).toMatch(/qa\/tickets/);
+      expect(body).toMatch(/derivePromotion|reference-tier|reference/i);
+    }
+  });
+
+  it("submit CLI upserts the auto-corroboration ticket on --key without duplicating", () => {
+    const queue = tempQueue();
+    const bodyFile = join(queue, "body.md");
+    writeFileSync(
+      bodyFile,
+      [
+        "derivePromotion auto-corroborates reference-tier clusters.",
+        "Linear/intake/queue is the short working board; qa/tickets is the idle shelf.",
+        "",
+      ].join("\n"),
+    );
+    const tsx = join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
+    const run = () =>
+      execFileSync(
+        "node",
+        [
+          tsx,
+          "bin/submit.ts",
+          "--source",
+          "audit",
+          "--kind",
+          "bug",
+          "--priority",
+          "P1",
+          "--title",
+          "Grok-4.6 reference-tier auto-corroboration floods intake and Linear",
+          "--body-file",
+          bodyFile,
+          "--key",
+          "grok-reference-tier-autocorroboration",
+          "--label",
+          "lane:playtest",
+          "--queue",
+          queue,
+        ],
+        { encoding: "utf8" },
+      );
+    const id = submissionId({
+      source: "audit",
+      kind: "bug",
+      key: "grok-reference-tier-autocorroboration",
+    });
+    const first = run();
+    const second = run();
+    expect(first).toContain(id);
+    expect(second).toContain(id);
+    const files = readdirSync(queue).filter((name) => name.endsWith(".json"));
+    expect(files).toHaveLength(1);
+    const stored = JSON.parse(readFileSync(join(queue, files[0]!), "utf8"));
+    expect(stored.id).toBe(id);
+    expect(stored.source).toBe("audit");
+    expect(stored.status).toBe("open");
+  });
+});
+
 describe("Linear intake mapping", () => {
   it("prefixes titles with the 16-hex join key and maps P0–P3 to Urgent/High/Medium/Low", () => {
     expect(linearIssueTitle("33c83cbe8ead954b", "Steading Yard north blocked")).toBe(
