@@ -174,6 +174,8 @@ export interface PureFleetRunArtifactExpectation {
   build: z.infer<typeof PureRunBuildSchema> & { tracked_worktree_clean: true };
   /** Forward-only report contract; omitted for historical artifact readability. */
   requireStructuredIssueConsistency?: boolean;
+  /** Ordinary QA may pin a different effort; certification retains its xhigh default. */
+  expectedReasoningEffort?: string;
 }
 
 export interface PureFleetRunArtifactHashes {
@@ -314,7 +316,7 @@ const CodexTurnContextSchema = z
     approval_policy: z.literal("never"),
     sandbox_policy: z.object({ type: z.literal("read-only") }).passthrough(),
     model: CertifiedCodexModelSchema,
-    effort: z.literal("xhigh"),
+    effort: z.string().min(1),
   })
   .passthrough();
 
@@ -392,6 +394,7 @@ const AnyCodexCaptureReceiptSchema = z.union([
 interface CodexAuthorityFacts {
   sessionId: string;
   actualModel: CertifiedCodexModel;
+  reasoningEffort: string;
   turnId: string;
   cwd: string;
   codeModeContract:
@@ -620,6 +623,7 @@ function parseCodexAuthority(
   captureText: string,
   expectedModel: CertifiedCodexModel,
   report: string,
+  expectedEffort = "xhigh",
 ): { ok: true; facts: CodexAuthorityFacts } | { ok: false; reason: string } {
   const events = parseJsonLines(eventsText, "Codex provider events");
   if (!events.ok) return events;
@@ -645,8 +649,11 @@ function parseCodexAuthority(
   );
   if (!session.success) return { ok: false, reason: "Codex rollout session_meta is malformed" };
   const turn = CodexTurnContextSchema.safeParse((turnRow.row as Record<string, unknown>).payload);
-  if (!turn.success)
-    return { ok: false, reason: "Codex rollout turn_context is not a strict read-only xhigh turn" };
+  if (!turn.success || turn.data.effort !== expectedEffort)
+    return {
+      ok: false,
+      reason: `Codex rollout turn_context is not a strict read-only ${expectedEffort} turn`,
+    };
   if (turn.data.model !== expectedModel) {
     return {
       ok: false,
@@ -698,6 +705,7 @@ function parseCodexAuthority(
     codeModeContract: capture.codeModeContract,
     transportContract: capture.transportContract ?? capture.codeModeContract,
     cliVersion: session.data.cli_version,
+    expectedEffort,
   });
   if (!inspected.ok)
     return { ok: false, reason: `Codex provider evidence rejected: ${inspected.reason}` };
@@ -763,6 +771,7 @@ function parseCodexAuthority(
     facts: {
       sessionId: session.data.id,
       actualModel: turn.data.model,
+      reasoningEffort: turn.data.effort,
       turnId: turn.data.turn_id,
       cwd: capture.canonicalCwd,
       codeModeContract: capture.codeModeContract,
@@ -982,6 +991,7 @@ export function validatePureFleetRunArtifactBytes(
       decoded.providerCapture.text,
       expectedModel.data,
       providerReport,
+      expected.expectedReasoningEffort ?? "xhigh",
     );
     if (!authority.ok) return authority;
     if (primary.data.session_id !== authority.facts.sessionId) {
@@ -1008,7 +1018,7 @@ export function validatePureFleetRunArtifactBytes(
         provider_session_id: authority.facts.sessionId,
         actual_model: authority.facts.actualModel,
         actual_provider: "openai",
-        reasoning_effort: "xhigh",
+        reasoning_effort: authority.facts.reasoningEffort,
         provider_turn_id: authority.facts.turnId,
         provider_cwd: authority.facts.cwd,
         code_mode_contract: authority.facts.codeModeContract,

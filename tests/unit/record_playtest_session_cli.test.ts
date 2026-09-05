@@ -18,6 +18,11 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  countsTowardExperienceMetrics,
+  parsePlaytestSession,
+} from "../../src/qa/session_record.js";
+import { recordedClaudeRun, recordedCodexRun } from "./support/recorded_runner.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
@@ -72,6 +77,13 @@ type RecordOptions = {
   provider?: string;
   model?: string;
   attestation?: { attestedBy: string; method: string };
+  effort?: string;
+  envEffort?: string;
+};
+
+const ATTESTATION = {
+  attestedBy: "qa-harness",
+  method: "runner launch observed; client proof unavailable",
 };
 
 function record(
@@ -100,13 +112,35 @@ function record(
       "--store",
       store,
       ...attestationArgs,
+      ...(options.effort ? ["--effort", options.effort] : []),
     ],
-    { cwd: ROOT, encoding: "utf8", timeout: 120_000 },
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+      timeout: 120_000,
+      env: { ...process.env, BLIND_REASONING_EFFORT: options.envEffort ?? "" },
+    },
   );
   return { output: `${result.stdout ?? ""}\n${result.stderr ?? ""}`, status: result.status };
 }
 
 describe("recording a run into the playtest corpus", () => {
+  it.each(["flag", "environment"])("honors the Codex launch effort from the %s", (source) => {
+    const out = join(temp("af-rec-run-"), "run");
+    const store = temp("af-rec-store-");
+    recordedCodexRun(out, "max");
+    const result = record(out, store, {
+      model: "gpt-5.6-terra",
+      ...(source === "flag" ? { effort: "max", envEffort: "low" } : { envEffort: "max" }),
+    });
+    expect(result.status, result.output).toBe(0);
+    const session = JSON.parse(
+      readFileSync(join(store, readdirSync(store)[0]!, "session.json"), "utf8"),
+    );
+    expect(session.provider.isolation).toBe("runner_enforced");
+    expect(session.provider.client_evidence.reasoning_effort).toBe("max");
+    expect(session.model.settings.reasoning_effort).toBe("max");
+  });
   it("keeps a structural mock out of the corpus entirely", () => {
     const work = temp("af-rec-run-");
     const store = temp("af-rec-store-");
@@ -136,7 +170,7 @@ describe("recording a run into the playtest corpus", () => {
     writeFileSync(`${out}.md`, REPORT, "utf8");
     writeFileSync(`${out}.run.json`, "{ not json at all", "utf8");
 
-    const { output } = record(out, store);
+    const { output } = record(out, store, { attestation: ATTESTATION });
     expect(output).not.toContain("not a playtest");
     expect(readdirSync(store).length, output).toBe(1);
   });
@@ -149,10 +183,46 @@ describe("recording a run into the playtest corpus", () => {
     const out = join(work, "run1");
     writeFileSync(`${out}.md`, REPORT, "utf8");
 
-    const { output, status } = record(out, store);
+    const { output, status } = record(out, store, { attestation: ATTESTATION });
     expect(status, output).toBe(0);
     expect(readdirSync(store).length, output).toBe(1);
+    const session = JSON.parse(
+      readFileSync(join(store, readdirSync(store)[0]!, "session.json"), "utf8"),
+    );
+    expect(session.provider.isolation).toBe("operator_attested");
+    expect(session.provider.client_evidence).toBeUndefined();
   });
+
+  it.each([
+    ["codex", "gpt-5.6-terra", recordedCodexRun],
+    ["claude_code", "claude-haiku-4-5-20251001", recordedClaudeRun],
+  ] as const)(
+    "requires run-specific proof before sealing %s as runner_enforced",
+    (provider, model, fixture) => {
+      const out = join(temp("af-rec-run-"), "run");
+      const store = temp("af-rec-store-");
+      const run = fixture(out);
+      const proofPath =
+        provider === "codex" ? `${out}.codex-capture.json` : `${out}.claude-capture.json`;
+      const proof = readFileSync(proofPath);
+      rmSync(proofPath);
+      const rejected = record(out, store, { provider, model });
+      expect(rejected.status, rejected.output).not.toBe(0);
+      expect(rejected.output).toContain("requires both --attested-by and --method");
+      expect(readdirSync(store)).toEqual([]);
+      writeFileSync(proofPath, proof);
+      const accepted = record(out, store, { provider, model });
+      expect(accepted.status, accepted.output).toBe(0);
+      const session = parsePlaytestSession(
+        JSON.parse(readFileSync(join(store, readdirSync(store)[0]!, "session.json"), "utf8")),
+      );
+      expect(session.provider.isolation).toBe("runner_enforced");
+      expect(session.provider.client_evidence?.model).toBe(run.model);
+      expect(session.game_session_id).toBe("ow-recorded-proof");
+      expect(session.run_seed).toBe(741);
+      expect(countsTowardExperienceMetrics(session)).toBe(true);
+    },
+  );
 
   it("refuses to invent a missing operator attestation", () => {
     const work = temp("af-rec-run-");

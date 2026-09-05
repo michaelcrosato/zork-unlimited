@@ -100,16 +100,33 @@ That matters more than it sounds. `bin/record-playtest-session.ts` seals the iso
 label onto a corpus record, and the ranking layer lets `runner_enforced` sessions move
 experience metrics. A provider stamped with a label the runner cannot back is the
 contamination `src/blind/providers.ts` calls the worst error available in that file —
-so the recorder now downgrades to `operator_attested`, loudly, for any provider this
-checkout cannot actually drive. The weaker path requires explicit `--attested-by` and
-`--method` values and fails before writing if either is absent; it never manufactures
-an attestation to make the schema pass.
+so the recorder requires both a drivable provider and verified artifacts from this
+particular run. Current pure server evidence must reproduce the sidecar and report
+receipt. Codex additionally revalidates its envelope, public events, copied rollout,
+capture receipt, and requested model/effort. Claude Code re-audits the copied transcript
+and client stream, binds their assistant messages and final result, then reproduces
+the capture receipt and envelope. The resulting
+`client_evidence` records the client session, model, and artifact hashes. Reading a
+capture receipt never reopens the client's private state directory.
 
-Adding a vendor is therefore five mechanical steps, none of which is "edit a gate":
+Missing or rejected proof downgrades to `operator_attested`, with the reason printed.
+That path requires explicit `--attested-by` and `--method` values and fails before
+writing if either is absent. `playtest-loop.sh` supplies its own launch attestation so
+crashes and incomplete runs remain recorded even when no client proof was published.
+This does not retroactively authenticate historical corpus records.
+For an effort override, pass the same `--effort` to the recorder or retain
+`BLIND_REASONING_EFFORT` in its environment; the effective setting is checked and
+recorded instead of silently substituting the catalog default. Server-authored
+build/seed/session evidence remains a trusted runner assertion, checked for consistency
+against the sidecar and report receipt.
+
+Making a vendor launchable takes five mechanical steps:
 a registry entry, a `capture` block, a reader module, a launch branch in `run.sh`, and
 one line in `implemented-launch-paths.json`. The first three make its evidence honest;
 the last two make it runnable. `npm run doctor` prints exactly which of the five are
-missing, per provider, in this checkout.
+missing, per provider, in this checkout. Granting new corpus records `runner_enforced`
+also requires a retained-artifact verifier in `src/qa/runner_evidence.ts`; until then,
+the recorder requires explicit attestation.
 
 **Today that yields: codex and claude_code both live in the generic runner
 (`blind-tester/claude-session.mjs` has its launch branch and its line in the
