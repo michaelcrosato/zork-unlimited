@@ -23,6 +23,7 @@ import {
   INITIAL_JOURNEY_GOAL,
   INITIAL_JOURNEY_GOAL_GUIDANCE,
   JOURNEY_CONTRACT_VERSION,
+  type JourneyChoiceResult,
   type JourneyPresentation,
   type JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
@@ -2426,6 +2427,78 @@ describe("MCP journey surface", () => {
     });
     expect(stepped.overworld_snapshot_hash).not.toBe(continued.snapshot_hash);
   });
+
+  it.each([
+    { choice: "continue", compact_context: true },
+    { choice: "end", compact_context: true },
+    { choice: "continue", compact_context: false },
+    { choice: "end", compact_context: false },
+  ] as const)(
+    "journey result projection keeps $choice evidence without a second journey (compact context $compact_context)",
+    ({ choice, compact_context }) => {
+      const run = mcpWolfWinterCheckpointInsideQuest();
+      const before = run.a.get_overworld_session({
+        session_id: run.overworldSessionId,
+        include_observation: true,
+      });
+      const response = run.a.choose_overworld_session_journey({
+        session_id: run.overworldSessionId,
+        choice,
+        compact_context,
+      });
+      const current = run.a.get_overworld_session({
+        session_id: run.overworldSessionId,
+        include_observation: true,
+      });
+      expect(response.result).not.toHaveProperty("journey");
+      expect(Object.keys(response.result).sort()).toEqual(["exitReceipt", "retentionEvent"]);
+      expect(response.journey).toEqual(
+        compact_context ? compactJourneyPresentation(current.journey) : current.journey,
+      );
+      expect(response.snapshot_hash).toBe(current.snapshot_hash);
+      expect(response.result.retentionEvent).toEqual(current.journey.retentionHistory.at(-1));
+      expect(response.result.retentionEvent).toMatchObject({
+        choice,
+        atDecision: before.journey.acceptedDecisions,
+        decisionProofHash: before.journey.decisionProof.hash,
+      });
+      expect(current.journey.decisionProof).toEqual(before.journey.decisionProof);
+      if (choice === "end") {
+        expect(response.result.exitReceipt).toMatchObject({
+          acceptedDecisions: before.journey.acceptedDecisions,
+          decisionProofHash: before.journey.decisionProof.hash,
+          retentionHistory: current.journey.retentionHistory,
+        });
+        expect(response).not.toHaveProperty("rpg_session");
+      } else {
+        expect(response.result.exitReceipt).toBeNull();
+        expect(response.rpg_session_id).toBe(run.rpgSessionId);
+        expect(response.rpg_session?.state_hash).toBe(run.checkpoint.state_hash);
+      }
+    },
+  );
+
+  it.each([true, false] as const)(
+    "journey result projection preserves explicit full results (compact context %s)",
+    (compact_context) => {
+      const run = mcpWolfWinterCheckpointInsideQuest();
+      const response = run.a.choose_overworld_session_journey({
+        session_id: run.overworldSessionId,
+        choice: "continue",
+        compact_context,
+        compact_result: false,
+      });
+      const current = run.a.get_overworld_session({
+        session_id: run.overworldSessionId,
+        include_observation: true,
+      });
+      expectTypeOf(response.result).toEqualTypeOf<JourneyChoiceResult>();
+      expect(response.result.journey).toEqual(current.journey);
+      expect(response.result.retentionEvent).toEqual(current.journey.retentionHistory.at(-1));
+      expect(response.result.exitReceipt).toBeNull();
+      expect(response.rpg_session_id).toBe(run.rpgSessionId);
+    },
+  );
 
   it("resumes compact quest context after Continue and never exposes it after End", () => {
     const continuedRun = mcpWolfWinterCheckpointInsideQuest();
