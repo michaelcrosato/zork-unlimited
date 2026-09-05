@@ -1,0 +1,65 @@
+id: bug_0606
+title: World validation repeatedly rebuilt identical campaign service projection keys
+pack: n/a — overworld validation
+reported_by: intake/queue/P2-audit-133f3695b3d0fb46.json
+severity: S3
+
+symptom: >
+  Fresh CLI and MCP processes repeatedly validated the shipped world. Campaign
+  service validation rebuilt the same relationship-memory and story-choice keys
+  when projecting internal states at multiple service locations and revisiting
+  relevant quest states. A sampled compiled CLI startup attributed about 4.9 of
+  9.1 seconds to campaign service integrity, including 1.6 seconds in its location
+  state-key function. Sampling was under concurrent suite load, not an idle timer.
+
+root_cause: >
+  canonicalCampaignServiceLocationStateKey flattened relationship memories and
+  parsed story-choice references on every call, although these two unfiltered
+  arrays depend only on a privately constructed, unchanged state. Location-specific
+  filters and sorting were combined with this repeated location-independent work.
+
+fix: >
+  Keep a WeakMap inside one assertCampaignServiceRulesIntegrity invocation. For
+  each internal state object, compute and validate its two unfiltered key arrays
+  once. Each location still filters into fresh arrays, sorts, and serializes the
+  exact same projection. A later validation starts with a new cache. Cached array
+  types are readonly and the internal state ownership requirement is documented.
+
+deterministic_witnesses:
+  - A later location still detects a collision requiring a specific memory and dawn choice.
+  - Different dawn choices after the same character outcome remain independently reachable.
+  - Editing a previously valid world's choice predicate is rejected on the next validation.
+  - Both successful validation and rejection leave the supplied world's JSON bytes unchanged.
+  - Existing impossible ally predicates and canonical return-service collisions remain rejected.
+  - An instrumented prototype compared every visited projected key with the original and agreed.
+  - Actual TypeScript CLI runs retain exact exit status, stdout, stderr, and snapshot hashes.
+
+measurement:
+  method: >
+    Four balanced interleaved pairs of fresh Node22 plus tsx processes ran the same
+    seed-7 CLI road script in baseline and candidate worktrees, both based on
+    88061453. World content was identical, and source/diff hashes stayed fixed.
+    The separate full dependency suite was running concurrently. These are local
+    contended CLI timings, not a measured whole-suite speedup or idle benchmark.
+  paired_reduction_percent: [16.6961, 0.1369, 32.3833, 20.6688]
+  median_paired_reduction_percent: 18.68
+  evidence: >
+    Ignored ai-runs/measure-service-key-cache.mjs and service-key-cache-measurement.json
+    retain the actual TypeScript measurements and input/output digests. The prior
+    CPU profile and compiled prototype's full per-visited-key differential check
+    are retained under audit-feedback-recovery/ai-runs. The later integration of
+    main c434935f changed QA tooling only and preserved the measured source diff.
+
+scope:
+  - No validated-world marker or cross-process cache is introduced.
+  - Every canonical traversal, schema check, location filter, and evaluation limit remains.
+  - Gameplay state, serialization, random streams, and test isolation remain unchanged.
+  - The broader suite-startup intake 63d4720207957da5 remains open.
+
+production:
+  - src/world/overworld.ts
+
+tests:
+  - tests/unit/world_campaign_service_rules.test.ts
+  - tests/unit/world_campaign_service_region_renown.test.ts
+  - tests/unit/world_campaign_story_choices.test.ts

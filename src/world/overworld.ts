@@ -2709,6 +2709,16 @@ type CanonicalCampaignServiceIntegrityState = Readonly<{
   }>[];
 }>;
 
+type CanonicalCampaignServiceSharedStateKeys = Readonly<{
+  relationshipMemories: readonly string[];
+  selectedStoryChoices: readonly string[];
+}>;
+
+type CanonicalCampaignServiceStateKeyCache = WeakMap<
+  CanonicalCampaignServiceIntegrityState,
+  CanonicalCampaignServiceSharedStateKeys
+>;
+
 function canonicalCampaignServiceIntegrityStateKey(
   state: CanonicalCampaignServiceIntegrityState,
 ): string {
@@ -2870,7 +2880,18 @@ function canonicalCampaignServiceLocationStateProjection(
 function canonicalCampaignServiceLocationStateKey(
   state: CanonicalCampaignServiceIntegrityState,
   projection: CanonicalCampaignServiceLocationStateProjection,
+  projectionKeysByState: CanonicalCampaignServiceStateKeyCache,
 ): string {
+  let sharedKeys = projectionKeysByState.get(state);
+  if (sharedKeys === undefined) {
+    sharedKeys = {
+      relationshipMemories: state.character.relationships.flatMap((relationship) =>
+        relationship.memories.map((memoryId) => `${relationship.npcId}\u0000${memoryId}`),
+      ),
+      selectedStoryChoices: state.selectedStoryChoices.map(campaignStoryChoiceRefKey),
+    };
+    projectionKeysByState.set(state, sharedKeys);
+  }
   return JSON.stringify({
     companions: state.character.companions
       .filter((companionId) => projection.companionIds.has(companionId))
@@ -2879,10 +2900,7 @@ function canonicalCampaignServiceLocationStateKey(
       .filter((promise) => projection.promiseIds.has(promise.promiseId))
       .map((promise) => `${promise.promiseId}\u0000${promise.status}`)
       .sort(),
-    relationshipMemories: state.character.relationships
-      .flatMap((relationship) =>
-        relationship.memories.map((memoryId) => `${relationship.npcId}\u0000${memoryId}`),
-      )
+    relationshipMemories: sharedKeys.relationshipMemories
       .filter((memoryKey) => projection.relationshipMemoryKeys.has(memoryKey))
       .sort(),
     wounds: state.character.wounds
@@ -2893,8 +2911,7 @@ function canonicalCampaignServiceLocationStateKey(
       .filter((questId) => projection.completedQuestIds.has(questId))
       .sort(),
     worldFactIds: state.worldFactIds.filter((factId) => projection.worldFactIds.has(factId)).sort(),
-    selectedStoryChoices: state.selectedStoryChoices
-      .map(campaignStoryChoiceRefKey)
+    selectedStoryChoices: sharedKeys.selectedStoryChoices
       .filter((choiceKey) => projection.storyChoiceKeys.has(choiceKey))
       .sort(),
   });
@@ -3099,10 +3116,15 @@ function canonicalCampaignServiceRelevantQuestStatesForLocation(
   relevantQuestIds: readonly string[],
   targetQuestId: string,
   stateProjection: CanonicalCampaignServiceLocationStateProjection,
+  projectionKeysByState: CanonicalCampaignServiceStateKeyCache,
 ): readonly CanonicalCampaignServiceIntegrityState[] {
   const statesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
   const visit = (state: CanonicalCampaignServiceIntegrityState): void => {
-    const key = canonicalCampaignServiceLocationStateKey(state, stateProjection);
+    const key = canonicalCampaignServiceLocationStateKey(
+      state,
+      stateProjection,
+      projectionKeysByState,
+    );
     if (statesByKey.has(key)) return;
     statesByKey.set(key, state);
     if (statesByKey.size > MAX_CANONICAL_CAMPAIGN_SERVICE_COMBINATIONS_PER_LOCATION) {
@@ -3394,6 +3416,10 @@ function assertCampaignServiceRulesIntegrity(
   areaIds: Set<string>,
   areaHomes: Map<string, string>,
 ): void {
+  // These canonical states are privately constructed and never mutated. Cache
+  // only unfiltered strings: each location still projects its own keys, and a
+  // later validation call starts fresh even when its input world was edited.
+  const projectionKeysByState: CanonicalCampaignServiceStateKeyCache = new WeakMap();
   const rules = CampaignServiceRulesSchema.parse(world.campaign_service_rules ?? []);
   const authoredWorldFactIds = new Set(
     world.quests.flatMap((quest) =>
@@ -3593,7 +3619,11 @@ function assertCampaignServiceRulesIntegrity(
     const baseStatesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
     for (const state of bounded.states) {
       baseStatesByKey.set(
-        canonicalCampaignServiceLocationStateKey(state, location.stateProjection),
+        canonicalCampaignServiceLocationStateKey(
+          state,
+          location.stateProjection,
+          projectionKeysByState,
+        ),
         state,
       );
     }
@@ -3605,9 +3635,14 @@ function assertCampaignServiceRulesIntegrity(
         location.relevantQuestIds,
         bounded.targetQuestId,
         location.stateProjection,
+        projectionKeysByState,
       )) {
         relevantQuestStatesByKey.set(
-          canonicalCampaignServiceLocationStateKey(relevantQuestState, location.stateProjection),
+          canonicalCampaignServiceLocationStateKey(
+            relevantQuestState,
+            location.stateProjection,
+            projectionKeysByState,
+          ),
           relevantQuestState,
         );
         if (

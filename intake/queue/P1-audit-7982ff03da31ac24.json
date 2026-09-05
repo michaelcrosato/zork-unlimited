@@ -26,5 +26,14 @@
   "created_at": "2026-08-31T14:54:22.689Z",
   "updated_at": "2026-09-05T05:28:17.052Z",
   "external": null,
-  "resolved_by": "audit-feedback-recovery"
+  "resolved_by": "audit-feedback-recovery",
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "0768680e-3110-4103-9b5b-2e77be8ead74",
+      "identifier": "MIC-45",
+      "url": "https://linear.app/michael-crosato/issue/MIC-45/7982ff03da31ac24-feedbackrebootstrap-cannot-run-when-ai-runs-is",
+      "synced_status": "open"
+    }
+  ]
 }
