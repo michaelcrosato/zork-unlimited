@@ -23,17 +23,16 @@
  * ── Why nothing already covers it for RPG ───────────────────────────────────────────
  *   - `enumerateRpgActions` (src/rpg/runner.ts) returns the FULL parser action set
  *     (`enumerateActions`) PLUS one `attack_<enemy.id>` per living enemy standing in the
- *     room. Two id families, two collision surfaces, neither checked anywhere:
+ *     room. Two id families, two collision surfaces unchecked when this proof began:
  *       • the parser templates (`go_<dir>`, `examine_<oid>`, `use_<item>_on_<target>`, ...)
  *         — bug_0151 proves these unique over PARSER packs, but never over RPG packs (a
  *         different pack set, a different reachable region: combat opens post-defeat states
  *         the parser BFS can't reach). Two exits sharing a direction mint a duplicate
- *         `go_<dir>` the static DUPLICATE_ID validator (rooms/objects/npcs only) cannot see.
- *       • `attack_<enemy.id>` — the RPG-only family. The parser validator dup-checks
- *         room/object/npc ids; the RPG validator adds enemy room/death_ending checks but NO
- *         enemy-id uniqueness check, so two enemies sharing an id in one room mint two
- *         identical `attack_<id>` options the static layer is blind to. The negative control
- *         below plants exactly that.
+ *         `go_<dir>` the static DUPLICATE_ID check on authored entity ids cannot see.
+ *       • `attack_<enemy.id>` — the RPG-only family. Two enemies sharing an id in one
+ *         room mint identical `attack_<id>` options. bug_0598 now rejects duplicate enemy
+ *         ids statically as well; the negative control below still plants that invalid
+ *         shape directly to prove the enumerator audit independently detects it.
  *   - `enumerateRpgActions` builds each option through the same resolvable-only `option()`
  *     path, so "every offered action resolves" is true BY CONSTRUCTION (vacuous). Uniqueness
  *     is the orthogonal property: two DISTINCT, individually-resolvable options can still
@@ -261,7 +260,7 @@ describe("bug_0152 — every reachable action menu of every RPG pack has unique 
 
   it("FAILS on a planted duplicate parser-template id (two same-direction exits → go_north)", () => {
     // Two exits in the SAME direction both mint the option id `go_north` — a real runtime
-    // duplicate the static DUPLICATE_ID validator (rooms/objects/npcs, not enumerator-minted
+    // duplicate the static DUPLICATE_ID validator (authored entity ids, not enumerator-minted
     // ids) does not catch, surfaced HERE through the RPG enumerator, which wraps the parser
     // `enumerateActions`. The negative control for the inherited parser-template surface.
     const src = `
@@ -294,11 +293,9 @@ endings: [{ id: e, title: E, text: "done" }]
 
   it("FAILS on a planted duplicate RPG-only id (two same-id enemies in one room → attack_<id>)", () => {
     // The RPG-specific collision surface: two enemies sharing an id, both standing in room a,
-    // each mint `attack_guard`. NO static check catches this — the parser validator dup-checks
-    // room/object/npc ids, and the RPG validator adds enemy room/death_ending checks but no
-    // enemy-id uniqueness check. The dynamic proof must catch it. This is the RPG analogue of
-    // the parser two-same-direction-exits control above — a runtime duplicate minted from
-    // declared content the static layer is blind to.
+    // each mint `attack_guard`. Feed this schema-compiled fixture directly to the enumerator:
+    // the foundation validator now rejects duplicate enemy ids, but the dynamic proof must
+    // independently catch the collision too. This complements the parser control above.
     const src = `
 meta: { id: t, title: T, start_room: a, vars_init: { hp: 10, attack: 3, defense: 1 } }
 rooms:
