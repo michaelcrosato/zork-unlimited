@@ -143,6 +143,20 @@ is unavailable or invalid; it cannot replace a healthy accepted compile or creat
 initial baseline.
 `loop.sh` does not count or invoke the compiler; it only performs the post-gate seal.
 
+If the whole `ai-runs/` directory was cleared, start a new dev cycle before recovery:
+record the cycle-start HEAD, pass the pre-crawl gate, and run `npm run ai:loop` with
+`AI_LOOP_COMMIT=1` in the environment. This command is the deterministic assessor;
+it recreates `latest-cycle.json` and the tracked cycle scaffold without `loop.sh`
+or a coding-agent CLI. Review and freeze that scaffold in the provisional commit
+as usual; a recovery-only cycle keeps its actual-selection marker at null. Then
+run `npm run feedback:rebootstrap` for that frozen revision. The compiler checks
+cycle metadata before writing a bundle and explains this setup when it is missing.
+The replacement remains provisional: `feedback:status` will still reject the old,
+missing accepted bundle until it is sealed and committed. After the normal outer
+gates pass, run `npm run loop:seal-feedback -- --start-ref <saved-cycle-start-HEAD>
+--expected-commit <frozen-HEAD>` with the two full commit hashes, then commit the
+ledger update. Recreating metadata supplies no playtest evidence.
+
 **Evidence-only mode.** With `AI_LOOP_COMMIT=0`, `npm run ai:loop` does not rotate or
 append to the tracked loop ledger before the agent starts. The prompt requires an
 exactly clean `git status --porcelain` before any uncommitted edit (no play of any
