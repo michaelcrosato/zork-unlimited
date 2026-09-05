@@ -8,6 +8,7 @@ import { localEventSceneRequirementsMet } from "./local_event_scene.js";
 import { availableLocalJobSceneOptions } from "./local_job_scene.js";
 import type { OverworldArea, OverworldLocalEvent, OverworldLocalJob } from "./overworld.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
+import { compareCaseFoldedCodeUnits, compareCodeUnits } from "./string_order.js";
 
 export type JourneyOpportunityProjectionState = Readonly<{
   currentAreaId: string | null;
@@ -76,12 +77,12 @@ function compareOpportunityLeads(
 ): number {
   const access = ACCESS_ORDER[left.access] - ACCESS_ORDER[right.access];
   if (access !== 0) return access;
-  const area = left.area.localeCompare(right.area);
+  const area = compareCaseFoldedCodeUnits(left.area, right.area);
   if (area !== 0) return area;
-  const title = left.title.localeCompare(right.title);
+  const title = compareCaseFoldedCodeUnits(left.title, right.title);
   if (title !== 0) return title;
-  const kind = left.kind.localeCompare(right.kind);
-  return kind !== 0 ? kind : left.id.localeCompare(right.id);
+  const kind = compareCodeUnits(left.kind, right.kind);
+  return kind !== 0 ? kind : compareCodeUnits(left.id, right.id);
 }
 
 /**

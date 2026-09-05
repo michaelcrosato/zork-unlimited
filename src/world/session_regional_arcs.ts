@@ -4,6 +4,7 @@ import { timeLabel } from "./session_journal_codec.js";
 import { addOverworldJournalEntry } from "./session_journal_store.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { pushIndexed } from "./session_collections.js";
+import { compareCaseFoldedCodeUnits } from "./string_order.js";
 
 export type OverworldRegionalArcProgress = {
   id: string;
@@ -96,7 +97,7 @@ export function buildOverworldRegionalArcProgress(
     (a, b) =>
       Number(b.region === currentRegion) - Number(a.region === currentRegion) ||
       Number(a.completed) - Number(b.completed) ||
-      a.region.localeCompare(b.region),
+      compareCaseFoldedCodeUnits(a.region, b.region),
   );
   return progress;
 }

@@ -1,5 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { SaveIntegrityError, type SaveSourceRef } from "../persist/save_load.js";
 import type { Trace, TraceSourceRef } from "../trace/record.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
@@ -84,6 +86,128 @@ export type WorldQuestSourceArgs = {
 };
 
 const overworldManifestCache = new Map<string, OverworldManifest>();
+
+/**
+ * The world-integrity verdict cache (bug_0611).
+ *
+ * `assertOverworldIntegrity` is about 19 of the 20 seconds it takes to load the shipped
+ * world, and it is a pure function of the manifest bytes and the engine source: the same
+ * bytes under the same code always reach the same verdict. Every vitest file runs in its
+ * own process, so without a cache the suite re-proved the identical world ~115 times per
+ * run (a third of the fast lane's worker time), and every CLI, MCP server and crawler
+ * start paid the same 20 seconds. A marker under `ai-runs/world-integrity/`, keyed on the
+ * SHA-256 of the world bytes AND of every `.ts` file under `src/`, records a verdict a
+ * later process may reuse.
+ *
+ * What keeps this honest: the marker names the exact bytes it vouches for (a changed
+ * world or a changed engine is a miss, never a stale hit); `npm run validate` runs with
+ * `refresh` so the bar always re-proves and rewrites it before the suite reads it; and a
+ * build without `src/` beside this module (compiled output) gets no cache at all.
+ * Forging a marker requires write access to `ai-runs/`, which already implies write
+ * access to the world file itself.
+ */
+export type OverworldIntegrityCacheMode = "use" | "refresh" | "off";
+export type OverworldIntegrityCacheKey = Readonly<{ world: string; code: string | null }>;
+export const WORLD_INTEGRITY_CACHE_ENV = "ADVENTUREFORGE_WORLD_INTEGRITY_CACHE";
+const WORLD_INTEGRITY_CACHE_DIR = ["ai-runs", "world-integrity"] as const;
+
+let engineSourceDigestMemo: string | null | undefined;
+
+/** SHA-256 over every `.ts` file under `src/` (relative path and bytes, in path order),
+ *  or null when `src/` is not beside this module — a compiled build has no such tree
+ *  and therefore no cache. Memoized: the engine does not change while a process runs. */
+function engineSourceDigest(): string | null {
+  if (engineSourceDigestMemo !== undefined) return engineSourceDigestMemo;
+  const srcDir = fileURLToPath(new URL("../", import.meta.url));
+  let files: string[];
+  try {
+    files = readdirSync(srcDir, { recursive: true, encoding: "utf8" })
+      .filter((name) => name.endsWith(".ts"))
+      .map((name) => name.replaceAll("\\", "/"))
+      .sort();
+  } catch {
+    files = [];
+  }
+  if (files.length === 0) {
+    engineSourceDigestMemo = null;
+    return null;
+  }
+  const hash = createHash("sha256");
+  for (const file of files) {
+    hash.update(file);
+    hash.update("\0");
+    hash.update(readFileSync(join(srcDir, file)));
+    hash.update("\0");
+  }
+  engineSourceDigestMemo = hash.digest("hex");
+  return engineSourceDigestMemo;
+}
+
+export function overworldIntegrityCacheKey(worldText: string): OverworldIntegrityCacheKey {
+  return {
+    world: createHash("sha256").update(worldText).digest("hex"),
+    code: engineSourceDigest(),
+  };
+}
+
+/** Where the marker for this key lives under `root`, or null when no cache is possible. */
+export function overworldIntegrityMarkerPath(
+  root: string,
+  key: OverworldIntegrityCacheKey,
+): string | null {
+  if (key.code === null) return null;
+  return join(
+    root,
+    ...WORLD_INTEGRITY_CACHE_DIR,
+    `${key.world.slice(0, 32)}-${key.code.slice(0, 32)}.json`,
+  );
+}
+
+function integrityCacheMode(
+  explicit: OverworldIntegrityCacheMode | undefined,
+): OverworldIntegrityCacheMode {
+  const requested = explicit ?? process.env[WORLD_INTEGRITY_CACHE_ENV] ?? "use";
+  if (requested === "use" || requested === "refresh" || requested === "off") return requested;
+  throw new Error(
+    `${WORLD_INTEGRITY_CACHE_ENV} must be "use", "refresh" or "off"; got ${JSON.stringify(requested)}.`,
+  );
+}
+
+/** True only when the marker parses and names exactly this key; a torn or foreign file is a miss. */
+function integrityMarkerVouches(markerPath: string, key: OverworldIntegrityCacheKey): boolean {
+  let stored: unknown;
+  try {
+    stored = JSON.parse(readFileSync(markerPath, "utf8"));
+  } catch {
+    return false;
+  }
+  if (stored === null || typeof stored !== "object") return false;
+  const record = stored as Record<string, unknown>;
+  return record.world_sha256 === key.world && record.code_sha256 === key.code;
+}
+
+function writeIntegrityMarker(markerPath: string, key: OverworldIntegrityCacheKey): void {
+  const record = {
+    world_sha256: key.world,
+    code_sha256: key.code,
+    validated_at: new Date().toISOString(),
+    node: process.version,
+  };
+  const staging = `${markerPath}.${process.pid}.tmp`;
+  try {
+    mkdirSync(dirname(markerPath), { recursive: true });
+    writeFileSync(staging, `${JSON.stringify(record, null, 2)}\n`, "utf8");
+    renameSync(staging, markerPath);
+  } catch {
+    // The cache is an accelerator, never a gate: a marker that cannot be written costs
+    // the next process one more proof and nothing else.
+    try {
+      rmSync(staging, { force: true });
+    } catch {
+      // Nothing left to clean up.
+    }
+  }
+}
 
 function deepFreeze<T>(value: T): T {
   if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
@@ -177,15 +301,24 @@ export function assertOverworldQuestSourceCoverage(
   }
 }
 
-export function loadOverworldManifest(root: string): OverworldManifest {
+export function loadOverworldManifest(
+  root: string,
+  options: { integrityCache?: OverworldIntegrityCacheMode } = {},
+): OverworldManifest {
   const cached = overworldManifestCache.get(root);
   if (cached) return cached;
 
-  const raw = JSON.parse(
-    readFileSync(join(root, "content", "world", "new_york_overworld.json"), "utf8"),
-  );
-  const overworld = parseOverworldManifest(raw);
-  assertOverworldIntegrity(overworld);
+  const worldText = readFileSync(join(root, "content", "world", "new_york_overworld.json"), "utf8");
+  const overworld = parseOverworldManifest(JSON.parse(worldText));
+  const mode = integrityCacheMode(options.integrityCache);
+  const key = mode === "off" ? null : overworldIntegrityCacheKey(worldText);
+  const marker = key === null ? null : overworldIntegrityMarkerPath(root, key);
+  const vouched =
+    key !== null && marker !== null && mode === "use" && integrityMarkerVouches(marker, key);
+  if (!vouched) {
+    assertOverworldIntegrity(overworld);
+    if (key !== null && marker !== null) writeIntegrityMarker(marker, key);
+  }
   assertOverworldQuestSourceCoverage(overworld, discoverShippedRpgSourcePaths(root));
   assertOpeningPreparationCheckDisclosureSourceIntegrity(root, overworld);
   deepFreeze(overworld);

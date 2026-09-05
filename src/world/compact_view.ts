@@ -43,6 +43,7 @@ import {
   sharedWolfHillRouteDispatchStatus,
   wolfHillRouteTradeoffParts,
 } from "./wolf_hill_route_presentation.js";
+import { compareCaseFoldedCodeUnits } from "./string_order.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -1670,7 +1671,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   });
   const journal = compactOverworldJournalEntries(view.journal);
   const renownEntries = Object.entries(view.regionRenown).sort(([left], [right]) =>
-    left.localeCompare(right),
+    compareCaseFoldedCodeUnits(left, right),
   );
   const renown = compactOverworldRenownEntries(renownEntries);
   const completedArcIds = view.completedRegionalArcIds;

@@ -29,6 +29,7 @@ import {
   indexOverworldRegionalArcsByRegion,
 } from "./session_regional_arcs.js";
 import type { OverworldRoutePlannerIndex } from "./session_routes.js";
+import { compareCaseFoldedCodeUnits } from "./string_order.js";
 
 export type OverworldSessionIndexes = {
   nodes: Map<string, OverworldNode>;
@@ -66,25 +67,25 @@ export function buildOverworldSessionIndexes(world: OverworldManifest): Overworl
   const areasByTown = sortedIndex(
     world.areas,
     (area) => area.home,
-    (a, b) => a.travel_minutes - b.travel_minutes || a.name.localeCompare(b.name),
+    (a, b) => a.travel_minutes - b.travel_minutes || compareCaseFoldedCodeUnits(a.name, b.name),
   );
   const areaExitsByArea = indexAreaExits(world, areasById);
   const poisById = idIndex(world.points_of_interest);
   const poisByArea = sortedIndex(
     world.points_of_interest,
     (poi) => poi.area,
-    (a, b) => a.title.localeCompare(b.title),
+    (a, b) => compareCaseFoldedCodeUnits(a.title, b.title),
   );
   const charactersById = idIndex(world.characters);
   const charactersByArea = sortedIndex(
     world.characters,
     (character) => character.area,
-    (a, b) => a.name.localeCompare(b.name),
+    (a, b) => compareCaseFoldedCodeUnits(a.name, b.name),
   );
   const eventsByArea = sortedIndex(
     world.local_events,
     (event) => event.area,
-    (a, b) => b.intensity - a.intensity || a.title.localeCompare(b.title),
+    (a, b) => b.intensity - a.intensity || compareCaseFoldedCodeUnits(a.title, b.title),
   );
   const localEventsById = idIndex(world.local_events);
   const jobsById = idIndex(world.local_jobs);
@@ -92,19 +93,21 @@ export function buildOverworldSessionIndexes(world: OverworldManifest): Overworl
     world.local_jobs,
     (job) => job.home,
     (a, b) =>
-      a.difficulty - b.difficulty || a.minutes - b.minutes || a.title.localeCompare(b.title),
+      a.difficulty - b.difficulty ||
+      a.minutes - b.minutes ||
+      compareCaseFoldedCodeUnits(a.title, b.title),
   );
   const sitesById = idIndex(world.exploration_sites);
   const sitesByArea = sortedIndex(
     world.exploration_sites,
     (site) => site.area,
-    (a, b) => b.danger - a.danger || a.title.localeCompare(b.title),
+    (a, b) => b.danger - a.danger || compareCaseFoldedCodeUnits(a.title, b.title),
   );
   const questsById = idIndex(world.quests);
   const questsByTown = sortedIndex(
     world.quests,
     (quest) => quest.home,
-    (a, b) => a.title.localeCompare(b.title),
+    (a, b) => compareCaseFoldedCodeUnits(a.title, b.title),
   );
   const regionalArcsByRegion = indexOverworldRegionalArcsByRegion(world.regional_arcs);
   const regionalArcAnchorTownsById = indexOverworldRegionalArcAnchorTowns(
@@ -181,7 +184,8 @@ function indexAreaExits(
   for (const exits of index.values()) {
     exits.sort(
       (a, b) =>
-        a.travel_minutes - b.travel_minutes || a.destination.name.localeCompare(b.destination.name),
+        a.travel_minutes - b.travel_minutes ||
+        compareCaseFoldedCodeUnits(a.destination.name, b.destination.name),
     );
   }
   return index;
@@ -205,7 +209,8 @@ function indexRoadExits(
   for (const exits of index.values()) {
     exits.sort(
       (a, b) =>
-        a.travel_minutes - b.travel_minutes || a.destination.name.localeCompare(b.destination.name),
+        a.travel_minutes - b.travel_minutes ||
+        compareCaseFoldedCodeUnits(a.destination.name, b.destination.name),
     );
   }
   return index;

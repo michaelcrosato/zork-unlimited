@@ -137,4 +137,30 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // bug_0608: the world layer's order must not depend on the host's ICU locale.
+    // `localeCompare` with no locale argument sorted roads, areas, characters, jobs and
+    // snapshot map keys differently under Czech or Lithuanian collation, which moved
+    // the indices a blind agent navigates by and the keys the snapshot hash is built
+    // from. src/world/string_order.ts holds the two locale-independent comparators.
+    // The URL.pathname rule is repeated here because a later `no-restricted-syntax`
+    // entry REPLACES the earlier one for these files rather than adding to it.
+    files: ["src/world/**/*.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            'MemberExpression[property.name="pathname"][object.type="NewExpression"][object.callee.name="URL"]',
+          message:
+            "Use fileURLToPath(new URL(...)) instead of new URL(...).pathname — .pathname yields /C:/... on Windows and resolve() turns that into C:\C:\...",
+        },
+        {
+          selector: 'CallExpression[callee.property.name="localeCompare"]',
+          message:
+            "localeCompare orders by the host locale; use compareCodeUnits or compareCaseFoldedCodeUnits from src/world/string_order.ts (bug_0608).",
+        },
+      ],
+    },
+  },
 );

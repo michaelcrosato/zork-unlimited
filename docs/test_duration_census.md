@@ -11,7 +11,7 @@ decides what it can afford to keep.
 
 ## Why measure at all
 
-`scripts/ci-test-groups.ts` shards CI from `MEASURED_TEST_COST_MS`, a 24-entry
+`scripts/ci-test-groups.ts` shards CI from `MEASURED_TEST_COST_MS`, a 23-entry
 table sampled once from GitHub Actions run 30295854622 on 2026-07-27. Every
 other file — the other ~470 of them — is priced at a flat `DEFAULT_TEST_COST_MS`
 of 3s. The table's own comment states the hazard it cannot fix:
@@ -181,6 +181,15 @@ amount of re-bucketing touches it. Three ways out, cheapest first:
 
 Option 1 is the recommendation: it is the only one that removes the redundancy
 without weakening either isolation or validation.
+
+**Landed 2026-09-05 (bug_0611).** `loadOverworldManifest` records a marker under
+`ai-runs/world-integrity/` keyed on the SHA-256 of the world bytes and of every
+`.ts` file under `src/`, and a later process whose key matches skips
+`assertOverworldIntegrity` (18.6 of the loader's 20 seconds on this box). The
+cheap checks still run every time. `ADVENTUREFORGE_WORLD_INTEGRITY_CACHE` selects
+`use` (default), `refresh` or `off`; `npm run validate` forces `refresh`, so the
+bar re-proves and rewrites the marker before the suite reads it, and the CI test
+shards run `validate` first for the same reason.
 
 ### What that one fix does to the bands
 

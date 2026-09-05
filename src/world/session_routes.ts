@@ -17,6 +17,7 @@ import {
 } from "./travel_mechanics.js";
 import { roadEventForOverworldSessionTravel } from "./session_road_travel.js";
 import type { TravelLogEntry } from "./session_snapshot.js";
+import { compareCaseFoldedCodeUnits } from "./string_order.js";
 
 export type OverworldRouteEstimate = {
   baseMinutes: number;
@@ -248,6 +249,6 @@ function compareOverworldRouteOptions(
     left.estimate.elapsedMinutes - right.estimate.elapsedMinutes ||
     left.totalMinutes - right.totalMinutes ||
     right.destination.population_2025 - left.destination.population_2025 ||
-    left.destination.name.localeCompare(right.destination.name)
+    compareCaseFoldedCodeUnits(left.destination.name, right.destination.name)
   );
 }

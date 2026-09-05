@@ -3,7 +3,10 @@
 # A compact, machine-readable statement of what the engine can and cannot do, so a
 # story stays loosely inside the engine's reach without forcing prose into rigid
 # schema form. The ADAPTER then classifies every beat against `adaptation_labels`
-# (§11); anything labelled `requires_engine_extension` triggers the §14 gate.
+# (§11); anything labelled `requires_engine_extension` is a beat the engine cannot
+# express yet. The §14 human-approval gate that label once triggered is retired
+# (AGENTS.md, Authority): the agent may extend the engine under trust-but-verify,
+# and the label now only tells the assessor that an extension is what the beat needs.
 engine_capabilities:
   structure:
     - scenes
@@ -38,7 +41,7 @@ engine_capabilities:
     - inspect
 
   # The closed condition/effect vocabulary content may use (§7.1, §16). Content can
-  # never introduce new kinds — only the engine, through the §14 gate.
+  # never introduce new kinds — only an engine change can, verified by the bar.
   conditions:
     - has_flag
     - not_flag
@@ -95,5 +98,5 @@ adaptation_labels:
   - fully_supported
   - supported_with_minor_rewrite
   - requires_cutscene
-  - requires_engine_extension     # triggers the §14 gate
+  - requires_engine_extension     # the engine cannot express this beat yet
   - too_expensive_for_prototype   # deferred
