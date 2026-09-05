@@ -7,6 +7,7 @@
   "kind": "bug",
   "priority": "P1",
   "status": "done",
+  "resolved_by": "orchestrator",
   "labels": [],
   "area": "albany:relief_registration",
   "evidence": {
@@ -18,7 +19,15 @@
     "observations": 2
   },
   "created_at": "2026-08-29T00:28:02.567Z",
-  "updated_at": "2026-08-30T21:53:57.427Z",
+  "updated_at": "2026-08-31T16:36:27.813Z",
   "external": null,
-  "resolved_by": "orchestrator"
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "19d9916f-3ff0-488d-ab3f-5e49b591755a",
+      "identifier": "MIC-61",
+      "url": "https://linear.app/michael-crosato/issue/MIC-61/81e4b84c2203aea5-permanent-background-summaries-hide-the-mechanical",
+      "synced_status": "done"
+    }
+  ]
 }

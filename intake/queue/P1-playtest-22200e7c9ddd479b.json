@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "22200e7c9ddd479b",
+  "title": "Relief Advocate Full Duty still rolls Repair 0 vs DC 12",
+  "body": "Relief Advocate (Mediation 4, Repair 0) on Full Duty / Full Compact still funnels the load-bearing Broken Paling check into **Repair d20+0 vs DC 12**. Mediation never applies. A fail-by-1 is patched by emergency strip and 2 HP at dawn.\n\nThis 200-player grok-4.6 (low) MCP wave (build `36ff6d106fa0df2ff19e80d09cf00df081b81653`, seed-base `1900000000`): **7** S2 reports in ticket `4ffaf479dec5c854`. Example seed `1900000000` (record `74f7249f2db2a9a2e860dede32d0e50e7ad1af21a28372723c21c0aadcb2c8f4`). One of the four would-replay-yes players still called this out: the Advocate path never uses Mediation.\n\nFix: let Mediation (or another authored Advocate skill) participate in the outer-seal check, or stop offering Relief Advocate as if it changes the FORTIFY math.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/rpg/quests",
+  "evidence": {
+    "summary": "Grok-4.6 low MCP 200-wave ticket 4ffaf479dec5c854 (7 S2 reports) on build 36ff6d10.",
+    "refs": [
+      "ai-runs/playtest/grok-wave-200",
+      "ai-runs/playtest/grok-200-manifest.json"
+    ],
+    "lineages": [
+      "grok"
+    ],
+    "observations": 7
+  },
+  "created_at": "2026-08-31T16:34:05.817Z",
+  "updated_at": "2026-08-31T16:36:26.171Z",
+  "external": null,
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "d6f416df-5006-4f64-8644-c5d138e8dd5e",
+      "identifier": "MIC-57",
+      "url": "https://linear.app/michael-crosato/issue/MIC-57/22200e7c9ddd479b-relief-advocate-full-duty-still-rolls-repair-0-vs-dc",
+      "synced_status": "open"
+    }
+  ]
+}

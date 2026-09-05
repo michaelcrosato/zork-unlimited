@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "a38a43b74212d7cc",
   "title": "First LURE LAY Fieldcraft DC 12 contradicts silent skip / hidden DC 10",
-  "body": "The first LURE LAY is described as a Fieldcraft **DC 12** check that can fail, but overlapping copy (field condition, Cade, sheltered stockway) **skips the roll** or **hides the easier DC 10** and leaves a no-retry DC 12 that spikes cattle alarm.\n\nGrok-4.6 MCP wave: **21** `bugs[]` rows (S2 11 / S1 10) plus matching worst-moments (“told DC 12, then auto-succeed” / “quiet stockway still demanded DC 12”).\n\nFix: one player-visible rule for the first LAY on each approach. Journal, Cade, field condition, and the actual check must agree on DC, whether it can be skipped, and whether it is retryable.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`.",
+  "body": "The first LURE LAY is described as a Fieldcraft **DC 12** check that can fail, but overlapping copy (field condition, Cade, sheltered stockway) **skips the roll** or **hides the easier DC 10** and leaves a no-retry DC 12 that spikes cattle alarm.\n\nThis 200-player grok-4.6 (low) MCP wave (build `36ff6d106fa0df2ff19e80d09cf00df081b81653`, seed-base `1900000000`): largest clusters `3e7b87f6affaea65` (13 reports, S2), `99a3e1008ee69312` (11), plus `de8b7c5b22554546` (8), `2e04dcbc23887da2` (6), `19f42e78a4132eae` (5). Example seeds: `1900000001`, `1900000014`, `1900000045`. This was also the most common worst-moment.\n\nFix: one player-visible rule for the first LAY on each approach. Journal, Cade, field condition, and the actual check must agree on DC, whether it can be skipped, and whether it is retryable.",
   "source": "playtest",
   "kind": "bug",
   "priority": "P1",
@@ -12,18 +12,20 @@
   ],
   "area": "content/world/new_york_overworld.json",
   "evidence": {
-    "summary": "Grok-4.6 MCP wave cluster (21 mentions, 82 completed interviews).",
+    "summary": "Grok-4.6 low MCP 200-wave top S2 clusters 3e7b87f6affaea65 (13) and 99a3e1008ee69312 (11) on build 36ff6d10.",
     "refs": [
       "ai-runs/playtest/sessions",
-      "ai-runs/playtest/grok-100-manifest.json"
+      "ai-runs/playtest/grok-100-manifest.json",
+      "ai-runs/playtest/grok-wave-200",
+      "ai-runs/playtest/grok-200-manifest.json"
     ],
     "lineages": [
       "grok"
     ],
-    "observations": 21
+    "observations": 13
   },
   "created_at": "2026-08-31T02:14:24.892Z",
-  "updated_at": "2026-08-31T05:46:57.792Z",
+  "updated_at": "2026-08-31T16:35:36.095Z",
   "external": null,
   "mirrors": [
     {
