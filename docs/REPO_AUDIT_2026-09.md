@@ -29,7 +29,7 @@ around the engine, and the biggest one is that the machine has stopped.
 | # | Problem | What to do |
 | --- | --- | --- |
 | 1 | **The flywheel has stalled.** Sealed dev-loop cycles per week went 269 → 299 → 66 → 20 → 14 → **0 → 0**; the last sealed cycle is 2026-08-22, the accepted feedback compile from that day is still unconsumed, and the last fifteen cycles each spent hours of verification on a few hundred bytes of prose that never moved the pilot gate (clarity 38–40 of 50, every time). Meanwhile 65 commits landed by hand and by bots, and the intake queue holds 48 open items including a P0 from 2026-08-29. | Make a cycle cheap again (finding 2), measure the pilot gate's own noise before spending on it again, and drain the queue's already-written fixes in one owner-approved batch (finding 5). |
-| 2 | **The bar is too slow and too load-sensitive for a machine to run.** The fast lane is 54 minutes of wall clock on four cores; 63% of files cost 1.5% of it; 117 test files each re-validate the 2.7 MB world (69 minutes of summed worker time, a third of the lane); one file sets a 13–22 minute floor; timeouts are a flat 60 s; the CI cost table is frozen from July and wrong in both directions. | Land the census's own two recommendations (validate the world once: −31%; split the four files that set the floor), size timeouts from measured cost, and make the lane's wall clock a gate so it cannot drift again. |
+| 2 | **The bar is too slow and too load-sensitive for a machine to run, and on a 4-core box it is red today.** The fast lane took 54 min 48 s here and failed 10 of 492 files, every failure a timeout, while the same commit was green on GitHub's runners; 63% of files cost 1.5% of the lane; 117 test files each re-validate the 2.7 MB world (69 minutes of summed worker time, a third of the lane); one file sets a 13–22 minute floor; timeouts are a flat 60 s; the CI cost table is frozen from July and wrong in both directions. | Land the census's own two recommendations (validate the world once: −31%; split the four files that set the floor), size timeouts from measured cost per file, and make the lane's wall clock a gate so it cannot drift again. |
 | 3 | **CI cancels its own post-merge check on main.** `cancel-in-progress: true` applies to push events too, so the "drift vs previous tip" step that exists to catch an admin direct push (branch protection has `enforce_admins` off) was cancelled on 6 of the last 15 `main` runs. | One line: `cancel-in-progress: ${{ github.event_name == 'pull_request' }}`. |
 | 4 | **Playtest evidence can still be forged or lost.** A hand-written JSON record can be stamped `runner_enforced` and move the experience metrics that gate the milestone (P0, open); model-authored strings flow unbounded into tracked files; the intake claim is a read-modify-write with no lock; and the playtest loop hard-resets away its own triage output every wave. | Only the runner mints `runner_enforced`, bound to its sidecar hash; `.max()` the free-text fields; stage-and-rename queue writes; run playtest-side triage as a dry run. |
 | 5 | **The anti-weakening guard has two holes it does not name, and it is blocking a proven fix.** Nothing checks a changed expected literal in the 494 non-hash-pinned test files; raw count floors reward padding (bot PRs adding tests for string helpers count exactly like census proofs); and a HIGH-severity scoring exploit whose fix is already written has sat in the queue since 2026-08-29 because landing it re-pins one trace hash, which needs an owner acknowledgement nobody has given. | State the limit in the guard's docstring and report changed test literals in drift mode; protect the three unprotected verifier inputs; replace raw count floors with a per-file import rule; decide the one re-pin now and adopt a rule for the next one. |
@@ -418,7 +418,7 @@ impossible; §5 finding 5 is about where visibility currently stops.
 | `validate` (12 quests) | OK, 0 errors, 0 warnings, content hashes unchanged |
 | The eight cheap gates together | 2 min 34 s wall clock |
 | `crawl:smoke` | OK: 6,000 steps in 50.7 s (118 steps/s), 0 findings; overworld 247/247 nodes, 344/344 edges, 12/12 boards, 12/12 quests entered |
-| `test:fast` | Still running at the time of this commit (started 03:03 UTC, four workers, load average about 8 on four cores); the result is recorded in the follow-up commit to this document |
+| `test:fast` | **Red on this box, on timeouts alone.** 54 min 48 s wall clock at four workers over 492 files: 10 files failed, 482 passed; 17 tests failed, 4,483 passed, 3 skipped. Every failure in the captured output is `Test timed out in 60000ms` or `spawnSync node ETIMEDOUT`, in `overworld_cli`, `inspect_death_ending_diagnosis`, `trace_cli_integrity`, `blind_runner_config_contract`, `overworld_cli_embedded_journey_bridge`, `rpg_play_world_source`, `world_campaign_service_rules`, `cade_return_packet_counterfactual`, `ally_commitment_counterfactual`, and `rpg_validation_bar`. Re-running only those ten files (15 min 44 s) failed the same ten again with 14 timeouts. Run one at a time with the ceiling raised to 600 s, `world_campaign_service_rules` passes 14 of 14 in 91 s and `trace_cli_integrity` passes 10 of 10 in 142 s: the tests are correct and the ceiling is what fails. The same commit passed both CI shards on GitHub's runners in 17 and 35 minutes. |
 | CI on `main`, last 15 runs | 9 success, 6 cancelled by the concurrency group, 0 failures |
 | Deep audit, last 12 nightly runs | 12 of 12 success, latest 2026-09-04 on `fff2ec6` |
 
@@ -521,9 +521,15 @@ frames the work as the smallest safe content edit.
 | `MEASURED_TEST_COST_MS` in `scripts/ci-test-groups.ts` | 24 entries frozen on 2026-07-27; the census found it wrong in both directions |
 
 The previous audit measured the same shape at 1 h 47 min with 20 timeout-only failures
-under load; the census reproduced the failure mode ("10 files — load, at 4 workers").
-`loop.sh` counts such a failure toward its 5-consecutive-failure breaker exactly like a
-real one.
+under load; the census reproduced the failure mode ("10 files — load, at 4 workers");
+and this audit reproduced it a third time at this commit (§4): 10 of 492 files red,
+every failure a timeout, the same ten red again when run by themselves, and the same
+commit green on GitHub's runners. Two of the ten, run alone with the ceiling raised,
+pass in 91 s and 142 s. A flat 60 s ceiling is a hardware
+assumption calibrated for the CI runner, and `loop.sh` runs `health` on whatever
+machine the operator has. `loop.sh` counts such a failure toward its
+5-consecutive-failure breaker exactly like a real one, so on a 4-core box the dev
+loop cannot complete a cycle at all today.
 
 **Fix.**
 
