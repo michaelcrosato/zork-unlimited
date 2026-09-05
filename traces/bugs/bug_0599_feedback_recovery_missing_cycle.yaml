@@ -1,0 +1,42 @@
+id: bug_0599
+title: Feedback recovery wrote an orphaned bundle before rejecting missing cycle metadata
+pack: n/a — feedback tooling
+reported_by: intake/queue/P1-audit-7982ff03da31ac24.json
+severity: S2
+
+symptom: >
+  Clearing ai-runs removed both the accepted feedback bundle and latest-cycle.json.
+  feedback:status advised feedback:rebootstrap, which wrote four replacement files
+  before failing with only "ai-runs/latest-cycle.json is missing". Retrying status
+  repeated the same advice, and malformed cycle metadata also left partial output.
+
+root_cause: >
+  The compiler checked cycle metadata only while writing the final acceptance
+  pointer, after compileFeedback had already written the bundle. Its diagnostic
+  did not name the deterministic npm run ai:loop command that creates metadata.
+  The ticket's claim that this setup requires a coding-agent CLI was incorrect:
+  src/ai-loop.ts assesses the repo and writes the cycle scaffold without one.
+
+fix: >
+  Validate the cycle run id before resolving inputs or compiling an authoritative
+  bundle, then use that validated id for the staged pointer. Missing metadata now
+  names npm run ai:loop with AI_LOOP_COMMIT=1 and the recovery documentation.
+  Document the provisional commit, outer gates, and acceptance seal needed to
+  complete recovery; generating metadata alone does not restore accepted authority.
+
+deterministic_witnesses:
+  - A committed missing-bundle marker with no ai-runs directory fails before creating it.
+  - Malformed latest-cycle.json fails before creating ai-runs/feedback and stays unchanged.
+  - Existing valid-cycle recovery still writes a bootstrap manifest and its exact cycle pointer.
+  - Recovery still refuses a healthy accepted bundle or a state with no accepted predecessor.
+
+scope:
+  - No metadata or playtest evidence is synthesized by feedback:rebootstrap.
+  - Status and standalone forensic compilation do not require cycle metadata.
+  - Acceptance remains provisional until the existing post-gate seal and ledger commit.
+
+production:
+  - bin/feedback.ts
+
+tests:
+  - tests/regression/feedback_rebootstrap_cli.test.ts

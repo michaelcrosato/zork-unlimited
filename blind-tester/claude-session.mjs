@@ -529,14 +529,23 @@ export function captureClaudeSession({
   const transcriptBytes = readStableClaudeFile(path, "Claude Code session transcript", {
     maxBytes: maxBytes ?? CLAUDE_TRANSCRIPT_MAX_BYTES,
   });
+  const streamBytes = readStableClaudeFile(streamPath, "Claude Code client stream", {
+    maxBytes: CLAUDE_STREAM_MAX_BYTES,
+  });
+  const receipt = inspectClaudeSessionBytes({ transcriptBytes, streamBytes, sessionId, cwd, path });
+  if (transcriptOut !== undefined) {
+    writeFileSync(transcriptOut, transcriptBytes, { flag: "wx" });
+  }
+  return receipt;
+}
+
+/** Re-audit the retained bytes without reopening a client's private state directory. */
+export function inspectClaudeSessionBytes({ transcriptBytes, streamBytes, sessionId, cwd, path }) {
   const rows = parseClaudeJsonl(transcriptBytes.toString("utf8"), "Claude Code session transcript");
   const binding = auditClaudeTranscriptBinding(rows, { sessionId, cwd });
   const toolCalls = extractClaudeToolCalls(rows);
   const toolCallCounts = auditClaudeToolCalls(toolCalls);
 
-  const streamBytes = readStableClaudeFile(streamPath, "Claude Code client stream", {
-    maxBytes: CLAUDE_STREAM_MAX_BYTES,
-  });
   const streamRows = parseClaudeJsonl(streamBytes.toString("utf8"), "Claude Code client stream");
   const offered = auditClaudeInitEvent(readClaudeInitEvent(streamRows), { sessionId, cwd });
 
@@ -548,16 +557,6 @@ export function captureClaudeSession({
       `client init reports model ${JSON.stringify(offered.model)} but the transcript ` +
         `records ${JSON.stringify(binding.model)}`,
     );
-  }
-
-  // Evidence inside the directory the client owns is evidence the client can rewrite,
-  // so the runner asks for a copy beside the report — the codex lane's rollout copy,
-  // done the cheap way this vendor allows: these are the exact bytes every audit above
-  // ran over, so identity with the receipt's sha256 holds by construction rather than
-  // by a second read that could race. `wx` because a pre-existing file at the
-  // destination means the prefix was reused, which the runner treats as refusal.
-  if (transcriptOut !== undefined) {
-    writeFileSync(transcriptOut, transcriptBytes, { flag: "wx" });
   }
 
   return {

@@ -794,6 +794,7 @@ describe("Codex certified fleet rollout authority", () => {
       facts: {
         sessionId: SESSION,
         actualModel: "gpt-5.6-terra",
+        reasoningEffort: "xhigh",
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: STRICT_CODE_MODE_CONTRACT,
@@ -823,6 +824,7 @@ describe("Codex certified fleet rollout authority", () => {
       facts: {
         sessionId: SESSION,
         actualModel: "gpt-5.3-codex-spark",
+        reasoningEffort: "xhigh",
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: null,
@@ -852,6 +854,7 @@ describe("Codex certified fleet rollout authority", () => {
       facts: {
         sessionId: SESSION,
         actualModel: "gpt-5.6-terra",
+        reasoningEffort: "xhigh",
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: null,
@@ -965,6 +968,7 @@ describe("Codex certified fleet rollout authority", () => {
       facts: {
         sessionId: SESSION,
         actualModel: "gpt-5.6-terra",
+        reasoningEffort: "xhigh",
         turnId: TURN,
         codeModeContract: STRICT_CODE_MODE_CONTRACT,
         transportContract: null,
@@ -991,6 +995,7 @@ describe("Codex certified fleet rollout authority", () => {
       facts: {
         sessionId: SESSION,
         actualModel: "gpt-5.6-terra",
+        reasoningEffort: "xhigh",
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: STRICT_CODE_MODE_CONTRACT,
@@ -1025,6 +1030,7 @@ describe("Codex certified fleet rollout authority", () => {
       facts: {
         sessionId: SESSION,
         actualModel: "gpt-5.6-terra",
+        reasoningEffort: "xhigh",
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: HISTORICAL_STRICT_CODE_MODE_CONTRACT,

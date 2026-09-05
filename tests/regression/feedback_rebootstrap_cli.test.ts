@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -286,5 +294,42 @@ describe("feedback rebootstrap recovery CLI", () => {
       commit: head,
       previous_manifest_sha256: null,
     });
+  });
+
+  it("explains how to recreate a cleared cycle directory before writing a recovery bundle", () => {
+    const root = tempRoot();
+    commitAcceptanceState(root, missingBundleState());
+    cpSync(join(REPO_ROOT, "content"), join(root, "content"), { recursive: true });
+    mkdirSync(join(root, "blind-tester", "reports"), { recursive: true });
+    const stateBefore = readFileSync(join(root, "AI_LOOP_STATE.md"), "utf8");
+    expect(existsSync(join(root, "ai-runs"))).toBe(false);
+
+    const result = runRebootstrap(root);
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(1);
+    expect(result.stderr).toContain("ai-runs/latest-cycle.json is missing");
+    expect(result.stderr).toContain("npm run ai:loop");
+    expect(result.stderr).toContain("AI_LOOP_COMMIT=1");
+    expect(result.stderr).toContain("no coding-agent CLI is required");
+    expect(result.stdout).not.toContain("Wrote");
+    expect(existsSync(join(root, "ai-runs"))).toBe(false);
+    expect(readFileSync(join(root, "AI_LOOP_STATE.md"), "utf8")).toBe(stateBefore);
+  });
+
+  it("rejects malformed cycle metadata before writing a recovery bundle", () => {
+    const root = tempRoot();
+    commitAcceptanceState(root, missingBundleState());
+    cpSync(join(REPO_ROOT, "content"), join(root, "content"), { recursive: true });
+    mkdirSync(join(root, "blind-tester", "reports"), { recursive: true });
+    mkdirSync(join(root, "ai-runs"));
+    writeFileSync(join(root, "ai-runs", "latest-cycle.json"), "{");
+
+    const result = runRebootstrap(root);
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(1);
+    expect(result.stderr).toContain("ai-runs/latest-cycle.json is invalid");
+    expect(result.stdout).not.toContain("Wrote");
+    expect(existsSync(join(root, "ai-runs", "feedback"))).toBe(false);
+    expect(readFileSync(join(root, "ai-runs", "latest-cycle.json"), "utf8")).toBe("{");
   });
 });

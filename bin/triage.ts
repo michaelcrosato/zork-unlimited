@@ -17,9 +17,8 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { buildLocationIndex } from "../src/feedback/normalize.js";
 import { DEFAULT_QUEUE_DIR } from "../src/intake/submission.js";
-import { upsertSubmission } from "../src/intake/queue.js";
 import { DEFAULT_TICKET_DIR } from "../src/qa/ticket.js";
-import { submissionsFromTickets } from "../src/qa/ticket_submission.js";
+import { reconcileTicketSubmissions } from "../src/qa/ticket_submission.js";
 import { readTickets, summarizeBucket, writeTickets } from "../src/qa/ticket_store.js";
 import { DEFAULT_SESSION_STORE, listPlaytestSessions } from "../src/qa/session_store.js";
 import { triagePlaytestCorpus } from "../src/qa/triage.js";
@@ -67,15 +66,11 @@ function buildHistory(): string[] {
 function main(): void {
   const store = argValue("--store", DEFAULT_SESSION_STORE);
   const ticketDir = argValue("--tickets", DEFAULT_TICKET_DIR);
+  const queueDir = argValue("--queue", DEFAULT_QUEUE_DIR);
   const dryRun = process.argv.includes("--dry-run");
 
   const { entries, unreadable } = listPlaytestSessions(store);
   for (const bad of unreadable) console.error(`! unreadable session ${bad.dir}: ${bad.reason}`);
-
-  if (entries.length === 0) {
-    console.log(`No playtest sessions in ${store}; the bucket is unchanged.`);
-    return;
-  }
 
   // Unreadable tickets are reported here for the same reason unreadable sessions are,
   // one screen up: they are workflow state — somebody's `wont_fix`, somebody's notes —
@@ -85,6 +80,23 @@ function main(): void {
   const { tickets: existing, unreadable: unreadableTickets } = readTickets(ticketDir);
   for (const bad of unreadableTickets) {
     console.error(`! unreadable ticket ${bad.file}: ${bad.reason} (left in place)`);
+  }
+
+  if (entries.length === 0) {
+    console.log(`No playtest sessions in ${store}; the bucket is unchanged.`);
+    // The previous run may have written proven replacements before intake failed.
+    // Those persisted decisions can be retried without inventing new corpus evidence.
+    if (!dryRun) {
+      const { promoted, superseded } = reconcileTicketSubmissions(existing, queueDir, {
+        supersededOnly: true,
+      });
+      if (promoted > 0 || superseded > 0) {
+        console.log(
+          `Reconciled saved replacements: promoted ${promoted}, superseded ${superseded} in ${queueDir}.`,
+        );
+      }
+    }
+    return;
   }
 
   const result = triagePlaytestCorpus({
@@ -101,7 +113,7 @@ function main(): void {
   );
   console.log(
     `  verified ${stats.verified}, corroborated ${stats.corroborated}, ` +
-      `accumulating ${stats.accumulating}, stale ${stats.stale}`,
+      `accumulating ${stats.accumulating}, stale ${stats.stale}, superseded ${stats.superseded}`,
   );
   // Retirement removes tracked files, so it is reported rather than left to be noticed
   // in a diff.
@@ -126,14 +138,13 @@ function main(): void {
 
   // Only actionable tickets cross into the dev loop's queue. The rest stay visible in
   // the bucket — they are real evidence, just not yet work.
-  const queueDir = argValue("--queue", DEFAULT_QUEUE_DIR);
-  const promoted = submissionsFromTickets(result.tickets);
-  for (const submission of promoted) upsertSubmission(submission, queueDir);
+  const { promoted, superseded } = reconcileTicketSubmissions(result.tickets, queueDir);
   console.log(
-    promoted.length === 0
+    promoted === 0
       ? `Nothing promoted to ${queueDir}: no ticket is corroborated or verified yet.`
-      : `Promoted ${promoted.length} submission(s) to ${queueDir}.`,
+      : `Promoted ${promoted} submission(s) to ${queueDir}.`,
   );
+  if (superseded > 0) console.log(`Superseded ${superseded} pending submission(s) in ${queueDir}.`);
 }
 
 main();
