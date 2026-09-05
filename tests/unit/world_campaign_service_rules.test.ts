@@ -54,6 +54,18 @@ function worldWithRule(rule: CampaignServiceRule): OverworldManifest {
   return world;
 }
 
+function openingServiceWitness(world: OverworldManifest) {
+  const ally = world.opening_ally;
+  const relationship = world.opening_registration?.profiles[0]?.character.relationships.find(
+    (candidate) => candidate.memories.length > 0,
+  );
+  if (!ally || !relationship) throw new Error("expected an opening ally and relationship memory");
+  return {
+    companionId: ally.ally_npc_id,
+    memory: { npc_id: relationship.npcId, memory_id: relationship.memories[0]! },
+  };
+}
+
 describe("campaign service-rule authoring", () => {
   it("requires care to bind an exact source wound and permits no rest/resupply mutations", () => {
     const care = {
@@ -474,6 +486,76 @@ describe("campaign service-rule authoring", () => {
     expect(() => assertOverworldIntegrity(brokenWithJune)).toThrow(
       /opening promise or companion conditions unreachable.*canonical pre-Wolf and post-Wolf/i,
     );
+  });
+
+  it("keeps later-location memory and story predicates when detecting collisions", () => {
+    const world = structuredClone(WORLD);
+    const witness = openingServiceWitness(world);
+    const laterRule = serviceRule({
+      id: "service:test_later_wardens",
+      home: "saratoga_springs_city",
+      area: "saratoga_springs_city__market",
+      requires_all_world_facts: undefined,
+      requires_all_story_choices: [WARDENS_STORY_CHOICE],
+      requires_all_companions: [witness.companionId],
+    });
+    world.campaign_service_rules = [
+      serviceRule({
+        id: "service:test_first_wagon",
+        home: "saratoga_springs_city",
+        area: "saratoga_springs_city__civic_core",
+        requires_all_world_facts: undefined,
+        requires_all_story_choices: [WAGON_STORY_CHOICE],
+      }),
+      ...(world.campaign_service_rules ?? []),
+      laterRule,
+      serviceRule({
+        ...laterRule,
+        id: "service:test_later_wardens_memory_collision",
+        character_conditions: {
+          requires_all_relationship_memories: [witness.memory],
+        },
+      }),
+    ];
+    const before = JSON.stringify(world);
+
+    expect(() => assertOverworldIntegrity(world)).toThrow(
+      /both resolve for action "rest".*saratoga_springs_city__market/i,
+    );
+    expect(JSON.stringify(world)).toBe(before);
+  });
+
+  it("revalidates edited dawn-choice predicates without merging character states", () => {
+    const world = structuredClone(WORLD);
+    const witness = openingServiceWitness(world);
+    const wagon = serviceRule({
+      id: "service:test_market_wagon",
+      home: "saratoga_springs_city",
+      area: "saratoga_springs_city__market",
+      requires_all_world_facts: undefined,
+      requires_all_story_choices: [WAGON_STORY_CHOICE],
+      requires_all_companions: [witness.companionId],
+    });
+    const wardens = serviceRule({
+      ...wagon,
+      id: "service:test_market_wardens",
+      requires_all_story_choices: [WARDENS_STORY_CHOICE],
+      character_conditions: {
+        requires_all_relationship_memories: [witness.memory],
+      },
+    });
+    world.campaign_service_rules = [...(world.campaign_service_rules ?? []), wagon, wardens];
+
+    // These mutually exclusive choices can follow the same character outcome.
+    const before = JSON.stringify(world);
+    expect(() => assertOverworldIntegrity(world)).not.toThrow();
+    expect(JSON.stringify(world)).toBe(before);
+    wardens.requires_all_story_choices = [WAGON_STORY_CHOICE];
+    const edited = JSON.stringify(world);
+    expect(() => assertOverworldIntegrity(world)).toThrow(
+      /both resolve for action "rest".*saratoga_springs_city__market/i,
+    );
+    expect(JSON.stringify(world)).toBe(edited);
   });
 
   it("rejects distinct service predicates that collide in a canonical return state", () => {
