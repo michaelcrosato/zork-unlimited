@@ -234,6 +234,11 @@ export function validateRpgFoundation(
     "npc",
     findings,
   );
+  dupCheck(
+    pack.enemies.map((enemy) => enemy.id),
+    "enemy",
+    findings,
+  );
 
   // ── Reference integrity ─────────────────────────────────────────────────────
   if (!roomIds.has(pack.meta.start_room)) {

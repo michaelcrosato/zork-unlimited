@@ -1,0 +1,44 @@
+id: bug_0598
+title: Duplicate enemy IDs passed validation and shared combat state
+severity: S3
+intake: 542ff39a378316ba
+
+symptom: >
+  A pack containing two enemies with the same ID passed validateRpg with zero
+  findings. In one room, the two enemies exposed identical attack action IDs. They
+  also shared the same enemy-health variable, even when authored in different rooms.
+
+root_cause: >
+  src/validate/rpg_foundation_validator.ts checked room, object, and NPC IDs for
+  uniqueness but omitted enemies. src/rpg/runner.ts enumerates enemies individually,
+  while combat health in src/rpg/schema.ts is keyed only by enemy ID. Accepting
+  duplicate IDs therefore made distinct authored rows address the same action and
+  health state.
+
+reproduction:
+  - Generate the canonical valid pack with generateRpgPack(0).
+  - Append a structured clone of the first enemy without changing its ID.
+  - Before the fix, both the original and duplicate pack validate with zero findings.
+  - >
+    Starting in the duplicated enemy's room exposes two attack_foe rows; both enemy
+    records map to __enemy_hp_foe. This witness was produced locally from the generated
+    fixture, not by a live playtester or against published content.
+
+fix: >
+  Apply the existing dupCheck helper to enemy IDs across the whole pack. Duplicate
+  enemies now produce the same error-level DUPLICATE_ID diagnostic used by the other
+  entity collections. The runtime menu and combat state are unchanged; invalid
+  identity is rejected at the validation boundary.
+
+regression:
+  file: tests/unit/rpg_enemy_identity_validation.test.ts
+  before: Both new duplicate-enemy cases fail because the validator accepts their packs.
+  cases:
+    - The generated baseline with distinct enemy IDs has zero findings.
+    - Duplicated enemy IDs in the same room are rejected with the enemy-specific diagnostic.
+    - Duplicated enemy IDs in different rooms are rejected with the same diagnostic.
+
+required_verification:
+  - npm run crawl:smoke
+  - npm run health
+  - Independent review under docs/parallel_lanes.md
