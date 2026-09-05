@@ -14,6 +14,11 @@ lane on a 4-core / 15 GB Linux box; the GitHub Actions history of `ci.yml` and
 `deep-audit.yml`; and the full git history (1,653 commits since 2026-05-31, after
 unshallowing the clone this session started with).
 
+Unless another source date or commit is stated, measurements and statuses below
+describe observations at the audited `700e523` snapshot on 2026-09-05. The
+live-run numbers describe the 4-core / 15 GB Linux box used for this audit and do
+not describe later `main` revisions.
+
 This document is deliberately opinionated about impact. Anything that would not
 change what a maintainer does next was left out.
 
@@ -22,14 +27,16 @@ change what a maintainer does next was left out.
 ## 0. The short version
 
 The engine is in good shape. The pure core, the closed DSL, the validators, the
-census proofs, the crawler, and the evidence-binding rules all do what they claim,
-and every gate is green on `main` today. The problems are in the machine built
-around the engine, and the biggest one is that the machine has stopped.
+census proofs, and the crawler do what they claim; the evidence-binding seal is
+commit-bound, while the recorder/provenance boundary remains open (finding 4).
+The contemporaneous GitHub gates for `700e523` were green, while the local
+`test:fast` run recorded below was red under load. The problems are in the machine
+built around the engine, and the biggest one is that the machine has stopped.
 
 | # | Problem | What to do |
 | --- | --- | --- |
 | 1 | **The flywheel has stalled.** Sealed dev-loop cycles per week went 269 → 299 → 66 → 20 → 14 → **0 → 0**; the last sealed cycle is 2026-08-22, the accepted feedback compile from that day is still unconsumed, and the last fifteen cycles each spent hours of verification on a few hundred bytes of prose that never moved the pilot gate (clarity 38–40 of 50, every time). Meanwhile 65 commits landed by hand and by bots, and the intake queue holds 48 open items including a P0 from 2026-08-29. | Make a cycle cheap again (finding 2), measure the pilot gate's own noise before spending on it again, and drain the queue's already-written fixes in one owner-approved batch (finding 5). |
-| 2 | **The bar is too slow and too load-sensitive for a machine to run, and on a 4-core box it is red today.** The fast lane took 54 min 48 s here and failed 10 of 492 files, every failure a timeout, while the same commit was green on GitHub's runners; 63% of files cost 1.5% of the lane; 117 test files each re-validate the 2.7 MB world (69 minutes of summed worker time, a third of the lane); one file sets a 13–22 minute floor; timeouts are a flat 60 s; the CI cost table is frozen from July and wrong in both directions. | Land the census's own two recommendations (validate the world once: −31%; split the four files that set the floor), size timeouts from measured cost per file, and make the lane's wall clock a gate so it cannot drift again. |
+| 2 | **The bar is too slow and too load-sensitive for a machine to run, and on the 4-core audit box it was red under load.** The fast lane took 54 min 48 s here and failed 10 of 492 files, every failure a timeout, while the same commit was green on GitHub's runners; 63% of files cost 1.5% of the lane; 117 test files each re-validate the 2.7 MB world (69 minutes of summed worker time, a third of the lane); one file sets a 13–22 minute floor; timeouts are a flat 60 s; the CI cost table is frozen from July and wrong in both directions. | Land the census's own two recommendations (validate the world once: −31%; split the four files that set the floor), size timeouts from measured cost per file, and make the lane's wall clock a gate so it cannot drift again. |
 | 3 | **CI cancels its own post-merge check on main.** `cancel-in-progress: true` applies to push events too, so the "drift vs previous tip" step that exists to catch an admin direct push (branch protection has `enforce_admins` off) was cancelled on 6 of the last 15 `main` runs. | One line: `cancel-in-progress: ${{ github.event_name == 'pull_request' }}`. |
 | 4 | **Playtest evidence can still be forged or lost.** A hand-written JSON record can be stamped `runner_enforced` and move the experience metrics that gate the milestone (P0, open); model-authored strings flow unbounded into tracked files; the intake claim is a read-modify-write with no lock; and the playtest loop hard-resets away its own triage output every wave. | Only the runner mints `runner_enforced`, bound to its sidecar hash; `.max()` the free-text fields; stage-and-rename queue writes; run playtest-side triage as a dry run. |
 | 5 | **The anti-weakening guard has two holes it does not name, and it is blocking a proven fix.** Nothing checks a changed expected literal in the 494 non-hash-pinned test files; raw count floors reward padding (bot PRs adding tests for string helpers count exactly like census proofs); and a HIGH-severity scoring exploit whose fix is already written has sat in the queue since 2026-08-29 because landing it re-pins one trace hash, which needs an owner acknowledgement nobody has given. | State the limit in the guard's docstring and report changed test literals in drift mode; protect the three unprotected verifier inputs; replace raw count floors with a per-file import rule; decide the one re-pin now and adopt a rule for the next one. |
@@ -403,7 +410,7 @@ existence, enforces four count floors (2,975 test cases, 18,700 assertions, 17,9
 strong matchers, 0 tautologies), and in drift mode ratchets those counts against the
 cycle-start ref and refuses edits that lower a floor or shrink a protected list. Its
 own docstring says the point is to make tampering visible and effortful, not
-impossible; §5 finding 5 is about where visibility currently stops.
+impossible; §5 finding 5 is about where visibility stopped at the audited commit.
 
 ---
 
@@ -423,7 +430,7 @@ impossible; §5 finding 5 is about where visibility currently stops.
 | Deep audit, last 12 nightly runs | 12 of 12 success, latest 2026-09-04 on `fff2ec6` |
 
 The shallow-clone failure is worth one sentence because it is the first thing a new
-agent or a cloud runner hits: the trace verifier now diagnoses it correctly (one
+agent or a cloud runner hits: the audited revision diagnosed it correctly (one
 finding naming the remedy, instead of 771 false accusations), but `npm run health` is
 still red on a depth-limited checkout, and `npm run doctor` does not mention it.
 
@@ -477,8 +484,9 @@ xychart-beta
   entries, not bytes.
 
 **Why it matters.** The charter's thesis is that quality compounds through the loop.
-Right now the loop produces nothing, the queue it is supposed to drain grows, and the
-verification apparatus built to keep the loop honest is what made a cycle cost hours.
+At the audited snapshot the loop produced nothing, the queue it was supposed to drain
+grew, and the verification apparatus built to keep the loop honest was what made a
+cycle cost hours.
 The two-loop split correctly removed the per-cycle playtest, but the remaining bar is
 still about an hour on the fast lane alone (finding 2), and the cycle prompt still
 frames the work as the smallest safe content edit.
@@ -499,7 +507,7 @@ frames the work as the smallest safe content edit.
    record-keeping items. Most are one commit each; what they lack is an approval, not
    an implementation.
 4. Enforce the ledger's own terseness with a byte cap in `detectLoopStateOverflow`
-   (currently entry-count only), so the 42 KB every cycle reads shrinks to the
+   (entry-count only at the audited snapshot), so the 42 KB every cycle reads shrinks to the
    ≤8-line contract it already states.
 
 ### 2. The bar is too slow and too load-sensitive for a machine to run
@@ -512,7 +520,7 @@ frames the work as the smallest safe content edit.
 | Fast lane, summed worker time / wall clock at 4 workers | 216.6 min / **54.1 min** |
 | Files under 10 s | 309 of 494 (63%), 1.5% of the cost |
 | Four most expensive files | 23% of the cost |
-| Test files that re-validate the 2.7 MB world at module scope | 117 today (114 in the census), 21.6 s each, 69 min summed, a third of the lane |
+| Test files that re-validate the 2.7 MB world at module scope | 117 at the audited snapshot (114 in the census), 21.6 s each, 69 min summed, a third of the lane |
 | Slowest file, `tests/regression/overworld_cli.test.ts` | 22.4 min in the suite, 13.0 min alone: the lane's floor |
 | Exhaustive lane (six census proofs) | 53.0 min wall clock, one proof 27.4 min alone |
 | Full `npm run health` | about 2 h; `health:fast` about 1 h |
@@ -528,8 +536,8 @@ commit green on GitHub's runners. Two of the ten, run alone with the ceiling rai
 pass in 91 s and 142 s. A flat 60 s ceiling is a hardware
 assumption calibrated for the CI runner, and `loop.sh` runs `health` on whatever
 machine the operator has. `loop.sh` counts such a failure toward its
-5-consecutive-failure breaker exactly like a real one, so on a 4-core box the dev
-loop cannot complete a cycle at all today.
+5-consecutive-failure breaker exactly like a real one, so under those 4-core
+conditions the dev loop could not complete a cycle.
 
 **Fix.**
 
@@ -653,7 +661,7 @@ dry run, and have `playtest-loop.sh` write and authenticate a pid record the sam
   dozens of mutable fields (`Set`s, `Map`s, counters, caches) and more than 40 public methods, and
   `session_snapshot.ts` plus `session_snapshot_restore.ts` are 3,008 lines of hand-rolled
   serialization that exist only because the state is not a plain value.
-- The failure class is live this week. PR 317 (2026-09-02) memoized `overworldNodesById`
+- The failure class was live during this audit. PR 317 (2026-09-02) memoized `overworldNodesById`
   in a `WeakMap` and returned the cached `Map`; PR 351 (2026-09-04) had to wrap the public
   function in `new Map(...)` because callers received a shared mutable cache. Both landed
   through the fast lane, which cannot see `src/world` regressions the census proofs
@@ -682,7 +690,7 @@ dry run, and have `playtest-loop.sh` write and authenticate a pid record the sam
   `new_rochelle_city` under `lt_LT`, and put `cicero_town` before `chester_town` under
   `cs_CZ`. The tiebreak at `session_indices.ts` line 69 (`travel_minutes`, then name)
   feeds `roadsFrom`, the view model's `roads`, and the compact view a blind agent
-  navigates by index. With current content, two of 247 towns (`eastchester_town`,
+  navigates by index. With the audited content, two of 247 towns (`eastchester_town`,
   `mount_vernon_city`) reorder under Lithuanian collation, and 272 of 929 node and area
   names reorder under Czech. `tests/property/overworld_determinism.test.ts` cannot see
   it: it picks roads by the very index this reorders and compares two runs inside one
