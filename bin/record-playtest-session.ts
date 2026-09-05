@@ -23,6 +23,7 @@
  * Usage (called by playtest-loop.sh; also fine by hand):
  *   npm run playtest:record -- --out <run.sh --out prefix> \
  *     --provider codex --model gpt-5.3-codex-spark --persona default [--store <dir>]
+ * Pass the launch's --effort (or BLIND_REASONING_EFFORT) when overriding the catalog.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -47,6 +48,7 @@ import {
   type PlaytestSessionBody,
 } from "../src/qa/session_record.js";
 import { DEFAULT_SESSION_STORE, sha256Hex, writePlaytestSession } from "../src/qa/session_store.js";
+import { verifyRecordedRunnerEvidence } from "../src/qa/runner_evidence.js";
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const WORLD_PATH = join(REPO_ROOT, "content/world/new_york_overworld.json");
@@ -99,6 +101,16 @@ function main(): void {
     JSON.parse(readFileSync(join(REPO_ROOT, provider.catalogPath), "utf8")),
   );
   const model = findCatalogModel(catalog, required("--model"));
+  const reasoningEffort =
+    arg("--effort") ??
+    (process.env.BLIND_REASONING_EFFORT || undefined) ??
+    model.settings.reasoning_effort;
+  if (
+    reasoningEffort !== undefined &&
+    !/^(minimal|low|medium|high|xhigh|max)$/.test(String(reasoningEffort))
+  ) {
+    throw new Error("--effort / BLIND_REASONING_EFFORT must name a supported reasoning effort");
+  }
 
   const personaId = arg("--persona") ?? "default";
   const personaText = readFileSync(join(PERSONA_DIR, `${personaId}.md`), "utf8");
@@ -206,10 +218,22 @@ function main(): void {
   };
 
   const drivable = runnerCanDriveProvider(provider);
-  const runnerIsolation = drivable.drivable ? provider.isolation : "operator_attested";
-  if (provider.isolation === "runner_enforced" && !drivable.drivable) {
+  const proof = drivable.drivable
+    ? verifyRecordedRunnerEvidence({
+        outPrefix,
+        provider: provider.id,
+        model: model.id,
+        transportContract: provider.transportContract,
+        reasoningEffort: String(reasoningEffort ?? "xhigh"),
+        reportText,
+        sidecarText,
+        evidenceText,
+      })
+    : { ok: false as const, reason: drivable.reason };
+  const runnerIsolation = proof.ok ? "runner_enforced" : "operator_attested";
+  if (provider.isolation === "runner_enforced" && !proof.ok) {
     console.error(
-      `! sealing ${provider.id} as operator_attested rather than runner_enforced: ${drivable.reason}`,
+      `! sealing ${provider.id} as operator_attested rather than runner_enforced: ${proof.reason}`,
     );
   }
 
@@ -248,19 +272,20 @@ function main(): void {
       id: provider.id,
       vendor: provider.vendor,
       family: provider.family,
-      // The registry's label says what this vendor's evidence COULD be; this says what it
-      // can actually be here. They came apart the moment a capture reader landed for a
-      // vendor run.sh has no launch path for: the registry reads `runner_enforced`, yet
-      // no runner in this checkout can have enforced anything, because it cannot launch
-      // that client at all. Sealing the stronger label onto such a record would be the
-      // precise contamination src/blind/providers.ts calls the worst error available —
-      // an unverifiable session wearing the label that lets it move experience metrics.
-      // Downgrade, and say so, rather than trusting a field that is describing potential.
+      // Re-audited artifacts, not the provider's potential capabilities, own this label.
       isolation: runnerIsolation,
+      ...(proof.ok ? { client_evidence: proof.clientEvidence } : {}),
       transport_contract: provider.transportContract,
       ...(operatorAttestation ? { operator_attestation: operatorAttestation } : {}),
     },
-    model: { id: model.id, tier: model.tier, settings: model.settings },
+    model: {
+      id: model.id,
+      tier: model.tier,
+      settings: {
+        ...model.settings,
+        ...(reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
+      },
+    },
     persona: {
       id: personaId,
       title: arg("--persona-title") ?? personaId,
