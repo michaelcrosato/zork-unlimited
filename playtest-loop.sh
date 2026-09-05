@@ -286,6 +286,9 @@ run_player() {
   # from the artifacts that actually landed. Dropping failures here is precisely how a
   # QA corpus quietly becomes a highlight reel.
   local record_args=(--out "$out" --provider "$provider" --persona "$persona" --store "$STORE")
+  # We witnessed the launch even when a crash prevented client proof. The recorder
+  # uses this explicit weaker attestation only when retained proof cannot verify.
+  record_args+=(--attested-by playtest-loop --method "playtest-loop invoked blind-tester/run.sh with the pure player boundary; retained client isolation proof did not verify")
   [[ -n "$model" ]] && record_args+=(--model "$model")
   if [[ -z "$model" ]]; then
     # No pin: ask the registry which model this provider defaulted to, so the record

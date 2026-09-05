@@ -1,0 +1,37 @@
+id: bug_0596
+title: Playtest recorder granted runner_enforced without inspecting the run's client evidence
+severity: S3
+pack: n/a — playtest tooling
+reported_by: audit intake 7e920b74962d7f38
+symptom: >
+  A hand-written pure report and sidecar naming a supported provider could become
+  a completed runner_enforced corpus record and affect experience metrics without
+  any envelope, copied client transcript, or runner capture receipt.
+root_cause: >
+  bin/record-playtest-session.ts checked only runnerCanDriveProvider. That proves
+  the checkout can launch a provider, not that this session used its isolated
+  runner. The recorder never wrote the declared client_evidence field.
+fix: >
+  Revalidate retained game and client artifacts before assigning runner_enforced.
+  Codex uses the existing fleet artifact verifier with an explicit expected effort;
+  existing certification callers still require xhigh. Claude uses the same byte
+  audit as the live capture reader, without reading private client state. Store
+  the verified model, client session, and artifact hashes in client_evidence.
+  Missing or rejected proof requires explicit operator attestation. The playtest
+  loop supplies a launch attestation so failed runs are still recorded honestly.
+regressions:
+  - tests/unit/record_playtest_session_cli.test.ts
+  - tests/unit/recorded_runner_evidence.test.ts
+  - tests/regression/claude_capture_contract.test.ts
+witnesses:
+  - Complete Codex and Claude fixtures record as completed and count toward metrics.
+  - Removing either provider's capture receipt prevents sealing without attestation.
+  - Raw evidence, sidecar, report, provider, and model mismatches fail verification.
+  - A forbidden Claude tool in the offered surface fails even if it was never called.
+  - Missing or edited copied client transcripts fail verification.
+  - Claude stream messages and final result must agree with the hash-bound transcript.
+  - A deliberately pinned max-effort Codex run verifies only against that effort.
+  - Incomplete runs survive with explicit attestation and no client_evidence claim.
+limitations:
+  - Historical corpus records are not retroactively authenticated by this change.
+  - Server-authored evidence and its matching sidecar are trusted runner assertions about build, seed, and game session; this verifies their consistency, not a cryptographic signature from the game server.
