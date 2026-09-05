@@ -35,8 +35,6 @@ const PROTECTED_BRANCH = "main";
  *  until it passes, so this is a wait, not a second opinion. */
 const CHECK_POLL_SECONDS = 20;
 const CHECK_TIMEOUT_SECONDS = 60 * 60;
-/** How long "no checks reported yet" is treated as pending rather than as a failure. */
-const CHECK_STARTUP_GRACE_SECONDS = 5 * 60;
 
 export interface ShipOptions {
   message: string;
@@ -163,16 +161,15 @@ function changedPaths(branch: string): string[] {
   return [...new Set([...working, ...committed])];
 }
 
-/** gh reports "no required checks reported" as a plain error, not as pending, and that is
- *  the normal state for the first seconds after a push while Actions registers the run.
- *  Failing on it would abandon a perfectly healthy ship at the moment it starts. */
+/** gh reports "no required checks reported" as a plain error, not as pending. The CI
+ *  workflow registers `verify` only after its prerequisite jobs finish, so this can
+ *  remain normal for most of the run. It shares the overall wait deadline. */
 function noChecksRegisteredYet(output: string): boolean {
   return /no (required )?checks? reported/i.test(output);
 }
 
-function waitForChecks(branch: string): boolean {
-  const started = Date.now();
-  const deadline = started + CHECK_TIMEOUT_SECONDS * 1000;
+export function waitForChecks(branch: string): boolean {
+  const deadline = Date.now() + CHECK_TIMEOUT_SECONDS * 1000;
   while (Date.now() < deadline) {
     const result = spawnSync("gh", ["pr", "checks", branch, "--required"], {
       encoding: "utf8",
@@ -182,9 +179,7 @@ function waitForChecks(branch: string): boolean {
     // on a real failure. Treating "pending" as failure would abandon a healthy ship.
     if (result.status === 0) return true;
     if (result.status !== 8) {
-      const startingUp =
-        noChecksRegisteredYet(output) && Date.now() - started < CHECK_STARTUP_GRACE_SECONDS * 1000;
-      if (!startingUp) {
+      if (!noChecksRegisteredYet(output)) {
         console.error(output.trim());
         return false;
       }

@@ -9,6 +9,7 @@
   "status": "done",
   "claimed_by": "claude-code_2-1-247_agent",
   "claimed_at": "2026-08-31T15:07:19.695Z",
+  "resolved_by": "claude-code_2-1-247_agent",
   "labels": [],
   "area": "ui/src/engine.ts",
   "evidence": {
@@ -18,7 +19,15 @@
     "observations": 1
   },
   "created_at": "2026-08-29T07:18:00.026Z",
-  "updated_at": "2026-08-31T15:07:20.510Z",
+  "updated_at": "2026-08-31T16:36:30.305Z",
   "external": null,
-  "resolved_by": "claude-code_2-1-247_agent"
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "72d14090-69fa-4027-8bff-fccb54ab8d46",
+      "identifier": "MIC-10",
+      "url": "https://linear.app/michael-crosato/issue/MIC-10/407d606a0e9cbafc-browser-quest-launch-drops-the-mcp",
+      "synced_status": "done"
+    }
+  ]
 }

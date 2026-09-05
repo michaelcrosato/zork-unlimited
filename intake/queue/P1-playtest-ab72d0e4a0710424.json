@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "ab72d0e4a0710424",
+  "title": "Gallowmere wind-stone lethal gate can erase a prepared journey",
+  "body": "Promoted from the fresh 100-player Terra playtest review.\n\n**Build** `f9b5c73d9d1f2de409f0c00538f098050d6c2895`\n**Run** `terra-100-f9b5-copy-20260831` — 100 verified pure reports, 0 failed.\n**Severity signal** 4 reports: one S3, two S2, one S1.\n\nAt The Gallowmere's Moor Gully, `GAUGE wind-stone WITH hunting-knife` is mandatory before the north exit. A failed DC 9 Lore check immediately ends the entire journey with `ending_gored`; there is no retry, alternate route, or recovery after the player has completed the prescribed hunt preparation. This appears intentional in `content/rpg/quests/gallowmere.yaml`, so this is a design review rather than a proven state bug.\n\nEvidence: seeds 9537, 9555, 9579, and 9599. The feedback compiler ranked the related wind-stone hotspot first (`a9109f53`, score 16, max S3).\n\nFix direction: add a deterministic retry or alternate mitigation, or make the guaranteed-preparation path and stakes more explicit before commitment. Preserve the intended challenge only if the player has a reliable, clearly surfaced way to avoid a full-journey loss.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P1",
+  "status": "open",
+  "labels": [
+    "lane:content"
+  ],
+  "area": "content/rpg/quests/gallowmere.yaml",
+  "evidence": {
+    "summary": "Terra 100-player pure fleet: 4 wind-stone findings, max S3, on build f9b5c73d.",
+    "refs": [
+      "ai-runs/fleet/terra-100-f9b5-copy-20260831/summary.json",
+      "ai-runs/review/terra-100-20260831-compile/hotspots.md",
+      "blind-tester/reports/20260831T152851Z_overworld_seed9599.md"
+    ],
+    "lineages": [
+      "terra"
+    ],
+    "observations": 4
+  },
+  "created_at": "2026-09-01T05:32:12.987Z",
+  "updated_at": "2026-09-01T05:32:12.987Z",
+  "external": null
+}

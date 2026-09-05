@@ -9,6 +9,7 @@
   "status": "done",
   "claimed_by": "claude-code_2-1-247_agent",
   "claimed_at": "2026-08-31T12:37:38.437Z",
+  "resolved_by": "claude-code_2-1-247_agent",
   "labels": [],
   "area": "blind-tester/run.sh",
   "evidence": {
@@ -24,7 +25,15 @@
     "observations": 1
   },
   "created_at": "2026-08-28T23:34:46.307Z",
-  "updated_at": "2026-08-31T12:38:09.782Z",
+  "updated_at": "2026-08-31T16:36:21.584Z",
   "external": null,
-  "resolved_by": "claude-code_2-1-247_agent"
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "1ba1cd04-b250-46db-a2b3-6e28f0e04a65",
+      "identifier": "MIC-5",
+      "url": "https://linear.app/michael-crosato/issue/MIC-5/e605134a2c956cec-runner-enforced-blindness-is-codex-only-so-experience",
+      "synced_status": "done"
+    }
+  ]
 }
