@@ -13,8 +13,11 @@ import {
   playtestTargetSummary,
   playtestTarget,
   playtestTargetMetadata,
+  PROMPT_QUEUE_LIMIT,
+  selectPromptQueue,
   shouldRunUltraplan,
 } from "../../src/ai-loop.js";
+import type { Submission } from "../../src/intake/submission.js";
 import {
   OVERWORLD_PLAYTEST_TARGET,
   SATURATION_FLOOR,
@@ -262,6 +265,108 @@ function expectContiguousSteps(prompt: string, first: number): void {
   expect(numbers.length).toBeGreaterThan(0);
   expect(numbers).toEqual(numbers.map((_value, index) => first + index));
 }
+
+describe("buildPrompt carries the intake queue", () => {
+  const NOW = new Date("2026-09-05T21:00:00.000Z");
+  const submission = (over: Partial<Submission> & { id: string }): Submission =>
+    ({
+      title: `work ${over.id}`,
+      priority: "P2",
+      source: "playtest",
+      kind: "bug",
+      status: "open",
+      created_at: "2026-09-01T00:00:00.000Z",
+      evidence: { summary: "", refs: [], lineages: [], observations: 1 },
+      ...over,
+    }) as Submission;
+
+  const promptFor = (queue: readonly Submission[]): string => {
+    const top = candidate("engine", "src/core/engine.ts");
+    return buildPrompt({ a: assessment(top), top, queue });
+  };
+
+  it("names the open queue ahead of the assessor's ranking, with the claim commands", () => {
+    // The defect this closes: the worker is a fresh process reading only STDIN, so a queue
+    // printed to the cycle log reaches nobody. Order matters as much as presence — the
+    // charter puts somebody's actual request ahead of a candidate the assessor synthesized.
+    const prompt = promptFor([
+      submission({ id: "b".repeat(16), priority: "P2", title: "split the overworld JSON" }),
+      submission({ id: "a".repeat(16), priority: "P1", title: "cattle alarm stays 0" }),
+    ]);
+
+    expect(prompt).toContain("cattle alarm stays 0");
+    expect(prompt).toContain("a".repeat(16));
+    expect(prompt).toContain("npm run work -- --claim <id>");
+    expect(prompt).toContain("npm run work -- --done <id>");
+    // --done writes intake/queue/, so it must precede the freeze or the ledger-only gate trips.
+    expect(prompt).toContain("BEFORE the provisional commit");
+    expect(prompt.indexOf("intake queue")).toBeLessThan(prompt.indexOf("The assessor's"));
+    // Priority decides the order, not file order or the order the caller happened to pass.
+    expect(prompt.indexOf("cattle alarm stays 0")).toBeLessThan(
+      prompt.indexOf("split the overworld JSON"),
+    );
+  });
+
+  it("keeps the selection marker honest for off-list queue work", () => {
+    // A queue item is not an assessor candidate, so claiming its id would make the sealed
+    // acceptance marker assert a candidate the cycle never implemented.
+    expect(promptFor([submission({ id: "c".repeat(16) })])).toContain(
+      "leave `selected_recommendation_id` null",
+    );
+  });
+
+  it("hides work another lane holds, and shows it again once the lease expires", () => {
+    const held = submission({
+      id: "d".repeat(16),
+      status: "in_progress",
+      claimed_by: "some-other-lane",
+      claimed_at: "2026-09-05T20:00:00.000Z",
+      title: "held by a live lane",
+    });
+    const expired = { ...held, claimed_at: "2026-09-01T00:00:00.000Z" };
+
+    // Two lanes building the same item is the exact waste claims exist to stop...
+    expect(selectPromptQueue([held], { identity: "dev-opus-lane", now: NOW }).shown).toEqual([]);
+    // ...but a crashed lane must not hold work hostage past its lease.
+    expect(
+      selectPromptQueue([expired], { identity: "dev-opus-lane", now: NOW }).shown,
+    ).toHaveLength(1);
+    // Our own claim is ours to keep working.
+    expect(
+      selectPromptQueue([{ ...held, claimed_by: "dev-opus-lane" }], {
+        identity: "dev-opus-lane",
+        now: NOW,
+      }).shown,
+    ).toHaveLength(1);
+  });
+
+  it("drops resolved and superseded items", () => {
+    // Supersession sets status "declined"; done/stale are equally not work.
+    const closed = (["done", "declined", "stale"] as const).map((status, index) =>
+      submission({ id: `${index}`.repeat(16), status }),
+    );
+    expect(selectPromptQueue(closed, { identity: "dev-opus-lane", now: NOW }).available).toBe(0);
+    expect(promptFor(closed)).toContain("normal state, not a stall");
+  });
+
+  it("caps the listing and points at the CLI for the rest", () => {
+    const queue = Array.from({ length: PROMPT_QUEUE_LIMIT + 5 }, (_unused, index) =>
+      submission({ id: `${index}`.padStart(16, "0"), title: `queued item ${index}` }),
+    );
+    const prompt = promptFor(queue);
+
+    expect(prompt).toContain(`queued item ${PROMPT_QUEUE_LIMIT - 1}`);
+    expect(prompt).not.toContain(`queued item ${PROMPT_QUEUE_LIMIT}`);
+    expect(prompt).toContain("5 more");
+  });
+
+  it("says an empty queue is normal instead of staying silent about it", () => {
+    // Silence reads as "nothing was checked". The charter is explicit that empty is normal.
+    const prompt = promptFor([]);
+    expect(prompt).toContain("normal state, not a stall");
+    expect(prompt).not.toContain("--claim");
+  });
+});
 
 describe("buildPrompt drops the blind-playtest mandate", () => {
   it.each([

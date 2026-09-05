@@ -37,6 +37,8 @@ import {
 } from "./afk/assessor.js";
 import { rotateLoopState } from "./afk/loop_state.js";
 import { formatFeedbackCycleSelectionMarker } from "./feedback/acceptance.js";
+import { claimLeaseHours, readQueue, resolveClaimIdentity } from "./intake/queue.js";
+import { compareSubmissions, isOpenWork, type Submission } from "./intake/submission.js";
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
 // When the deterministic assessor runs dry (isSaturated), a cycle re-aims the
@@ -194,7 +196,7 @@ function main(): void {
 
   const prompt = ultraplan
     ? buildUltraplanPrompt({ a, currentPlanRecord: currentPlanRecord!, commitEnabled })
-    : buildPrompt({ a, top, commitEnabled });
+    : buildPrompt({ a, top, commitEnabled, queue: readQueue().submissions });
 
   // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
   // quest authoring) both need more than the lean routine default; loop.sh reads this
@@ -263,12 +265,107 @@ export function formatRecommendationConsoleLine(a: Assessment): string {
   return "  • no strategic recommendation (the assessor produced no candidate)";
 }
 
+/** How many queued items the prompt names before deferring to `npm run work -- --list`. */
+export const PROMPT_QUEUE_LIMIT = 12;
+
+/**
+ * A LIVE claim by a different lane — the one reason an open item is not this cycle's to take.
+ *
+ * The lease rules mirror `claimSubmission` exactly, including the awkward case: a claim with
+ * no timestamp cannot prove freshness, so it counts as expired rather than as a hold. Being
+ * stricter here than the claim path would advertise work the worker is then refused, and being
+ * looser would advertise work another lane is actively building.
+ */
+function heldByAnotherLane(
+  submission: Submission,
+  identity: string,
+  leaseHours: number,
+  now: Date,
+): boolean {
+  if (submission.status !== "in_progress") return false;
+  if (!submission.claimed_by || submission.claimed_by === identity) return false;
+  if (!submission.claimed_at) return false;
+  return (now.getTime() - Date.parse(submission.claimed_at)) / 3_600_000 < leaseHours;
+}
+
+/**
+ * The slice of the queue this cycle should actually be offered.
+ *
+ * Sorted here rather than trusted from the caller: `compareSubmissions` is the queue's own
+ * order — priority first, then weight of evidence, then age — and the prompt must not invent
+ * a second one. Declined and done items (which is what supersession produces) are already
+ * outside `isOpenWork`.
+ */
+export function selectPromptQueue(
+  submissions: readonly Submission[],
+  options: { identity?: string; leaseHours?: number; now?: Date; limit?: number } = {},
+): { shown: Submission[]; available: number } {
+  const identity = options.identity ?? resolveClaimIdentity();
+  const leaseHours = options.leaseHours ?? claimLeaseHours();
+  const now = options.now ?? new Date();
+  const available = submissions
+    .filter((submission) => isOpenWork(submission))
+    .filter((submission) => !heldByAnotherLane(submission, identity, leaseHours, now))
+    .sort(compareSubmissions);
+  return {
+    shown: available.slice(0, options.limit ?? PROMPT_QUEUE_LIMIT),
+    available: available.length,
+  };
+}
+
+/**
+ * The intake queue, IN THE PROMPT.
+ *
+ * `loop.sh` has always printed the queue at cycle start, but it prints it to the cycle LOG —
+ * and the worker is a fresh headless process whose entire world is this string on STDIN. So
+ * the charter's first step ("read the intake queue first ... claim it with
+ * `npm run work -- --claim <id>`") was something no worker could act on: dozens of open
+ * submissions, several corroborated by many independent playtest observations, were invisible
+ * to the one agent whose job is to work them, and every cycle fell to the assessor's
+ * synthesized maintenance candidates by default rather than by judgement.
+ *
+ * An empty queue is stated rather than omitted. Silence reads as "nothing was checked", while
+ * the charter is explicit that an empty queue is a normal state and not a stall.
+ */
+export function formatQueueSection(shown: readonly Submission[], available: number): string[] {
+  if (available === 0)
+    return [
+      "## The intake queue (`npm run work -- --list`)",
+      "Empty right now, or entirely claimed by another lane — a normal state, not a stall.",
+      "The assessor's own candidates carry this cycle.",
+    ];
+  const remainder = available - shown.length;
+  return [
+    "## The intake queue — CONSIDER THIS FIRST (`npm run work -- --list`)",
+    `${available} open submission(s) not held by another lane, highest priority first (weight`,
+    "of evidence breaks ties). A queued item is somebody's actual request, and a verified or",
+    "corroborated playtest item is the strongest evidence this repo has — stronger than any",
+    "candidate the deterministic assessor can synthesize, because a real player hit it.",
+    "",
+    ...shown.map((s) => `  ${s.priority} ${s.source}/${s.kind} ${s.id} — ${s.title}`),
+    ...(remainder > 0 ? [`  … ${remainder} more; \`npm run work -- --list\` shows them all.`] : []),
+    "",
+    "PREFER the highest-ranked item you can both finish AND verify in this ONE cycle against",
+    "the bar. An item you cannot finish is worth less this cycle than an assessor candidate you",
+    "can. Taking one:",
+    "  `npm run work -- --claim <id>`   before you start",
+    "  `npm run work -- --done <id>`    when the change is complete, BEFORE the provisional commit",
+    "Both write tracked files under intake/queue/, so they have to ride that commit — afterwards",
+    "AI_LOOP_STATE.md is the only tracked change the driver still allows.",
+    "Queue work is normally OFF-LIST: leave `selected_recommendation_id` null unless you really",
+    "implemented the assessor candidate of that id. If you pass over the queue for an assessor",
+    "candidate, say why in AI_LOOP_STATE.md.",
+  ];
+}
+
 export function buildPrompt(ctx: {
   a: Assessment;
   top: ImprovementCandidate | null;
   commitEnabled?: boolean;
+  queue?: readonly Submission[];
 }): string {
-  const { a, commitEnabled = false } = ctx;
+  const { a, commitEnabled = false, queue = [] } = ctx;
+  const { shown: queueShown, available: queueAvailable } = selectPromptQueue(queue);
   const top = a.top;
   const recommendationKind = assessmentRecommendationKind(a);
   const ranked = a.candidates
@@ -398,6 +495,8 @@ export function buildPrompt(ctx: {
     "This cycle improves AdventureForge, a local fictional text-based TTRPG project.",
     ...cycleCharge,
     "do not route around the verifier.",
+    "",
+    ...formatQueueSection(queueShown, queueAvailable),
     "",
     ...assessorSection,
     "",
