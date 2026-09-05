@@ -32,6 +32,7 @@ import {
   compactOverworldAreaTravelResult,
   compactOverworldGoalPassageResult,
   compactOverworldJourneyStoryChoiceResult,
+  compactOverworldJourneyChoiceResult,
   compactOverworldOpportunityExplanation,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
@@ -44,6 +45,7 @@ import {
   type OverworldCompactAreaTravelResult,
   type OverworldCompactGoalPassageResult,
   type OverworldCompactJourneyStoryChoiceResult,
+  type OverworldCompactJourneyChoiceResult,
   type OverworldCompactOpportunityExplanation,
   type OverworldCompactQuestCompletionResult,
   type OverworldCompactRoadEncounterResult,
@@ -275,7 +277,12 @@ type ResumedEmbeddedRpgField<Args extends RpgViewOptions & OverworldResponseOpti
 };
 
 type OverworldJourneyChoiceResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
-  OverworldSessionResponse<"result", JourneyChoiceResult, Args> &
+  OverworldSessionResponse<
+    "result",
+    JourneyChoiceResult,
+    Args,
+    OverworldCompactJourneyChoiceResult
+  > &
     Partial<ResumedEmbeddedRpgField<Args>>;
 
 type OverworldCompactJourneyStoryInspection<Story extends JourneyStoryChoiceComparison> = Readonly<{
@@ -843,7 +850,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         args.session_id,
         "result",
         (session) => session.chooseJourney(args.choice),
-        (result): JourneyChoiceResult => result,
+        compactOverworldJourneyChoiceResult,
       );
       if (response.ok !== true) {
         return response as OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>>;

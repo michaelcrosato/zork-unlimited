@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "8c57d00c90511374",
   "title": "Cade's talk is a procedure dump, not character speech",
-  "body": "Cade’s talk is a **procedure dump** (LAY/CAST/DC/cattle-alarm, “Reviews choose nothing”, ALL-CAPS LURE/DRIVE/FORTIFY/HUNT) instead of a farmer in a wolf siege. This is the chapter’s voice, not a single blocked exit.\n\nGrok-4.6 MCP wave: **17** `bugs[]` rows tagged as Cade-as-manual plus many more Cade lines; **13+** worst-moments named Cade’s first speech. Clarity averaged 2.45; 78/82 would not replay — this voice is a stated reason.\n\nFix: Cade’s plan comparison should stay in character. DCs and closed plans can live on the action/journal surface; his spoken lines should not be the rules document.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`. Not a duplicate of `4806c6f8ade14c0b` (action-id vocabulary).",
+  "body": "Cade’s talk is a **procedure dump** (LAY/CAST/DC/cattle-alarm, “Reviews choose nothing”, ALL-CAPS LURE/DRIVE/FORTIFY/HUNT) instead of a farmer in a wolf siege.\n\nThis 200-player grok-4.6 (low) MCP wave (build `36ff6d106fa0df2ff19e80d09cf00df081b81653`): S2 clusters `1cb2e79f09226df6` (7 reports) and `2d87b881eb2b1792` (4) plus many S1 confusions. Worst-moments repeatedly name Cade’s first speech. Clarity averaged 2.63; **188/192 would not replay**. Example seeds: `1900000003`, `1900000007`, `1900000015`.\n\nFix: Cade’s plan comparison should stay in character. DCs and closed plans can live on the action/journal surface; his spoken lines should not be the rules document.",
   "source": "playtest",
   "kind": "experience",
   "priority": "P1",
@@ -12,18 +12,20 @@
   ],
   "area": "content/rpg/quests",
   "evidence": {
-    "summary": "Grok-4.6 MCP wave cluster (17 mentions, 82 completed interviews).",
+    "summary": "Grok-4.6 low MCP 200-wave S2 clusters 1cb2e79f09226df6 (7) and 2d87b881eb2b1792 (4); 188/192 would not replay.",
     "refs": [
       "ai-runs/playtest/sessions",
-      "ai-runs/playtest/grok-100-manifest.json"
+      "ai-runs/playtest/grok-100-manifest.json",
+      "ai-runs/playtest/grok-wave-200",
+      "ai-runs/playtest/grok-200-manifest.json"
     ],
     "lineages": [
       "grok"
     ],
-    "observations": 17
+    "observations": 7
   },
   "created_at": "2026-08-31T02:14:25.883Z",
-  "updated_at": "2026-08-31T05:46:58.709Z",
+  "updated_at": "2026-08-31T16:35:36.091Z",
   "external": null,
   "mirrors": [
     {

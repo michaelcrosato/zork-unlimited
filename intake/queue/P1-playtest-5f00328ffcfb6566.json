@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "5f00328ffcfb6566",
   "title": "Hayden Cade Return Filing stays listed with no authored choice after Wolf-Winter",
-  "body": "After **Wolf-Winter completes**, Albany Station still lists **Hayden’s Cade Return Filing** with:\n\n> No authored choice is currently available in this journey state.\n\nThat is authoring-layer copy on a leftover lead, not a player action. Testers hit it at the end of an otherwise finished chapter.\n\nThis wave (seed-base `1800000000`, store `ai-runs/playtest/sessions-wave-20260831`, build `d8d03f8ce620999c7d7666cff6bfbcd9d4bbeefc`): **19** completed interviews named it (`bugs[]`, mostly S1; a few S0). The prior grok-4.6 MCP wave (`1700000000`) had **21** independent mentions of the same leftover filing. Typical `where`: Albany Station Quarter after Wolf-Winter / Dawn Under Albany Seal / after End.\n\nNot a duplicate of MIC-33–MIC-40 (yard blocks, Cade-as-manual, LAY DC, cattle alarm, paperwork, Jamie loft, duplicate $0). Related-but-done `e24b759193c0cd8c` was the Rowan **charter-backlog** lead on the Albany **opening** (“talk to Rowan” then the same engine string). Hayden is a **post-quest** dead lead after the farm is already won.\n\nFix: when Wolf-Winter is complete, either author the Hayden filing choice or hide/close that lead. If it must stay visible, replace the engine sentence with world-facing copy (Hayden has no more questions tonight) instead of “authored choice / journey state.”",
+  "body": "After **Wolf-Winter completes**, Albany Station still lists **Hayden’s Cade Return Filing** with “No authored choice is currently available in this journey state.”\n\nThis 200-player grok-4.6 (low) MCP wave (build `36ff6d106fa0df2ff19e80d09cf00df081b81653`, seed-base `1900000000`): **41** reports in ticket `2df266d25f7cc893` (S1) — the single highest-count cluster in the wave. Example seeds: `1900000041`, `1900000074`, `1900000158`, `1900000161`. Example record: `3bd835d2a983970e57e828ac40dfcb1b8c93c0de9038cd6c3ba552885dab5b03`.\n\nFix: when Wolf-Winter is complete, either author the Hayden filing choice or hide/close that lead. If it must stay visible, replace the engine sentence with world-facing copy instead of “authored choice / journey state.”",
   "source": "playtest",
   "kind": "bug",
   "priority": "P1",
@@ -12,16 +12,20 @@
   ],
   "area": "Albany Station Hayden Cade Return Filing",
   "evidence": {
-    "summary": "Filed by playtest.",
+    "summary": "Grok-4.6 low MCP 200-wave ticket 2df266d25f7cc893 (41 S1 reports) on build 36ff6d10.",
     "refs": [
       "ai-runs/playtest/sessions-wave-20260831",
-      "ai-runs/playtest/grok-wave-20260831-manifest.json"
+      "ai-runs/playtest/grok-wave-20260831-manifest.json",
+      "ai-runs/playtest/grok-wave-200",
+      "ai-runs/playtest/grok-200-manifest.json"
     ],
-    "lineages": [],
-    "observations": 1
+    "lineages": [
+      "grok"
+    ],
+    "observations": 41
   },
   "created_at": "2026-08-31T07:35:30.145Z",
-  "updated_at": "2026-08-31T07:37:08.809Z",
+  "updated_at": "2026-08-31T16:35:36.103Z",
   "external": null,
   "mirrors": [
     {

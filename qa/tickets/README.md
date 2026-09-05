@@ -1,7 +1,8 @@
 # QA ticket bucket
 
-The dev loop's inbox. Written by `npm run qa:triage`, read by `npm run qa:bucket`
-and by `loop.sh` at the start of every cycle.
+The QA triage bucket that feeds the dev loop's inbox (`intake/queue/`). Written by
+`npm run qa:triage`, which `loop.sh` runs at the start of every cycle and which
+promotes corroborated findings into `intake/queue/`; read by `npm run qa:bucket`.
 
 Tracked in git on purpose: the dev loop runs against a checkout, so a ticket that
 only exists on the QA machine is a ticket it cannot act on. Keeping tickets here

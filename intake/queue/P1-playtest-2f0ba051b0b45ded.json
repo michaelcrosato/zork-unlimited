@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "2f0ba051b0b45ded",
   "title": "Albany opening is paperwork and compact tuples before the farm",
-  "body": "The Albany opening is **registration / oath / report / ready-made setup** plus **compact tuples and a legend** before the player sees Cade’s farm or a wolf. Goal is understood; the first hour still feels like a dispatch form.\n\nGrok-4.6 MCP wave: **14** `bugs[]` rows on paperwork/tuples; **9** worst-moments named Rowan-to-oath before the yard; 53 verdicts mentioned paperwork/bureaucracy. Enjoyment 2.89, would-replay 4/82.\n\nFix: get a first-time player onto a readable place and a wolf problem faster. Keep civic choices, but do not front-load three stacked menus and machine tuples as the first scene.\n\nEvidence: grok-4.6 instant-thinking wave, 82 completed interviews, build `fe2619a8`.",
+  "body": "The Albany opening is **registration / oath / report / ready-made setup** plus **compact tuples and a legend** before the player sees Cade’s farm or a wolf. Goal is understood; the first hour still feels like a dispatch form.\n\nThis 200-player grok-4.6 (low) MCP wave (build `36ff6d106fa0df2ff19e80d09cf00df081b81653`): S2 clusters `969c5593e732b284` (7 reports) and `77400ba9b10d2ff8` (5). Mean enjoyment 2.90; would-replay **4/192**. Example seeds: `1900000011`, `1900000037`, `1900000074`.\n\nFix: get a first-time player onto a readable place and a wolf problem faster. Keep civic choices, but do not front-load three stacked menus and machine tuples as the first scene.",
   "source": "playtest",
   "kind": "experience",
   "priority": "P1",
@@ -12,18 +12,20 @@
   ],
   "area": "content/world/new_york_overworld.json",
   "evidence": {
-    "summary": "Grok-4.6 MCP wave cluster (14 mentions, 82 completed interviews).",
+    "summary": "Grok-4.6 low MCP 200-wave S2 clusters 969c5593e732b284 (7) and 77400ba9b10d2ff8 (5); would-replay 4/192 on build 36ff6d10.",
     "refs": [
       "ai-runs/playtest/sessions",
-      "ai-runs/playtest/grok-100-manifest.json"
+      "ai-runs/playtest/grok-100-manifest.json",
+      "ai-runs/playtest/grok-wave-200",
+      "ai-runs/playtest/grok-200-manifest.json"
     ],
     "lineages": [
       "grok"
     ],
-    "observations": 14
+    "observations": 7
   },
   "created_at": "2026-08-31T02:14:26.185Z",
-  "updated_at": "2026-08-31T05:47:00.964Z",
+  "updated_at": "2026-08-31T16:35:36.086Z",
   "external": null,
   "mirrors": [
     {

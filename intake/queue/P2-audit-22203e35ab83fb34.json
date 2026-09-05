@@ -22,5 +22,14 @@
   "created_at": "2026-08-31T10:00:22.498Z",
   "updated_at": "2026-09-02T23:50:18.887Z",
   "external": null,
-  "resolved_by": "claude-code_2-1-259_agent"
+  "resolved_by": "claude-code_2-1-259_agent",
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "e8fcda54-8faf-49a9-90c9-3271d7e0088d",
+      "identifier": "MIC-51",
+      "url": "https://linear.app/michael-crosato/issue/MIC-51/22203e35ab83fb34-triage-bucket-says-0-actionable-while-doctor-sees-351",
+      "synced_status": "open"
+    }
+  ]
 }
