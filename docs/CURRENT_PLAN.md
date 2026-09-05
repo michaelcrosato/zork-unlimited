@@ -17,15 +17,15 @@ Use these authoritative sources:
   generated artifacts remain ignored and local, and merely newer files are inert.
 
 For each commit-enabled increment, follow the repository loop in `AGENTS.md`:
-assess, pass the pre-crawl gate, make one focused change, run focused checks,
-freeze the implementation in a local provisional commit, and require an exactly
-clean tree before one fresh pure blind playtest. Run `npm run feedback:status`
-and compile only when it reports a bootstrap or three-report actionable delta;
-then pass the post-crawl, health, integrity-drift, and playtest-record gates before
-the driver seals feedback authority and commits the terse `AI_LOOP_STATE.md`
-result. Evidence-only cycles instead capture their clean
-baseline play before any uncommitted edit and never represent that baseline as
-evidence for the later work. Run milestone pilots and fleets only on a frozen
+assess (the intake queue first), pass the pre-crawl gate, make one focused change,
+run focused checks, and freeze the implementation in a local provisional commit.
+The dev loop does not play the game: playtest evidence arrives asynchronously from
+the playtest loop and is consumed as intake items at the START of a cycle, never
+proven at its end. Run `npm run feedback:status` and compile only when it reports a
+bootstrap or three-report actionable delta; then pass the post-crawl, health and
+integrity-drift gates before the driver seals feedback authority and commits the
+terse `AI_LOOP_STATE.md` result. Evidence-only cycles (`AI_LOOP_COMMIT=0`) run the
+same checks and leave the work uncommitted. Run milestone pilots and fleets only on a frozen
 build when the contract calls for them. The driver stops continuous
 evidence-only mode when a completed cycle leaves pending work, so the next clean
 baseline cannot be mislabeled. Do not infer certification readiness from this

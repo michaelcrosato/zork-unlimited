@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "ddcf5dd54180d3f9",
+  "title": "Regenerate MEASURED_TEST_COST_MS from the census instead of by hand",
+  "body": "scripts/ci-test-groups.ts shards CI from a 23-entry cost table sampled once on 2026-07-27; docs/test_duration_census.md found it wrong in both directions two months later. Emit the table from npm run test:census output and assert in tests/unit/test_lanes.test.ts that every entry names a file that still exists. From docs/REPO_AUDIT_2026-09.md finding 2.",
+  "source": "audit",
+  "kind": "refactor",
+  "priority": "P3",
+  "status": "open",
+  "labels": [],
+  "area": "scripts/ci-test-groups.ts",
+  "evidence": {
+    "summary": "Filed by audit.",
+    "refs": [
+      "scripts/ci-test-groups.ts",
+      "docs/test_duration_census.md",
+      "scripts/test-duration-census.ts"
+    ],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-05T14:18:41.030Z",
+  "updated_at": "2026-09-05T14:18:41.030Z",
+  "external": null
+}

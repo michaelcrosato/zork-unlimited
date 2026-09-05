@@ -16,17 +16,30 @@ import {
   JOURNEY_EXIT_REASON,
 } from "../world/journey_contract.js";
 
+/**
+ * Upper bounds on model-authored free text (bug_0610). Triage copies interview text
+ * into tracked ticket and queue files, so an unbounded field is a way for one runaway
+ * or adversarial report to commit megabytes through the dev loop's own ledger commit.
+ * The bounds sit far above anything the corpus has produced (longest verdict on disk:
+ * 879 characters; longest list: 5 entries) and below anything a person would read.
+ */
+export const EXIT_INTERVIEW_MAX_TEXT = 2_000;
+export const EXIT_INTERVIEW_MAX_VERDICT = 4_000;
+export const EXIT_INTERVIEW_MAX_ITEMS = 25;
+
+const BoundedText = z.string().min(1).max(EXIT_INTERVIEW_MAX_TEXT);
+
 const ExitInterviewFields = {
   clarity: z.number().int().min(1).max(5),
   enjoyment: z.number().int().min(1).max(5),
   goal_understood: z.boolean(),
   got_stuck: z.boolean(),
-  confusions: z.array(z.string().min(1)).default([]),
+  confusions: z.array(BoundedText).max(EXIT_INTERVIEW_MAX_ITEMS).default([]),
   bugs: z
     .array(
       z
         .object({
-          where: z.string().min(1),
+          where: BoundedText,
           /**
            * ASCENDING: S0 is the mildest and S4 the most severe.
            *
@@ -43,15 +56,16 @@ const ExitInterviewFields = {
               "Ascending severity: S0 trivial, S1 minor, S2 moderate, S3 serious, " +
                 "S4 most severe. Note this is the reverse of the usual S1-is-critical scale.",
             ),
-          note: z.string().min(1),
+          note: BoundedText,
         })
         .strict(),
     )
+    .max(EXIT_INTERVIEW_MAX_ITEMS)
     .default([]),
-  best_moment: z.string().min(1),
-  worst_moment: z.string().min(1),
+  best_moment: BoundedText,
+  worst_moment: BoundedText,
   would_replay: z.boolean(),
-  verdict: z.string().min(20),
+  verdict: z.string().min(20).max(EXIT_INTERVIEW_MAX_VERDICT),
 } as const;
 
 export const ISSUE_CONSISTENCY_VERSION = 1 as const;
