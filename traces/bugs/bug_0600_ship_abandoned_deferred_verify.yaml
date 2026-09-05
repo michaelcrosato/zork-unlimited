@@ -1,0 +1,40 @@
+id: bug_0600
+title: "ship abandoned CI before the required verify job could register"
+pack: n/a — landing tooling
+reported_by: "2026-09-04 audit while waiting for PR #353"
+severity: S2
+
+symptom: >
+  The default ship command stopped waiting after five minutes with no required checks
+  reported, even while healthy prerequisite jobs continued running. The PR remained
+  open and the promised automatic landing never happened.
+
+root_cause: >
+  scripts/ship.ts treated absent required checks as a brief startup condition with a
+  separate five-minute grace. In .github/workflows/ci.yml the required verify job
+  depends on the prerequisite, test-shard and crawl jobs. GitHub did not register
+  verify while the test shards ran; gh pr checks --required returned exit code 1 and
+  no required checks reported more than eight minutes into PR #353's CI run.
+
+fix: >
+  Keep absent required checks pending within the existing one-hour CI deadline.
+  Preserve immediate failure for actual CLI/check errors, rejection of failing
+  required checks, and the final timeout when checks never register or finish.
+
+deterministic_witnesses:
+  - "A fake-clock run registers verify after ten minutes, observes pending, then passes."
+  - "The baseline stops at five minutes instead; the delayed-success and full-deadline cases fail."
+  - "A failing verify result remains false after delayed registration."
+  - "A CLI authorization error fails immediately without sleeping."
+  - "Absent and pending checks both time out at the existing one-hour deadline."
+  - "Already-passing required checks return immediately."
+
+production:
+  - scripts/ship.ts
+tests:
+  - tests/unit/ship_checks.test.ts
+verification:
+  - npm exec -- vitest run tests/unit/ship_checks.test.ts tests/unit/ship.test.ts --project standard
+  - npm run verify:bug-traces
+  - npm run crawl:smoke
+  - npm run health:fast
