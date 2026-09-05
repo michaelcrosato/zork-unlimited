@@ -34,6 +34,7 @@ carried-forward ticket when **all** of these hold, and keeps it otherwise:
 - its status is `stale` — it went more than `STALE_AFTER_BUILDS` builds without a
   fresh report while unverified, and then the corpus stopped mentioning it at all;
 - it carries no `notes`, the one field nothing can regenerate;
+- it has no `superseded_by` links, which preserve the history of a corrected identity;
 - the current corpus produced at least one cluster, so triage has some basis for
   concluding anything went quiet. Against an empty or half-synced store — a fresh
   clone, a lane worktree, one machine's shard — every ticket looks silent, and
@@ -50,5 +51,23 @@ deliberate trade, since the retired file stays in Git history, which is where
 [`AGENTS.md`](../../AGENTS.md) ("Token Economy") already keeps old detail.
 
 `tests/unit/qa_playtest_pipeline.test.ts` pins both halves of the rule.
+
+## Corrected region identities
+
+Schema v2 includes `superseded_by` for old whole-region tickets whose identities
+omitted the region. Migration requires every original session and reproduces the
+exact old identity, evidence and excerpts. A partial corpus leaves the old ticket
+untouched. Version 1 tickets remain readable.
+
+A superseded ticket keeps its status, notes and evidence, but is excluded from
+actionable work. `qa:bucket --all` shows its replacement IDs. A single unambiguous
+successor inherits workflow state unless it already has its own; a split inherits
+neither the old claim nor its corroboration.
+
+Triage also declines an already-promoted pending intake item with that exact old
+identity, retaining its body, evidence, claim and tracker pointers and adding
+replacement references. Completed and declined decisions remain intact. Tracker
+pointers stay on the predecessor. Reconciliation uses the saved links, so a retry
+after writing the ticket bucket still corrects the intake queue.
 
 See [`../../docs/two_loop_workflow.md`](../../docs/two_loop_workflow.md).

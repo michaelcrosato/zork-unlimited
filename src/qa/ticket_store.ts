@@ -85,6 +85,7 @@ export function writeTickets(tickets: readonly QaTicket[], dir: string = DEFAULT
 export type BucketSummary = {
   total: number;
   actionable: number;
+  superseded: number;
   byStatus: Record<string, number>;
   byPromotion: Record<string, number>;
   bySeverity: Record<string, number>;
@@ -98,7 +99,12 @@ export function summarizeBucket(tickets: readonly QaTicket[]): BucketSummary {
   const byStatus: Record<string, number> = {};
   const byPromotion: Record<string, number> = {};
   const bySeverity: Record<string, number> = {};
+  let superseded = 0;
   for (const ticket of tickets) {
+    if (ticket.superseded_by) {
+      superseded += 1;
+      continue;
+    }
     bump(byStatus, ticket.status);
     bump(byPromotion, ticket.promotion);
     bump(bySeverity, ticket.severity);
@@ -107,6 +113,7 @@ export function summarizeBucket(tickets: readonly QaTicket[]): BucketSummary {
   return {
     total: tickets.length,
     actionable: actionable.length,
+    superseded,
     byStatus,
     byPromotion,
     bySeverity,

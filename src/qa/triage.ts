@@ -23,6 +23,7 @@
  * human or the dev loop set (`in_progress`, `wont_fix`), and re-triage must not stomp
  * that just because new evidence arrived.
  */
+import { canonicalize } from "../core/hash.js";
 import { clusterIssues, type IssueCluster, type IssueRecord } from "../feedback/cluster.js";
 import { scoreCluster } from "../feedback/rank.js";
 import { canonicalizeLocation, type LocationIndex } from "../feedback/normalize.js";
@@ -35,6 +36,7 @@ import {
   QA_TICKET_SCHEMA_VERSION,
   ticketId,
   type QaTicket,
+  type TicketEvidence,
   type TicketKind,
   type TicketSeverity,
 } from "./ticket.js";
@@ -135,7 +137,14 @@ function issueKey(ref: string, text: string): string {
 
 /** Stable, human-readable location label for a ticket. */
 function locationLabel(location: CanonicalLocation): string {
-  return location.sceneId ?? location.questId ?? location.node ?? location.raw[0] ?? "unmapped";
+  return (
+    location.sceneId ??
+    location.questId ??
+    location.node ??
+    location.region ??
+    location.raw[0] ??
+    "unmapped"
+  );
 }
 
 /**
@@ -155,6 +164,104 @@ function clusterKind(cluster: IssueCluster, confusionKeys: ReadonlySet<string>):
     (issue) => !confusionKeys.has(issueKey(issue.ref, issue.text)),
   );
   return anyRealBug ? "bug" : "experience";
+}
+
+function clusterIdentity(cluster: IssueCluster, confusionKeys: ReadonlySet<string>) {
+  const kind = clusterKind(cluster, confusionKeys);
+  const location = locationLabel(cluster.location);
+  return { kind, location, id: ticketId({ kind, location, fingerprint: cluster.key }) };
+}
+
+function clusterExcerpts(cluster: IssueCluster): string[] {
+  return [...new Set(cluster.issues.map((issue) => issue.text))].slice(0, 5);
+}
+
+function clusterEvidence(
+  cluster: IssueCluster,
+  sessionById: ReadonlyMap<string, PlaytestSessionRecord>,
+  currentBuild: string | null,
+): TicketEvidence {
+  const contributing = cluster.issues
+    .map((issue) => sessionById.get(issue.ref))
+    .filter((s): s is PlaytestSessionRecord => s !== undefined);
+  // Sorted so the result depends on the evidence set, never its arrival order.
+  const times = contributing.map((s) => s.recorded_at).sort();
+  const builds = contributing.map((s) => ({ at: s.recorded_at, build: s.build.git_commit }));
+  builds.sort((a, b) => a.at.localeCompare(b.at));
+  return {
+    report_count: cluster.issues.length,
+    families: [...new Set(contributing.map((s) => s.provider.family))].sort(),
+    providers: [...new Set(contributing.map((s) => s.provider.id))].sort(),
+    tiers: (["reference", "volume"] as const).filter((tier) =>
+      contributing.some((s) => s.model.tier === tier),
+    ),
+    has_runner_enforced_report: contributing.some(
+      (s) => s.provider.isolation === "runner_enforced",
+    ),
+    session_ids: [...new Set(contributing.map((s) => s.record_id))].sort(),
+    first_seen_build: builds[0]?.build ?? currentBuild ?? "unknown",
+    last_seen_build: builds.at(-1)?.build ?? currentBuild ?? "unknown",
+    first_seen_at: times[0] ?? new Date(0).toISOString(),
+    last_seen_at: times.at(-1) ?? new Date(0).toISOString(),
+  };
+}
+
+/**
+ * Migrate only the proven v1 region-key collision. A partial corpus cannot tell us
+ * what an unmatched ticket became. Require every original session, then reproduce
+ * its exact old identity, evidence and excerpts with only the region discriminator
+ * removed. Keep the predecessor as history; never spread its promotion across a split.
+ */
+function legacyRegionReplacements(
+  existing: ReadonlyMap<string, QaTicket>,
+  clusters: readonly IssueCluster[],
+  confusionKeys: ReadonlySet<string>,
+  sessionById: ReadonlyMap<string, PlaytestSessionRecord>,
+  currentBuild: string | null,
+): Map<string, string[]> {
+  const replacements = new Map<string, string[]>();
+  const legacyIssues: IssueRecord[] = [];
+  const successorByIssue = new Map<string, string>();
+  const currentIds = new Set<string>();
+  for (const cluster of clusters) {
+    const { id } = clusterIdentity(cluster, confusionKeys);
+    currentIds.add(id);
+    for (const issue of cluster.issues) {
+      const location = issue.location;
+      if (location.kind !== "overworld" || location.node !== null || location.region === null)
+        continue;
+      const legacy = { ...issue, location: { ...location, region: null } };
+      legacyIssues.push(legacy);
+      // Full issue identity, not just its session: a player may report several regions.
+      successorByIssue.set(canonicalize(legacy), id);
+    }
+  }
+  if (legacyIssues.length === 0) return replacements;
+
+  for (const prior of existing.values()) {
+    if (prior.schema_version !== 1 || prior.superseded_by || currentIds.has(prior.ticket_id))
+      continue;
+    const sessions = new Set(prior.evidence.session_ids);
+    if (![...sessions].every((id) => sessionById.has(id))) continue;
+    const legacy = clusterIssues(legacyIssues.filter((issue) => sessions.has(issue.ref))).find(
+      (cluster) => clusterIdentity(cluster, confusionKeys).id === prior.ticket_id,
+    );
+    if (
+      !legacy ||
+      clusterKind(legacy, confusionKeys) !== prior.kind ||
+      locationLabel(legacy.location) !== prior.location ||
+      legacy.maxSeverity !== prior.severity ||
+      canonicalize(clusterEvidence(legacy, sessionById, currentBuild)) !==
+        canonicalize(prior.evidence) ||
+      canonicalize(clusterExcerpts(legacy)) !== canonicalize(prior.excerpts)
+    )
+      continue;
+    const successors = [
+      ...new Set(legacy.issues.map((issue) => successorByIssue.get(canonicalize(issue))!)),
+    ].sort();
+    replacements.set(prior.ticket_id, successors);
+  }
+  return replacements;
 }
 
 /** Longest a report excerpt may run before the location suffix. */
@@ -215,6 +322,8 @@ function buildsSince(buildHistory: readonly string[], build: string): number | n
  *   underway, `open` is the queue itself.
  * - No `notes`. Notes are the one free-text field a human writes and nothing can
  *   regenerate. A ticket carrying them is kept whatever its status.
+ * - No supersession links. A replaced identity is kept as history so its prior
+ *   decision and the reason it left the work queue remain inspectable together.
  * - Nothing else in the file is authored. `ticket_id` is derived from the cluster's
  *   stable identity and `evidence` is recomputed from the contributing sessions on
  *   every run, so if the finding recurs, triage rebuilds a byte-identical ticket under
@@ -227,7 +336,7 @@ function buildsSince(buildHistory: readonly string[], build: string): number | n
  * remember.
  */
 function isRetireable(ticket: QaTicket): boolean {
-  return ticket.status === "stale" && ticket.notes === undefined;
+  return ticket.status === "stale" && ticket.notes === undefined && !ticket.superseded_by;
 }
 
 export type TriageResult = {
@@ -243,6 +352,8 @@ export type TriageResult = {
     corroborated: number;
     accumulating: number;
     stale: number;
+    /** Historical identities replaced by an exact evidence-backed migration. */
+    superseded: number;
     /** Aged-out, undecided tickets dropped from the bucket this run. See `isRetireable`. */
     retired: number;
   };
@@ -257,6 +368,29 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
   const sessionById = new Map(input.sessions.map((s) => [s.record_id, s]));
   const { records: issues, confusionKeys } = sessionIssueRecords(input.sessions, idx);
   const clusters = clusterIssues(issues);
+  const replacements = legacyRegionReplacements(
+    existing,
+    clusters,
+    confusionKeys,
+    sessionById,
+    currentBuild,
+  );
+  // Saved markers also recover workflow if a prior bucket write stopped before
+  // writing the successor. Keep every marker in the ambiguity check.
+  const replacementLinks = new Map<string, string[]>(
+    [...existing.values()]
+      .filter((ticket) => ticket.superseded_by !== undefined)
+      .map((ticket) => [ticket.ticket_id, ticket.superseded_by!]),
+  );
+  for (const [id, successors] of replacements) replacementLinks.set(id, successors);
+  const predecessors = new Map<string, QaTicket[]>();
+  for (const [id, successors] of replacementLinks) {
+    for (const successor of successors) {
+      const priors = predecessors.get(successor) ?? [];
+      priors.push(existing.get(id)!);
+      predecessors.set(successor, priors);
+    }
+  }
 
   // Retirement is licensed by a corpus that actually said something. Triage runs
   // routinely against an empty or half-synced store — a fresh clone, a lane worktree,
@@ -268,45 +402,19 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
 
   const tickets: QaTicket[] = [];
   for (const cluster of clusters) {
-    const kind = clusterKind(cluster, confusionKeys);
-    const location = locationLabel(cluster.location);
-    const id = ticketId({ kind, location, fingerprint: cluster.key });
-
-    const contributing = cluster.issues
-      .map((issue) => sessionById.get(issue.ref))
-      .filter((s): s is PlaytestSessionRecord => s !== undefined);
-
-    // Sorted so the ticket is a pure function of its evidence set, not of iteration
-    // order — two machines triaging the same corpus must produce identical files.
-    const sessionIds = [...new Set(contributing.map((s) => s.record_id))].sort();
-    const providers = [...new Set(contributing.map((s) => s.provider.id))].sort();
-    const families = [...new Set(contributing.map((s) => s.provider.family))].sort();
-    const tiers = (["reference", "volume"] as const).filter((tier) =>
-      contributing.some((s) => s.model.tier === tier),
-    );
-    const times = contributing.map((s) => s.recorded_at).sort();
-    const builds = contributing.map((s) => ({ at: s.recorded_at, build: s.build.git_commit }));
-    builds.sort((a, b) => a.at.localeCompare(b.at));
-
-    const evidence = {
-      report_count: cluster.issues.length,
-      families,
-      providers,
-      tiers,
-      has_runner_enforced_report: contributing.some(
-        (s) => s.provider.isolation === "runner_enforced",
-      ),
-      session_ids: sessionIds,
-      first_seen_build: builds[0]?.build ?? currentBuild ?? "unknown",
-      last_seen_build: builds.at(-1)?.build ?? currentBuild ?? "unknown",
-      first_seen_at: times[0] ?? new Date(0).toISOString(),
-      last_seen_at: times.at(-1) ?? new Date(0).toISOString(),
-    };
+    const { kind, location, id } = clusterIdentity(cluster, confusionKeys);
+    const evidence = clusterEvidence(cluster, sessionById, currentBuild);
 
     const isVerified = verified.has(id);
     const promotion = derivePromotion(evidence, { verified: isVerified });
 
-    const prior = existing.get(id);
+    const candidates = predecessors.get(id) ?? [];
+    const solePredecessor =
+      candidates.length === 1 && replacementLinks.get(candidates[0]!.ticket_id)?.length === 1
+        ? candidates[0]
+        : undefined;
+    const sameIdentity = existing.get(id);
+    const prior = sameIdentity ?? solePredecessor;
     // Preserve workflow state a human or the dev loop set. Re-triage owns the
     // evidence and the promotion rung; it does not own whether someone is already
     // working on this or has decided not to.
@@ -326,10 +434,11 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
       status,
       promotion,
       location,
-      excerpts: [...new Set(cluster.issues.map((issue) => issue.text))].slice(0, 5),
+      excerpts: clusterExcerpts(cluster),
       evidence,
       priority: scoreCluster(cluster),
       ...(prior?.notes !== undefined ? { notes: prior.notes } : {}),
+      ...(sameIdentity?.superseded_by ? { superseded_by: sameIdentity.superseded_by } : {}),
     });
   }
 
@@ -347,6 +456,15 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
   let retired = 0;
   for (const [id, prior] of existing) {
     if (tickets.some((t) => t.ticket_id === id)) continue;
+    const successors = replacements.get(id);
+    if (successors) {
+      tickets.push({
+        ...prior,
+        schema_version: QA_TICKET_SCHEMA_VERSION,
+        superseded_by: successors,
+      });
+      continue;
+    }
     if (corpusHasEvidence && isRetireable(prior)) {
       retired += 1;
       continue;
@@ -356,6 +474,7 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
 
   tickets.sort(compareTickets);
   const actionable = tickets.filter(isActionable);
+  const currentTickets = tickets.filter((ticket) => !ticket.superseded_by);
 
   return {
     tickets,
@@ -365,10 +484,11 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
       sessionsWithInterview: input.sessions.filter((s) => s.exit_interview !== null).length,
       issues: issues.length,
       clusters: clusters.length,
-      verified: tickets.filter((t) => t.promotion === "verified").length,
-      corroborated: tickets.filter((t) => t.promotion === "corroborated").length,
-      accumulating: tickets.filter((t) => t.promotion === "accumulating").length,
-      stale: tickets.filter((t) => t.status === "stale").length,
+      verified: currentTickets.filter((t) => t.promotion === "verified").length,
+      corroborated: currentTickets.filter((t) => t.promotion === "corroborated").length,
+      accumulating: currentTickets.filter((t) => t.promotion === "accumulating").length,
+      stale: currentTickets.filter((t) => t.status === "stale").length,
+      superseded: tickets.length - currentTickets.length,
       retired,
     },
   };
