@@ -1,8 +1,9 @@
 # External-review process decisions
 
 Recorded 2026-08-05 and updated 2026-08-07 after the owner-authorized structural
-closeout. These are owner-level decisions for the systemic questions raised by
-`EXTERNAL_REVIEW.md`. Their implementation/evidence disposition is indexed in
+closeout. These are owner-level decisions for the systemic questions raised by the
+independent external review (a document that was never tracked in this repository;
+only these two follow-ups are). Their implementation/evidence disposition is indexed in
 [`EXTERNAL_REVIEW_COMPLETION.md`](./EXTERNAL_REVIEW_COMPLETION.md).
 
 ## Decisions now in force

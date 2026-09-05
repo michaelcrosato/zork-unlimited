@@ -1,0 +1,33 @@
+id: bug_0610
+title: Exit-interview free text had no upper bound on its way into tracked files
+reported_by: docs/REPO_AUDIT_2026-09.md (finding 4), verified 2026-09-05
+severity: S2
+
+symptom: >
+  The interview schema bounded clarity and enjoyment to 1..5 but put only .min(1) on
+  confusions, bug locations and notes, best_moment and worst_moment, and no cap on the
+  arrays. Triage copies that text into qa/tickets/ and intake/queue/, both tracked, so a
+  single runaway or adversarial report could commit megabytes to the repository through
+  the dev loop's own ledger commit.
+
+cause: >
+  The schema was written for well-behaved mock and vendor output; nothing modelled the
+  report as untrusted input.
+
+reproduction:
+  - Parse a report whose verdict is 100,000 characters; before the fix it was accepted.
+
+fix: >
+  Every free-text field carries a maximum (2,000 characters; 4,000 for the verdict) and
+  both arrays are capped at 25 entries. The bounds sit far above the corpus (longest
+  verdict on disk 879 characters, longest list 5 entries), so no recorded session changes
+  status.
+
+production:
+  - src/blind/exit_interview.ts
+regression:
+  - tests/unit/blind_exit_interview_bounds.test.ts
+verification:
+  - The bounds tests failed before the caps existed and pass after them.
+  - Every interview in the local corpus (734 reports) stays within the new bounds.
+  - npm run health:fast

@@ -20,5 +20,14 @@
   "created_at": "2026-08-29T07:17:59.502Z",
   "updated_at": "2026-09-05T03:59:39.317Z",
   "external": null,
-  "resolved_by": "audit-playtest-proof"
+  "resolved_by": "audit-playtest-proof",
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "ec3efdd5-62c0-4395-857f-ad95041f4f4f",
+      "identifier": "MIC-12",
+      "url": "https://linear.app/michael-crosato/issue/MIC-12/7e920b74962d7f38-qa-corpus-stamps-runner-enforced-from-a-json-field",
+      "synced_status": "open"
+    }
+  ]
 }

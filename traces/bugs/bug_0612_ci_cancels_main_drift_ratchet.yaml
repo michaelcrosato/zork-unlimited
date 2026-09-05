@@ -1,0 +1,29 @@
+id: bug_0612
+title: CI cancelled its own post-merge drift ratchet on main
+reported_by: docs/REPO_AUDIT_2026-09.md (finding 3), confirmed against .github/workflows/ci.yml 2026-09-05
+severity: S2
+
+symptom: >
+  The workflow's concurrency group cancelled in-progress runs for every event. On main
+  each merge is a push to the same ref, so a merge within about 35 minutes of the previous
+  one cancelled the previous run, and with it the "verifier drift vs the previous tip"
+  step that exists because enforce_admins is off. Six of fifteen recent main runs were
+  cancelled, so a weakening landed in a cancelled tip was never ratcheted against.
+
+cause: >
+  cancel-in-progress: true was written for the pull-request case, where a superseded
+  commit's run is worthless, and applied to pushes as well.
+
+reproduction:
+  - Merge two pull requests less than a CI run apart; the first main run shows as cancelled.
+
+fix: >
+  cancel-in-progress is now the expression github.event_name == 'pull_request', so
+  superseded PR commits still cancel while every push to main runs to completion.
+
+production:
+  - .github/workflows/ci.yml
+regression: []
+verification:
+  - The workflow parses (the change is one expression on one line) and CI ran green on the branch that carried it.
+  - The next two merges to main both show completed push runs instead of a cancelled one.

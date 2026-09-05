@@ -7,6 +7,7 @@
   "kind": "bug",
   "priority": "P1",
   "status": "done",
+  "resolved_by": "orchestrator",
   "labels": [],
   "area": "albany:wolf_relief_oath",
   "evidence": {
@@ -18,7 +19,15 @@
     "observations": 2
   },
   "created_at": "2026-08-29T00:28:01.383Z",
-  "updated_at": "2026-08-30T21:53:56.761Z",
+  "updated_at": "2026-08-31T16:36:27.193Z",
   "external": null,
-  "resolved_by": "orchestrator"
+  "mirrors": [
+    {
+      "provider": "linear",
+      "id": "90c800ab-b4e1-4ac1-bfe0-d3bb3f015b90",
+      "identifier": "MIC-59",
+      "url": "https://linear.app/michael-crosato/issue/MIC-59/822ad28b0cf7834c-self-contradicting-oath-copy-header-and-option-state",
+      "synced_status": "done"
+    }
+  ]
 }
