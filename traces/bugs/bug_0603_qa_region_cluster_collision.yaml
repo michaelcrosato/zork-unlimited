@@ -1,0 +1,57 @@
+id: bug_0603
+title: Whole-region QA findings collided across different regions
+reported_by: intake/queue/P1-audit-661126dc75143480.json
+severity: S2
+
+symptom: >
+  Matching travel-cost findings in Capital / Mohawk and Central New York produced
+  one QA ticket. The cluster combined the reporters' different provider families,
+  allowing findings about separate locations to count as corroboration.
+  Saved false corroborations also survived a key correction as unmatched tickets,
+  and previously promoted intake items could remain pending after re-triage.
+
+cause: >
+  Region-level locations have a canonical region name but no node, quest, or scene.
+  The cluster identity omitted region as redundant with node, leaving every whole
+  region with the same identity. The QA label then used a raw reporter spelling
+  despite having a canonical region name.
+
+reproduction:
+  - Canonicalize capital_mohawk and central_new_york as whole-region locations.
+  - Triage two volume-model reports from gpt and claude about doubled travel time.
+  - Before the fix, exact and similar issue wording each produced one ticket.
+  - A same-region report pair also displayed a raw region ID as its location.
+
+fix: >
+  Include the canonical region in cluster identity only for overworld locations
+  without a node, and use that name in QA location labels. Keep node and quest
+  identities, matching thresholds, and unmapped-location isolation unchanged.
+  Reproduce each saved region-less ticket from all original contributing sessions
+  before marking it superseded by corrected identities. Preserve its history and
+  transfer workflow only for an unambiguous one-to-one replacement. Reconcile exact
+  promoted intake identities while retaining authored content, claims and mirrors.
+
+production:
+  - src/feedback/cluster.ts
+  - src/qa/triage.ts
+  - src/qa/ticket.ts
+  - src/qa/ticket_store.ts
+  - src/qa/ticket_submission.ts
+  - src/intake/queue.ts
+  - bin/qa.ts
+  - bin/triage.ts
+regression:
+  - tests/unit/qa_region_identity.test.ts
+verification:
+  - Three regression cases failed before the fix; the node-identity control passed.
+  - Different regions remain separate accumulating tickets for exact and similar prose.
+  - Matching reports within one region corroborate with its canonical location name.
+  - Reversing report order preserves the same tickets.
+  - Renaming a known node's region preserves its cluster identity.
+  - Six saved-ticket migration cases failed before supersession was implemented.
+  - Partial or unrecognized evidence preserves prior tickets and pending intake work.
+  - A split preserves predecessor notes and claims without making successors actionable.
+  - One-to-one replacements preserve workflow, and tracker pointers remain on the predecessor.
+  - The real triage CLI respects dry runs and writes stable ticket and queue files on retries.
+  - npm run crawl:smoke
+  - npm run health:fast

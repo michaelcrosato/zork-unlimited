@@ -171,6 +171,42 @@ export function setSubmissionStatus(
   return rewriteSubmission(next, dir);
 }
 
+/**
+ * Retire work whose playtest identity was conclusively replaced during QA triage.
+ * This is a lifecycle operation, not a re-file: retain authored content, ownership
+ * history and tracker pointers. The successor references explain the machine decision.
+ */
+export const QA_SUPERSESSION_RESOLVER = "qa:triage:region-supersession";
+
+export function supersedePlaytestSubmission(
+  id: string,
+  kind: Submission["kind"],
+  successorTicketIds: readonly string[],
+  dir: string = DEFAULT_QUEUE_DIR,
+): Submission | null {
+  const found = readQueue(dir).submissions.find((submission) => submission.id === id);
+  if (!found || found.source !== "playtest" || found.kind !== kind) return null;
+  if (!isOpenWork(found) || successorTicketIds.length === 0) return found;
+  return rewriteSubmission(
+    {
+      ...found,
+      status: "declined",
+      resolved_by: QA_SUPERSESSION_RESOLVER,
+      evidence: {
+        ...found.evidence,
+        refs: [
+          ...new Set([
+            ...found.evidence.refs,
+            ...[...successorTicketIds].sort().map((ticketId) => `qa-ticket:${ticketId}`),
+          ]),
+        ],
+      },
+      updated_at: new Date().toISOString(),
+    },
+    dir,
+  );
+}
+
 /** How long a work claim holds before another lane may take the item over. */
 export const DEFAULT_CLAIM_LEASE_HOURS = 24;
 

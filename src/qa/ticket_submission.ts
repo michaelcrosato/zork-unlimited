@@ -20,11 +20,19 @@
  */
 import {
   defaultPriority,
+  DEFAULT_QUEUE_DIR,
   SUBMISSION_SCHEMA_VERSION,
   submissionId,
   type Submission,
   type SubmissionPriority,
 } from "../intake/submission.js";
+import { canonicalize } from "../core/hash.js";
+import {
+  QA_SUPERSESSION_RESOLVER,
+  readQueue,
+  supersedePlaytestSubmission,
+  upsertSubmission,
+} from "../intake/queue.js";
 import { isActionable, type QaTicket } from "./ticket.js";
 
 /**
@@ -106,6 +114,85 @@ export function submissionFromTicket(ticket: QaTicket): Submission {
 /** Only what triage judged actionable becomes queued work. */
 export function submissionsFromTickets(tickets: readonly QaTicket[]): Submission[] {
   return tickets.filter(isActionable).map(submissionFromTicket);
+}
+
+/**
+ * Reconcile persisted supersessions as well as newly actionable evidence. Merely
+ * omitting a replaced ticket from the next upsert leaves its old intake item open.
+ * Create successors before retiring predecessors so an interrupted run can retry
+ * without losing a one-to-one claim. Mirrors always stay on their original identity.
+ */
+export function reconcileTicketSubmissions(
+  tickets: readonly QaTicket[],
+  dir: string = DEFAULT_QUEUE_DIR,
+  options: { supersededOnly?: boolean } = {},
+): { promoted: number; superseded: number } {
+  const queued = new Map(
+    readQueue(dir).submissions.map((submission) => [submission.id, submission]),
+  );
+  const predecessors = new Map<string, QaTicket[]>();
+  const ticketIds = new Set(tickets.map((ticket) => ticket.ticket_id));
+  for (const ticket of tickets) {
+    for (const successor of ticket.superseded_by ?? []) {
+      const priors = predecessors.get(successor) ?? [];
+      priors.push(ticket);
+      predecessors.set(successor, priors);
+    }
+  }
+  const priorSubmission = (ticket: QaTicket): Submission | undefined => {
+    const prior = queued.get(
+      submissionId({ source: "playtest", kind: ticket.kind, key: ticket.ticket_id }),
+    );
+    return prior?.source === "playtest" && prior.kind === ticket.kind ? prior : undefined;
+  };
+  const promoted = tickets.filter(
+    (ticket) =>
+      isActionable(ticket) && (!options.supersededOnly || predecessors.has(ticket.ticket_id)),
+  );
+  for (const ticket of promoted) {
+    let submission = submissionFromTicket(ticket);
+    const current = queued.get(submission.id);
+    // Current triage emits v2. An unchanged v1 ticket was carried from history,
+    // possibly because this machine only has part of its evidence. Do not re-file
+    // that old evidence over an investigator's edited intake body.
+    if (ticket.schema_version === 1 && current) continue;
+    const candidates = predecessors.get(ticket.ticket_id) ?? [];
+    const priorTicket =
+      candidates.length === 1 && candidates[0]!.superseded_by?.length === 1
+        ? candidates[0]
+        : undefined;
+    const predecessor = priorTicket ? priorSubmission(priorTicket) : undefined;
+    const inheritedEvidence =
+      priorTicket !== undefined &&
+      canonicalize(ticket.evidence) === canonicalize(priorTicket.evidence);
+    // Ordinary re-filing revives stale work. A retry of a transferred stale decision
+    // has no new evidence; compare the full immutable QA history, since the intake
+    // payload caps session refs and does not retain build/time boundaries.
+    if (predecessor?.status === "stale" && current?.status === "stale" && inheritedEvidence)
+      continue;
+    if (!current && predecessor && predecessor.resolved_by !== QA_SUPERSESSION_RESOLVER) {
+      submission = {
+        ...submission,
+        status: predecessor.status === "stale" && !inheritedEvidence ? "open" : predecessor.status,
+        claimed_by: predecessor.claimed_by,
+        claimed_at: predecessor.claimed_at,
+        resolved_by: predecessor.resolved_by,
+      };
+    }
+    upsertSubmission(submission, dir);
+  }
+  let superseded = 0;
+  for (const ticket of tickets) {
+    if (!ticket.superseded_by) continue;
+    // An interrupted ticket write can leave a marker without all its successors.
+    // Keep the old claim until the replacement records are available to reconcile.
+    if (!ticket.superseded_by.every((id) => ticketIds.has(id))) continue;
+    const prior = priorSubmission(ticket);
+    if (!prior) continue;
+    const next = supersedePlaytestSubmission(prior.id, ticket.kind, ticket.superseded_by, dir);
+    if (next && next.status !== prior.status) superseded += 1;
+  }
+  return { promoted: promoted.length, superseded };
 }
 
 /** Kept for callers that want the default without a ticket in hand. */
