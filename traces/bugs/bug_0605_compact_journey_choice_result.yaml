@@ -1,0 +1,67 @@
+id: bug_0605
+title: Compact journey checkpoint replies repeated the full journey presentation
+pack: n/a — MCP response projection
+reported_by: intake/queue/P2-audit-2068058764c38052.json
+severity: S3
+
+symptom: >
+  choose_overworld_session_journey returned the current journey at the top level
+  and a full presentation in result.journey even when compact_result defaulted
+  to true. The extra presentation repeated checkpoint and goal information and
+  exposed full story-choice detail alongside the compact envelope's projection.
+
+root_cause: >
+  The handler passed an identity formatter for JourneyChoiceResult to the session
+  store. Choosing compact output therefore left all three canonical result fields
+  intact, although the response envelope already supplied the current journey.
+
+fix: >
+  Use a dedicated compact result containing the exact retentionEvent and
+  exitReceipt. Keep the envelope's journey and explicit compact_result false
+  responses unchanged. Include the compact type in the existing exhaustive
+  result-legend coverage with its two self-describing field names.
+
+deterministic_witnesses:
+  - Continue and End both omit only result.journey with either compact or full context.
+  - Explicit full-result callers retain the canonical three-field JourneyChoiceResult.
+  - The current journey, snapshot hash, decision proof, event, and exit receipt stay exact.
+  - Continue resumes the same paused RPG child with the same state hash.
+  - End preserves accepted-decision and proof-history evidence without returning an RPG child.
+  - Pure transport still records the same-session exit receipt and rejects later gameplay.
+  - A failed evidence write still allows one End retry without a second gameplay mutation.
+
+measurement:
+  method: >
+    Apply the exported compact formatter to 15 retained default-compact checkpoint
+    replies from three successful runner-verified Claude sessions. Each original
+    text equals JSON.stringify(parsed), so serialization whitespace contributes
+    no savings. Assert all other envelope fields, event, receipt, and canonical
+    input remain exact. This projects recorded responses; it is not a new game
+    run, token or cost measurement, or a representative sample of all players.
+  checkpoint_response_bytes_before: 161178
+  checkpoint_response_bytes_after: 121950
+  saved_bytes: 39228
+  checkpoint_percent_reduction: 24.34
+  corpus_calls: 332
+  corpus_response_bytes_before: 1445215
+  corpus_response_bytes_after: 1405987
+  corpus_percent_reduction: 2.71
+  evidence: >
+    Ignored ai-runs/measure-journey-output.ts and journey-output-measurement.json
+    in the audit-journey-output lane retain the method, per-call measurements,
+    and SHA-256 hashes of the three source provider transcripts. Published
+    playtest session records retain those transcripts' commit-bound digests.
+
+scope:
+  - Only the MCP compact checkpoint-result projection changes.
+  - Full API results, gameplay state, retention evidence, and the engine contract stay exact.
+  - Current story choices remain available through the existing top-level journey projection.
+
+production:
+  - src/mcp/compact_overworld_result.ts
+  - src/mcp/overworld_tool_handlers.ts
+
+tests:
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/compact_overworld_result.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
