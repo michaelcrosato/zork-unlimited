@@ -1247,3 +1247,124 @@ describe("retiring aged-out tickets so the bucket stays bounded", () => {
     expect(again.tickets.every((t) => t.status === "open")).toBe(true);
   });
 });
+
+/**
+ * Unmapped findings: one bucket, and content still decides.
+ *
+ * A player's `where` that resolves to no known place used to become the ticket's location
+ * AND part of its id, so one defect described in two people's words became two tickets of
+ * one report each, neither able to corroborate the other — the shape audit item
+ * dcaefa368898e77c records. They now share the `unmapped` bucket; the severity band and
+ * token tests are untouched, so the bucket only makes them ELIGIBLE to be compared.
+ */
+describe("unmapped findings cluster on content, not on phrasing", () => {
+  const transcript = "line one\nline two\n";
+
+  function ticketsFor(interviews: readonly PlaytestSessionBody["exit_interview"][]) {
+    const store = tempDir();
+    interviews.forEach((interview, index) => {
+      writePlaytestSession(
+        store,
+        sealPlaytestSession(body({ exit_interview: interview, run_seed: 900 + index })),
+        transcript,
+      );
+    });
+    return triagePlaytestCorpus({
+      sessions: listPlaytestSessions(store).entries.map((entry) => entry.record),
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+    }).tickets;
+  }
+
+  /** A `where` string that deliberately resolves to nothing. */
+  const NOWHERE_A = "the tutorial's closing summary screen, wherever that lives";
+  const NOWHERE_B = "somewhere in the opening tutorial text, no idea what it is called";
+
+  it("MUST MERGE: a bug and a confusion of the same band and tokens become one ticket", () => {
+    // The must-merge case, and the tutorial finding that prompted it: one player filed the
+    // same complaint in both lists. Both unmapped, an S1 bug (the interview's own "minor"
+    // rung) against the S1 confusion rung so the severity BAND matches, and the same
+    // leading tokens so the fingerprint matches. `clusterKind` takes the stronger reading.
+    //
+    // The bug's note deliberately differs from the confusion by its tail. Making the two
+    // strings character-identical instead trips a documented collision in `issueKey`
+    // (ref + text), which files the bug as its own confusion and reads the merged cluster
+    // as `experience` — a real behaviour, but not the one under test here.
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: ["tutorial says gallowmere is the final optional chapter"],
+        bugs: [
+          {
+            where: NOWHERE_A,
+            severity: "S1" as const,
+            note: "tutorial says gallowmere is the final optional chapter, yet a third opened",
+          },
+        ],
+      },
+    ]);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.kind).toBe("bug");
+    expect(tickets[0]!.location).toBe("unmapped");
+    expect(tickets[0]!.evidence.report_count).toBe(2);
+  });
+
+  it("keeps the player's `where` in the excerpts once it is no longer the label", () => {
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: NOWHERE_A,
+            severity: "S1" as const,
+            note: "the closing summary omits the score",
+          },
+        ],
+      },
+    ]);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.location).toBe("unmapped");
+    // Leads, because a reader scanning the bucket wants the place before the complaint.
+    expect(tickets[0]!.excerpts[0]).toBe(NOWHERE_A);
+    expect(tickets[0]!.excerpts).toContain("the closing summary omits the score");
+  });
+
+  it("MUST NOT MERGE: same bucket, different fingerprint stays two tickets", () => {
+    // The guard. Nothing about the content tests was loosened to get the merge above, so
+    // two unrelated unresolved problems remain two pieces of work.
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: NOWHERE_A,
+            severity: "S1" as const,
+            note: "the closing summary omits the score",
+          },
+          {
+            where: NOWHERE_B,
+            severity: "S1" as const,
+            note: "a merchant charged me twice for one lantern",
+          },
+        ],
+      },
+    ]);
+    expect(tickets).toHaveLength(2);
+    expect(new Set(tickets.map((ticket) => ticket.ticket_id)).size).toBe(2);
+  });
+
+  it("two players who phrase one unmapped defect differently now corroborate", () => {
+    // The behaviour dcaefa368898e77c is about: before the bucket, these were two tickets
+    // of one report each and neither could ever reach a promotion rung.
+    const confusion = "tutorial framed gallowmere as the final chapter but more followed";
+    const tickets = ticketsFor([
+      { ...INTERVIEW, confusions: [confusion], bugs: [] },
+      { ...INTERVIEW, confusions: [confusion], bugs: [] },
+    ]);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.evidence.report_count).toBe(2);
+    expect(tickets[0]!.evidence.session_ids).toHaveLength(2);
+  });
+});

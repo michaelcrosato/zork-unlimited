@@ -224,17 +224,33 @@ export function jaccard(a: readonly string[], b: readonly string[]): number {
  * Region is redundant when a node is known, so those existing identities stay
  * independent of the region's display name.
  *
- * `unmapped` locations are the one exception: they carry no resolved
- * identity beyond their raw text, so two DIFFERENT unmapped raw strings must
- * never be treated as the same place just because they share `kind`.
- * Unmapped locations key on `kind|raw-joined` instead, so distinct free-text
- * reports that never resolved to a real location only cluster with
- * themselves (or with issues sharing that exact raw text), never with each
- * other.
+ * `unmapped` locations used to be the one exception: they key on
+ * `kind|raw-joined`, on the reasoning that two DIFFERENT unmapped raw strings
+ * must never be treated as the same place merely because neither resolved.
+ *
+ * That reasoning protects against a real failure, but it bought the protection
+ * at a price nobody priced: pass 2 never merges across locationKeys, so making
+ * the player's exact wording part of the key meant an unmapped finding could
+ * only ever corroborate with a report phrased character-for-character the same
+ * way. Two players describing one defect in their own words produced two
+ * clusters of one, forever — so the findings least likely to name a resolvable
+ * location became the findings least able to earn promotion, which is the
+ * opposite of what evidence weight should do.
+ *
+ * They now share one bucket, and the merge is gated where the gate belongs: on
+ * CONTENT. Pass 1 still demands the same severity band and the same first six
+ * stemmed tokens; pass 2 still demands `everyMemberPairSimilar`. Neither test is
+ * relaxed here — this only makes unmapped issues ELIGIBLE to be compared, where
+ * before they were disqualified by their phrasing alone.
+ *
+ * The risk this accepts, stated plainly: two genuinely different unresolved
+ * problems described in closely similar words can now land in one cluster, where
+ * previously they could not. That is bounded by the similarity test, and it is
+ * the same risk every mapped location already carries.
  */
 function locationKey(location: CanonicalLocation): string {
   if (location.kind === "unmapped") {
-    return `unmapped|${location.raw.join("\x01")}`;
+    return UNMAPPED_LOCATION_KEY;
   }
   const part = (value: string | null): string => value ?? "\x00";
   const key = `${location.kind}|${part(location.questId)}|${part(location.node)}|${part(location.sceneId)}`;
@@ -242,6 +258,13 @@ function locationKey(location: CanonicalLocation): string {
     ? `${key}|region:${location.region}`
     : key;
 }
+
+/**
+ * The single key every unresolved free-text location shares. Exported because the
+ * ticket layer labels these clusters with the same word, and two spellings of one
+ * concept is how they drift apart.
+ */
+export const UNMAPPED_LOCATION_KEY = "unmapped";
 
 function unionTokens(a: readonly string[], b: readonly string[]): string[] {
   return [...new Set([...a, ...b])].sort();

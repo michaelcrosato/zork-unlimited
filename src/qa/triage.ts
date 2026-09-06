@@ -24,7 +24,12 @@
  * that just because new evidence arrived.
  */
 import { canonicalize } from "../core/hash.js";
-import { clusterIssues, type IssueCluster, type IssueRecord } from "../feedback/cluster.js";
+import {
+  UNMAPPED_LOCATION_KEY,
+  clusterIssues,
+  type IssueCluster,
+  type IssueRecord,
+} from "../feedback/cluster.js";
 import { scoreCluster } from "../feedback/rank.js";
 import { canonicalizeLocation, type LocationIndex } from "../feedback/normalize.js";
 import type { CanonicalLocation } from "../feedback/schema.js";
@@ -135,8 +140,23 @@ function issueKey(ref: string, text: string): string {
   return `${ref}\u0000${text}`;
 }
 
-/** Stable, human-readable location label for a ticket. */
+/**
+ * Stable, human-readable location label for a ticket.
+ *
+ * An unmapped location answers with the bucket word, never with `raw[0]`. That raw string
+ * is one player's sentence — "Stuck job with no legal option ever exposed (Rowan's Winter
+ * Return Docket)" — and while it served as the label it was also hashed into the ticket
+ * id, so every rephrasing of one defect minted a separate ticket and split its own
+ * evidence. The sentence is not lost: `clusterExcerpts` keeps it, which is where a
+ * description belongs.
+ */
 function locationLabel(location: CanonicalLocation): string {
+  if (location.kind === "unmapped") return UNMAPPED_LOCATION_KEY;
+  // `raw[0]` stays the last resort for MAPPED kinds. `legacyRegionReplacements` rebuilds a
+  // predecessor by nulling the region on an overworld location, and some of those fall all
+  // the way through to the raw text; removing the fallback here silently stopped the v1
+  // migration reproducing any of those ids, which reads exactly like a migration with
+  // nothing left to do.
   return (
     location.sceneId ??
     location.questId ??
@@ -173,7 +193,12 @@ function clusterIdentity(cluster: IssueCluster, confusionKeys: ReadonlySet<strin
 }
 
 function clusterExcerpts(cluster: IssueCluster): string[] {
-  return [...new Set(cluster.issues.map((issue) => issue.text))].slice(0, 5);
+  const reported = cluster.issues.map((issue) => issue.text);
+  // An unmapped cluster's `where` no longer survives in the location label, and it is
+  // often the only pointer to the place the player actually meant. It leads, because a
+  // reader scanning the bucket wants the location before the complaint.
+  const where = cluster.location.kind === "unmapped" ? cluster.location.raw : [];
+  return [...new Set([...where, ...reported])].slice(0, 5);
 }
 
 function clusterEvidence(
