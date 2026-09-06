@@ -36,9 +36,9 @@ const CERTIFIED_EXTRACTS_SOURCE_HASH =
 const RESOLVED_OSWIN_PRESENCE_SOURCE_HASH =
   "c3dd62683dcbbfa314298faa4bdbda727ebeb62124fd286fcc402a3293ce7e69";
 const POST_DISMISSAL_READ_PREDECESSOR_SOURCE_HASH =
-  "d8b85620ac7ee8b4672f25e8b5a1552478b3d9d6add0b4894df32bb09dd19dff";
-const POST_DISMISSAL_READ_SOURCE_HASH =
   "e4b26db74d454274b5abe1977603206f142d62dedab1e7dd096cc7c97eb583f5";
+const POST_DISMISSAL_READ_SOURCE_HASH =
+  "8c97ed09440795366e1dec7dd302a4695ce5e69682edb2fa0fc56ad24d8d522c";
 const EXPELLED_ENDING_TEXT =
   "Craf kills you in the market. The deputy records the disturbance, Marta's broadcloth remains impounded, and Oswin's notice stands. *** You have fallen. ***\n";
 const UNTOUCHED_CASE_RECORD_TEXT =
@@ -520,6 +520,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
           town_register_taken: true,
           register_read: true,
           priors_read: true,
+          priors_taken: true,
           appeal_attempted: true,
         },
         charterLocation: undefined,
