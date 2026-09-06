@@ -26,6 +26,8 @@
 #   AI_LOOP_COMMIT=1                 provisional + final-ledger commits [0 = evidence-only]
 #   AI_LOOP_PUSH=1                   push after commit [0]; see the push note below
 #   AI_LOOP_MAX_CYCLES=N             stop after N cycles [unbounded]
+#   AI_LOOP_STOP_FILE=<path>         touch this file to stop cleanly at the next cycle
+#                                    boundary; cleared at startup [ai-runs/loop.stop]
 #   AI_LOOP_DELAY_SECONDS=N          pause between cycles [10]
 #   AI_AGENT_CMD="..."               explicit full agent command (overrides the registry)
 #   AI_CODEX_SANDBOX=...             sandbox for the codex entry only [workspace-write]
@@ -66,6 +68,33 @@ if [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] && [[ -n "$(git status --porcelain)"
   echo "Commit or stash first, or set AI_LOOP_ALLOW_DIRTY=1 to accept the risk."
   exit 1
 fi
+
+# ── Graceful stop (AI_LOOP_STOP_FILE) ────────────────────────────────────────────
+# Landing a repo change while an UNBOUNDED loop runs used to mean one of two bad
+# options: catch the inter-cycle sleep, which is ten seconds by default, or kill a
+# cycle mid-flight and throw away a worker turn that had already cost real money.
+# Neither is a boundary. A file the operator can touch at any moment is one: the loop
+# finishes what it is doing, pushes it, and exits 0 at the next safe point, so "stop
+# after this cycle" costs nothing and loses nothing.
+#
+# It is checked twice. Before a cycle begins, so a stop never starts work it would
+# throw away; and again after a cycle returns — which is after its push, the last
+# thing run_cycle does — so a landed cycle stops immediately instead of racing the
+# delay. Both are outside run_cycle on purpose: a stop is an operator decision about
+# the SCHEDULE, and must never be able to fail a cycle or alter its gates.
+#
+# The file is CLEARED at startup rather than honoured. One left behind by an earlier
+# run would otherwise stop the next launch before it did anything, which looks exactly
+# like a loop that failed to start — the most confusing possible failure for a knob
+# whose whole job is to make stopping predictable.
+STOP_FILE="${AI_LOOP_STOP_FILE:-ai-runs/loop.stop}"
+stop_requested() {
+  [[ -e "$STOP_FILE" ]]
+}
+
+clear_stop_request() {
+  rm -f -- "$STOP_FILE" 2>/dev/null || true
+}
 
 # ── Project-scoped PID files (so orchestrator tooling tracks THIS loop only) ──────
 # With several projects running identical-looking `./loop.sh` / headless-agent processes,
@@ -146,6 +175,7 @@ fi
 trap cleanup_pid_records EXIT
 trap 'on_loop_signal 130' INT
 trap 'on_loop_signal 143' TERM
+clear_stop_request
 
 # The worker-recording shell below inherits these helpers before it execs the real
 # agent. exec preserves its pid and start time, so the record stays valid for the
@@ -723,6 +753,10 @@ max_fails="${AI_LOOP_MAX_CONSECUTIVE_FAILURES:-5}"
 max_fails_total="${AI_LOOP_MAX_TOTAL_FAILURES:-15}"
 delay="${AI_LOOP_DELAY_SECONDS:-10}"
 while true; do
+  if stop_requested; then
+    echo "Graceful stop requested ($STOP_FILE) — exiting before cycle $((count + 1)) begins."
+    break
+  fi
   if run_cycle; then
     fails=0
     echo "✓ cycle $((count + 1)) complete."
@@ -756,6 +790,10 @@ while true; do
     fi
   fi
   count=$((count + 1))
+  if stop_requested; then
+    echo "Graceful stop requested ($STOP_FILE) — cycle $count is finished and pushed; exiting."
+    break
+  fi
   if [[ "$once" == "1" ]]; then
     break
   fi

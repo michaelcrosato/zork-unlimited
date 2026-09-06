@@ -546,6 +546,78 @@ describe("the dev loop does not gate on a playtest", () => {
  * solved this for landings by reading the bar off the diff; these lock the loop doing the
  * same thing, and — far more importantly — locking WHICH WAY it errs when it cannot tell.
  */
+describe("loop.sh graceful stop", () => {
+  const stopKnob = `${sectionBetween(
+    'STOP_FILE="${AI_LOOP_STOP_FILE:-ai-runs/loop.stop}"',
+    "\n}\n\nclear_stop_request",
+  )}\n}`;
+
+  const ask = (env: Record<string, string> = {}, setup?: (root: string) => void): string =>
+    runGateHarness(
+      stopKnob,
+      env,
+      "if stop_requested; then echo STOP; else echo GO; fi",
+      setup,
+    ).output.trim();
+
+  it("stops only when the file is actually there", () => {
+    expect(ask()).toBe("GO");
+    expect(
+      ask({}, (root) => {
+        mkdirSync(join(root, "ai-runs"), { recursive: true });
+        writeFileSync(join(root, "ai-runs", "loop.stop"), "");
+      }),
+    ).toBe("STOP");
+  });
+
+  it("honours an operator-chosen path", () => {
+    expect(
+      ask({ AI_LOOP_STOP_FILE: "halt-here" }, (root) => {
+        // The default path must NOT be what stops it when another was named.
+        mkdirSync(join(root, "ai-runs"), { recursive: true });
+        writeFileSync(join(root, "ai-runs", "loop.stop"), "");
+      }),
+    ).toBe("GO");
+    expect(
+      ask({ AI_LOOP_STOP_FILE: "halt-here" }, (root) => {
+        writeFileSync(join(root, "halt-here"), "");
+      }),
+    ).toBe("STOP");
+  });
+
+  it("clears a stale stop file at startup instead of obeying it", () => {
+    // A file left by an earlier run would otherwise stop the next launch before it did
+    // anything — which reads as a loop that failed to start, the worst failure for a
+    // knob whose whole job is to make stopping predictable.
+    const startup = loopText.indexOf(
+      "\nclear_stop_request\n",
+      loopText.indexOf("trap cleanup_pid_records EXIT"),
+    );
+    const scheduler = loopText.indexOf("while true; do");
+    expect(startup).toBeGreaterThanOrEqual(0);
+    expect(scheduler).toBeGreaterThan(startup);
+  });
+
+  it("asks before a cycle starts and again after it has pushed", () => {
+    const scheduler = loopText.slice(loopText.indexOf("while true; do"));
+    const before = scheduler.indexOf("stop_requested");
+    const runCycle = scheduler.indexOf("if run_cycle; then");
+    const after = scheduler.indexOf("stop_requested", runCycle);
+    const sleeps = scheduler.indexOf('sleep "$delay"');
+
+    expect(before).toBeGreaterThanOrEqual(0);
+    expect(runCycle).toBeGreaterThan(before);
+    // The second check is after the cycle returns — i.e. after its push, the last thing
+    // run_cycle does — so a landed cycle stops at once instead of racing the delay.
+    expect(after).toBeGreaterThan(runCycle);
+    expect(sleeps).toBeGreaterThan(after);
+    // A stop is a decision about the SCHEDULE: it must never sit inside run_cycle, where
+    // it could fail a cycle or alter a gate.
+    const cycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    expect(cycle).not.toContain("stop_requested");
+  });
+});
+
 describe("loop.sh post-change bar selection", () => {
   const selectBar = `${sectionBetween("select_health_bar() {", "\n}\n\nsafe_commit_if_enabled()")}\n}`;
 
