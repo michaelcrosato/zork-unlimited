@@ -186,8 +186,8 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Evidence: bug_0620 trace; new red-before/green-after regression assertions in winter_return_docket_counterfactual.test.ts for both the job and event rejection; typecheck/lint/format clean on touched files; targeted vitest green (6 files, 69 tests); verify:bug-traces green; feedback:status again reports the accepted compile's ignored artifacts missing locally (no ai-runs/ history in this sandbox) — recorded, not rebootstrapped, no report of its own this cycle.
 - Next: the event path's other "Choose one option" throw (already-resolved-without-a-matching-option re-call) still names no ids; lower-traffic branch, left for whoever next touches that file.
 ## AFK Cycle 2026-09-06T09-16-39-619Z — ULTRAPLAN (saturation re-aim)
-<!-- feedback_cycle_selection: {"run_id":"2026-09-06T09-16-39-619Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-dawn_beacon (content_fix/M; score=0.5).
-- Mode: ultraplan re-aim; handoff ai-runs/2026-09-06T09-16-39-619Z/current-plan.md.
-- Guard: health + verify:integrity before commit.
+- Assess: rpg=12; world=12; candidates=13; Rec playtest-dawn_beacon (content_fix/M; score=0.5) is floor-only — ultraplan re-aim instead (docs/DECISION_LOG.md 2026-09-06 entry).
+- Change: bug_0621 — session_event_resolution.ts's "already resolved, re-called without a matching option" branch still threw a bare "Choose one option for <title>." with no ids, the one throw site bug_0620 didn't reach; now lists them via the same availableLocalEventSceneOptions call the sibling branch already uses.
+- Self-critique: S-effort, zero-FP, single-branch fix continuing bug_0620's own recorded next step rather than a fan-out; confirmed the job path's analogous case is already covered by bug_0620's reordering, so no further leftover branch of this shape is known.
+- Evidence: bug_0621 trace; red-before/green-after regression in winter_return_docket_counterfactual.test.ts (red confirmed by stashing the source fix and re-running); typecheck/lint/format clean on touched files; verify:bug-traces green; feedback:status reports the accepted compile's ignored artifacts missing locally (no ai-runs/ history in this sandbox) — recorded, not rebootstrapped, no report of its own this cycle.
+- Next: re-run the four-dimension ultraplan sweep fresh next time rather than assume another leftover branch is waiting.
