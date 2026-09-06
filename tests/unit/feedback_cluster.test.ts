@@ -284,3 +284,69 @@ describe("merging independently-authored reports of one defect", () => {
     expect(Math.min(...same)).toBeGreaterThan(JACCARD_MERGE_THRESHOLD);
   });
 });
+
+/**
+ * `global` and `unmapped` are separate buckets on purpose, and neither may absorb a report
+ * that resolved to a real place. Three keys, three meanings: this text named several
+ * recognisable places, this text named nothing recognisable, this text named one place.
+ */
+describe("the global bucket keeps to itself", () => {
+  const global: CanonicalLocation = {
+    kind: "global",
+    questId: null,
+    region: null,
+    node: null,
+    sceneId: null,
+    raw: ["quest structure across Wolf-Winter and The Factor's Mark"],
+  };
+
+  it("merges two cross-cutting reports of the same pattern", () => {
+    const a = issue("every quest repeats the same three beat template", {
+      location: global,
+      ref: "s1",
+    });
+    const b = issue("every quest repeats the same three beat template", {
+      location: { ...global, raw: ["all six side quests, Gallowmere through Cold Forge"] },
+      ref: "s2",
+    });
+    const clusters = clusterIssues([a, b]);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]!.issues.map((i) => i.ref).sort()).toEqual(["s1", "s2"]);
+  });
+
+  it("never absorbs a report that resolved to a real place", () => {
+    // The must-not-merge direction. Identical words, one about the whole game and one
+    // about a single quest, stay two pieces of work — otherwise a design complaint about
+    // pacing would swallow a defect report from one room.
+    const a = issue("every quest repeats the same three beat template", {
+      location: global,
+      ref: "s1",
+    });
+    const b = issue("every quest repeats the same three beat template", {
+      location: { ...loc, node: "troy_city" },
+      ref: "s2",
+    });
+    expect(clusterIssues([a, b])).toHaveLength(2);
+  });
+
+  it("never absorbs an unmapped report either", () => {
+    // "Named several places" and "named nothing" are opposite findings about the text, and
+    // pooling them would let a report that pointed nowhere corroborate one about the game.
+    const a = issue("every quest repeats the same three beat template", {
+      location: global,
+      ref: "s1",
+    });
+    const b = issue("every quest repeats the same three beat template", {
+      location: {
+        kind: "unmapped",
+        questId: null,
+        region: null,
+        node: null,
+        sceneId: null,
+        raw: ["somewhere I did not note"],
+      },
+      ref: "s2",
+    });
+    expect(clusterIssues([a, b])).toHaveLength(2);
+  });
+});

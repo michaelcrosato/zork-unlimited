@@ -1432,3 +1432,91 @@ describe("unmapped findings cluster on content, not on phrasing", () => {
     expect(tickets[0]!.evidence.session_ids).toHaveLength(2);
   });
 });
+
+/**
+ * End to end: two players reporting one pattern about the whole game now reach each other.
+ *
+ * The wording here is taken from the live corpus. Before the global scope rung these two
+ * resolved to `factors_mark` and `unmapped` — two different buckets, two singletons,
+ * neither able to corroborate the other no matter how many players agreed. Cross-cutting
+ * findings (pacing, repetition, difficulty curve, tone) all have this shape, and they are
+ * the findings a mature playtest corpus should be best at surfacing.
+ */
+describe("cross-cutting findings corroborate each other", () => {
+  const transcript = "line one\nline two\n";
+
+  function ticketsFor(interviews: readonly PlaytestSessionBody["exit_interview"][]) {
+    const store = tempDir();
+    interviews.forEach((interview, index) => {
+      writePlaytestSession(
+        store,
+        sealPlaytestSession(body({ exit_interview: interview, run_seed: 700 + index })),
+        transcript,
+      );
+    });
+    return triagePlaytestCorpus({
+      sessions: listPlaytestSessions(store).entries.map((entry) => entry.record),
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+    }).tickets;
+  }
+
+  const SAME_COMPLAINT =
+    "every quest runs the same skeleton: gather optional bonuses, one linear gauntlet, one final choice";
+
+  it("MUST MERGE: two multi-quest reports of one pattern become one ticket", () => {
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: "General quest structure, Wolf-Winter through The Factor's Mark",
+            severity: "S1" as const,
+            note: SAME_COMPLAINT,
+          },
+        ],
+      },
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: "Quest structure across The Tanner's Fever / The Breaking Weir / The Cold Forge",
+            severity: "S1" as const,
+            note: SAME_COMPLAINT,
+          },
+        ],
+      },
+    ]);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.location).toBe("global");
+    expect(tickets[0]!.evidence.report_count).toBe(2);
+    expect(tickets[0]!.evidence.session_ids).toHaveLength(2);
+    // The `where` each player wrote survives, since it is no longer the label.
+    expect(tickets[0]!.excerpts.join(" ")).toContain("Wolf-Winter");
+  });
+
+  it("MUST NOT MERGE: the same complaint about ONE quest stays its own ticket", () => {
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: "General quest structure, Wolf-Winter through The Factor's Mark",
+            severity: "S1" as const,
+            note: SAME_COMPLAINT,
+          },
+        ],
+      },
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [{ where: "steading_yard", severity: "S1" as const, note: SAME_COMPLAINT }],
+      },
+    ]);
+    expect(tickets).toHaveLength(2);
+    expect(tickets.map((t) => t.location).sort()).toEqual(["global", "steading_yard"]);
+  });
+});

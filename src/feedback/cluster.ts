@@ -252,6 +252,13 @@ function locationKey(location: CanonicalLocation): string {
   if (location.kind === "unmapped") {
     return UNMAPPED_LOCATION_KEY;
   }
+  // Its OWN bucket, never merged with `unmapped`. The two mean opposite things — one text
+  // named nothing recognisable, the other named several recognisable things — and pooling
+  // them would let a report that pointed nowhere corroborate a report about the whole
+  // game.
+  if (location.kind === "global") {
+    return GLOBAL_LOCATION_KEY;
+  }
   const part = (value: string | null): string => value ?? "\x00";
   const key = `${location.kind}|${part(location.questId)}|${part(location.node)}|${part(location.sceneId)}`;
   return location.kind === "overworld" && location.node === null && location.region !== null
@@ -265,6 +272,9 @@ function locationKey(location: CanonicalLocation): string {
  * concept is how they drift apart.
  */
 export const UNMAPPED_LOCATION_KEY = "unmapped";
+
+/** The key every cross-cutting report shares. See `locationKey` for why it is separate. */
+export const GLOBAL_LOCATION_KEY = "global";
 
 function unionTokens(a: readonly string[], b: readonly string[]): string[] {
   return [...new Set([...a, ...b])].sort();

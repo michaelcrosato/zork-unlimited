@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "736e78afb781a07c",
+  "title": "Ask the player for scope explicitly instead of inferring it from prose",
+  "body": "The exit interview asks a player WHERE a problem was, and infers from their prose whether the report\nis about a place or about the game. That inference is doing more work than it can carry.\n\n## Why inference is the wrong instrument here\n\nA finding about the game as a whole — pacing, repetition, difficulty curve, tone, economy balance —\nhas no location, so players fill `where` with examples: \"General quest structure, Wolf-Winter through\nThe Factor's Mark\", \"Quest structure across The Tanner's Fever / The Breaking Weir / The Cold Forge\",\n\"Overall regional quest chain (Gallowmere through Dawn Beacon)\". The resolver then has to guess\nwhether that names a place or illustrates a pattern.\n\n`qa-global-scope-identity` makes that guess much better — two or more distinct known places at\nnon-overlapping positions keys to a `global` bucket — but it is still a guess over prose, and it has\na blind spot it cannot close from the inside: a place whose whole name is one content word cannot be\ncounted without risking ordinary English words dragging location-specific reports into `global`. The\nthird example above still resolves to `dawn_beacon` alone for exactly that reason.\n\nEvery such misread costs the same thing: a cross-cutting finding scattered into singletons that can\nnever corroborate, which is the class of finding a mature playtest corpus should be BEST at\nsurfacing.\n\n## Proposal\n\nAsk the player instead of guessing. Add an explicit scope to the exit interview's bug and confusion\nentries — for example `scope: \"place\" | \"game\"` — and let triage key on the declared value, falling\nback to the current inference for records written before the field existed.\n\nThe player already knows which they meant. Nothing else in the pipeline does.\n\n## What it costs, stated honestly\n\n1. **A schema change to the exit interview**, which is the one artifact every historical record is\n   compared against. Existing records have no `scope`, so the field must be optional and the\n   inference must remain as the fallback — meaning this ADDS a path rather than replacing one, and\n   the inference code cannot be deleted.\n2. **A prompt change**, and therefore a change to what players are asked to think about. That is not\n   free in a blind protocol: the exit interview is deliberately a small, fixed set of questions, and\n   every field added is one more thing shaping what a player attends to.\n3. **Comparability**: findings recorded before and after the change are keyed by different\n   mechanisms, so a rate measured across the boundary is measuring two instruments.\n\n## Recommendation\n\nWorth doing if cross-cutting findings keep scattering after `qa-global-scope-identity` has run for a\nwhile — the corpus will show it, because those tickets stay at `report_count: 1` while their content\nrepeats across sessions. Not worth doing pre-emptively: (3) is a real cost and the shipped rule may\nprove sufficient. Revisit with the data.\n\n## Related\n\n- `8d3d6658909e0d86` — clustering splits (queue).\n- `dcaefa368898e77c` — no-location findings never corroborate; closed by `qa-unmapped-identity`.\n- `ops/finding-global-findings-cannot-corroborate.md` — the finding, its three options, and the\n  evidence behind them.",
+  "source": "audit",
+  "kind": "feature",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "src/blind/exit_interview.ts",
+  "evidence": {
+    "summary": "Option (2) of the global-findings problem: the accurate answer that costs a schema change, filed so the deferral is in the queue.",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-06T20:15:59.667Z",
+  "updated_at": "2026-09-06T20:15:59.667Z",
+  "external": null
+}

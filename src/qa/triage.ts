@@ -25,6 +25,7 @@
  */
 import { canonicalize } from "../core/hash.js";
 import {
+  GLOBAL_LOCATION_KEY,
   UNMAPPED_LOCATION_KEY,
   clusterIssues,
   type IssueCluster,
@@ -157,6 +158,7 @@ function issueKey(ref: string, text: string): string {
  */
 function locationLabel(location: CanonicalLocation): string {
   if (location.kind === "unmapped") return UNMAPPED_LOCATION_KEY;
+  if (location.kind === "global") return GLOBAL_LOCATION_KEY;
   // `raw[0]` stays the last resort for MAPPED kinds. `legacyRegionReplacements` rebuilds a
   // predecessor by nulling the region on an overworld location, and some of those fall all
   // the way through to the raw text; removing the fallback here silently stopped the v1
@@ -202,7 +204,10 @@ function clusterExcerpts(cluster: IssueCluster): string[] {
   // An unmapped cluster's `where` no longer survives in the location label, and it is
   // often the only pointer to the place the player actually meant. It leads, because a
   // reader scanning the bucket wants the location before the complaint.
-  const where = cluster.location.kind === "unmapped" ? cluster.location.raw : [];
+  const where =
+    cluster.location.kind === "unmapped" || cluster.location.kind === "global"
+      ? cluster.location.raw
+      : [];
   return [...new Set([...where, ...reported])].slice(0, 5);
 }
 
