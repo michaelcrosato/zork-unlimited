@@ -33,6 +33,7 @@ import { hashState } from "../src/core/hash.js";
 import { JourneyExitReceiptSchema } from "../src/blind/exit_interview.js";
 import { verifyBlindReportText } from "../src/blind/report_verifier.js";
 import { parseBlindRunSidecar } from "../src/blind/run_evidence.js";
+import { PureReceiptBindingMetadataSchema } from "../src/blind/receipt_binding.js";
 import {
   findCatalogModel,
   findPlaytestProvider,
@@ -114,6 +115,23 @@ function main(): void {
 
   const personaId = arg("--persona") ?? "default";
   const personaText = readFileSync(join(PERSONA_DIR, `${personaId}.md`), "utf8");
+
+  // The binder writes this only when it actually replaced the receipt, so its presence is
+  // the fact being recorded. Parsed through the same schema the binder seals, because a
+  // hand-edited sidecar must not be able to stamp a record with a repair that never ran.
+  const receiptBindingText = readIfPresent(`${outPrefix}.receipt-bind.json`);
+  let receiptRepair: { replaced_field: string; count: number; initial_failure: string } | undefined;
+  if (receiptBindingText !== null) {
+    const parsed = PureReceiptBindingMetadataSchema.safeParse(JSON.parse(receiptBindingText));
+    if (!parsed.success) {
+      throw new Error("receipt binding metadata is present but invalid");
+    }
+    receiptRepair = {
+      replaced_field: parsed.data.replaced_field,
+      count: parsed.data.binding_count,
+      initial_failure: parsed.data.initial_failure,
+    };
+  }
 
   const reportText = readIfPresent(`${outPrefix}.md`);
   const sidecarText = readIfPresent(`${outPrefix}.run.json`);
@@ -286,6 +304,7 @@ function main(): void {
         ...(reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
       },
     },
+    ...(receiptRepair === undefined ? {} : { receipt_repair: receiptRepair }),
     persona: {
       id: personaId,
       title: arg("--persona-title") ?? personaId,

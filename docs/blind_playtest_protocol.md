@@ -91,6 +91,35 @@ mechanics; they do not simulate a new player. Structural output must be labeled
 non-pure and retention-ineligible. It must never satisfy or resume a live pure
 fleet member.
 
+## When the runner repairs a receipt, and when it refuses
+
+A pure run's exit interview must carry the journey exit receipt, and the verifier requires
+it to deep-equal the receipt the SERVER authored into run evidence. Players restate that
+receipt by hand, which means they sometimes fumble it: one observed session played 195
+turns and then wrote a `decisionProofHash` with twelve characters dropped out of the middle
+of a 64-character value, its prefix and suffix intact. Verification correctly rejected it,
+and an entire paid session was discarded over a transcription slip.
+
+The runner may therefore REPAIR such a report, on attempt zero only: it substitutes the
+server-authored receipt for the player's, preserves every other byte, and requires the
+UNCHANGED verifier to accept the result. The substituted value is the server's, so the
+repair cannot invent evidence — it can only restore what the server already recorded. Every
+repair is stamped on the binder metadata (`replaced_field`, `binding_count`,
+`initial_failure`) and carried onto the session record as `receipt_repair`, because a
+repaired session is honest evidence but is not the same thing as a player that transcribed
+its own receipt correctly, and a reader deserves to see which one they have.
+
+Repair is available to any provider whose envelope the runner can authenticate; it was
+briefly Codex-only, not by policy but because the binder had only one envelope shape it
+knew how to check.
+
+What the runner will NOT repair is a receipt that is well-formed and CONTRADICTS the
+server. That is not a transcription slip, it is a report of a journey that did not happen,
+and substituting the truth underneath it would let the run pass as though the player had
+reported accurately. It is a hard failure for every provider. The two cases separate
+themselves without a judgement call: a malformed value fails the schema, and a well-formed
+wrong value passes the schema and fails the deep-equal.
+
 ## The game-native journey contract
 
 The game owns session length. Current contract version 3 has this initial goal,

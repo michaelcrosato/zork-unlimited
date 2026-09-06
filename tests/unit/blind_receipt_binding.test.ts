@@ -447,7 +447,7 @@ describe("pure Codex receipt binding", () => {
 
   it("uses a zero-model attempt-zero launcher path", () => {
     const runner = readFileSync(new URL("../../blind-tester/run.sh", import.meta.url), "utf8");
-    const start = runner.indexOf("# Codex has no resumed report turn.");
+    const start = runner.indexOf("# A pure run has no resumed report turn");
     const end = runner.indexOf("\nif ! assert_launch_provenance_unchanged", start);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
@@ -456,5 +456,168 @@ describe("pure Codex receipt binding", () => {
     expect(bindingBranch).toContain("--attempt 0");
     expect(bindingBranch).toContain("scripts/verify-blind-report.ts");
     expect(bindingBranch).not.toMatch(/\bcodex exec\b|\bclaude\b|--resume|mcp__adventureforge__/u);
+  });
+});
+
+/**
+ * Two rules changed together, and they pull in opposite directions on purpose.
+ *
+ * The binder's repair was always vendor-neutral — it substitutes the SERVER's receipt from
+ * run evidence and then requires the unchanged verifier to accept the result. What was
+ * vendor-specific was the one thing before it: authenticating the provider's envelope. So
+ * `claude_code` runs lost an entire paid session to a single fumbled hash while the
+ * identical Codex failure was salvaged.
+ *
+ * Opening that gate without closing the other hole would have been a straight loosening,
+ * because `receipt_mismatch` — a WELL-FORMED receipt that contradicts the server — was also
+ * treated as salvageable. That is not a transcription slip; it is a player reporting a
+ * journey it did not take, and binding silently replaced it with the truth and passed the
+ * run. It is now a hard failure for every provider, Codex included.
+ */
+describe("receipt binding across providers, and the mismatch it now refuses", () => {
+  const CLAUDE_SESSION_ID = "3f1d9f6a-7c2b-4a51-9d84-2b6e4c0a17f5";
+
+  function claudeEnvelope(report: string, overrides: Record<string, unknown> = {}): string {
+    return `${JSON.stringify({
+      schema_version: 1,
+      provider: "claude_code",
+      transport_contract: "game-direct-mcp-v1",
+      model: MODEL,
+      session_id: CLAUDE_SESSION_ID,
+      is_error: false,
+      duration_ms: 955600,
+      num_turns: 195,
+      total_cost_usd: 11.7877,
+      usage: { input_tokens: 100, output_tokens: 30 },
+      result: report,
+      capture: { provider: "claude_code", session_id: CLAUDE_SESSION_ID },
+      ...overrides,
+    })}\n`;
+  }
+
+  /** Schema-valid and internally consistent, but not the journey the server recorded. */
+  function contradictingReceipt() {
+    const other = "b".repeat(64);
+    const payload = {
+      contractVersion: JOURNEY_CONTRACT_VERSION,
+      exitReason: "player_ended_at_choice" as const,
+      goalVersion: 1,
+      goalId: INITIAL_JOURNEY_GOAL.id,
+      goalText: INITIAL_JOURNEY_GOAL.text,
+      goalStatus: "active" as const,
+      goalCompletedAtDecision: null,
+      completedGoals: [],
+      acceptedDecisions: 40,
+      exitReasons: ["checkpoint" as const],
+      checkpoint: 40,
+      decisionProofHash: other,
+      retentionHistory: [
+        {
+          sequence: 1,
+          atDecision: 40,
+          reasons: ["checkpoint" as const],
+          checkpoint: 40,
+          goalVersion: null,
+          goalId: null,
+          choice: "end" as const,
+          decisionProofHash: other,
+        },
+      ],
+    };
+    return { ...payload, receiptHash: hashState(payload) };
+  }
+
+  it("binds a claude_code run against its own envelope, and records the repair", () => {
+    const report = reportWith();
+    const result = bind({
+      provider: "claude_code",
+      primaryEnvelopeBytes: bytes(claudeEnvelope(report)),
+      reportBytes: bytes(report),
+    });
+    expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
+    if (!result.ok) return;
+    expect(result.metadata.provider).toBe("claude_code");
+    expect(result.metadata.provider_session_id).toBe(CLAUDE_SESSION_ID);
+    // What "recorded" means, concretely: which field was replaced, how many times, and
+    // which failure class licensed it. An evidence reader can see a repair happened.
+    expect(result.metadata.replaced_field).toBe("journey_exit_receipt");
+    expect(result.metadata.binding_count).toBe(1);
+    expect(result.metadata.initial_failure).toBe("receipt_invalid");
+  });
+
+  it("refuses a claude_code envelope that is not the one this run produced", () => {
+    const report = reportWith();
+    expect(
+      bind({
+        provider: "claude_code",
+        primaryEnvelopeBytes: bytes(claudeEnvelope(report, { model: "some-other-model" })),
+        reportBytes: bytes(report),
+      }).ok,
+    ).toBe(false);
+    // A Codex envelope may not stand in for a claude_code run, or the gate would be
+    // decorative.
+    expect(
+      bind({ provider: "claude_code", primaryEnvelopeBytes: bytes(envelope(report)) }).ok,
+    ).toBe(false);
+  });
+
+  it.each([["codex"], ["claude_code"]])(
+    "HARD-FAILS a well-formed receipt that contradicts server run evidence (%s)",
+    (provider) => {
+      const report = reportWith(contradictingReceipt());
+      const result = bind({
+        provider,
+        primaryEnvelopeBytes: bytes(
+          provider === "claude_code" ? claudeEnvelope(report) : envelope(report),
+        ),
+        reportBytes: bytes(report),
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toContain("contradicts server run evidence");
+    },
+  );
+
+  it("still reproduces a binding sealed before the mismatch rule existed", () => {
+    // Already-sealed evidence has to stay verifiable, or landing this rule would make
+    // every historical artifact carrying a mismatch binding unreproducible. The replay
+    // flag is reachable only from stored metadata that already records the class.
+    const report = reportWith(contradictingReceipt());
+    const envelopeBytes = bytes(envelope(report));
+    const historical = bind({
+      primaryEnvelopeBytes: envelopeBytes,
+      reportBytes: bytes(report),
+      allowHistoricalMismatch: true,
+    });
+    expect(historical.ok, historical.ok ? undefined : historical.reason).toBe(true);
+    if (!historical.ok) return;
+    expect(historical.metadata.initial_failure).toBe("receipt_mismatch");
+
+    const reproduced = reproducePureCodexReceiptBinding({
+      primaryEnvelopeBytes: envelopeBytes,
+      originalReportBytes: bytes(report),
+      runEvidenceBytes: bytes(evidence()),
+      metadata: historical.metadata,
+    });
+    expect(reproduced.ok, reproduced.ok ? undefined : reproduced.reason).toBe(true);
+  });
+
+  it("leaves the Codex path otherwise byte-identical", () => {
+    // The only Codex-visible change is the mismatch rule above; the ordinary
+    // malformed-receipt salvage must produce exactly what it produced before.
+    const report = reportWith();
+    const before = bind();
+    const after = bind({
+      primaryEnvelopeBytes: bytes(envelope(report)),
+      reportBytes: bytes(report),
+    });
+    expect(before.ok && after.ok).toBe(true);
+    if (!before.ok || !after.ok) return;
+    expect(after.metadata.provider).toBe("codex");
+    expect(after.metadata.initial_failure).toBe("receipt_invalid");
+    expect(Buffer.from(after.reportBytes).toString("utf8")).toBe(
+      Buffer.from(before.reportBytes).toString("utf8"),
+    );
+    expect(after.metadata).toEqual(before.metadata);
   });
 });

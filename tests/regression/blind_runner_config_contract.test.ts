@@ -1523,7 +1523,9 @@ printf 'codex-cli 0.144.1\\n'
     expect(envelope).toContain('item.server !== "adventureforge"');
     expect(envelope).toContain("CODEX_PURE_PLAYER_TOOLS.has(item.tool)");
     expect(envelope).toContain('rows.at(-1)?.type !== "turn.completed"');
-    expect(runner).toContain("Codex has no resumed report turn");
+    // The branch is provider-agnostic: it always passed --provider "$PROVIDER" through and
+    // let the binder decide, but its wording named one vendor regardless of who played.
+    expect(runner).toContain("A pure run has no resumed report turn");
     expect(runner).toContain("scripts/blind-receipt-binding.ts bind");
     expect(runner).toContain('--verifier-status "$VERIFY_STATUS" --attempt 0');
     expect(runner).toContain("was not eligible for receipt-only binding");

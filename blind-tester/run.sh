@@ -1726,11 +1726,18 @@ REPORT_RECEIPT_BOUND=0
 if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   cat "$INITIAL_VERIFY_LOG" >&2
 
-  # Codex has no resumed report turn. On attempt zero only, a deterministic
-  # binder may replace the one existing journey_exit_receipt JSON value with
-  # the exact server-authored receipt. The strict binder authenticates the
-  # audited primary envelope and raw evidence, preserves every other report
-  # byte, and requires the unchanged verifier to accept the resulting bytes.
+  # A pure run has no resumed report turn, whichever vendor played it. On attempt
+  # zero only, a deterministic binder may replace the one existing
+  # journey_exit_receipt JSON value with the exact server-authored receipt. The
+  # strict binder authenticates the audited primary envelope and raw evidence,
+  # preserves every other report byte, and requires the unchanged verifier to
+  # accept the resulting bytes.
+  #
+  # This branch has always been provider-agnostic in everything but its wording:
+  # it passes --provider "$PROVIDER" straight through, and the binder decides.
+  # The messages below used to name one vendor regardless of who actually
+  # played, which sent an operator reading another vendor's failed run hunting
+  # in the wrong lane.
   RECEIPT_BIND_SOURCE="$OUT.md"
   RECEIPT_BIND_SOURCE_ARG="$(node_path_arg "$RECEIPT_BIND_SOURCE")"
   RECEIPT_BIND_CANDIDATE="$WORK/receipt-bound-report.txt"
@@ -1752,7 +1759,7 @@ if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   if [[ "$RECEIPT_BIND_STATUS" -ne 0 ]]; then
     cat "$OUT.receipt-bind.log" >&2 || true
     record_playthrough_terminal verification_failed
-    echo "✗ Codex blind report failed verification and was not eligible for receipt-only binding." >&2
+    echo "✗ blind report failed verification and was not eligible for receipt-only binding." >&2
     exit "$VERIFY_STATUS"
   fi
 
