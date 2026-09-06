@@ -12,6 +12,7 @@ import type {
 } from "./overworld.js";
 import {
   availableLocalJobSceneOptions,
+  describeUnmetLocalJobSceneOptionGates,
   localJobSceneOptionRequirementsMet,
   localJobSceneRequirementsMet,
   resolveLocalJobSceneOption,
@@ -400,9 +401,15 @@ export function planOverworldLocalJobCompletion(
       const availableIds = availableLocalJobSceneOptions(scene, conditionState).map(
         (option) => option.id,
       );
+      if (availableIds.length > 0) {
+        throw new Error(`Choose one option for ${job.title}: ${availableIds.join(", ")}.`);
+      }
+      // No option is legal yet: name the still-unmet gate(s) instead of a bare refusal,
+      // so the player knows what would unlock it rather than filing this as broken.
+      const unmetGates = describeUnmetLocalJobSceneOptionGates(scene, conditionState);
       throw new Error(
-        availableIds.length > 0
-          ? `Choose one option for ${job.title}: ${availableIds.join(", ")}.`
+        unmetGates
+          ? `${job.title} has no legal option yet; it still needs ${unmetGates}.`
           : `Choose one option for ${job.title}, but no authored option is legal yet in this journey.`,
       );
     }

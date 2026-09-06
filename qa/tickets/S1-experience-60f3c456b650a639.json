@@ -4,7 +4,7 @@
   "title": "parallel batched actions colliding with a newly-opened mandatory story… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

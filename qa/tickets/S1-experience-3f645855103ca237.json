@@ -4,7 +4,7 @@
   "title": "Long character-setup chain before reaching the actual field content @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

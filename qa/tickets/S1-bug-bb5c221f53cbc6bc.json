@@ -1,14 +1,15 @@
 {
   "schema_version": 2,
-  "ticket_id": "c361473aaed19b21",
-  "title": "Talking to a just-revealed field-team NPC fails unless the caller… @ albany_city",
+  "ticket_id": "bb5c221f53cbc6bc",
+  "title": "Three separate town quests reuse an almost identical… @ global",
   "kind": "bug",
   "severity": "S1",
   "status": "stale",
   "promotion": "accumulating",
-  "location": "albany_city",
+  "location": "global",
   "excerpts": [
-    "Talking to a just-revealed field-team NPC fails unless the caller already knows to pass the reveal's new snapshot hash; not documented up front, though the error self-corrects."
+    "Oswego 'The Advocate's Case', Cheektowaga 'The Factor's Mark', Tonawanda 'The Falconer's Ransom'",
+    "Three separate town quests reuse an almost identical notice/accuser/two-evidence-rooms/public-confrontation structure, reducing content variety when played back to back."
   ],
   "evidence": {
     "report_count": 1,

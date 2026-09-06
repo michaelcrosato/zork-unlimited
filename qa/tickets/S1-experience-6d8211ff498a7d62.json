@@ -4,7 +4,7 @@
   "title": "Multi-hop auto-travel skips past intermediate towns' local content @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

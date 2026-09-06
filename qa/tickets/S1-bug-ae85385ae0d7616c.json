@@ -1,13 +1,14 @@
 {
   "schema_version": 2,
-  "ticket_id": "314bee2206fc77db",
-  "title": "Combat-plan terminology (LURE/HUNT/DRIVE/FORTIFY and their sub-verbs)… @ albany_city",
+  "ticket_id": "ae85385ae0d7616c",
+  "title": "Combat-plan terminology (LURE/HUNT/DRIVE/FORTIFY and their sub-verbs)… @ global",
   "kind": "bug",
   "severity": "S1",
   "status": "stale",
   "promotion": "accumulating",
-  "location": "albany_city",
+  "location": "global",
   "excerpts": [
+    "Albany Civic Center — Wolf-Winter promise/registration dialogue with Rowan Quill",
     "Combat-plan terminology (LURE/HUNT/DRIVE/FORTIFY and their sub-verbs) is introduced all at once before the player has any gameplay context to anchor it to."
   ],
   "evidence": {

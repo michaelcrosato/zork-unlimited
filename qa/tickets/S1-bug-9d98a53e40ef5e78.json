@@ -1,13 +1,14 @@
 {
   "schema_version": 2,
-  "ticket_id": "af00630cb152632b",
-  "title": "All three optional field-kit options require… @ albany_city",
+  "ticket_id": "9d98a53e40ef5e78",
+  "title": "All three optional field-kit options require… @ global",
   "kind": "bug",
   "severity": "S1",
   "status": "stale",
   "promotion": "accumulating",
-  "location": "albany_city",
+  "location": "global",
   "excerpts": [
+    "Albany Station Quarter, Wolf-Winter field-kit preparation menu",
     "All three optional field-kit options require Repair/Streetwise/Mediation, which the Road Warden background starts at 0, leaving no safe/synergistic preparation choice for that build."
   ],
   "evidence": {

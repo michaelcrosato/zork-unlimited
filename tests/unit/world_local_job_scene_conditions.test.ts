@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   LocalJobSceneSchema,
   availableLocalJobSceneOptions,
+  describeUnmetLocalJobSceneOptionGates,
   type LocalJobScene,
   type LocalJobSceneConditionState,
 } from "../../src/world/local_job_scene.js";
@@ -80,6 +81,37 @@ describe("generic authored local-job conditions", () => {
         conditionState({ eventOption: "sealed", facts: ["fact:evacuated"] }),
       ).map((option) => option.id),
     ).toEqual(["sealed_evacuated"]);
+  });
+
+  it("names the one still-reachable gate and excludes an option foreclosed by the resolved event (bug_0624)", () => {
+    // The event was already resolved "open": sealed_evacuated's branch is dead and
+    // must not be offered as if resolving the event differently were still possible.
+    expect(
+      describeUnmetLocalJobSceneOptionGates(SYNTHETIC_SCENE, conditionState({ facts: [] })),
+    ).toBe('world fact "fact:held"');
+    expect(
+      describeUnmetLocalJobSceneOptionGates(
+        SYNTHETIC_SCENE,
+        conditionState({ eventOption: "sealed", facts: [] }),
+      ),
+    ).toBe('world fact "fact:evacuated"');
+  });
+
+  it("names a still-pending option-local event choice instead of foreclosing it", () => {
+    const optionLocalScene: LocalJobScene = {
+      ...structuredClone(SYNTHETIC_SCENE),
+      requires_resolved_events: undefined,
+    };
+    // Neither branch is resolved or foreclosed yet, so both event choices and both
+    // branches' facts are still genuinely reachable and all four gates are named.
+    expect(
+      describeUnmetLocalJobSceneOptionGates(
+        optionLocalScene,
+        conditionState({ resolved: [], facts: [] }),
+      ),
+    ).toBe(
+      'resolve event "test:event" choosing "open"; resolve event "test:event" choosing "sealed"; world fact "fact:evacuated"; world fact "fact:held"',
+    );
   });
 
   it("projects exact legal cards without exposing any option predicate metadata", () => {

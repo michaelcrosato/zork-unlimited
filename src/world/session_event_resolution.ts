@@ -13,11 +13,13 @@ import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { OVERWORLD_STARTING_MINUTES as STARTING_MINUTES } from "./travel_mechanics.js";
 import {
   availableLocalEventSceneOptions,
+  describeUnmetLocalEventSceneOptionGates,
   localEventSceneRequirementError,
   localEventSceneRequirementsMet,
   localEventSceneOptionRequirementsMet,
   resolveLocalEventSceneOption,
   type LocalEventScene,
+  type LocalEventSceneConditionState,
   type LocalEventSceneOption,
 } from "./local_event_scene.js";
 
@@ -208,6 +210,29 @@ export function assertOverworldEventResolutionReady(
   );
 }
 
+/**
+ * No option is legal yet: name the still-unmet gate(s) instead of a bare refusal, so
+ * the player knows what would unlock it rather than filing this as broken.
+ */
+function noLegalEventOptionError(
+  event: OverworldLocalEvent,
+  scene: LocalEventScene,
+  conditionState: LocalEventSceneConditionState,
+): Error {
+  const availableIds = availableLocalEventSceneOptions(scene, conditionState).map(
+    (option) => option.id,
+  );
+  if (availableIds.length > 0) {
+    return new Error(`Choose one option for ${event.title}: ${availableIds.join(", ")}.`);
+  }
+  const unmetGates = describeUnmetLocalEventSceneOptionGates(scene, conditionState);
+  return new Error(
+    unmetGates
+      ? `${event.title} has no legal option yet; it still needs ${unmetGates}.`
+      : `Choose one option for ${event.title}, but no authored option is legal yet in this journey.`,
+  );
+}
+
 export function planOverworldEventResolution(
   state: OverworldEventResolutionPlanState,
 ): OverworldEventResolutionPlan {
@@ -232,16 +257,11 @@ export function planOverworldEventResolution(
     const existing = state.journalEntries.get(entryId);
     if (existing) {
       if (scene && !sceneOption) {
-        const availableIds = availableLocalEventSceneOptions(scene, {
+        throw noLegalEventOptionError(event, scene, {
           completedQuestIds: state.completedQuestIds,
           completedJobIds: state.completedJobIds,
           worldFactIds: state.campaignWorldFactIds,
-        }).map((option) => option.id);
-        throw new Error(
-          availableIds.length > 0
-            ? `Choose one option for ${event.title}: ${availableIds.join(", ")}.`
-            : `Choose one option for ${event.title}, but no authored option is legal yet in this journey.`,
-        );
+        });
       }
       if (scene && existing.localSceneProof?.optionId !== sceneOption?.id) {
         throw new Error(`This event was already resolved with a different option: ${event.title}.`);
@@ -270,16 +290,11 @@ export function planOverworldEventResolution(
   if (scene && !sceneOption) {
     // Every scene-level gate above already passed, so each id named here is
     // immediately workable rather than a guess the caller has to resolve elsewhere.
-    const availableIds = availableLocalEventSceneOptions(scene, {
+    throw noLegalEventOptionError(event, scene, {
       completedQuestIds: state.completedQuestIds,
       completedJobIds: state.completedJobIds,
       worldFactIds: state.campaignWorldFactIds,
-    }).map((option) => option.id);
-    throw new Error(
-      availableIds.length > 0
-        ? `Choose one option for ${event.title}: ${availableIds.join(", ")}.`
-        : `Choose one option for ${event.title}, but no authored option is legal yet in this journey.`,
-    );
+    });
   }
   if (
     sceneOption &&

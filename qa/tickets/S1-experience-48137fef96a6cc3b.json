@@ -1,21 +1,20 @@
 {
   "schema_version": 2,
   "ticket_id": "48137fef96a6cc3b",
-  "title": "Compact tuple-based context requires some upfront effort to parse… @ unmapped",
+  "title": "Dense compact JSON legend/delta bookkeeping across many fields @ unmapped",
   "kind": "experience",
   "severity": "S1",
   "status": "open",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [
-    "Compact tuple-based context requires some upfront effort to parse before it clicks",
-    "Compact tuple/legend context format needs initial ramp-up to read fluently",
+    "Dense compact JSON legend/delta bookkeeping across many fields",
     "Dense compact tuple encoding requires frequent legend cross-referencing at first",
-    "Dense compact-context legend requires careful manual merging to parse",
-    "Dense compact-tuple data format requires constant legend cross-referencing"
+    "Dense compact tuple/legend format needs constant cross-referencing",
+    "Dense compact-context legend requires careful manual merging to parse"
   ],
   "evidence": {
-    "report_count": 5,
+    "report_count": 4,
     "families": [
       "claude"
     ],
@@ -27,16 +26,15 @@
     ],
     "has_runner_enforced_report": true,
     "session_ids": [
+      "038c3bf592eb97830a913d32b09a1da6620c5a4ae442f7553ad8d7074802cc97",
       "218c08af804e77e6b4fd599ccf5e387e2dffc4193c7058afcc584c30cc884243",
-      "56f2c6ab329212057f355267823c5e872b10c0bf7981f06a39dcc29ddc00eba0",
-      "679f1957006681ae80e7961a38a81dc9a610fcab65555deae072ab4c2752f206",
-      "dce1a8358954c8776ee25441703d9f04f7b45014d73e162a51472dfad9b9e8cd",
+      "630838b473e83ab6fb9a1ffe2fa709d2f343fad4574ed9023b3a33b11730de26",
       "f77835319ee6feffa4783b819d345bad0e716c24465a1e3ff8fe2c73f61b8a3d"
     ],
     "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "last_seen_build": "5efafa2bf6c3f67ec06c5df34dac8d1407940683",
+    "last_seen_build": "2ba18c67d61f4dc1d0c35bca994b43d6d96db2f5",
     "first_seen_at": "2026-09-05T23:40:30.927Z",
-    "last_seen_at": "2026-09-06T19:25:37.397Z"
+    "last_seen_at": "2026-09-06T20:05:42.337Z"
   },
-  "priority": 3.584962500721156
+  "priority": 3.321928094887362
 }

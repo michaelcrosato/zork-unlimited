@@ -4,7 +4,7 @@
   "title": "Job demanded an option choice but never exposed any options via… @ albany_city",
   "kind": "bug",
   "severity": "S2",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "albany_city",
   "excerpts": [

@@ -373,3 +373,69 @@ export function availableLocalJobSceneOptions(
   if (!localJobSceneRequirementsMet(parsed, state)) return [];
   return parsed.options.filter((option) => localJobSceneOptionRequirementsMet(option, state));
 }
+
+/**
+ * True once an option's own gate can never legally pass, because a one-time authored
+ * decision it depends on was already made a different, mutually exclusive way. Missing
+ * (not-yet-decided) requirements do not foreclose — they are still reachable.
+ */
+function localJobSceneOptionForeclosed(
+  option: LocalJobSceneOption,
+  state: LocalJobSceneConditionState,
+): boolean {
+  const storyChoiceKeys = state.storyChoiceKeys ?? new Set<string>();
+  return (
+    (option.requires_event_options ?? []).some(
+      (requirement) =>
+        state.resolvedEventIds.has(requirement.event_id) &&
+        state.eventOptionIdFor(requirement.event_id) !== requirement.option_id,
+    ) ||
+    (option.forbids_any_world_facts ?? []).some((factId) => state.worldFactIds.has(factId)) ||
+    (option.forbids_any_story_choices ?? []).some((ref) =>
+      storyChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
+    )
+  );
+}
+
+/**
+ * Player-facing reasons at least one option could still become legal, for the moment
+ * every option is currently blocked. An option already foreclosed by a contradictory
+ * authored decision is excluded rather than offered as an actionable step — telling a
+ * player to resolve an event they already resolved a different way is worse than
+ * saying nothing. Returns null when every option is foreclosed, which the caller
+ * should treat as having nothing actionable to report.
+ */
+export function describeUnmetLocalJobSceneOptionGates(
+  scene: LocalJobScene,
+  state: LocalJobSceneConditionState,
+): string | null {
+  const parsed = parseLocalJobScene(scene);
+  const storyChoiceKeys = state.storyChoiceKeys ?? new Set<string>();
+  const gates = new Set<string>();
+  for (const option of parsed.options) {
+    if (localJobSceneOptionForeclosed(option, state)) continue;
+    for (const requirement of option.requires_event_options ?? []) {
+      if (!state.resolvedEventIds.has(requirement.event_id)) {
+        gates.add(`resolve event "${requirement.event_id}" choosing "${requirement.option_id}"`);
+      }
+    }
+    for (const factId of option.requires_all_world_facts ?? []) {
+      if (!state.worldFactIds.has(factId)) gates.add(`world fact "${factId}"`);
+    }
+    for (const ref of option.requires_all_story_choices ?? []) {
+      if (!storyChoiceKeys.has(campaignStoryChoiceRefKey(ref))) {
+        gates.add(`story choice "${ref.story_choice_id}" of "${ref.choice_id}"`);
+      }
+    }
+    if (
+      option.character_conditions !== undefined &&
+      !(
+        state.character !== undefined &&
+        campaignCharacterMatchesConditions(state.character, option.character_conditions)
+      )
+    ) {
+      gates.add(`character requirements for "${option.id}"`);
+    }
+  }
+  return gates.size > 0 ? [...gates].sort().join("; ") : null;
+}
