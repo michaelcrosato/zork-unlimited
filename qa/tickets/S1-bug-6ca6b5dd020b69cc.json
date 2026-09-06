@@ -10,12 +10,12 @@
   "excerpts": [
     "Civic Center area in every town visited (Albany, Saratoga Springs, Queensbury, Oswego, Rome, Greece)",
     "Civic Center area in every visited town (Albany, Saratoga Springs, Colonie, Queensbury, Oneonta, Rome)",
+    "Civic-core loop in Albany/Saratoga Springs/Queensbury",
     "Civic-core notice board/contact/event loop feels templated across every town",
-    "Repeated boilerplate NPC names and event titles across different towns",
-    "Near-identical templated 'charter backlog' event and generic records-clerk dialogue repeat verbatim across towns, reducing sense of a distinct world."
+    "Identical town content template (notice board/job/event/site) across every town visited"
   ],
   "evidence": {
-    "report_count": 4,
+    "report_count": 6,
     "families": [
       "claude"
     ],
@@ -27,15 +27,15 @@
     ],
     "has_runner_enforced_report": true,
     "session_ids": [
+      "10c96f3e046c152eb997e60d2841cb36053fb682bd666407510a90f5e590b485",
       "14ada8d223a87b3426dfa3eb9dfead0660d5972ed4ebc7719e665fdca7349f17",
-      "9e27fa893b1e93e1cdad0c105c68ed1acca54cfd9763600f6ddecfd72bd8f72b",
       "d794ab4c55b2076a33610fb7248411f63f0b699319e40ad3ceef9892ec4bcb17",
       "dce1a8358954c8776ee25441703d9f04f7b45014d73e162a51472dfad9b9e8cd"
     ],
     "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "last_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "first_seen_at": "2026-09-06T00:25:47.967Z",
-    "last_seen_at": "2026-09-06T02:34:15.666Z"
+    "last_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "first_seen_at": "2026-09-06T00:55:42.871Z",
+    "last_seen_at": "2026-09-06T05:35:20.840Z"
   },
-  "priority": 3.321928094887362
+  "priority": 3.807354922057604
 }

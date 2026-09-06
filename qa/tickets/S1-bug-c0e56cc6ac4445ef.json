@@ -4,7 +4,7 @@
   "title": "Rejected on first attempt for a missing expected_snapshot_hash from the… @ albany_city",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "albany_city",
   "excerpts": [

@@ -4,7 +4,7 @@
   "title": "applied_campaign_import_effects was populated only for the first quest;… @ wolf_winter",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "wolf_winter",
   "excerpts": [

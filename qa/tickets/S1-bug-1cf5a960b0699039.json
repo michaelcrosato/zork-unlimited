@@ -4,7 +4,7 @@
   "title": "Same names reused for unrelated local NPCs in a distant region, reading… @ oneonta_city",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "oneonta_city",
   "excerpts": [

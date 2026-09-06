@@ -4,7 +4,7 @@
   "title": "Same underlying template (gather 2-3 items/evidence, apply each via one… @ unmapped",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

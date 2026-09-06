@@ -4,7 +4,7 @@
   "title": "Quest structure (gather three clues, then resolve) became predictable… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

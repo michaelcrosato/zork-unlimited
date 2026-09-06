@@ -171,3 +171,8 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: real, corroborated player-facing clarity fix, root-caused by direct reproduction (not guesswork); scoped to the one evidenced branch, closes the queue item and a previously-deferred sibling report (e24b759193c0cd8c).
 - Evidence: new regression test red-before/green-after the fix; bug_0617 trace; typecheck/lint/format clean on touched files; targeted vitest green (albany_station_return_filing_standard_counterfactual + winter_return_docket_counterfactual + progressive_event_disclosure = 25 tests); verify:integrity, verify:bug-traces, verify:opening-density, and all 12 validate packs green.
 - Next: same fix for the rarer fully-satisfied-but-still-blocked fallback branch if evidence ever implicates it; P1-audit-83bfaf74a0b8a3c3 (this scaffold heading vs the cycle-counting regex) is pre-existing queued debt, not touched here.
+## AFK Cycle 2026-09-06T06-59-18-840Z
+<!-- feedback_cycle_selection: {"run_id":"2026-09-06T06-59-18-840Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-breaking_weir (content_fix/M; score=0.5).
+- Guard: health + verify:integrity before commit.

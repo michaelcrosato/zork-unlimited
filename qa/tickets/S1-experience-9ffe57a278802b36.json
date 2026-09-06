@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "ticket_id": "9ffe57a278802b36",
-  "title": "Same-named contacts (Rowan Quill, Hayden Hale) appearing in distant,… @ unmapped",
+  "title": "Recurring NPC name (Hayden Hale) appeared as a contact in a distant… @ unmapped",
   "kind": "experience",
   "severity": "S1",
   "status": "open",
@@ -9,10 +9,11 @@
   "location": "unmapped",
   "excerpts": [
     "Identical NPC names reused as unrelated civic contacts in distant towns",
+    "Recurring NPC name (Hayden Hale) appeared as a contact in a distant town with no explanation of continuity",
     "Same-named contacts (Rowan Quill, Hayden Hale) appearing in distant, unrelated towns"
   ],
   "evidence": {
-    "report_count": 2,
+    "report_count": 3,
     "families": [
       "claude"
     ],
@@ -25,12 +26,13 @@
     "has_runner_enforced_report": true,
     "session_ids": [
       "14ada8d223a87b3426dfa3eb9dfead0660d5972ed4ebc7719e665fdca7349f17",
-      "16bfc47f69d073da592e555031f8e612675f49ebd20677e4fab1dc2d53b7ed00"
+      "16bfc47f69d073da592e555031f8e612675f49ebd20677e4fab1dc2d53b7ed00",
+      "71f1ed73fdc716d0b8b6b9b1b89ae54dc79dd7c1b8220ac4706963162b3fae40"
     ],
     "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "last_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "last_seen_build": "4a75abef22977bbb0ac31cea6c26e8b3c6d91956",
     "first_seen_at": "2026-09-05T23:23:03.124Z",
-    "last_seen_at": "2026-09-06T02:34:15.666Z"
+    "last_seen_at": "2026-09-06T06:11:06.682Z"
   },
-  "priority": 2.584962500721156
+  "priority": 3
 }

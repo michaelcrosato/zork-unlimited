@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "ticket_id": "60f3c456b650a639",
+  "title": "parallel batched actions colliding with a newly-opened mandatory story… @ unmapped",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "unmapped",
+  "excerpts": [
+    "parallel batched actions colliding with a newly-opened mandatory story choice",
+    "parallel tool call raced against a newly opened story choice and was rejected"
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "179d18394c67dbb0f58a0dfa1b0dc85d6280c3cb39508eef922cb18bfcbdf347",
+      "c89aedf0ce1212c1bd6218dbb7e6bae0f1bd5e28c90ea8629b70500ebccd33f1"
+    ],
+    "first_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "last_seen_build": "4a75abef22977bbb0ac31cea6c26e8b3c6d91956",
+    "first_seen_at": "2026-09-06T05:35:36.398Z",
+    "last_seen_at": "2026-09-06T06:04:20.262Z"
+  },
+  "priority": 2.584962500721156
+}

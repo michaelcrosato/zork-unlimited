@@ -4,7 +4,7 @@
   "title": "rest_overworld_session crossed a checkpoint boundary and blocked the… @ oneonta_city",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "oneonta_city",
   "excerpts": [

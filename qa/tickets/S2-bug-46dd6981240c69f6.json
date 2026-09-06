@@ -4,7 +4,7 @@
   "title": "applied_campaign_import_effects was empty for both, so the Road Warden… @ tanners_fever",
   "kind": "bug",
   "severity": "S2",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "tanners_fever",
   "excerpts": [

@@ -4,7 +4,7 @@
   "title": "Station dispatch board slot-name mapping (role/duty/evidence/etc.)… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

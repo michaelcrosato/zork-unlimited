@@ -4,7 +4,7 @@
   "title": "Field-kit preparation checks shown as '+0' without DC or base skill,… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

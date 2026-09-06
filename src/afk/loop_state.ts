@@ -13,6 +13,16 @@
  * The total completed-cycle count (which the generator seed window rides on, see
  * assessor.ts `generatedEvalSeedBase`) is recovered from a tiny historical marker
  * plus recent "### Cycle result" entries, so trimming the live log never resets it.
+ *
+ * Since the 2026-08-29 two-loop migration, `ai-loop.ts` appends each new cycle's
+ * scaffold under a "## AFK Cycle <stamp>" heading instead, and the current protocol
+ * (docs/afk_loop.md) has the agent complete THAT SAME heading in place — no rename,
+ * no prepended "### Cycle result" replacement. {@link countScaffoldEntries} counts
+ * those so {@link completedCycleCount}/{@link totalCycleCount} stay accurate (bug_0619).
+ * `rotateLoopState` deliberately does NOT fold scaffold entries into {@link CYCLE_ENTRY}:
+ * its single-cut slice assumes the kept region is prepend-ordered (newest first), which
+ * holds for the legacy "### Cycle result" section but not for the append-ordered
+ * scaffold tail, so rotating scaffolds needs its own pass rather than sharing this one.
  */
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
@@ -32,9 +42,17 @@ export const ROTATE_KEEP = 15;
 
 const CYCLE_ENTRY = /^### Cycle result/gm;
 
+/** Matches the "## AFK Cycle <stamp>" scaffold `formatLoopStateAppend` emits. */
+const SCAFFOLD_ENTRY = /^## AFK Cycle /gm;
+
 /** Count completed "### Cycle result" entries in a log text. Pure. */
 export function countCycleEntries(text: string): number {
   return (text.match(CYCLE_ENTRY) ?? []).length;
+}
+
+/** Count "## AFK Cycle" scaffold entries (completed in place, not renamed). Pure. */
+export function countScaffoldEntries(text: string): number {
+  return (text.match(SCAFFOLD_ENTRY) ?? []).length;
 }
 
 /** Count completed cycles intentionally removed from the live log. */
@@ -47,7 +65,7 @@ export function historicalCycleCount(text: string): number {
 
 /** Total completed cycles represented by one loop-state file. */
 export function completedCycleCount(text: string): number {
-  return historicalCycleCount(text) + countCycleEntries(text);
+  return historicalCycleCount(text) + countCycleEntries(text) + countScaffoldEntries(text);
 }
 
 function upsertHistoricalCycleCount(text: string, count: number): string {
@@ -57,11 +75,13 @@ function upsertHistoricalCycleCount(text: string, count: number): string {
 }
 
 /**
- * A cycle scaffold sits below the rich history until its final result is prepended.
- * At the live-entry limit, that puts its frozen selection marker on the archived side
- * of the cut. Relocate every line the selection parser counts without interpreting it:
- * canonical bytes stay stable, while malformed or duplicate lines remain available
- * for the seal to reject instead of being laundered away by archival.
+ * The in-progress cycle's scaffold sits below the rich "### Cycle result" history
+ * (see the module docstring for why the current "## AFK Cycle" form is not itself a
+ * {@link CYCLE_ENTRY}). At the legacy-entry limit, that puts its frozen selection
+ * marker on the archived side of the cut. Relocate every line the selection parser
+ * counts without interpreting it: canonical bytes stay stable, while malformed or
+ * duplicate lines remain available for the seal to reject instead of being laundered
+ * away by archival.
  */
 function relocateFeedbackCycleSelectionLines(
   keptText: string,
@@ -102,7 +122,10 @@ export function totalCycleCount(root: string): number {
   const liveText = existsSync(live) ? readFileSync(live, "utf8") : "";
   const liveN = liveText ? completedCycleCount(liveText) : 0;
   if (historicalCycleCount(liveText) > 0) return liveN;
-  const archN = existsSync(arch) ? countCycleEntries(readFileSync(arch, "utf8")) : 0;
+  const archiveText = existsSync(arch) ? readFileSync(arch, "utf8") : "";
+  const archN = archiveText
+    ? countCycleEntries(archiveText) + countScaffoldEntries(archiveText)
+    : 0;
   return liveN + archN;
 }
 

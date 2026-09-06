@@ -4,7 +4,7 @@
   "title": "Backend bookkeeping fields (decisionProof hashes, journeyDecision… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

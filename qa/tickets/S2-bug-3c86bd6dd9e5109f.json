@@ -4,7 +4,7 @@
   "title": "work_overworld_session_job rejects with 'Choose one option...' but… @ albany_city",
   "kind": "bug",
   "severity": "S2",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "albany_city",
   "excerpts": [
