@@ -1180,7 +1180,10 @@ describe("MCP pure play mode", () => {
       // +95 on 2026-08-30: new_game's description stopped promising a "default pack"
       // it actually refuses (generate_rpg_seed is required) and now points shipped
       // quests at start_world_quest — found by playing during the full audit.
-      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_678);
+      // +116 on 2026-09-06: choose_overworld_session_story now also accepts option_id
+      // as a full-mode-only alias for choice, so the obvious inspect-then-choose
+      // sequence no longer fails on an argument-name mismatch (queue 61d3b9dec4cb09fd).
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(39_794);
       expect(fullRead?.description).toBe(
         "Read current context without acting. Station support uses the exact board[5] id.",
       );
@@ -1221,6 +1224,7 @@ describe("MCP pure play mode", () => {
         ["get_state", "session_id", "rpg_session_id"],
         ["get_transcript", "session_id", "rpg_session_id"],
         ["save_game", "session_id", "rpg_session_id"],
+        ["choose_overworld_session_story", "choice", "option_id"],
       ] as const) {
         expectAliasedToolSchema(listed, name, canonicalName, aliasName);
       }
@@ -1385,6 +1389,47 @@ describe("MCP pure play mode", () => {
         });
         expect(chosen.isError, choice).not.toBe(true);
       }
+
+      // The natural sequence is inspect an option, then choose the id just inspected. The
+      // two tools used to name that id differently (option_id vs choice), so the obvious
+      // second call was rejected. This proves choose now accepts the inspected id verbatim.
+      const storyAliasStarted = textPayload(
+        await client.callTool({ name: "start_overworld", arguments: {} }),
+      );
+      const storyAliasSessionId = String(storyAliasStarted.session_id);
+      await client.callTool({
+        name: "scout_overworld_session_poi",
+        arguments: { session_id: storyAliasSessionId, poi_id: "albany_city__civic_core__poi" },
+      });
+      await client.callTool({
+        name: "talk_overworld_session_contact",
+        arguments: { session_id: storyAliasSessionId, contact_id: contactId },
+      });
+      const inspected = await client.callTool({
+        name: "inspect_overworld_session_story",
+        arguments: {
+          session_id: storyAliasSessionId,
+          story_choice_id: "albany:relief_registration",
+          option_id: "albany:ledger_advocate",
+        },
+      });
+      expect(inspected.isError).not.toBe(true);
+      const chosenByAlias = await client.callTool({
+        name: "choose_overworld_session_story",
+        arguments: { session_id: storyAliasSessionId, option_id: "albany:ledger_advocate" },
+      });
+      expect(chosenByAlias.isError).not.toBe(true);
+      const storyAliasConflict = await client.callTool({
+        name: "choose_overworld_session_story",
+        arguments: {
+          session_id: overworldSessionId,
+          choice: "albany:oath_limited_aid_only",
+          option_id: "albany:oath_full_duty",
+        },
+      });
+      expect(storyAliasConflict.isError).toBe(true);
+      expect(textResult(storyAliasConflict)).toMatch(/choice and option_id conflict/);
+
       const dualStarted = textPayload(
         await client.callTool({ name: "start_overworld", arguments: {} }),
       );

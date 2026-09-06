@@ -1,18 +1,17 @@
 {
   "schema_version": 2,
   "ticket_id": "2a12e37e247cdc26",
-  "title": "quest-local combat stats reset between separate embedded quests rather… @ unmapped",
+  "title": "Quest-local stats reset each quest rather than carrying overworld… @ unmapped",
   "kind": "experience",
   "severity": "S1",
   "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [
-    "Quest-local stats reset each quest rather than carrying overworld character sheet forward, only documented in a technical scope_note",
-    "quest-local combat stats reset between separate embedded quests rather than carrying over"
+    "Quest-local stats reset each quest rather than carrying overworld character sheet forward, only documented in a technical scope_note"
   ],
   "evidence": {
-    "report_count": 2,
+    "report_count": 1,
     "families": [
       "claude"
     ],
@@ -24,13 +23,12 @@
     ],
     "has_runner_enforced_report": true,
     "session_ids": [
-      "c89aedf0ce1212c1bd6218dbb7e6bae0f1bd5e28c90ea8629b70500ebccd33f1",
       "fe1bb536b4b3a745ee645b5329fb4df357d10a92f79bcab79db817df7cd3385f"
     ],
     "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "last_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "last_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
     "first_seen_at": "2026-09-06T00:12:30.100Z",
-    "last_seen_at": "2026-09-06T05:35:36.398Z"
+    "last_seen_at": "2026-09-06T00:12:30.100Z"
   },
-  "priority": 2.584962500721156
+  "priority": 2
 }

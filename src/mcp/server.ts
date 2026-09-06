@@ -1128,6 +1128,9 @@ function normalizeSimplePlayerAliases(name: string, args: unknown): unknown {
   if (name === "talk_overworld_session_contact") {
     normalized = normalizeEquivalentAlias(normalized, "character_id", "contact_id");
   }
+  if (name === "choose_overworld_session_story") {
+    normalized = normalizeEquivalentAlias(normalized, "choice", "option_id");
+  }
   return normalized;
 }
 
@@ -2131,12 +2134,27 @@ tool(
 tool(
   "choose_overworld_session_story",
   "Choose a visible story option. If revealOption exists, reveal it first. Pass story_choice_id for a Station support choice.",
-  {
-    ...OVERWORLD_SESSION,
-    choice: z.string().describe("Exact visible option id. Departure story id is inferred."),
-    story_choice_id: z.string().optional().describe("Story id required for Station support."),
-    ...OVERWORLD_ACTION_CONTEXT,
-  },
+  PLAY_MODE === "pure"
+    ? {
+        ...OVERWORLD_SESSION,
+        choice: z.string().describe("Exact visible option id. Departure story id is inferred."),
+        story_choice_id: z.string().optional().describe("Story id required for Station support."),
+        ...OVERWORLD_ACTION_CONTEXT,
+      }
+    : requireAliasedArgument(
+        {
+          ...OVERWORLD_SESSION,
+          choice: z
+            .string()
+            .optional()
+            .describe("Exact visible option id. Departure story id is inferred."),
+          option_id: z.string().optional().describe("Alias for choice."),
+          story_choice_id: z.string().optional().describe("Story id required for Station support."),
+          ...OVERWORLD_ACTION_CONTEXT,
+        },
+        "choice",
+        "option_id",
+      ),
   (a) => api.choose_overworld_session_story(defaultCompactOverworld(a)),
 );
 tool(

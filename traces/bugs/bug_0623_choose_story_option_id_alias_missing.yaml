@@ -1,0 +1,50 @@
+id: bug_0623
+title: choose_overworld_session_story rejects the option_id a caller just inspected
+reported_by: intake 61d3b9dec4cb09fd (audit finding F4, confirmed live in a reference-tier session)
+severity: S2
+
+symptom: >
+  inspect_overworld_session_story takes option_id to name a visible story option, and
+  choose_overworld_session_story takes choice to name that same kind of id. The natural
+  sequence — inspect an option, then choose the one just inspected — fails on the first
+  attempt when the caller reuses the argument name it just used: passing option_id to
+  choose is rejected with "Input validation error: Required at choice". Confirmed live in
+  a reference-tier session: inspected albany:road_warden, passed the same id to choose
+  under the argument name option_id, and was refused; a second call with choice succeeded
+  with an otherwise identical payload.
+
+cause: >
+  choose_overworld_session_story's full-mode input schema (src/mcp/server.ts) declared
+  only a required `choice` field. Every other pair of MCP tools that name the same kind of
+  id differently already gets an alias (session_id/rpg_session_id, action_id/action,
+  character_id/contact_id, destination_town_id/dest_town_id, via
+  normalizeEquivalentAlias/normalizeSimplePlayerAliases), but this one was missed.
+
+reproduction: >
+  tests/regression/mcp_pure_play_mode.test.ts, "publishes and honors the full-mode alias
+  matrix": a fresh full-mode session reaches Albany's registration story choice, inspects
+  option albany:ledger_advocate via inspect_overworld_session_story's option_id, then
+  calls choose_overworld_session_story with ONLY option_id (no choice); before this fix
+  the call was rejected for a missing `choice` argument.
+
+fix: >
+  choose_overworld_session_story's full-mode schema now uses the existing
+  requireAliasedArgument helper to accept option_id as an alias for choice (both optional,
+  at least one required), and normalizeSimplePlayerAliases folds option_id into choice
+  before the handler runs — the same mechanism every other aliased tool argument already
+  uses. Pure mode's schema is unchanged (byte-budget-capped catalogue; the convenience is
+  not worth its bytes there, since pure-mode fleets do not pay for it today).
+
+production:
+  - src/mcp/server.ts
+regression:
+  - tests/regression/mcp_pure_play_mode.test.ts
+verification:
+  - Extended the full-mode alias matrix test — schema now publishes both choice and
+    option_id with an anyOf-required group; a fresh session's inspect-then-choose-by-alias
+    sequence succeeds; passing conflicting choice/option_id values is rejected.
+  - Re-pinned the full-mode catalogue byte count (+116) and the overworld ToolSearch
+    schema source-size ceiling that the new schema text pushed past its old pin; pure
+    mode's catalogue byte count is unchanged.
+  - typecheck, lint, format, and the touched mcp_pure_play_mode/mcp_server_registration/
+    mcp_tools suites are green.

@@ -6,7 +6,9 @@
   "source": "audit",
   "kind": "bug",
   "priority": "P1",
-  "status": "open",
+  "status": "declined",
+  "claimed_by": "dev-opus-lane",
+  "claimed_at": "2026-09-06T19:36:09.588Z",
   "labels": [],
   "area": "src/qa/triage.ts",
   "evidence": {
@@ -16,7 +18,7 @@
     "observations": 1
   },
   "created_at": "2026-08-28T22:05:35.092Z",
-  "updated_at": "2026-08-31T16:36:28.423Z",
+  "updated_at": "2026-09-06T19:39:50.012Z",
   "external": null,
   "mirrors": [
     {
@@ -26,5 +28,6 @@
       "url": "https://linear.app/michael-crosato/issue/MIC-14/8d3d6658909e0d86-triage-clustering-splits-identical-findings-into",
       "synced_status": "open"
     }
-  ]
+  ],
+  "resolved_by": "dev-opus-lane"
 }

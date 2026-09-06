@@ -11,10 +11,11 @@
     "Compact tuple-based context requires some upfront effort to parse before it clicks",
     "Compact tuple/legend context format needs initial ramp-up to read fluently",
     "Dense compact tuple encoding requires frequent legend cross-referencing at first",
+    "Dense compact-context legend requires careful manual merging to parse",
     "Dense compact-tuple data format requires constant legend cross-referencing"
   ],
   "evidence": {
-    "report_count": 4,
+    "report_count": 5,
     "families": [
       "claude"
     ],
@@ -29,12 +30,13 @@
       "218c08af804e77e6b4fd599ccf5e387e2dffc4193c7058afcc584c30cc884243",
       "56f2c6ab329212057f355267823c5e872b10c0bf7981f06a39dcc29ddc00eba0",
       "679f1957006681ae80e7961a38a81dc9a610fcab65555deae072ab4c2752f206",
-      "dce1a8358954c8776ee25441703d9f04f7b45014d73e162a51472dfad9b9e8cd"
+      "dce1a8358954c8776ee25441703d9f04f7b45014d73e162a51472dfad9b9e8cd",
+      "f77835319ee6feffa4783b819d345bad0e716c24465a1e3ff8fe2c73f61b8a3d"
     ],
     "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "last_seen_build": "7d449585777e61c6b853c86c43fb24a130dc3b43",
+    "last_seen_build": "5efafa2bf6c3f67ec06c5df34dac8d1407940683",
     "first_seen_at": "2026-09-05T23:40:30.927Z",
-    "last_seen_at": "2026-09-06T08:24:43.395Z"
+    "last_seen_at": "2026-09-06T19:25:37.397Z"
   },
-  "priority": 3.321928094887362
+  "priority": 3.584962500721156
 }
