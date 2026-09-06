@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "ticket_id": "48137fef96a6cc3b",
+  "title": "Compact tuple-based context requires some upfront effort to parse… @ unmapped",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "unmapped",
+  "excerpts": [
+    "Compact tuple-based context requires some upfront effort to parse before it clicks",
+    "Dense compact tuple encoding requires frequent legend cross-referencing at first",
+    "Dense compact-tuple data format requires constant legend cross-referencing"
+  ],
+  "evidence": {
+    "report_count": 3,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "218c08af804e77e6b4fd599ccf5e387e2dffc4193c7058afcc584c30cc884243",
+      "679f1957006681ae80e7961a38a81dc9a610fcab65555deae072ab4c2752f206",
+      "dce1a8358954c8776ee25441703d9f04f7b45014d73e162a51472dfad9b9e8cd"
+    ],
+    "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "last_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "first_seen_at": "2026-09-05T23:40:30.927Z",
+    "last_seen_at": "2026-09-06T03:06:35.644Z"
+  },
+  "priority": 3
+}

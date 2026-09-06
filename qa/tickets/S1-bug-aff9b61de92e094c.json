@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "ticket_id": "aff9b61de92e094c",
+  "title": "The ['inspect', story_choice_id] tuple is easy to misread as requiring… @ albany_city",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "albany_city",
+  "excerpts": [
+    "The ['inspect', story_choice_id] tuple is easy to misread as requiring the literal word 'inspect' as the argument; caused one rejected call."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "9620647cd4acb0071a7601a0d2af6e6b8ed0235b6919292f102dfa1112783881"
+    ],
+    "first_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "last_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "first_seen_at": "2026-09-06T04:00:30.442Z",
+    "last_seen_at": "2026-09-06T04:00:30.442Z"
+  },
+  "priority": 2
+}

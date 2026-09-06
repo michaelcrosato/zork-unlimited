@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "ticket_id": "8e1fa436dfee3fed",
+  "title": "Parallel tool calls against sequential embedded-quest state produce… @ unmapped",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "unmapped",
+  "excerpts": [
+    "Parallel tool calls against sequential embedded-quest state produce stale-hash rejections",
+    "Tracking two parallel session handles (overworld vs quest) and their hashes"
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "218c08af804e77e6b4fd599ccf5e387e2dffc4193c7058afcc584c30cc884243",
+      "907da705fcec6494dc81ab2623af9e8a43ebda6d2e5fbfdf5672ee4b7031c233"
+    ],
+    "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "last_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "first_seen_at": "2026-09-05T23:40:30.927Z",
+    "last_seen_at": "2026-09-06T02:04:48.508Z"
+  },
+  "priority": 2.584962500721156
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "ticket_id": "9ffe57a278802b36",
+  "title": "Same-named contacts (Rowan Quill, Hayden Hale) appearing in distant,… @ unmapped",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "unmapped",
+  "excerpts": [
+    "Identical NPC names reused as unrelated civic contacts in distant towns",
+    "Same-named contacts (Rowan Quill, Hayden Hale) appearing in distant, unrelated towns"
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "14ada8d223a87b3426dfa3eb9dfead0660d5972ed4ebc7719e665fdca7349f17",
+      "16bfc47f69d073da592e555031f8e612675f49ebd20677e4fab1dc2d53b7ed00"
+    ],
+    "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "last_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "first_seen_at": "2026-09-05T23:23:03.124Z",
+    "last_seen_at": "2026-09-06T02:34:15.666Z"
+  },
+  "priority": 2.584962500721156
+}

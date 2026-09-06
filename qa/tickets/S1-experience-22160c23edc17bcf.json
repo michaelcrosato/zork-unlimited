@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "ticket_id": "22160c23edc17bcf",
+  "title": "Cattle alarm has two separate trigger sources (ridge descent vs. @ unmapped",
+  "kind": "experience",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "unmapped",
+  "excerpts": [
+    "Cattle alarm has two separate trigger sources (ridge descent vs. feed check) that aren't disambiguated until both occur"
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "679f1957006681ae80e7961a38a81dc9a610fcab65555deae072ab4c2752f206"
+    ],
+    "first_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "last_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "first_seen_at": "2026-09-06T03:06:35.644Z",
+    "last_seen_at": "2026-09-06T03:06:35.644Z"
+  },
+  "priority": 2
+}

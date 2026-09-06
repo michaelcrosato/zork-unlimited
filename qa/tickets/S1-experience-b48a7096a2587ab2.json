@@ -1,14 +1,14 @@
 {
   "schema_version": 2,
-  "ticket_id": "d036bf3a891e2238",
-  "title": "All 8 quests share an identical skeleton (gather optional bonuses, then… @ factors_mark",
-  "kind": "bug",
+  "ticket_id": "b48a7096a2587ab2",
+  "title": "Unclear at first whether checkpoint pauses could interrupt mid-dialogue… @ unmapped",
+  "kind": "experience",
   "severity": "S1",
   "status": "stale",
   "promotion": "accumulating",
-  "location": "factors_mark",
+  "location": "unmapped",
   "excerpts": [
-    "All 8 quests share an identical skeleton (gather optional bonuses, then a linear gauntlet, then one final choice), and every dangerous check becomes risk-free once the telegraphed NPC bonuses are collected, reducing tension in later chapters."
+    "Unclear at first whether checkpoint pauses could interrupt mid-dialogue (they don't, confirmed through play)"
   ],
   "evidence": {
     "report_count": 1,

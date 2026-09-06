@@ -164,3 +164,8 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure audit: post-exchange object EXAMINE and wind-only/special-first counterfactuals remain regression-causal; the report omits the directly observed retirement and loosely conflates the decision-28 goal choice with a checkpoint. An earlier 68-call launch omitted the mandatory exit interview and is quarantined outside ancestry with zero report/feedback authority.
 - Feedback/next: compile `20260811T225226Z` uses only the prior three sealed reports, excludes this pure, and recommends one-report S1 `4e42fc3a`; counter-audit that optional-branch/checkpoint wording against intentional Continue/End semantics before changing journey flow.
 - Guard: 7 focused behavior tests, the 4-file tracked change plus report/evidence/sidecar authority, Gallowmere validation at exact hash, 567 traces/1,948 references, both 6,000-step crawls, full health (448 files/3,899 tests), UI typecheck, all 12 packs, cycle-start integrity, exact pure/compile provenance, and the feedback seal are green.
+## AFK Cycle 2026-09-06T04-13-53-054Z
+<!-- feedback_cycle_selection: {"run_id":"2026-09-06T04-13-53-054Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Guard: health + verify:integrity before commit.

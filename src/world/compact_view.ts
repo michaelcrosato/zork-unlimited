@@ -756,7 +756,7 @@ export function compactOverworldBlockedEventLeads(
     );
     const investigated = context.journalEntryIds.has(`investigate:${event.id}`);
     const nextPrerequisite = context.gameplayActionsPaused
-      ? "No authored choice is currently available in this journey state."
+      ? "A pending journey decision must be resolved first. This lead returns once play resumes."
       : !scoutedPoi
         ? `Required first: scout ${context.poiTitlesById.get(scene.required_poi_id) ?? scene.required_poi_id}.`
         : !talkedContact

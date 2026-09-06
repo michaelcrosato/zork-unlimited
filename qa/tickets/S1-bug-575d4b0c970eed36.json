@@ -1,0 +1,37 @@
+{
+  "schema_version": 2,
+  "ticket_id": "575d4b0c970eed36",
+  "title": "Same underlying template (gather 2-3 items/evidence, apply each via one… @ unmapped",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "unmapped",
+  "excerpts": [
+    "Quest structure across The Tanner's Fever / The Breaking Weir / The Advocate's Case / The Cold Forge",
+    "quest structural template (evidence-gather, dual stat buffs, guarded checks, resolution) repeats across all six post-tutorial quests",
+    "Same underlying template (gather 2-3 items/evidence, apply each via one skill check, then a capstone action) repeats across quests; strong flavor text disguises it but it becomes predictable by the third instance."
+  ],
+  "evidence": {
+    "report_count": 2,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "a76a6eb41d01523a2a0c7214a6819875dc3debe96a8799b6c1a7f4fecb69b427",
+      "db907a6a65d04407c56437840c499807e69307a48c2f7067415e67e75101c014"
+    ],
+    "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "last_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "first_seen_at": "2026-09-05T23:34:58.152Z",
+    "last_seen_at": "2026-09-06T01:29:24.217Z"
+  },
+  "priority": 2.584962500721156
+}

@@ -1,0 +1,66 @@
+id: bug_0617
+title: "Blocked event leads named the engine's internal state instead of the pending journey decision"
+pack: n/a (overworld compact event presentation)
+reported_by: intake/queue P1-playtest-5f00328ffcfb6566.json (Grok-4.6 low MCP 200-wave
+  ticket 2df266d25f7cc893, 41 S1 reports, build 36ff6d106fa0df2ff19e80d09cf00df081b81653)
+severity: S1
+evidence:
+  source_report: intake/queue/P1-playtest-5f00328ffcfb6566.json
+  quoted_claim: >
+    After Wolf-Winter completes, Albany Station still lists Hayden's Cade Return
+    Filing with "No authored choice is currently available in this journey state."
+  player_friction: >
+    41 independent reports (the single largest cluster in the wave) named Hayden's
+    Cade Return Filing lead as stuck with this sentence right after Wolf-Winter.
+    The sentence names engine vocabulary ("authored", "journey state") that exists
+    nowhere in the game's own language and gives the player nothing to act on.
+    A prior, separately reported instance of the same sentence on a different
+    Albany event (intake/queue P1-playtest-e24b759193c0cd8c.json, closed without a
+    code change in favor of tracking this ticket) made the same complaint.
+symptom: >
+  Right after `completeQuest("wolf_winter", ...)`, the Continue/End decision (and
+  then the dawn-wagon story choice) is pending, so `service_actions` is empty and
+  the session is in a legitimate short gameplay pause. `albany_city__transport_hub__event`
+  ("Hayden Hale's Cade Return Filing Standard") becomes visible at that exact moment
+  because its `requires_completed_quests: [wolf_winter]` is now satisfied, and its
+  scout/talk prerequisites were already met before Wolf-Winter started. Its compact
+  event-lead hint (src/world/compact_view.ts, compactOverworldBlockedEventLeads)
+  therefore fell straight to the generic
+  "No authored choice is currently available in this journey state." row, even
+  though the lead's OWN stated prerequisites were already satisfied and the true
+  blocker (a pending Continue/End or story decision) is a normal, temporary, and
+  nameable state.
+root_cause: >
+  bug_0551 introduced this exact sentence as the correct STRUCTURAL fix for a
+  worse problem: showing an impossible-to-follow "Required first: investigate this
+  event" prerequisite during a gameplay pause. That fix correctly stopped naming an
+  action the player could not take, but the replacement text described the content
+  graph ("authored choice", "journey state") rather than the world: it never said a
+  decision was pending or that the lead would return once resolved.
+fix: >
+  Reworded only the `gameplayActionsPaused` branch of `compactOverworldBlockedEventLeads`
+  to "A pending journey decision must be resolved first. This lead returns once
+  play resumes." — matching the existing house phrasing for the same underlying
+  state in `journey_opportunity_leads.ts`'s `deferJourneyOpportunityDetails`
+  ("Choose the current journey option first. ... The leads return when play
+  resumes."). This is presentation-only: it changes no gate, legal action,
+  checkpoint, decision, snapshot, or snapshot hash, and it does not reintroduce
+  bug_0551's defect because it never names a specific per-event action. The other
+  three branches (scout/talk/investigate prerequisites, and the rarer
+  fully-prerequisite-met-but-still-blocked fallback) are unchanged.
+deterministic_witnesses:
+  - "a fresh Albany session that completes Wolf-Winter shows the transport-hub filing
+    lead with the new pending-decision copy the instant service_actions is empty,
+    both right after completeQuest and again after chooseJourney(\"continue\") while
+    the dawn-wagon story choice is still open (tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts)"
+  - "once the dawn-wagon story choice resolves and service_actions is populated
+    again, the same lead reports the accurate \"Required first: investigate this
+    event.\" prerequisite instead"
+production:
+  - src/world/compact_view.ts
+tests:
+  - tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts
+verification:
+  - npx vitest run tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts tests/starting_slice/winter_return_docket_counterfactual.test.ts tests/starting_slice/progressive_event_disclosure.test.ts
+  - npm run validate
+  - npm run verify:bug-traces

@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "ticket_id": "6208e862b123bc3a",
+  "title": "Modern highway infrastructure descriptions clash tonally with the… @ unmapped",
+  "kind": "bug",
+  "severity": "S1",
+  "status": "open",
+  "promotion": "accumulating",
+  "location": "unmapped",
+  "excerpts": [
+    "Road-travel encounter flavor text (e.g., I-90/New York State Thruway, jackknifed trucks, state police)",
+    "Modern highway infrastructure descriptions clash tonally with the pre-modern fantasy setting (1671 charters, spear-and-knife hunts)."
+  ],
+  "evidence": {
+    "report_count": 1,
+    "families": [
+      "claude"
+    ],
+    "providers": [
+      "claude_code"
+    ],
+    "tiers": [
+      "volume"
+    ],
+    "has_runner_enforced_report": true,
+    "session_ids": [
+      "d794ab4c55b2076a33610fb7248411f63f0b699319e40ad3ceef9892ec4bcb17"
+    ],
+    "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "last_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "first_seen_at": "2026-09-06T00:55:42.871Z",
+    "last_seen_at": "2026-09-06T00:55:42.871Z"
+  },
+  "priority": 2
+}
