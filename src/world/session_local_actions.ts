@@ -11,6 +11,7 @@ import type {
   OverworldLocalJob,
 } from "./overworld.js";
 import {
+  availableLocalJobSceneOptions,
   localJobSceneOptionRequirementsMet,
   localJobSceneRequirementsMet,
   resolveLocalJobSceneOption,
@@ -356,10 +357,6 @@ export function planOverworldLocalJobCompletion(
   const scene = job.authored_scene;
   let sceneOption: LocalJobSceneOption | null = null;
   if (scene) {
-    if (!state.optionId) {
-      throw new Error(`Choose one option for ${job.title}.`);
-    }
-    sceneOption = resolveLocalJobSceneOption(scene, state.optionId);
     if (!state.journalEntries.has(`scout:${scene.required_poi_id}`)) {
       throw new Error(`Scout the required point of interest before working ${job.title}.`);
     }
@@ -397,6 +394,19 @@ export function planOverworldLocalJobCompletion(
         `${job.title} is unavailable because its world-state requirements are not met.`,
       );
     }
+    if (!state.optionId) {
+      // Every scene-level gate above already passed, so each id named here is
+      // immediately workable rather than a guess the caller has to resolve elsewhere.
+      const availableIds = availableLocalJobSceneOptions(scene, conditionState).map(
+        (option) => option.id,
+      );
+      throw new Error(
+        availableIds.length > 0
+          ? `Choose one option for ${job.title}: ${availableIds.join(", ")}.`
+          : `Choose one option for ${job.title}, but no authored option is legal yet in this journey.`,
+      );
+    }
+    sceneOption = resolveLocalJobSceneOption(scene, state.optionId);
     if (!localJobSceneOptionRequirementsMet(sceneOption, conditionState)) {
       throw new Error(`That option for ${job.title} is unavailable in this journey.`);
     }

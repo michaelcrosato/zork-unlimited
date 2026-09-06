@@ -4,7 +4,7 @@
   "title": "Every quest follows the same template (gather 2-3 evidence/prep items… @ advocates_case",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "advocates_case",
   "excerpts": [

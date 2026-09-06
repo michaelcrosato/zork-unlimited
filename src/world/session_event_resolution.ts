@@ -12,6 +12,7 @@ import {
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { OVERWORLD_STARTING_MINUTES as STARTING_MINUTES } from "./travel_mechanics.js";
 import {
+  availableLocalEventSceneOptions,
   localEventSceneRequirementError,
   localEventSceneRequirementsMet,
   localEventSceneOptionRequirementsMet,
@@ -258,7 +259,18 @@ export function planOverworldEventResolution(
     );
   }
   if (scene && !sceneOption) {
-    throw new Error(`Choose one option for ${event.title}.`);
+    // Every scene-level gate above already passed, so each id named here is
+    // immediately workable rather than a guess the caller has to resolve elsewhere.
+    const availableIds = availableLocalEventSceneOptions(scene, {
+      completedQuestIds: state.completedQuestIds,
+      completedJobIds: state.completedJobIds,
+      worldFactIds: state.campaignWorldFactIds,
+    }).map((option) => option.id);
+    throw new Error(
+      availableIds.length > 0
+        ? `Choose one option for ${event.title}: ${availableIds.join(", ")}.`
+        : `Choose one option for ${event.title}, but no authored option is legal yet in this journey.`,
+    );
   }
   if (
     sceneOption &&

@@ -4,7 +4,7 @@
   "title": "Cattle alarm has two separate trigger sources (ridge descent vs. @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

@@ -132,8 +132,12 @@ describe("Winter Return Docket", () => {
     );
 
     session.investigateEvent(EVENT_ID);
+    // The rejection names the exact legal ids (bug_0620), not just the bare prompt.
     expect(() => session.resolveEvent(EVENT_ID)).toThrow(
-      /Choose one option for Albany Civic Center: charter backlog/i,
+      new RegExp(
+        `Choose one option for Albany Civic Center: charter backlog: ${PUBLIC}, ${PROTECTED}`,
+        "i",
+      ),
     );
     expect(session.view().eventChoices).toEqual([
       [EVENT_ID, PUBLIC],
@@ -179,6 +183,11 @@ describe("Winter Return Docket", () => {
     );
     expect(session.view().jobChoices).toEqual([[JOB_ID, PUBLIC_HELD]]);
     expect(session.compactView().job_choices).toEqual([[JOB_ID, PUBLIC_HELD]]);
+    // The rejection names the exact legal id (bug_0620), not just the bare prompt —
+    // a scouted job that needs an option must not be the first place a caller learns it.
+    expect(() => session.workLocalJob(JOB_ID)).toThrow(
+      new RegExp(`Choose one option for Rowan's Winter Return Docket: ${PUBLIC_HELD}`, "i"),
+    );
     expect(() => session.workLocalJob(JOB_ID, PROTECTED_HELD)).toThrow(
       /unavailable in this journey/i,
     );

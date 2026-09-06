@@ -4,7 +4,7 @@
   "title": "Identical NPC names recur as unrelated characters in distant towns with… @ unmapped",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

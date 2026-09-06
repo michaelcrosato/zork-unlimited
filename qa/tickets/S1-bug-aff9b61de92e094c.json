@@ -4,7 +4,7 @@
   "title": "Parallel calls raced against a newly opened story choice; investigate… @ albany_city",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "albany_city",
   "excerpts": [

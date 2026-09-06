@@ -4,7 +4,7 @@
   "title": "Generic civic/market NPCs in different towns reuse identical names,… @ unmapped",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

@@ -4,7 +4,7 @@
   "title": "Discovered side jobs aren't persistently listed in context, only shown… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

@@ -1,18 +1,19 @@
 {
   "schema_version": 2,
   "ticket_id": "67df6533a273b7cf",
-  "title": "Rowan's Winter Return Docket job never exposed its options or unlock… @ unmapped",
+  "title": "Rowan's Winter Return Docket job never exposed its options despite… @ unmapped",
   "kind": "experience",
   "severity": "S1",
   "status": "open",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [
+    "Rowan's Winter Return Docket job never exposed its options despite meeting apparent prerequisites",
     "Rowan's Winter Return Docket job never exposed its options or unlock condition",
     "Stuck job with no legal option ever exposed (Rowan's Winter Return Docket)"
   ],
   "evidence": {
-    "report_count": 2,
+    "report_count": 3,
     "families": [
       "claude"
     ],
@@ -24,13 +25,14 @@
     ],
     "has_runner_enforced_report": true,
     "session_ids": [
+      "3ffb22d676bd958b2cc8c1221499aa8a02a75f552556517cc10d32c690e0c8ba",
       "4f1a4a92dfb35042932e2d5a3a392e741766c3c8b3762875183d9881cd71670f",
       "86873d3933ad349b657f61dba830d69b3ea3573ad4b1d3acfd04001d8b91f5ac"
     ],
     "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "last_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "last_seen_build": "73a0286642bd88662e6a4c163452da1b39ec4d62",
     "first_seen_at": "2026-09-05T23:18:55.206Z",
-    "last_seen_at": "2026-09-06T03:00:51.187Z"
+    "last_seen_at": "2026-09-06T07:52:19.478Z"
   },
-  "priority": 2.584962500721156
+  "priority": 3
 }

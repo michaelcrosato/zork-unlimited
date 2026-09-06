@@ -4,7 +4,7 @@
   "title": "Compact tuple-based context requires some upfront effort to parse… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

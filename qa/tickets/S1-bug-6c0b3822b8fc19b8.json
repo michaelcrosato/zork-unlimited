@@ -4,7 +4,7 @@
   "title": "Job is discoverable and callable but only returns a generic 'choose one… @ albany_city",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "albany_city",
   "excerpts": [

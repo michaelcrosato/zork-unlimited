@@ -178,3 +178,8 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: real correctness fix, but deliberately partial — scaffold entries now count but still aren't rotated/archived, so the live-log token-economy goal is only half restored; called out as a follow-up rather than risking an unverified ordering change this cycle.
 - Evidence: traces/bugs/bug_0619; confirmed live AI_LOOP_STATE.md sits exactly at ROTATE_KEEP so detectLoopStateOverflow is unaffected; typecheck/lint/format clean on touched files; targeted vitest green (loop_state_rotation + generated_eval + loop_state + verifier_integrity + assessor_generator_rpg_mint_and_check = 114 tests); verify:integrity and verify:bug-traces green; feedback:status reports the accepted compile's ignored artifacts are missing locally (sandbox has no ai-runs/ history) — recorded, not rebootstrapped.
 - Next: a real fix for scaffold rotation needs prepend-ordered placement (not just a wider regex) so the live log stays bounded long-term; noted in the loop_state.ts docstring for whoever picks it up.
+## AFK Cycle 2026-09-06T07-54-38-299Z
+<!-- feedback_cycle_selection: {"run_id":"2026-09-06T07-54-38-299Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-cold_forge (content_fix/M; score=0.5).
+- Guard: health + verify:integrity before commit.

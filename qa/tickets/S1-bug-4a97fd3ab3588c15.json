@@ -4,7 +4,7 @@
   "title": "Nearly identical boilerplate greeting text repeated verbatim across… @ unmapped",
   "kind": "bug",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [
