@@ -88,7 +88,7 @@ const APPROACH_BLOCK_NAMES_ROAD_SOURCE_HASH =
   "e91d4b8e575a8000e0741d363e8364ec18b6d794cd6cc89d6c380989a92823fa";
 // bug_0604: June's BACK returns directly to the yard; retain every prior revision pin.
 const JUNE_BACK_RETURNS_TO_YARD_SOURCE_HASH =
-  "5df094221f64d819829b5218135d0c904917fbe3e7c4cfa396a1a0c74a2c3a2e";
+  "163dd3fd23174d3ed6d448f131e31a7d5787dc9f4199c69c896ddd170af5ca0f";
 const CADE_PEER_PLAN_PARITY_SOURCE_HASH =
   "08ddb7ce41d319fa34db896ba032cbf69edcf0b0d2a5fd413c457b28091be777";
 const YEARLING_DEFEAT_JOURNAL = "The yearling wolf is dead at the Broken Paling.";
