@@ -198,7 +198,27 @@ const WOLF_WINTER_CERTIFICATE: TransferCertificate = {
  * Advancing either hash is an explicit certification review, never an incidental
  * consequence of editing Wolf-Winter or the deterministic relabel oracle.
  */
-// Advanced for bug_0614 after explicit seeded-opening transfer review, superseding the
+// Advanced for bug_0618 after explicit seeded-opening transfer review, superseding the
+// bug_0614 renewal recorded below. The compiled predecessor and current packs differ only
+// by a `locked_msg_variants` entry on the store_shed "up" exit: during a committed LURE
+// with the yearling neither down nor redirected, the block now names the LAY step the
+// player must actually perform instead of citing a "currently listed yearling action"
+// that is listed nowhere. The base `locked_msg` is untouched, so every other approach
+// keeps the message it had.
+//
+// This renewal is the one that most needed the mechanical check rather than an eye, because
+// the edit ADDS a `when` clause and so is not prose in the narrow sense. Two facts settle
+// it. First, `locked_msg_variants` is consumed at exactly one site — reactiveText() in
+// src/rpg/model.ts, the same selector object descriptions use — so it can only choose which
+// string is shown for an exit that is already locked; it cannot gate an exit, mutate state,
+// or consume a seeded die, and src/rpg/schema.ts requires the base `locked_msg` to remain.
+// Second, the certificate itself reported the whole-pack hash as its SOLE diagnostic on both
+// the pack and the relabeled twin, with mechanicalReads 22 and presentationReads 49 both
+// unchanged — every certified surface (the seeded-opening flag list, the pack id, every
+// opening-condition signature, every ordinary failure signature) matched.
+//
+// Previous renewal, kept for the audit trail: advanced for bug_0614 after explicit
+// seeded-opening transfer review, superseding the
 // bug_0604 renewal recorded below. The compiled predecessor and current packs differ
 // only in the `text` of two steading_yard room-description variants: the exposed-ridge
 // prose said "The cattle saw you ... and are pressing the slats" before any action had
@@ -224,11 +244,11 @@ const WOLF_WINTER_CERTIFICATE: TransferCertificate = {
 // mechanical and 49 presentation reads, with the whole-pack hash as the only diagnostic
 // before renewal.
 const CERTIFIED_WOLF_WINTER_PACK_HASH =
-  "163dd3fd23174d3ed6d448f131e31a7d5787dc9f4199c69c896ddd170af5ca0f";
+  "eb102078db66e69bca3d150bd773f6b4d139b41fd86134b1c08285a0870c9c8b";
 // Same review for the deterministic twin: its dialogue edge is renamed by the
 // existing bijection, with every seeded-opening dependency preserved.
 const CERTIFIED_WOLF_WINTER_RELABELED_PACK_HASH =
-  "8d08e65840de43c9a71cd99b14cc407815bd1b3d785a5a682714d03a23725d31";
+  "47b2e09eaa456004f0aa6fbb4eef9e89351f9c952e06f10d2a5970b3803e55d6";
 
 const pathText = (path: readonly PathPart[]): string =>
   path
