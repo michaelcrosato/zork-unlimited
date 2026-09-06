@@ -358,6 +358,39 @@ export function formatQueueSection(shown: readonly Submission[], available: numb
   ];
 }
 
+/**
+ * How this agent is actually run, stated in the prompt because it is a property of the
+ * LOOP rather than of any vendor.
+ *
+ * Every one of these lines is a failure that happened rather than one that might. A cycle
+ * worker put its checks in the background and ended its turn "to resume when the
+ * background test run completes or the scheduled wakeup fires" — 950 s and $3.59 reverted,
+ * and the CLI reported success, so only the driver's provisional-commit check caught it. A
+ * host can defend against that (unset whatever makes long commands auto-background), but a
+ * host defends one machine; `dev-agents.json` invites any vendor on any machine, and the
+ * prompt is the only place the contract reaches all of them.
+ *
+ * The untracked clause is the same shape of trap from the other end: the cycle's own
+ * triage step writes qa/tickets/*.json, which are tracked in git on purpose
+ * (qa/tickets/README.md), as NEW untracked files after the cycle has already started —
+ * and require_final_ledger_only counts untracked paths, not just tracked ones. A worker
+ * that reads "only tracked change" literally leaves them behind and loses a green cycle at
+ * the very last gate.
+ */
+export const HEADLESS_TURN_CONTRACT: readonly string[] = [
+  "- You get ONE non-interactive turn, and nothing resumes you: no scheduled wakeup, no",
+  "  follow-up message, nobody to answer a question. Run every command in the FOREGROUND",
+  "  and wait for it. A backgrounded check is a check whose result you will never see, and",
+  "  ending the turn to come back later ends the CYCLE.",
+  "- The provisional commit must already EXIST before you finish. loop.sh looks for it the",
+  "  moment you exit and reverts the entire cycle when it is absent, however much the turn",
+  "  accomplished.",
+  "- That commit must absorb everything this cycle produced, including files that are still",
+  "  UNTRACKED — new tests and traces, and the intake/queue and qa/tickets entries written",
+  "  by the cycle's own claim and triage steps. The final gate counts untracked paths too,",
+  "  so one leftover qa/tickets/*.json reverts a cycle that was otherwise green.",
+];
+
 export function buildPrompt(ctx: {
   a: Assessment;
   top: ImprovementCandidate | null;
@@ -466,7 +499,8 @@ export function buildPrompt(ctx: {
         "  self-critique, evidence, and next focus.",
         "- Keep the frozen `feedback_cycle_selection` marker unchanged; the post-gate seal",
         "  removes it after using the committed actual-selection attestation.",
-        "- AI_LOOP_STATE.md must be the only tracked change after the provisional commit.",
+        "- After the provisional commit, AI_LOOP_STATE.md must be the only thing left in",
+        "  `git status --porcelain` at all — untracked paths included, not just tracked ones.",
         "  Do not commit it. loop.sh now runs the outer gates and makes the final ledger-only",
         "  commit; only after that may its separately enabled push step run.",
       ]
@@ -503,6 +537,7 @@ export function buildPrompt(ctx: {
     ...workflow,
     "",
     "## Hard constraints",
+    ...HEADLESS_TURN_CONTRACT,
     "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
     "- Keep the game playable; prefer a small, verified change over a broad rewrite.",
     "- `npm run health` must pass in loop.sh before anything is retained or pushed.",
@@ -670,6 +705,7 @@ export function buildUltraplanPrompt(ctx: {
     ...finish,
     "",
     "## Hard constraints",
+    ...HEADLESS_TURN_CONTRACT,
     "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
     "- ONE focused structural change; keep the game playable and the bar green.",
     "- `npm run health` and verify:integrity must pass in loop.sh; never weaken a check.",

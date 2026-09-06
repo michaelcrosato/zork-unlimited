@@ -13,6 +13,7 @@ import {
   playtestTargetSummary,
   playtestTarget,
   playtestTargetMetadata,
+  HEADLESS_TURN_CONTRACT,
   PROMPT_QUEUE_LIMIT,
   selectPromptQueue,
   shouldRunUltraplan,
@@ -266,6 +267,55 @@ function expectContiguousSteps(prompt: string, first: number): void {
   expect(numbers).toEqual(numbers.map((_value, index) => first + index));
 }
 
+describe("both prompts state the headless single-turn contract", () => {
+  const standard = (): string => {
+    const top = candidate("engine", "src/core/engine.ts");
+    return buildPrompt({ a: assessment(top), top, commitEnabled: true });
+  };
+  const ultraplan = (): string =>
+    buildUltraplanPrompt({
+      a: saturatedAssessment(null),
+      currentPlanRecord: "ai-runs/x/current-plan.md",
+      commitEnabled: true,
+    });
+
+  it("tells the worker it has exactly one turn and nothing resumes it", () => {
+    // A worker backgrounded its checks and ended its turn expecting a wakeup that a
+    // headless run never delivers; 950 s of work was reverted and the CLI still reported
+    // success. A host can unset whatever auto-backgrounds long commands, but a host
+    // defends one machine and dev-agents.json invites any vendor on any machine.
+    for (const prompt of [standard(), ultraplan()]) {
+      expect(prompt).toContain("ONE non-interactive turn");
+      expect(prompt).toContain("FOREGROUND");
+      expect(prompt).toContain("ending the turn to come back later ends the CYCLE");
+      expect(prompt).toContain("provisional commit must already EXIST before you finish");
+    }
+  });
+
+  it("warns that the final gate counts UNTRACKED paths, naming the ones the cycle writes", () => {
+    // The cycle's own triage step writes qa/tickets/*.json — tracked in git on purpose —
+    // as new untracked files after the cycle started. require_final_ledger_only counts
+    // untracked paths, so leaving one reverts an otherwise green cycle at the last gate.
+    for (const prompt of [standard(), ultraplan()]) {
+      expect(prompt).toContain("UNTRACKED");
+      expect(prompt).toContain("qa/tickets");
+      expect(prompt).toContain("intake/queue");
+    }
+    // And the commit-mode step no longer understates that gate as tracked-only.
+    expect(standard()).toContain("untracked paths included, not just tracked ones");
+    expect(standard()).not.toContain("must be the only tracked change after the provisional");
+  });
+
+  it("uses ONE contract for both prompts so they cannot drift apart", () => {
+    // Two hand-maintained copies of a safety contract is how one of them goes stale.
+    for (const line of HEADLESS_TURN_CONTRACT) {
+      expect(standard()).toContain(line);
+      expect(ultraplan()).toContain(line);
+    }
+    expect(HEADLESS_TURN_CONTRACT.length).toBeGreaterThan(0);
+  });
+});
+
 describe("buildPrompt carries the intake queue", () => {
   const NOW = new Date("2026-09-05T21:00:00.000Z");
   const submission = (over: Partial<Submission> & { id: string }): Submission =>
@@ -460,7 +510,11 @@ describe("buildPrompt drops the blind-playtest mandate", () => {
     expectContiguousSteps(prompt, 1);
     const improve = prompt.indexOf("## STEP 1 — Make ONE improvement");
     const provisional = prompt.indexOf("PROVISIONAL commit");
-    const ledger = prompt.indexOf("AI_LOOP_STATE.md must be the only tracked change");
+    // Re-pointed, not relaxed: the ledger step is now stated in terms of the gate that
+    // actually runs, which counts untracked paths too. The ORDER it pins is unchanged.
+    const ledger = prompt.indexOf(
+      "After the provisional commit, AI_LOOP_STATE.md must be the only thing left",
+    );
     expect(improve).toBeGreaterThanOrEqual(0);
     expect(provisional).toBeGreaterThan(improve);
     expect(ledger).toBeGreaterThan(provisional);
