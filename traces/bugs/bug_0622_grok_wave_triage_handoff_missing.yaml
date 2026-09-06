@@ -1,0 +1,52 @@
+id: bug_0622
+title: Grok playtest waves never handed their store to qa:triage, so sessions never reached qa/tickets or intake/queue on their own
+reported_by: audit finding 9db38c7a5cdad624, filed 2026-09-02
+severity: S2
+
+symptom: >
+  `npm run playtest:grok-wave` (bin/playtest-grok-wave.ts) plays a wave, writes session
+  records and a manifest, then returns. `playtest-loop.sh`'s `run_wave` re-triages the
+  store after every wave (PLAYTEST_TRIAGE=1 by default), but the Grok wave had no
+  equivalent step and no reference anywhere to qa:triage, qa/tickets, or intake/queue.
+  Real corroborated defects from paid 100/200-player Grok waves reached the queue only
+  because an operator ran `qa:triage` by hand afterward (commit 69e368b filed eight such
+  findings this way); nothing in the wave itself said that step was needed, so a wave run
+  without that manual follow-up left its evidence sitting in the store, invisible to the
+  dev loop.
+
+cause: >
+  bin/playtest-grok-wave.ts's `main()` ran `runPool` and then went straight to checking
+  for incomplete players; it never invoked `qa:triage` against `plan.store` the way
+  playtest-loop.sh's `run_wave` does after every wave.
+
+reproduction: >
+  tests/unit/qa_playtest_pipeline.test.ts's "grok MCP wave request" suite reads the
+  driver source and asserts the post-`runPool` handoff exists; deleting the
+  `handOffToTriage(plan.store)` call (confirmed by temporarily removing it) fails that
+  assertion.
+
+fix: >
+  Added `grokWaveTriageArgs(store)` to src/qa/grok_mcp_wave.ts, returning the same
+  `npm run --silent qa:triage -- --store <store>` argv playtest-loop.sh already runs.
+  bin/playtest-grok-wave.ts now calls it via a new `handOffToTriage` right after
+  `runPool` completes and before the incomplete-player check, so triage runs on
+  whatever sessions were saved regardless of how many players finished cleanly. The
+  call is best-effort: a failed handoff logs the exact manual command to run rather
+  than throwing, so it can never mask the wave's own incomplete-player error, and the
+  wave never again exits silently with untriaged evidence.
+
+production:
+  - src/qa/grok_mcp_wave.ts
+  - bin/playtest-grok-wave.ts
+regression:
+  - tests/unit/qa_playtest_pipeline.test.ts
+  - tests/unit/qa_triage_cli.test.ts
+verification:
+  - New pipeline-suite case asserts grokWaveTriageArgs's exact argv and that the driver
+    calls handOffToTriage(plan.store) between runPool and the incomplete check; removing
+    the call was confirmed to fail this assertion (red before / green after).
+  - New qa_triage_cli.test.ts case drives the real `bin/triage.ts` CLI over two
+    independent-lineage sessions reporting the same defect and asserts the resulting
+    corroborated ticket is promoted into a real intake/queue directory end to end — the
+    second half of the same audit finding, previously uncovered by any test.
+  - typecheck, lint, format, and both touched suites (80 tests) are green.

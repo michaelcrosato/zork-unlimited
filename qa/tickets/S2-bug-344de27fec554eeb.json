@@ -1,17 +1,18 @@
 {
   "schema_version": 2,
-  "ticket_id": "c0e56cc6ac4445ef",
+  "ticket_id": "344de27fec554eeb",
   "title": "Rejected on first attempt for a missing expected_snapshot_hash from the… @ albany_city",
   "kind": "bug",
-  "severity": "S0",
-  "status": "stale",
+  "severity": "S2",
+  "status": "open",
   "promotion": "accumulating",
   "location": "albany_city",
   "excerpts": [
-    "Rejected on first attempt for a missing expected_snapshot_hash from the just-revealed Station board; error message named the fix and retry succeeded immediately."
+    "Rejected on first attempt for a missing expected_snapshot_hash from the just-revealed Station board; error message named the fix and retry succeeded immediately.",
+    "talk_overworld_session_contact rejected the call requiring an undocumented expected_snapshot_hash parameter"
   ],
   "evidence": {
-    "report_count": 1,
+    "report_count": 2,
     "families": [
       "claude"
     ],
@@ -23,12 +24,13 @@
     ],
     "has_runner_enforced_report": true,
     "session_ids": [
+      "24c1ea5bc200dfc7acb65f121bcce3f6e166a2b13545034e6b0b8583d2367e42",
       "a76a6eb41d01523a2a0c7214a6819875dc3debe96a8799b6c1a7f4fecb69b427"
     ],
     "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "last_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
+    "last_seen_build": "b12e57fcdcc861282014f812ed9aa395058cecb4",
     "first_seen_at": "2026-09-05T23:34:58.152Z",
-    "last_seen_at": "2026-09-05T23:34:58.152Z"
+    "last_seen_at": "2026-09-06T09:23:42.923Z"
   },
-  "priority": 1
+  "priority": 5.169925001442312
 }

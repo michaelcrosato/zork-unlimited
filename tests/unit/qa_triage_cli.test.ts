@@ -43,7 +43,11 @@ function commits(): string[] {
     .filter(Boolean);
 }
 
-function session(build: string, index: number): PlaytestSessionBody {
+function session(
+  build: string,
+  index: number,
+  overrides: Partial<Pick<PlaytestSessionBody, "provider" | "model">> = {},
+): PlaytestSessionBody {
   return {
     schema_version: 1,
     recorded_at: `2026-08-28T12:0${index}:00.000Z`,
@@ -55,14 +59,14 @@ function session(build: string, index: number): PlaytestSessionBody {
       world_id: "new_york_overworld",
       world_hash: "b".repeat(64),
     },
-    provider: {
+    provider: overrides.provider ?? {
       id: "codex",
       vendor: "openai",
       family: "gpt",
       isolation: "runner_enforced",
       transport_contract: "game-direct-mcp-v1",
     },
-    model: { id: "gpt-5.3-codex-spark", tier: "volume", settings: {} },
+    model: overrides.model ?? { id: "gpt-5.3-codex-spark", tier: "volume", settings: {} },
     persona: { id: "default", title: "default", source_sha256: "c".repeat(64) },
     outcome: "abandoned",
     log: {
@@ -101,10 +105,14 @@ function corpus(build: string): string {
   return store;
 }
 
-function triage(store: string, tickets: string): { out: string; code: number | null } {
+function triage(
+  store: string,
+  tickets: string,
+  queue: string = temp("af-triage-q-"),
+): { out: string; code: number | null } {
   const result = spawnSync(
     process.execPath,
-    [TSX, "bin/triage.ts", "--store", store, "--tickets", tickets, "--queue", temp("af-triage-q-")],
+    [TSX, "bin/triage.ts", "--store", store, "--tickets", tickets, "--queue", queue],
     { cwd: ROOT, encoding: "utf8", timeout: 180_000 },
   );
   return { out: `${result.stdout ?? ""}\n${result.stderr ?? ""}`, code: result.status };
@@ -144,6 +152,47 @@ describe("qa:triage on disk", () => {
 
     expect(out).toMatch(/stale 0/);
     expect(onlyTicket(tickets)).toMatchObject({ status: "open" });
+  });
+
+  // The automatic promotion path (triage -> reconcileTicketSubmissions -> intake/queue)
+  // had never been exercised end to end through the real CLI: every case above stops at
+  // the ticket bucket. Two independent lineages reporting the same defect is what
+  // `derivePromotion` requires to reach `corroborated`, the rung that actually crosses
+  // into the queue.
+  it("promotes a corroborated finding into intake/queue via the real CLI", () => {
+    const build = commits()[0]!;
+    const store = temp("af-triage-store-");
+    writePlaytestSession(store, sealPlaytestSession(session(build, 0)), TRANSCRIPT);
+    writePlaytestSession(
+      store,
+      sealPlaytestSession(
+        session(build, 1, {
+          provider: {
+            id: "claude_code",
+            vendor: "anthropic",
+            family: "claude",
+            isolation: "runner_enforced",
+            transport_contract: "game-direct-mcp-v1",
+          },
+          model: { id: "claude-haiku-4-5-20251001", tier: "volume", settings: {} },
+        }),
+      ),
+      TRANSCRIPT,
+    );
+
+    const tickets = temp("af-triage-t-");
+    const queue = temp("af-triage-q-");
+    const { out } = triage(store, tickets, queue);
+
+    expect(onlyTicket(tickets)).toMatchObject({
+      promotion: "corroborated",
+      evidence: expect.objectContaining({ report_count: 2 }),
+    });
+    expect(out).toMatch(/Promoted 1 submission/);
+    const submissionFiles = readdirSync(queue).filter((name) => name.endsWith(".json"));
+    expect(submissionFiles).toHaveLength(1);
+    const submission = JSON.parse(readFileSync(join(queue, submissionFiles[0]!), "utf8"));
+    expect(submission).toMatchObject({ source: "playtest", kind: "bug", status: "open" });
   });
 
   // The bucket is rewritten wholesale every run, and a ticket file that stopped parsing

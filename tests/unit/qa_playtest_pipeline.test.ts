@@ -43,6 +43,7 @@ import {
   GROK_MCP_WAVE_PROMPT,
   GROK_MCP_WAVE_SURFACE,
   grokMcpProjectConfig,
+  grokWaveTriageArgs,
   parseGrokMcpWaveArgs,
   parseGrokStreamingOutput,
 } from "../../src/qa/grok_mcp_wave.js";
@@ -1024,6 +1025,24 @@ describe("grok MCP wave request", () => {
     );
     expect(driver).toContain('requestedOutcome: "failed"');
     expect(driver).toContain("savePlaytestReport({");
+  });
+
+  it("hands the wave off to qa:triage against its own store once play finishes (bug_0622)", () => {
+    // Unlike playtest-loop.sh's `run_wave` (which always re-triages after a wave), the
+    // Grok wave used to stop at the manifest: sessions were saved but nothing folded them
+    // into qa/tickets or intake/queue without an operator running qa:triage by hand.
+    expect(grokWaveTriageArgs("ai-runs/playtest/grok-store")).toEqual([
+      "run",
+      "--silent",
+      "qa:triage",
+      "--",
+      "--store",
+      "ai-runs/playtest/grok-store",
+    ]);
+    const driver = readFileSync(join(process.cwd(), "bin", "playtest-grok-wave.ts"), "utf8");
+    expect(driver).toMatch(
+      /const rows = await runPool\([\s\S]*?handOffToTriage\(plan\.store\)[\s\S]*?const incomplete = /u,
+    );
   });
 
   it("builds a private pure MCP server config with exact run provenance", () => {
