@@ -119,6 +119,30 @@ describe("loop.sh verification gates", () => {
     }
   });
 
+  it("rejects an unattested provisional commit immediately, not after the bar", () => {
+    // A provisional commit whose ledger entry carries no actual-selection marker is dead
+    // the moment it exists: loop:seal-feedback refuses it at the END of the cycle whatever
+    // the gates said. One such cycle spent seventy minutes proving a full bar green — 4771
+    // tests — and was discarded at the last step. The check therefore has to sit right
+    // after the commit and BEFORE anything expensive.
+    const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    const provisional = runCycle.indexOf('require_provisional_commit "$start_ref"');
+    const attestation = runCycle.indexOf("--check-attestation", provisional);
+    const rotate = runCycle.indexOf("loop:rotate-state", attestation);
+    const bar = runCycle.indexOf('npm run "$health_script"', attestation);
+
+    expect(provisional).toBeGreaterThanOrEqual(0);
+    expect(attestation).toBeGreaterThan(provisional);
+    // Before the rotation, the post-crawl and the bar — everything the wasted cycle paid for.
+    expect(rotate).toBeGreaterThan(attestation);
+    expect(bar).toBeGreaterThan(attestation);
+    expect(runCycle).toContain('_reject_cycle "attestation"');
+    // It asks the SEAL rather than re-parsing the marker in bash: a check that drifts from
+    // the gate it stands in for would fail cycles the seal would have accepted.
+    expect(runCycle).toContain("loop:seal-feedback -- --check-attestation");
+    expect(runCycle).not.toMatch(/feedback_cycle_selection[^\n]*grep/u);
+  });
+
   it("rotates completed loop state in both modes before post-change verification", () => {
     const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
     const provisional = runCycle.indexOf('require_provisional_commit "$start_ref"');

@@ -691,8 +691,63 @@ function valueOf(argv: string[], flag: string): string | undefined {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
+/**
+ * The seal's actual-selection precondition, on its own, so `loop.sh` can fail a cycle in
+ * seconds instead of after the bar.
+ *
+ * A cycle whose worker never wrote the attestation is DEAD from the moment it commits: the
+ * seal will refuse it whatever the gates say. One such cycle spent 70 minutes proving a
+ * full bar green — 4771 tests — and was then thrown away at the last step. This is that
+ * same precondition, reached by the same parser against the same committed file, so the
+ * two can never disagree about what counts as attested. Duplicating the parsing in bash
+ * would have been the obvious shortcut and the wrong one: a check that drifts from the
+ * gate it stands in for is worse than no check, because it fails cycles the seal would
+ * have accepted.
+ */
+function checkAttestation(argv: string[]): void {
+  const metadataPath = valueOf(argv, "--meta") ?? "ai-runs/latest-cycle.json";
+  let runId: string;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(resolve(metadataPath), "utf8"));
+    const candidate = (parsed as { runId?: unknown }).runId;
+    if (typeof candidate !== "string" || candidate === "") throw new Error("no runId");
+    runId = candidate;
+  } catch (error) {
+    console.error(
+      `cannot read the cycle run id from ${metadataPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    process.exit(2);
+  }
+  let committedStateText: string;
+  try {
+    committedStateText = execFileSync("git", ["show", "HEAD:AI_LOOP_STATE.md"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+  } catch {
+    console.error("the provisional commit does not contain AI_LOOP_STATE.md");
+    process.exit(1);
+  }
+  const selection = parseFeedbackCycleSelection(committedStateText, runId);
+  if (!selection.ok) {
+    console.error(selection.reason);
+    process.exit(1);
+  }
+  if (!selection.selection) {
+    // Byte-identical to what the seal would say later, so an operator reading either
+    // message is reading the same failure.
+    console.error(`committed AI_LOOP_STATE.md has no actual-selection attestation for ${runId}`);
+    process.exit(1);
+  }
+  console.log(`✓ provisional commit carries the actual-selection attestation for ${runId}`);
+}
+
 function main(): void {
-  const argv = process.argv.slice(2);
+  const argv = process.argv.slice(2).filter((arg) => arg !== "--check-attestation");
+  if (process.argv.includes("--check-attestation")) {
+    checkAttestation(argv);
+    return;
+  }
   const known = new Set(["--meta", "--expected-commit", "--start-ref"]);
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];

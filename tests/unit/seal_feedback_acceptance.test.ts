@@ -486,6 +486,39 @@ function parseState(root: string) {
   return parsed.state;
 }
 
+describe("--check-attestation, the seal's precondition on its own", () => {
+  /**
+   * The seal refuses a provisional commit whose ledger entry carries no actual-selection
+   * marker. It runs at the END of a cycle, so a worker that forgets costs the whole bar:
+   * one such cycle proved 4771 tests green over seventy minutes and was discarded at the
+   * last step. loop.sh now asks this same precondition immediately after the commit.
+   */
+  const check = (root: string): { status: number | null; output: string } => {
+    const result = spawnSync(
+      "npx",
+      ["tsx", join(REPO_ROOT, "scripts", "seal-feedback-acceptance.ts"), "--check-attestation"],
+      { cwd: root, encoding: "utf8" },
+    );
+    return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+  };
+
+  it("passes a commit that carries the attestation", () => {
+    const { root } = initCycle(EMPTY_STATE, null, "some-candidate-id");
+    const result = check(root);
+    expect(result.status, result.output).toBe(0);
+    expect(result.output).toContain("carries the actual-selection attestation");
+  });
+
+  it("rejects one that does not, with the message the seal itself would give", () => {
+    // Byte-identical wording matters: an operator who sees this at second 5 and the same
+    // text at minute 70 must be able to tell they are the same failure, not two.
+    const { root } = initCycle(EMPTY_STATE, null, null, false);
+    const result = check(root);
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("has no actual-selection attestation for");
+  });
+});
+
 describe("feedback acceptance cycle seal", () => {
   it("records the exact verified pure report bytes and provisional commit", () => {
     const { root, startRef, head, evidence } = initCycle(EMPTY_STATE, null);

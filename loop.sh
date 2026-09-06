@@ -685,6 +685,17 @@ run_cycle() {
     _reject_cycle "provisional-commit" "required provisional implementation commit is absent or invalid"
     return 1
   }
+  # Fail fast on the seal's OWN precondition. A provisional commit whose ledger entry
+  # carries no actual-selection attestation is already dead — loop:seal-feedback will
+  # refuse it at the end of the cycle no matter how green the gates are — and one such
+  # cycle spent seventy minutes proving a full bar (4771 tests) before being thrown away
+  # at the last step. Asking the seal itself, in --check-attestation mode, rather than
+  # re-parsing the marker here: a check that drifts from the gate it stands in for is
+  # worse than none, because it would fail cycles the seal would have accepted.
+  npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json || {
+    _reject_cycle "attestation" "provisional commit carries no actual-selection attestation; the seal would reject it"
+    return 1
+  }
   # The agent has now completed the current ledger entry. Rotate at this boundary,
   # after evidence-only baseline play and before integrity runs, so both modes keep
   # exactly the configured live history without mutating an evidence-only baseline.
