@@ -56,11 +56,11 @@ const WOLF_SOURCE = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!WOLF_SOURCE.ok) throw new Error("Wolf-Winter must compile.");
 const WOLF_INDEX = indexRpgPack(WOLF_SOURCE.compiled.pack);
 const NEUTRAL_RIDGE_SUMMARY =
-  "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Cattle alarm starts at 1, but you can see the byre and weather clearly. This road chooses no field plan.";
+  "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Descending raises cattle alarm to 1, but you can see the byre and weather clearly. This road chooses no field plan.";
 const NEUTRAL_STOCKWAY_SUMMARY =
   "Sheltered Stockway — 75 minutes, 2 supplies, +10 fatigue. Cattle alarm starts at 0, but hedges hide the byre and weather. This road chooses no field plan.";
 const ROUTE_INDEPENDENCE_PREVIEW = "This road does not choose a field plan.";
-const RIDGE_ENTRY_TIMING = "Cattle alarm starts at 1";
+const RIDGE_ENTRY_TIMING = "Descending raises cattle alarm to 1";
 
 const ROUTE_CARD_CASES = [
   {

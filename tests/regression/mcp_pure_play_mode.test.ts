@@ -809,7 +809,9 @@ describe("MCP pure play mode", () => {
         ).toBe(true);
         expect(selectedDispatchText.split(readyDispatchStatus)).toHaveLength(3);
         expect(selectedDispatchText).not.toContain("optional Station support remains");
-        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(7_500);
+        // bug_0614: the exposed-ridge route summary grew when it stopped claiming cattle
+        // alarm starts at 1 (it doesn't; descending raises it to 1).
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(7_533);
         expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBeLessThanOrEqual(9_250);
         expect(selectedDispatchText).not.toMatch(/\b(?:DEF|DRIVE|FORTIFY)\b/gu);
         expect(selectedDispatchText).not.toMatch(/\bWorks\b/gu);
@@ -2258,7 +2260,9 @@ describe("MCP pure play mode", () => {
       );
       expect(fullJuneText.split(preparedDispatchStatus)).toHaveLength(3);
       expect(fullJuneText).not.toContain("optional Station support remains");
-      expect(Buffer.byteLength(fullJuneText, "utf8")).toBe(7_842);
+      // bug_0614: the exposed-ridge route summary grew when it stopped claiming cattle
+      // alarm starts at 1 (it doesn't; descending raises it to 1).
+      expect(Buffer.byteLength(fullJuneText, "utf8")).toBe(7_875);
     });
   }, 120_000);
 

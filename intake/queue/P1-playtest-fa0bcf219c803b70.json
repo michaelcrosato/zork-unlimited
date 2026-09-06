@@ -6,7 +6,9 @@
   "source": "playtest",
   "kind": "bug",
   "priority": "P1",
-  "status": "open",
+  "status": "done",
+  "claimed_by": "dev-opus-lane",
+  "claimed_at": "2026-09-05T23:30:31.651Z",
   "labels": [
     "lane:content"
   ],
@@ -25,7 +27,7 @@
     "observations": 22
   },
   "created_at": "2026-08-31T02:14:25.124Z",
-  "updated_at": "2026-08-31T16:35:36.099Z",
+  "updated_at": "2026-09-05T23:45:21.911Z",
   "external": null,
   "mirrors": [
     {
@@ -35,5 +37,6 @@
       "url": "https://linear.app/michael-crosato/issue/MIC-37/fa0bcf219c803b70-cattle-alarm-stays-0-while-prose-says-the-cattle",
       "synced_status": "open"
     }
-  ]
+  ],
+  "resolved_by": "dev-opus-lane"
 }

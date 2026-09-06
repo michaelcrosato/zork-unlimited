@@ -1,0 +1,57 @@
+id: bug_0614
+title: "Exposed Ridge road claimed cattle alarm 'starts at 1' while the quest's own meter starts at 0"
+pack: wolf_winter_v1 (plus its Albany overworld launch and Station dispatch board)
+reported_by: intake/queue P1-playtest-fa0bcf219c803b70.json (Grok-4.6 low MCP 200-wave
+  ticket c565c8b7b45b73ba, 22 S2 reports, build 36ff6d106fa0df2ff19e80d09cf00df081b81653)
+severity: S2
+evidence:
+  source_report: intake/queue/P1-playtest-fa0bcf219c803b70.json
+  quoted_claim: "Cattle alarm starts at 1."
+  player_friction: >
+    On the Exposed Ridge / Steading Yard opening, three independent surfaces told the
+    player cattle alarm was already at 1 (or that the cattle had already seen them)
+    before any action raised it: the Station dispatch board's route tradeoff summary,
+    the overworld quest-launch preview/consequence text, and the Wolf-Winter room's own
+    opening description. The actual `cattle_alarm` var is initialized to 0 by
+    `wolf_winter.yaml`'s `vars_init` for every road, and only becomes 1 after the player
+    explicitly performs the exposed-ridge DESCEND action. Players read the meter at 0
+    and the prose at "already 1" in the same opening and reported the contradiction.
+symptom: >
+  Choosing "Take the Exposed Ridge" showed "Cattle alarm starts at 1" in the Station
+  dispatch board summary (src/world/wolf_hill_route_presentation.ts), the quest-launch
+  preview and consequence (content/world/new_york_overworld.json), and the Wolf-Winter
+  opening room said "The cattle saw you ... and are pressing the slats"
+  (content/rpg/quests/wolf_winter.yaml, steading_yard). None of these are true until the
+  player actually performs the DESCEND action inside the quest; the meter reads 0 until
+  then.
+root_cause: >
+  Three separately authored copy sites described the exposed-ridge road's *eventual*
+  cattle-alarm cost as an already-true starting condition instead of a consequence of
+  the DESCEND action the player has not yet taken. None of the three were cross-checked
+  against `wolf_winter.yaml`'s `vars_init: { cattle_alarm: 0, ... }`, which applies to
+  every road.
+fix: >
+  Reworded all three sites to describe the exposed ridge as *raising* cattle alarm to 1
+  when the player descends, not as already being at 1: the Station dispatch board
+  constant (ROUTE_SUMMARIES.exposedRidge), the overworld launch option's preview and
+  consequence text for albany:wolf_approach_exposed_ridge, and the two
+  approach_exposed_ridge variants of the steading_yard room description. This is
+  presentation-only: it changes no var, effect, cost, id, or mechanic, and the sheltered
+  stockway's accurate "starts at 0" copy is unchanged.
+deterministic_witnesses:
+  - "a fresh Wolf-Winter state (any road) reads cattle_alarm 0 before any exposed-ridge action (tests/regression/wolf_winter_seeded_field_conditions.test.ts)"
+  - "the same state reads cattle_alarm 1 only after the use_exposed_ridge_last_mile action resolves"
+  - "the overworld launch preview/consequence for albany:wolf_approach_exposed_ridge state the descent raises alarm to 1, not that it starts there"
+  - "the Station dispatch board's route tradeoff summary for the ridge matches the same wording across full, compact, browser, CLI, and MCP surfaces"
+production:
+  - src/world/wolf_hill_route_presentation.ts
+  - content/world/new_york_overworld.json
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - tests/regression/wolf_winter_seeded_field_conditions.test.ts
+  - tests/starting_slice/wolf_route_tradeoff_projection.test.ts
+  - tests/starting_slice/station_dispatch_board.test.ts
+verification:
+  - npx vitest run tests/regression/wolf_winter_seeded_field_conditions.test.ts tests/starting_slice/wolf_route_tradeoff_projection.test.ts tests/starting_slice/station_dispatch_board.test.ts
+  - npm run validate
+  - npm run verify:bug-traces
