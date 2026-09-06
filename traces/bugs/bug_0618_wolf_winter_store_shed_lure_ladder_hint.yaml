@@ -1,0 +1,53 @@
+id: bug_0618
+title: "Store-Shed ladder told a LURE player to 'complete the currently listed yearling action' before any yearling action was listed anywhere"
+pack: wolf_winter_v1
+reported_by: intake/queue P1-playtest-c3f6544dbf5cfa5b.json (Grok-4.6 low MCP 200-wave
+  tickets cf10a976446271fc [34], 673ec0ecdcfc551e [23], 01c28908a726c8cd [12], build
+  36ff6d106fa0df2ff19e80d09cf00df081b81653)
+severity: S1
+evidence:
+  source_report: intake/queue/P1-playtest-c3f6544dbf5cfa5b.json
+  quoted_claim: "During a committed LURE, Store-Shed up is blocked with yearling-combat
+    / yearling-action copy while no yearling action is listed in that room yet (LAY
+    often has not happened)."
+symptom: >
+  A LURE-committed player who has taken Cade's winter-feed sack but has not yet
+  traveled to the Broken Paling (north of the Byre-Yard) tries the Store-Shed's ladder
+  ("up" to the Fodder-Loft). The block reads "Complete the currently listed yearling
+  action" even though the player has never visited the room where a yearling action
+  is offered, so nothing is "currently listed" for them to complete anywhere in the
+  game state. The wording reads as a stuck, self-contradicting instruction rather than
+  a next step.
+root_cause: >
+  The ladder's `up` exit (content/rpg/quests/wolf_winter.yaml, room `store`) has one
+  static `locked_msg` shared by every unmet combination of its four AND'ed conditions:
+  the yearling must be down or redirected, a crossing method must be held, and the
+  flank-wolf fight must not already be resolved. The message was written for the case
+  where a yearling action IS currently offered (the player is mid-encounter at the
+  Broken Paling) but fires identically for a LURE player who has not started that
+  encounter at all, naming "the currently listed yearling action" when no such action
+  exists yet in any room the player has reached.
+fix: >
+  Added a `locked_msg_variants` entry to the ladder's `up` exit, reusing the existing
+  reactive-message mechanism already used by the neighboring Byre-Yard `north` exit
+  (bug_0558). When `strategy_lure_committed` is true and neither `yearling_down` nor
+  `yearling_redirected` is set, the block now reads: "Up is blocked. Go east to the
+  Byre-Yard, then north to the Broken Paling and LAY downwind feed line WITH Cade's
+  winter-feed sack. Then return here to cross with Cade's LURE route." — naming the
+  actual pending LAY step at the room that offers it, in the room's own established
+  phrasing (content/rpg/quests/wolf_winter.yaml already uses this exact "LAY downwind
+  feed line WITH Cade's winter-feed sack" sentence at the Byre-Yard hub). The base
+  `locked_msg` is unchanged and still applies once the yearling is down or redirected
+  but a crossing method or the flank-wolf state is what's actually missing.
+deterministic_witnesses:
+  - "a LURE-committed player who reaches the Store-Shed before visiting the Broken Paling sees the new LAY-specific block, both before and after taking the winter-feed sack (tests/regression/wolf_winter_store_shed_lure_ladder_hint.test.ts)"
+  - "once the yearling is already down, a certified-testimony player missing only a crossing method still sees the original unchanged generic block, proving the new variant does not over-fire (tests/starting_slice/lead_source_counterfactual.test.ts)"
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - tests/regression/wolf_winter_store_shed_lure_ladder_hint.test.ts
+  - tests/starting_slice/lead_source_counterfactual.test.ts
+verification:
+  - npx vitest run tests/regression/wolf_winter_store_shed_lure_ladder_hint.test.ts tests/starting_slice/lead_source_counterfactual.test.ts tests/regression/wolf_winter_first_cast_feed_truth.test.ts tests/regression/wolf_winter_uncommitted_living_boundary.test.ts tests/regression/wolf_winter_loft_resource_choice.test.ts tests/regression/wolf_winter_postcast_state_truth.test.ts tests/regression/wolf_winter_seeded_field_conditions.test.ts
+  - npm run validate
+  - npm run verify:bug-traces

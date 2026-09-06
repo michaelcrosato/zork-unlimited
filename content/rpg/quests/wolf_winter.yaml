@@ -607,6 +607,12 @@ rooms:
           - { not_flag: flank_wolf_down }
           - { not_flag: flank_redirected }
         locked_msg: "Up is blocked. Complete the currently listed yearling action. Then cross with a split-rail guard, Jamie's certified crawlboard route, or Cade's LURE route. A sound braced rail cannot be carried."
+        locked_msg_variants:
+          - when:
+              - { has_flag: strategy_lure_committed }
+              - { not_flag: yearling_down }
+              - { not_flag: yearling_redirected }
+            text: "Up is blocked. Go east to the Byre-Yard, then north to the Broken Paling and LAY downwind feed line WITH Cade's winter-feed sack. Then return here to cross with Cade's LURE route."
 
   - id: fodder_loft
     name: "The Fodder-Loft"
