@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "303b088a26e91fab",
+  "title": "Join the two intake routes onto one finding identity",
+  "body": "Two routes put playtest findings into `intake/queue/`, and they do not share an identity space, so\nthe same defect can occupy the queue twice under unrelated ids.\n\n**Route A — corpus triage.** `bin/triage.ts` clusters session records, mints\n`ticketId({kind, location, fingerprint})`, writes `qa/tickets/`, and `reconcileTicketSubmissions`\nkeys the intake submission on that ticket id (`submissionId({source, kind, key: ticket.ticket_id})`).\n\n**Route B — fleet review / `npm run submit`.** A reviewer compiles a fleet run and files a\nsubmission directly, with an id that is not derived from any cluster.\n\nNeither can recognise the other's finding, because only one of them is computing a cluster identity\nat all.\n\n## Observed instance\n\n`intake/queue/P1-playtest-56b3d1a6260af50c.json` — \"Albany Rowan docket appears without executable\njob options\", 3 independent Terra reports on build `f9b5c73d`, area `src/world/session_local_view.ts`,\nfiled 2026-09-01 through route B. It has **no file in `qa/tickets/`** and its evidence refs point at\n`ai-runs/fleet/terra-100-f9b5-copy-20260831/summary.json` and a review compile.\n\nOn 2026-09-05 two live `claude_code` sessions (`16bfc47f69d0`, `4f1a4a92dfb3`, both\n`runner_enforced`, build `2da50f33`) independently hit the same defect: the docket is listed, and\n`work_overworld_session_job` rejects it demanding an `option_id` that no `job_choices` data ever\nexposes. Route A clustered them correctly into one ticket — `S2-bug-3c86bd6dd9e5109f` @ `albany_city`,\n`report_count: 2` — under an identity with no relationship to `56b3d1a6260af50c`.\n\nSo the queue is on course to carry two items for one defect, and the second one's evidence does not\nstrengthen the first.\n\n## Why this is worth fixing rather than tolerating\n\nThe cost is not the single duplicate. It is that **every finding the Terra-era fleet already filed\nwill be re-filed as new work the moment the live loop rediscovers and corroborates it** — precisely\nthe findings most likely to recur, since they were real enough to be filed once. The queue's ranking\nthen sees two weak items where the evidence supports one strong one, and a human reading the queue\ncannot tell that the second is the first with more witnesses.\n\n## Options\n\n1. **Compute the same identity on route B.** Have the fleet-review submission path derive\n   `ticketId` from the cluster it was compiled from, so both routes land on one key. Cleanest, and\n   makes corroboration across routes automatic. Requires route B to carry a cluster, which the\n   review compile already has.\n2. **Match on the way in.** Teach `reconcileTicketSubmissions` to look for an existing open\n   submission with the same normalized location plus `area` before minting a new id, and attach the\n   evidence to it. Cheaper, but a heuristic — and a wrong match silently merges two defects, which\n   is worse than a duplicate.\n3. **Accept and let it self-heal** (the current decision). Legacy route-B items age out after\n   `STALE_AFTER_BUILDS`; the cost is temporary pairs. Reasonable while the queue is small and the\n   fleet route is dormant, and it costs nothing to revisit if the pairs start crowding the queue.\n\nOption 1 is the one worth building if this is ever picked up; option 2 should be resisted unless the\nmatch is exact, because over-merging hides a defect while duplication merely wastes attention.\n\n## Related\n\n- `8d3d6658909e0d86` — clustering splits (queue).\n- `dcaefa368898e77c` — no-location findings never corroborate; addressed by the\n  `qa-unmapped-identity` patch.",
+  "source": "audit",
+  "kind": "feature",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "src/qa/ticket.ts",
+  "evidence": {
+    "summary": "Corpus triage and direct submission mint unrelated ids for the same finding; observed on the Rowan docket defect (56b3d1a6260af50c vs S2-bug-3c86bd6dd9e5109f).",
+    "refs": [],
+    "lineages": [],
+    "observations": 1
+  },
+  "created_at": "2026-09-06T00:24:23.561Z",
+  "updated_at": "2026-09-06T00:24:23.561Z",
+  "external": null
+}
