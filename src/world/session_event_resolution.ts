@@ -232,7 +232,16 @@ export function planOverworldEventResolution(
     const existing = state.journalEntries.get(entryId);
     if (existing) {
       if (scene && !sceneOption) {
-        throw new Error(`Choose one option for ${event.title}.`);
+        const availableIds = availableLocalEventSceneOptions(scene, {
+          completedQuestIds: state.completedQuestIds,
+          completedJobIds: state.completedJobIds,
+          worldFactIds: state.campaignWorldFactIds,
+        }).map((option) => option.id);
+        throw new Error(
+          availableIds.length > 0
+            ? `Choose one option for ${event.title}: ${availableIds.join(", ")}.`
+            : `Choose one option for ${event.title}, but no authored option is legal yet in this journey.`,
+        );
       }
       if (scene && existing.localSceneProof?.optionId !== sceneOption?.id) {
         throw new Error(`This event was already resolved with a different option: ${event.title}.`);

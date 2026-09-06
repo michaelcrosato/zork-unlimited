@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "ticket_id": "77fb87f37aee0631",
-  "title": "undocumented mandatory snapshot hash for Station-locked ally talk @ unmapped",
+  "title": "June Pike dialogue required an undisclosed expected_snapshot_hash on… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [
+    "June Pike dialogue required an undisclosed expected_snapshot_hash on first attempt",
     "June Pike talk initially rejected pending an undocumented snapshot_hash requirement",
-    "Needed expected_snapshot_hash to talk to a revealed Station NPC, discovered only via a rejected call",
-    "undocumented mandatory snapshot hash for Station-locked ally talk"
+    "June Pike's contact talk unexpectedly required an expected_snapshot_hash guard that no other NPC talk needed"
   ],
   "evidence": {
     "report_count": 3,
@@ -26,13 +26,13 @@
     "has_runner_enforced_report": true,
     "session_ids": [
       "10c96f3e046c152eb997e60d2841cb36053fb682bd666407510a90f5e590b485",
-      "179d18394c67dbb0f58a0dfa1b0dc85d6280c3cb39508eef922cb18bfcbdf347",
-      "9e27fa893b1e93e1cdad0c105c68ed1acca54cfd9763600f6ddecfd72bd8f72b"
+      "a76a6eb41d01523a2a0c7214a6819875dc3debe96a8799b6c1a7f4fecb69b427",
+      "db907a6a65d04407c56437840c499807e69307a48c2f7067415e67e75101c014"
     ],
     "first_seen_build": "2da50f33d4d9937d82cfa8dd9e845e5a9d083ba9",
-    "last_seen_build": "4a75abef22977bbb0ac31cea6c26e8b3c6d91956",
-    "first_seen_at": "2026-09-06T00:25:47.967Z",
-    "last_seen_at": "2026-09-06T06:04:20.262Z"
+    "last_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "first_seen_at": "2026-09-05T23:34:58.152Z",
+    "last_seen_at": "2026-09-06T05:35:20.840Z"
   },
   "priority": 3
 }

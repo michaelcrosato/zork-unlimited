@@ -185,3 +185,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: real, corroborated (3 independent Terra reports) player-facing UX fix, root-caused to the exact throw sites rather than guessed; reordering the job's gate checks only ever makes an already-passing path also list ids, confirmed against 5 existing Depth-Contract job scenes plus the dedicated conditions unit test.
 - Evidence: bug_0620 trace; new red-before/green-after regression assertions in winter_return_docket_counterfactual.test.ts for both the job and event rejection; typecheck/lint/format clean on touched files; targeted vitest green (6 files, 69 tests); verify:bug-traces green; feedback:status again reports the accepted compile's ignored artifacts missing locally (no ai-runs/ history in this sandbox) — recorded, not rebootstrapped, no report of its own this cycle.
 - Next: the event path's other "Choose one option" throw (already-resolved-without-a-matching-option re-call) still names no ids; lower-traffic branch, left for whoever next touches that file.
+## AFK Cycle 2026-09-06T09-16-39-619Z — ULTRAPLAN (saturation re-aim)
+<!-- feedback_cycle_selection: {"run_id":"2026-09-06T09-16-39-619Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-dawn_beacon (content_fix/M; score=0.5).
+- Mode: ultraplan re-aim; handoff ai-runs/2026-09-06T09-16-39-619Z/current-plan.md.
+- Guard: health + verify:integrity before commit.

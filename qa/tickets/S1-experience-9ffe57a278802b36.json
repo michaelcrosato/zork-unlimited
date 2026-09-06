@@ -4,7 +4,7 @@
   "title": "Recurring NPC name (Hayden Hale) appeared as a contact in a distant… @ unmapped",
   "kind": "experience",
   "severity": "S1",
-  "status": "open",
+  "status": "stale",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [

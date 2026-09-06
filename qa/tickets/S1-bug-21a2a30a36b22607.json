@@ -1,18 +1,19 @@
 {
   "schema_version": 2,
   "ticket_id": "21a2a30a36b22607",
-  "title": "Generic civic/market NPCs in different towns reuse identical names,… @ unmapped",
+  "title": "Repetitive generic civic-center/market-street template in every town @ unmapped",
   "kind": "bug",
   "severity": "S1",
-  "status": "stale",
+  "status": "open",
   "promotion": "accumulating",
   "location": "unmapped",
   "excerpts": [
     "Contact lists in unrelated towns (e.g. Rowan Quill in Albany/Queensbury, Hayden Hale in Albany/Oneonta, Avery Lowell in Rome/Greece)",
+    "Repetitive generic civic-center/market-street template in every town",
     "Generic civic/market NPCs in different towns reuse identical names, reading as an unexplained recurring character rather than a new local person."
   ],
   "evidence": {
-    "report_count": 1,
+    "report_count": 2,
     "families": [
       "claude"
     ],
@@ -24,12 +25,13 @@
     ],
     "has_runner_enforced_report": true,
     "session_ids": [
-      "10c96f3e046c152eb997e60d2841cb36053fb682bd666407510a90f5e590b485"
+      "10c96f3e046c152eb997e60d2841cb36053fb682bd666407510a90f5e590b485",
+      "b40116672cd550eadeca1b32102b5858a38cc8cb16f9bfcbc09920a528519cc6"
     ],
     "first_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
-    "last_seen_build": "9230ce5ef47412d3711ddbe7150da9f5cf19bdf2",
+    "last_seen_build": "7d449585777e61c6b853c86c43fb24a130dc3b43",
     "first_seen_at": "2026-09-06T05:35:20.840Z",
-    "last_seen_at": "2026-09-06T05:35:20.840Z"
+    "last_seen_at": "2026-09-06T08:25:52.438Z"
   },
-  "priority": 2
+  "priority": 2.584962500721156
 }

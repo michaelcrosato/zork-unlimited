@@ -161,6 +161,14 @@ describe("Winter Return Docket", () => {
     expect(() => session.resolveEvent(EVENT_ID, PROTECTED)).toThrow(
       /already resolved with a different option/i,
     );
+    // A re-call with no option at all names the exact legal ids too (bug_0621), not just
+    // the bare prompt — the "already resolved" branch bug_0620 didn't reach.
+    expect(() => session.resolveEvent(EVENT_ID)).toThrow(
+      new RegExp(
+        `Choose one option for Albany Civic Center: charter backlog: ${PUBLIC}, ${PROTECTED}`,
+        "i",
+      ),
+    );
     expect(
       session.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT_ID}`),
     ).toMatchObject({
