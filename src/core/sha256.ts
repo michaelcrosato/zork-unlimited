@@ -47,11 +47,12 @@ const rotr = (x: number, n: number): number => (x >>> n) | (x << (32 - n));
 export function sha256Hex(input: string): string {
   // Optimization: Use encodeInto into a pre-allocated Uint8Array message buffer and reuse
   // Uint32Array work buffers to avoid object creation during state hashing (~1.5x speedup).
-  const maxBytes = input.length * 4;
+  const str = input ?? "";
+  const maxBytes = str.length * 4;
   const maxWithPadding = maxBytes + 1 + 64 + 8;
   const msg = getMsgBuffer(maxWithPadding);
 
-  const { written: byteLen } = SHARED_TEXT_ENCODER.encodeInto(input, msg);
+  const { written: byteLen } = SHARED_TEXT_ENCODER.encodeInto(str, msg);
   const bitLen = byteLen * 8;
 
   // Pad: append 0x80, then zeros, then the 64-bit big-endian length.
