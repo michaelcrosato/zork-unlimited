@@ -38,6 +38,8 @@ import {
 import { rotateLoopState } from "./afk/loop_state.js";
 import { formatFeedbackCycleSelectionMarker } from "./feedback/acceptance.js";
 import { claimLeaseHours, readQueue, resolveClaimIdentity } from "./intake/queue.js";
+import { compareTickets, type QaTicket } from "./qa/ticket.js";
+import { readTickets } from "./qa/ticket_store.js";
 import { compareSubmissions, isOpenWork, type Submission } from "./intake/submission.js";
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
@@ -196,7 +198,13 @@ function main(): void {
 
   const prompt = ultraplan
     ? buildUltraplanPrompt({ a, currentPlanRecord: currentPlanRecord!, commitEnabled })
-    : buildPrompt({ a, top, commitEnabled, queue: readQueue().submissions });
+    : buildPrompt({
+        a,
+        top,
+        commitEnabled,
+        queue: readQueue().submissions,
+        leads: readTickets().tickets,
+      });
 
   // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
   // quest authoring) both need more than the lean routine default; loop.sh reads this
@@ -416,13 +424,77 @@ export const FOCUSED_CHECKS_CONTRACT: readonly string[] = [
   "  re-proving the gate is a turn that lands nothing.",
 ];
 
+/** How many unverified leads the prompt names before deferring to the bucket itself. */
+export const UNVERIFIED_LEADS_LIMIT = 6;
+
+/**
+ * The leads a cycle is allowed to see but not to trust.
+ *
+ * `derivePromotion` only reaches `corroborated` on reference-tier evidence or two independent
+ * model families, so a single-lineage fleet can report the same defect twenty times and never
+ * move it off `accumulating` — and `isActionable` then keeps it out of the queue entirely. That
+ * is the correct rule for CONFIDENCE and the wrong outcome for a real defect nobody can see: on
+ * this branch it left a two-session S2 blocker, and roughly $200 of corroborated evidence,
+ * invisible to the loop.
+ *
+ * Reproduction is the other honest route to confidence, so these are surfaced as LEADS rather
+ * than as work: a worker may take one only by first reproducing it deterministically, which is
+ * what promotes it. BUG tickets only — an `experience` judgement about how the game reads cannot
+ * be settled by a test, only by more players, so putting one here would invite exactly the
+ * faith-based "fix" this section exists to prevent.
+ */
+export function selectUnverifiedLeads(
+  tickets: readonly QaTicket[],
+  limit: number = UNVERIFIED_LEADS_LIMIT,
+): QaTicket[] {
+  return tickets
+    .filter(
+      (ticket) =>
+        ticket.kind === "bug" &&
+        ticket.promotion === "accumulating" &&
+        ticket.superseded_by === undefined &&
+        (ticket.status === "open" || ticket.status === "in_progress") &&
+        ticket.evidence.report_count >= 2,
+    )
+    .sort(compareTickets)
+    .slice(0, limit);
+}
+
+export function formatLeadsSection(leads: readonly QaTicket[]): string[] {
+  if (leads.length === 0) return [];
+  return [
+    "",
+    "## Unverified leads (qa/tickets) — REPRODUCE BEFORE YOU FIX",
+    `${leads.length} accumulating BUG ticket(s) that more than one report has hit and that`,
+    "nothing has reproduced yet. They are NOT corroborated: one model lineage reporting the same",
+    "thing many times is one opinion repeated, not two independent witnesses, which is why volume",
+    "alone never promotes them. Experience tickets are excluded — how the game READS can only be",
+    "settled by more players, never by a test.",
+    "",
+    ...leads.map(
+      (lead) =>
+        `  ${lead.severity} ${lead.ticket_id} — ${lead.title} ` +
+        `(${lead.evidence.report_count} reports, ${lead.evidence.families.length} lineage(s), ${lead.location})`,
+    ),
+    "",
+    "You may take a lead ONLY by first reproducing it deterministically — a regression test or a",
+    "crawler probe that fails on the current build for the reason the ticket gives. That",
+    "reproduction is what turns a lead into evidence, so record it BEFORE the provisional commit:",
+    "  `npm run qa:triage -- --verified <ticket_id> --verified-by tests/regression/<your test>.ts`",
+    "which stamps the ticket, promotes it to verified, and lets ordinary cycle-start triage carry",
+    "it into the intake queue from then on. If you CANNOT reproduce it, say so in AI_LOOP_STATE.md",
+    "and leave it — an unreproduced lead is not a defect you may fix on faith.",
+  ];
+}
+
 export function buildPrompt(ctx: {
   a: Assessment;
   top: ImprovementCandidate | null;
   commitEnabled?: boolean;
   queue?: readonly Submission[];
+  leads?: readonly QaTicket[];
 }): string {
-  const { a, commitEnabled = false, queue = [] } = ctx;
+  const { a, commitEnabled = false, queue = [], leads = [] } = ctx;
   const { shown: queueShown, available: queueAvailable } = selectPromptQueue(queue);
   const top = a.top;
   const recommendationKind = assessmentRecommendationKind(a);
@@ -556,6 +628,7 @@ export function buildPrompt(ctx: {
     "do not route around the verifier.",
     "",
     ...formatQueueSection(queueShown, queueAvailable),
+    ...formatLeadsSection(selectUnverifiedLeads(leads)),
     "",
     ...assessorSection,
     "",

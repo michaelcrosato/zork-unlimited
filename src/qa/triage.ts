@@ -78,6 +78,11 @@ export type TriageInput = {
    * maintainer's repro). These promote straight to `verified`.
    */
   verifiedTicketIds?: readonly string[];
+  /**
+   * What reproduced those ids, recorded onto the ticket so the promotion outlives this run.
+   * Without it a `--verified` stamp would promote once and evaporate at the next triage.
+   */
+  verifiedBy?: string;
 };
 
 /**
@@ -430,9 +435,6 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
     const { kind, location, id } = clusterIdentity(cluster, confusionKeys);
     const evidence = clusterEvidence(cluster, sessionById, currentBuild);
 
-    const isVerified = verified.has(id);
-    const promotion = derivePromotion(evidence, { verified: isVerified });
-
     const candidates = predecessors.get(id) ?? [];
     const solePredecessor =
       candidates.length === 1 && replacementLinks.get(candidates[0]!.ticket_id)?.length === 1
@@ -440,6 +442,15 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
         : undefined;
     const sameIdentity = existing.get(id);
     const prior = sameIdentity ?? solePredecessor;
+    // A lead proved once stays proved. `verified_by` is carried forward by identity, so the
+    // rung survives every later triage without the operator re-passing a flag — which is the
+    // whole difference between a promotion and a one-run override. A fresh stamp wins over a
+    // carried one so a re-verification can name the newer proof.
+    const verifiedBy = verified.has(id)
+      ? (input.verifiedBy ?? "operator reproduction")
+      : prior?.verified_by;
+    const isVerified = verifiedBy !== undefined;
+    const promotion = derivePromotion(evidence, { verified: isVerified });
     // Preserve workflow state a human or the dev loop set. Re-triage owns the
     // evidence and the promotion rung; it does not own whether someone is already
     // working on this or has decided not to.
@@ -463,6 +474,7 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
       evidence,
       priority: scoreCluster(cluster),
       ...(prior?.notes !== undefined ? { notes: prior.notes } : {}),
+      ...(verifiedBy !== undefined ? { verified_by: verifiedBy } : {}),
       ...(sameIdentity?.superseded_by ? { superseded_by: sameIdentity.superseded_by } : {}),
     });
   }

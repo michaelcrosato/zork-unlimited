@@ -47,7 +47,13 @@ import {
   parseGrokStreamingOutput,
 } from "../../src/qa/grok_mcp_wave.js";
 import { extractExitInterview, isPureExitInterviewV2 } from "../../src/blind/exit_interview.js";
-import { derivePromotion, isActionable, ticketId, type QaTicket } from "../../src/qa/ticket.js";
+import {
+  derivePromotion,
+  isActionable,
+  QaTicketSchema,
+  ticketId,
+  type QaTicket,
+} from "../../src/qa/ticket.js";
 import { readTickets, writeTickets } from "../../src/qa/ticket_store.js";
 import { triagePlaytestCorpus } from "../../src/qa/triage.js";
 import { submissionsFromTickets } from "../../src/qa/ticket_submission.js";
@@ -706,7 +712,10 @@ describe("end to end: a corroborated finding reaches the dev loop's queue", () =
     },
   ];
 
-  function triageCorpus(reporters: readonly (typeof REPORTERS)[number][]) {
+  function triageCorpus(
+    reporters: readonly (typeof REPORTERS)[number][],
+    extra: Partial<Parameters<typeof triagePlaytestCorpus>[0]> = {},
+  ) {
     const store = tempDir();
     for (const r of reporters) {
       writePlaytestSession(store, sealPlaytestSession(reporter(r)), transcript);
@@ -717,8 +726,44 @@ describe("end to end: a corroborated finding reaches the dev loop's queue", () =
       sessions: entries.map((entry) => entry.record),
       locationIndex: buildLocationIndex(process.cwd()),
       buildHistory: ["a".repeat(40)],
+      ...extra,
     });
   }
+
+  it("cannot promote a single lineage on volume alone, however many reports it files", () => {
+    // The gap this whole route exists to close: promotion needs reference tier or two
+    // independent families, so a Sonnet-only fleet corroborating a real defect over and over
+    // stays at `accumulating` and never becomes actionable work.
+    const oneLineage = REPORTERS.filter((r) => r.model.id.startsWith("claude"));
+    const ticket = triageCorpus(oneLineage).tickets[0]!;
+    expect(ticket.evidence.families).toEqual(["claude"]);
+    expect(ticket.promotion).toBe("accumulating");
+    expect(isActionable(ticket)).toBe(false);
+  });
+
+  it("a reproduction promotes it, and the promotion OUTLIVES the run that recorded it", () => {
+    const oneLineage = REPORTERS.filter((r) => r.model.id.startsWith("claude"));
+    const id = triageCorpus(oneLineage).tickets[0]!.ticket_id;
+
+    const stamped = triageCorpus(oneLineage, {
+      verifiedTicketIds: [id],
+      verifiedBy: "tests/regression/rowan_docket_options.test.ts",
+    }).tickets[0]!;
+    expect(stamped.promotion).toBe("verified");
+    expect(stamped.verified_by).toBe("tests/regression/rowan_docket_options.test.ts");
+    expect(isActionable(stamped)).toBe(true);
+
+    // The point of the durable field: a later triage with NO flag must keep the rung. A
+    // promotion that evaporated on the next run would be an override, not evidence.
+    const later = triageCorpus(oneLineage, { existingTickets: [stamped] }).tickets[0]!;
+    expect(later.promotion).toBe("verified");
+    expect(later.verified_by).toBe("tests/regression/rowan_docket_options.test.ts");
+
+    // And it round-trips through the strict schema rather than being dropped on read.
+    expect(QaTicketSchema.parse(JSON.parse(JSON.stringify(later))).verified_by).toBe(
+      "tests/regression/rowan_docket_options.test.ts",
+    );
+  });
 
   it("merges three wordings of one defect into a single ticket", () => {
     const { tickets, stats } = triageCorpus(REPORTERS);

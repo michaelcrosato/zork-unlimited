@@ -14,12 +14,16 @@ import {
   playtestTarget,
   playtestTargetMetadata,
   FOCUSED_CHECKS_CONTRACT,
+  formatLeadsSection,
   HEADLESS_TURN_CONTRACT,
   PROMPT_QUEUE_LIMIT,
   selectPromptQueue,
+  selectUnverifiedLeads,
+  UNVERIFIED_LEADS_LIMIT,
   shouldRunUltraplan,
 } from "../../src/ai-loop.js";
 import type { Submission } from "../../src/intake/submission.js";
+import type { QaTicket } from "../../src/qa/ticket.js";
 import {
   OVERWORLD_PLAYTEST_TARGET,
   SATURATION_FLOOR,
@@ -326,6 +330,89 @@ describe("both prompts state the headless single-turn contract", () => {
       expect(ultraplan()).toContain(line);
     }
     expect(HEADLESS_TURN_CONTRACT.length).toBeGreaterThan(0);
+  });
+});
+
+describe("buildPrompt surfaces unverified leads without trusting them", () => {
+  /** `reportCount` is its own knob so a case can vary it without restating the whole
+   *  evidence block — a partial `evidence` would not satisfy TicketEvidence and a cast
+   *  around that gap would hide the very field this section filters on. */
+  const ticket = (
+    over: Partial<Omit<QaTicket, "evidence">> & { ticket_id: string; reportCount?: number },
+  ): QaTicket => {
+    const { reportCount = 2, ...rest } = over;
+    return {
+      schema_version: 2,
+      title: `lead ${over.ticket_id}`,
+      kind: "bug",
+      severity: "S2",
+      status: "open",
+      promotion: "accumulating",
+      location: "albany_city",
+      excerpts: [],
+      priority: 1,
+      evidence: {
+        report_count: reportCount,
+        families: ["claude"],
+        providers: ["claude_code"],
+        tiers: ["volume"],
+        has_runner_enforced_report: true,
+        session_ids: ["s1"],
+        first_seen_build: "a".repeat(40),
+        last_seen_build: "a".repeat(40),
+        first_seen_at: "2026-09-01T00:00:00.000Z",
+        last_seen_at: "2026-09-01T00:00:00.000Z",
+      },
+      ...rest,
+    } as QaTicket;
+  };
+
+  const promptWith = (leads: readonly QaTicket[]): string => {
+    const top = candidate("engine", "src/core/engine.ts");
+    return buildPrompt({ a: assessment(top), top, commitEnabled: true, leads });
+  };
+
+  it("lists an accumulating bug that two reports hit, and demands reproduction first", () => {
+    // The rule this encodes: one lineage reporting a thing twenty times is one opinion
+    // repeated, not two witnesses — so a lead is shown as a LEAD, never as work.
+    const prompt = promptWith([
+      ticket({ ticket_id: "a".repeat(16), title: "docket has no options" }),
+    ]);
+    expect(prompt).toContain("docket has no options");
+    expect(prompt).toContain("REPRODUCE BEFORE YOU FIX");
+    expect(prompt).toContain("npm run qa:triage -- --verified");
+    expect(prompt).toContain("--verified-by");
+    // And the honest exit when it cannot be reproduced.
+    expect(prompt).toContain("not a defect you may fix on faith");
+  });
+
+  it("excludes experience tickets, single reports, and anything already promoted", () => {
+    // An experience judgement cannot be settled by a test, so offering one here would invite
+    // exactly the faith-based fix the section exists to prevent.
+    expect(
+      selectUnverifiedLeads([
+        ticket({ ticket_id: "b".repeat(16), kind: "experience" }),
+        ticket({ ticket_id: "c".repeat(16), reportCount: 1 }),
+        ticket({ ticket_id: "d".repeat(16), promotion: "corroborated" }),
+        ticket({ ticket_id: "e".repeat(16), promotion: "verified" }),
+        ticket({ ticket_id: "f".repeat(16), status: "wont_fix" }),
+        ticket({ ticket_id: "0".repeat(16), superseded_by: ["1".repeat(16)] }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("caps the listing so one noisy bucket cannot flood the prompt", () => {
+    const many = Array.from({ length: UNVERIFIED_LEADS_LIMIT + 4 }, (_unused, index) =>
+      ticket({ ticket_id: `${index}`.padStart(16, "a"), priority: index }),
+    );
+    expect(selectUnverifiedLeads(many)).toHaveLength(UNVERIFIED_LEADS_LIMIT);
+  });
+
+  it("says nothing at all when there is no lead to show", () => {
+    // Silence is right here, unlike the queue: an empty bucket is not a state the worker
+    // has to reason about, and a permanent empty heading is noise in every prompt.
+    expect(formatLeadsSection([])).toEqual([]);
+    expect(promptWith([])).not.toContain("Unverified leads");
   });
 });
 
