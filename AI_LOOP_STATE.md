@@ -165,7 +165,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback/next: compile `20260811T225226Z` uses only the prior three sealed reports, excludes this pure, and recommends one-report S1 `4e42fc3a`; counter-audit that optional-branch/checkpoint wording against intentional Continue/End semantics before changing journey flow.
 - Guard: 7 focused behavior tests, the 4-file tracked change plus report/evidence/sidecar authority, Gallowmere validation at exact hash, 567 traces/1,948 references, both 6,000-step crawls, full health (448 files/3,899 tests), UI typecheck, all 12 packs, cycle-start integrity, exact pure/compile provenance, and the feedback seal are green.
 ## AFK Cycle 2026-09-06T04-13-53-054Z
-<!-- feedback_cycle_selection: {"run_id":"2026-09-06T04-13-53-054Z","selected_recommendation_id":null} -->
 - Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-advocates_case (content_fix/M; score=0.5).
-- Guard: health + verify:integrity before commit.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5); took off-list queue item instead (below), higher weight of evidence.
+- Change: queue P1 5f00328ffcfb6566 (41 reports, largest cluster) — Hayden's Cade Return Filing showed engine-jargon "No authored choice is currently available in this journey state." right after Wolf-Winter even though its own prerequisites were met; reproduced directly as the paused-gameplay branch of compactOverworldBlockedEventLeads (src/world/compact_view.ts) firing during the legitimate pending Continue/End + dawn-wagon decisions. Reworded that one branch to name the pending decision, matching journey_opportunity_leads.ts's existing phrasing; other branches untouched.
+- Self-critique: real, corroborated player-facing clarity fix, root-caused by direct reproduction (not guesswork); scoped to the one evidenced branch, closes the queue item and a previously-deferred sibling report (e24b759193c0cd8c).
+- Evidence: new regression test red-before/green-after the fix; bug_0617 trace; typecheck/lint/format clean on touched files; targeted vitest green (albany_station_return_filing_standard_counterfactual + winter_return_docket_counterfactual + progressive_event_disclosure = 25 tests); verify:integrity, verify:bug-traces, verify:opening-density, and all 12 validate packs green.
+- Next: same fix for the rarer fully-satisfied-but-still-blocked fallback branch if evidence ever implicates it; P1-audit-83bfaf74a0b8a3c3 (this scaffold heading vs the cycle-counting regex) is pre-existing queued debt, not touched here.
