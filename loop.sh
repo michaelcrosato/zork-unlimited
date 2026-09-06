@@ -451,12 +451,22 @@ require_final_ledger_only() {
     git diff --cached --name-only
     git ls-files --others --exclude-standard
   } | LC_ALL=C sort -u)"
-  if [[ "$changed" != "AI_LOOP_STATE.md" ]]; then
+  # A CLEAN tree passes too, and this is not a loosening. What the gate exists to stop is a
+  # cycle quietly growing a SECOND change after it verified, and nothing at all cannot be a
+  # second change. A worker may legitimately have put the completed ledger entry inside its
+  # own provisional commit — an early ledger, not a missing one — and rejecting that cost a
+  # real cycle: a green run was reverted with "got: (none)", which is the gate refusing a
+  # tree because it was too clean.
+  if [[ -n "$changed" && "$changed" != "AI_LOOP_STATE.md" ]]; then
     echo "Expected AI_LOOP_STATE.md to be the only post-play tracked change; got:"
-    [[ -n "$changed" ]] && echo "$changed" || echo "(none)"
+    echo "$changed"
     return 1
   fi
-  echo "✓ post-play changes are ledger-only"
+  if [[ -z "$changed" ]]; then
+    echo "✓ post-play tree is clean (the ledger entry was frozen in the provisional commit)"
+  else
+    echo "✓ post-play changes are ledger-only"
+  fi
 }
 
 # Which post-change bar THIS cycle has to clear. `npm run ship` already reads that off
@@ -495,11 +505,23 @@ safe_commit_if_enabled() {
   if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]]; then
     return 0
   fi
-  local meta="ai-runs/latest-cycle.json" current_ref
+  local meta="ai-runs/latest-cycle.json" current_ref ledger_already_frozen=0
   current_ref="$(git rev-parse HEAD)" || return 1
+  # Whether the ledger entry was already frozen in the provisional commit, checked BEFORE the
+  # seal runs. It decides how to read an empty stage afterwards: with an early ledger, a seal
+  # that adds nothing is the normal outcome; without one, it means the ledger never got
+  # written and failing is right. Collapsing the two would hide a genuinely missing ledger.
+  if git diff --quiet && git diff --cached --quiet; then ledger_already_frozen=1; fi
   npm run --silent loop:seal-feedback -- --meta "$meta" --expected-commit "$current_ref" --start-ref "$cycle_failure_start_ref" || return 1
   git add -- AI_LOOP_STATE.md
-  git diff --cached --quiet && { echo "No final ledger change to commit."; return 1; }
+  if git diff --cached --quiet; then
+    if [[ "$ledger_already_frozen" == "1" ]]; then
+      echo "Ledger was already frozen in the provisional commit and the seal added nothing further; no second commit needed."
+      return 0
+    fi
+    echo "No final ledger change to commit."
+    return 1
+  fi
   git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Autonomous dev cycle: record verified change}"
 }
 

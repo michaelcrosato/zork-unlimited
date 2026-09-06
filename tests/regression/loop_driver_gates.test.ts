@@ -143,6 +143,56 @@ describe("loop.sh verification gates", () => {
     expect(scripts["loop:rotate-state"]).toBe("tsx scripts/rotate-loop-state.ts");
   });
 
+  it("accepts a clean tree as well as a ledger-only one, and still refuses a second change", () => {
+    // The gate exists to stop a cycle quietly growing a SECOND change after it verified.
+    // Nothing at all cannot be a second change — but the gate rejected it anyway, and a
+    // green cycle was reverted with "got: (none)" because its worker had frozen the
+    // completed ledger inside its own provisional commit. An early ledger, not a missing one.
+    const gate = `${sectionBetween("require_final_ledger_only() {", "\n}\n\n# Which post-change bar")}\n}`;
+    const ask = (setup?: (root: string) => void): { status: number | null; output: string } =>
+      runGateHarness(gate, { AI_LOOP_COMMIT: "1" }, "require_final_ledger_only", (root) => {
+        spawnSync("git", ["init", "-q"], { cwd: root });
+        spawnSync("git", ["config", "user.email", "t@t"], { cwd: root });
+        spawnSync("git", ["config", "user.name", "t"], { cwd: root });
+        writeFileSync(join(root, "AI_LOOP_STATE.md"), "seed\n");
+        spawnSync("git", ["add", "-A"], { cwd: root });
+        spawnSync("git", ["commit", "-qm", "seed"], { cwd: root });
+        setup?.(root);
+      });
+
+    const clean = ask();
+    expect(clean.status, clean.output).toBe(0);
+    expect(clean.output).toContain("frozen in the provisional commit");
+
+    const ledgerOnlyChange = ask((root) => {
+      writeFileSync(join(root, "AI_LOOP_STATE.md"), "seed\nentry\n");
+    });
+    expect(ledgerOnlyChange.status, ledgerOnlyChange.output).toBe(0);
+    expect(ledgerOnlyChange.output).toContain("ledger-only");
+
+    // The thing it must still refuse: any OTHER change, with or without the ledger.
+    const secondChange = ask((root) => {
+      writeFileSync(join(root, "src.ts"), "grown after verification\n");
+    });
+    expect(secondChange.status).not.toBe(0);
+    expect(secondChange.output).toContain("src.ts");
+  });
+
+  it("does not demand a second commit when the ledger was already frozen", () => {
+    // The other half of the same bug: with the ledger committed early the seal has nothing
+    // left to write, and failing "No final ledger change to commit" would lose the cycle at
+    // the very last step. That tolerance is scoped — it applies ONLY when the tree was
+    // already clean before the seal ran, so a genuinely missing ledger still fails.
+    const commit = sectionBetween("safe_commit_if_enabled() {", "\n}\n\nreport_qa_bucket()");
+    const frozenAt = commit.indexOf("ledger_already_frozen=1");
+    const seal = commit.indexOf("loop:seal-feedback");
+    expect(frozenAt).toBeGreaterThanOrEqual(0);
+    // Checked BEFORE the seal runs; reading it afterwards would always see a clean tree.
+    expect(seal).toBeGreaterThan(frozenAt);
+    expect(commit).toContain("no second commit needed");
+    expect(commit).toContain("No final ledger change to commit.");
+  });
+
   it("safe_commit_if_enabled is inert unless AI_LOOP_COMMIT=1", () => {
     const safeCommit = sectionBetween("safe_commit_if_enabled() {", "\n}\n\nreport_qa_bucket()");
 
@@ -332,7 +382,9 @@ describe("loop.sh provisional/final commit contracts", () => {
   )}\n}`;
   const ledgerOnly = `${sectionBetween(
     "require_final_ledger_only() {",
-    "\n}\n\nsafe_commit_if_enabled()",
+    // select_health_bar now sits between these two functions, so the old end anchor cut a
+    // section three times the intended size. Anchor on what actually follows the gate.
+    "\n}\n\n# Which post-change bar",
   )}\n}`;
   it("requires an advancing local commit in commit-enabled mode", () => {
     const missing = runGateHarness(
