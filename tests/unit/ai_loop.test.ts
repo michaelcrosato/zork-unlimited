@@ -13,6 +13,7 @@ import {
   playtestTargetSummary,
   playtestTarget,
   playtestTargetMetadata,
+  FOCUSED_CHECKS_CONTRACT,
   HEADLESS_TURN_CONTRACT,
   PROMPT_QUEUE_LIMIT,
   selectPromptQueue,
@@ -306,9 +307,21 @@ describe("both prompts state the headless single-turn contract", () => {
     expect(standard()).not.toContain("must be the only tracked change after the provisional");
   });
 
+  it("forbids running the driver's own bar inside the turn", () => {
+    // A worker ran health:fast three times in one turn — roughly 17 minutes each under
+    // load — and hit its 60-minute budget without landing anything. Each run re-proved the
+    // bar loop.sh runs immediately afterwards on the same tree, so it bought no safety.
+    for (const prompt of [standard(), ultraplan()]) {
+      expect(prompt).toContain("Run FOCUSED checks only");
+      expect(prompt).toContain("npm run health:fast");
+      expect(prompt).toContain("Do NOT run");
+      expect(prompt).toContain("loop.sh runs the bar itself");
+    }
+  });
+
   it("uses ONE contract for both prompts so they cannot drift apart", () => {
     // Two hand-maintained copies of a safety contract is how one of them goes stale.
-    for (const line of HEADLESS_TURN_CONTRACT) {
+    for (const line of [...HEADLESS_TURN_CONTRACT, ...FOCUSED_CHECKS_CONTRACT]) {
       expect(standard()).toContain(line);
       expect(ultraplan()).toContain(line);
     }

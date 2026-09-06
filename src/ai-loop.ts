@@ -391,6 +391,31 @@ export const HEADLESS_TURN_CONTRACT: readonly string[] = [
   "  so one leftover qa/tickets/*.json reverts a cycle that was otherwise green.",
 ];
 
+/**
+ * What "focused checks" means, stated because a worker guessed generously and lost a cycle.
+ *
+ * Measured on cycle 2026-09-06T02-27-19-129Z: the worker ran `npm run health:fast` THREE
+ * times inside its own turn, at roughly 17 minutes each under load, and reached its
+ * 60-minute budget without finishing. Every one of those runs re-proved the exact bar the
+ * driver runs immediately afterwards, on the same tree, so the cycle paid for its gate four
+ * times and landed nothing.
+ *
+ * The instinct is a good one pointed at the wrong target — the worker was trying to be sure
+ * before freezing. But the driver's bar is the gate, and a red bar reverts the cycle whether
+ * or not the worker saw it coming, so a self-run bar buys no safety at all. It only spends
+ * the turn. What genuinely helps is narrow: the tests that cover what was touched, and
+ * lint/format on the touched files, which catch the mistakes a worker can actually fix
+ * inside its turn.
+ */
+export const FOCUSED_CHECKS_CONTRACT: readonly string[] = [
+  "- Run FOCUSED checks only: the test files covering what you touched, plus lint and format",
+  "  on those files. Do NOT run `npm run health`, `npm run health:fast`, `npm test`, or the",
+  "  whole suite inside your turn. loop.sh runs the bar itself right after your provisional",
+  "  commit, on this same tree, and reverts the cycle if it is red — so running it yourself",
+  "  proves nothing the cycle does not already prove, and a turn that spends its budget",
+  "  re-proving the gate is a turn that lands nothing.",
+];
+
 export function buildPrompt(ctx: {
   a: Assessment;
   top: ImprovementCandidate | null;
@@ -538,6 +563,7 @@ export function buildPrompt(ctx: {
     "",
     "## Hard constraints",
     ...HEADLESS_TURN_CONTRACT,
+    ...FOCUSED_CHECKS_CONTRACT,
     "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
     "- Keep the game playable; prefer a small, verified change over a broad rewrite.",
     "- `npm run health` must pass in loop.sh before anything is retained or pushed.",
@@ -706,6 +732,7 @@ export function buildUltraplanPrompt(ctx: {
     "",
     "## Hard constraints",
     ...HEADLESS_TURN_CONTRACT,
+    ...FOCUSED_CHECKS_CONTRACT,
     "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
     "- ONE focused structural change; keep the game playable and the bar green.",
     "- `npm run health` and verify:integrity must pass in loop.sh; never weaken a check.",
