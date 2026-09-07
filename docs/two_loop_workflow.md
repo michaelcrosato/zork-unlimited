@@ -78,6 +78,12 @@ AI_AGENT=claude ./loop.sh                   # dev loop on Claude Code
 PLAYTEST_COHORT="codex:8" ./playtest-loop.sh
 ```
 
+`PLAYTEST_NEW_BUILD_ONLY=1` makes the playtest loop wait, after its pause, for the upstream
+tip to change before it starts the next wave (`PLAYTEST_NEW_BUILD_POLL_SECONDS` sets how
+often it looks; after `PLAYTEST_NEW_BUILD_MAX_WAIT_SECONDS` it replays the current build
+once rather than staying silent), so a lane feeding a dev loop plays each landed build
+instead of one build to exhaustion.
+
 ### Vendor privilege is now derived, not declared
 
 **No vendor is named anywhere in the gate.** Whether a provider may produce a
