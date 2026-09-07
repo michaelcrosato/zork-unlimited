@@ -59,6 +59,26 @@ export type OverworldSessionIndexes = {
   worldHash: string;
 };
 
+/**
+ * Module-level WeakMap cache for `worldHash` computations on frozen OverworldManifest objects.
+ * Computing `hashState(world)` takes ~100ms per call due to canonical serialization of the large manifest.
+ * Since `loadOverworldManifest` deep-freezes the manifest, caching by object identity is completely safe
+ * for frozen manifests and avoids repeated ~100ms overhead on every new `OverworldSession` instance.
+ */
+const FROZEN_WORLD_HASH_CACHE = new WeakMap<object, string>();
+
+function getOrComputeWorldHash(world: OverworldManifest): string {
+  if (Object.isFrozen(world)) {
+    let hash = FROZEN_WORLD_HASH_CACHE.get(world);
+    if (!hash) {
+      hash = hashState(world);
+      FROZEN_WORLD_HASH_CACHE.set(world, hash);
+    }
+    return hash;
+  }
+  return hashState(world);
+}
+
 export function buildOverworldSessionIndexes(world: OverworldManifest): OverworldSessionIndexes {
   const nodes = overworldNodesById(world);
   const roadExitsByTown = indexRoadExits(world, nodes);
@@ -162,7 +182,7 @@ export function buildOverworldSessionIndexes(world: OverworldManifest): Overworl
     regionalArcAnchorTownsById,
     routePlannerIndex,
     snapshotManifestIndex,
-    worldHash: hashState(world),
+    worldHash: getOrComputeWorldHash(world),
   };
 }
 
