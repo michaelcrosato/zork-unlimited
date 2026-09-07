@@ -618,6 +618,20 @@ describe("buildPrompt drops the blind-playtest mandate", () => {
     expect(improve).toBeGreaterThanOrEqual(0);
     expect(provisional).toBeGreaterThan(improve);
     expect(ledger).toBeGreaterThan(provisional);
+    // bug: a worker read STEP 3's old "Do not commit it" as "never commit the ledger",
+    // committed ten correct src/world files with NO AI_LOOP_STATE.md, and lost the whole
+    // cycle to the attestation gate. STEP 2 now states the requirement positively and
+    // hands the worker the SAME command loop.sh runs, so the turn cannot end red on a
+    // check the worker could have run itself. Pin both halves.
+    expect(prompt).toContain("The provisional commit MUST INCLUDE AI_LOOP_STATE.md");
+    expect(prompt).toContain(
+      "npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json",
+    );
+    expect(prompt).toContain("Never end the turn on");
+    // STEP 3 still withholds the COMPLETION, and must not be re-readable as withholding
+    // the file: the words that caused the loss are gone.
+    expect(prompt).toContain("Leave THIS COMPLETION uncommitted");
+    expect(prompt).not.toContain("Do not commit it.");
     expect(prompt).toContain("Never push");
     expect(prompt).toContain("npm run feedback:status");
     expect(prompt).toContain("only when status says ready");
