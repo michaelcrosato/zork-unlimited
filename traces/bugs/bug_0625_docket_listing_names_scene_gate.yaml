@@ -1,0 +1,98 @@
+id: bug_0625
+title: Rowan's Winter Return Docket's own scene-level quest/event gate was named on the rejection but silent on the listing
+reported_by: intake/queue audit/bug 834b4d2f60f7915c (scene-level half of eca7893d8b0be480)
+severity: S1
+
+symptom: >
+  Six real sessions (claude+grok lineages) discovered "Rowan's Winter Return Docket" at
+  Albany Civic Center — POI scouted, contact talked — while Wolf-Winter was still
+  incomplete. Each attempted it exactly once, was rejected, and never retried, even
+  though four of them went on to complete Wolf-Winter later in the same run and held the
+  unlock in their hands. The rejection (bc5de6e9 / bug_0617) already named the missing
+  quest and event, but only in engine ids ("wolf_winter", not "Wolf-Winter"); the
+  LISTING said nothing at all — a discovered, scene-gated job was folded silently into
+  the local view's hidden job count, with no reason surfaced anywhere a passive read
+  could see it.
+
+cause: >
+  projectOverworldSessionLocalJob (session_local_view.ts) returns null whenever
+  availableLocalJobSceneOptions comes back empty, and availableLocalJobSceneOptions
+  returns [] uniformly for BOTH the SCENE-level case (a chronology gate — completed
+  quest / resolved event — is unmet) and the OPTION-level case (scene met, but every
+  option's own gate is blocked). buildOverworldSessionLocalView folds that null into
+  hiddenJobCount with no further signal, so a scouted, discovered job with an unmet
+  scene gate was indistinguishable, on the listing, from one that had simply not been
+  found yet. Separately, planOverworldLocalJobCompletion's own scene-gate rejection
+  (session_local_actions.ts) named the blocking quest/event by their raw content ids,
+  which are not something a player can look up.
+
+  83fc32b6e9e9f715 tried a related fix (533a233c) but targeted the OPTION-level case;
+  it was reverted at the full bar by tests/starting_slice/cade_return_packet_counterfactual.test.ts,
+  because the only shipped option-level-empty scene (the Cade return packet) is pinned
+  HIDDEN by design — it carries two live event-option gates in every ending/dawn
+  combination that test proves, so listing it would overturn an intentional "the packet
+  appears only when there is something to file" decision nobody complained about.
+  834b4d2f60f7915c narrowed the item to the SCENE-level case alone, which this fixes;
+  the option-level case is untouched and stays exactly as it behaves today.
+
+reproduction: >
+  tests/starting_slice/winter_return_docket_counterfactual.test.ts, new case: drives the
+  REAL shipped docket scene through the six players' actual state (preparedForWolf(null)
+  already scouts civic_core's POI and talks its contact, since civic_core is the Albany
+  opening's own starting area) and asserts session.view().jobLeads names the docket with
+  the SAME string session.workLocalJob(JOB_ID) throws, byte-for-byte. A second case
+  completes Wolf-Winter without resolving the charter-backlog event and asserts the
+  remaining gate — the event — is named instead, by title.
+
+fix: >
+  local_job_scene.ts gains localJobSceneChronologyBlockedReason(scene, jobTitle, state,
+  titles): given a scene and the SAME condition state localJobSceneRequirementsMet
+  already checks (completed quests, resolved events, world facts), it returns the exact
+  player-facing sentence ("Complete quest \"<title>\" before working <job>." / "Resolve
+  event \"<title>\" before working <job>.") or null once every scene-level gate is met.
+  session_local_actions.ts's execution rejection and session_local_view.ts's new
+  discoveredCurrentAreaJobLeads (surfaced as OverworldSessionLocalView.jobLeads, then
+  OverworldView.jobLeads and compact job_leads) both call this ONE helper, so the two
+  surfaces cannot describe the same gate two different ways — the parity is structural,
+  not conventional. jobLeads only fires for a DISCOVERED job whose required POI is
+  scouted and required contact is talked to (matching the rejection's own preconditions,
+  so a lead never promises a gate that isn't the very next one the player would hit);
+  the option-level case is untouched: projectOverworldSessionLocalJob,
+  availableLocalJobSceneOptions, and hiddenJobCount's computation are byte-identical to
+  before. Quest/event titles come from questsById/eventsById (session.ts's existing
+  registries), threaded through as optional fields that fall back to the raw id when
+  absent. Compact view gains job_leads (mirroring the existing event_leads shape) behind
+  OVERWORLD_COMPACT_VIEW_VERSION 51, with the legend entry and signature re-pinned
+  deliberately in tests/unit/compact_legend.test.ts.
+
+production:
+  - src/world/local_job_scene.ts
+  - src/world/session_local_actions.ts
+  - src/world/session_local_lifecycle.ts
+  - src/world/session_local_view.ts
+  - src/world/session_local_state.ts
+  - src/world/session.ts
+  - src/world/session_view.ts
+  - src/world/session_view_state.ts
+  - src/world/session_compact_view.ts
+  - src/world/compact_view.ts
+regression:
+  - tests/starting_slice/winter_return_docket_counterfactual.test.ts
+verification:
+  - New winter_return_docket_counterfactual.test.ts case drives the real docket through
+    both the scene-level quest gate and the scene-level event gate, asserting the
+    listing and rejection strings are identical in each state, and that compact
+    restore's job_leads carries the same tuple.
+  - Three pre-existing tests (albany_works_scene_counterfactual, cade_return_packet_counterfactual,
+    albany_market_scene_counterfactual) that pinned the old id-based rejection text were
+    updated to the title-based text; cade_return_packet_counterfactual — the test that
+    reverted 83fc32b6e9e9f715 — is unchanged in every other assertion, confirming the
+    option-level Cade-packet boundary still holds.
+  - OVERWORLD_COMPACT_VIEW_VERSION bumped 50 -> 51 with a re-signed legend signature
+    (tests/unit/compact_legend.test.ts) and every other exact `.toBe(50)` pin moved to 51
+    deliberately, not blindly.
+  - tests/regression/mcp_pure_play_mode.test.ts's two exact receipt byte-length pins grew
+    by the same ~160 bytes (one job_leads entry) and were re-pinned with the reason
+    stated inline; both stay under their existing ceilings.
+  - typecheck (root and ui) and targeted vitest are green on every touched and
+    downstream-consuming file.

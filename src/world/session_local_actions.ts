@@ -8,13 +8,15 @@ import type {
   OverworldArea,
   OverworldAreaExit,
   OverworldExplorationSite,
+  OverworldLocalEvent,
   OverworldLocalJob,
+  OverworldQuest,
 } from "./overworld.js";
 import {
   availableLocalJobSceneOptions,
   describeUnmetLocalJobSceneOptionGates,
+  localJobSceneChronologyBlockedReason,
   localJobSceneOptionRequirementsMet,
-  localJobSceneRequirementsMet,
   resolveLocalJobSceneOption,
   type LocalJobScene,
   type LocalJobSceneOption,
@@ -169,6 +171,9 @@ export type OverworldLocalJobCompletionState = {
   campaignWorldFactIds?: ReadonlySet<string> | undefined;
   campaignStoryChoiceKeys?: ReadonlySet<string> | undefined;
   campaignCharacter?: CampaignCharacterState | undefined;
+  /** Title lookups for the chronology-gate rejection; ids are shown when absent. */
+  questsById?: ReadonlyMap<string, Pick<OverworldQuest, "title">> | undefined;
+  eventsById?: ReadonlyMap<string, Pick<OverworldLocalEvent, "title">> | undefined;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
@@ -369,18 +374,6 @@ export function planOverworldLocalJobCompletion(
     if (!talkedToRequiredContact) {
       throw new Error(`Talk to the required contact before working ${job.title}.`);
     }
-    const missingQuest = scene.requires_completed_quests?.find(
-      (questId) => !state.completedQuestIds?.has(questId),
-    );
-    if (missingQuest) {
-      throw new Error(`Complete quest "${missingQuest}" before working ${job.title}.`);
-    }
-    const missingEvent = scene.requires_resolved_events?.find(
-      (eventId) => !state.resolvedEventIds?.has(eventId),
-    );
-    if (missingEvent) {
-      throw new Error(`Resolve event "${missingEvent}" before working ${job.title}.`);
-    }
     const conditionState = {
       completedQuestIds: state.completedQuestIds ?? new Set<string>(),
       resolvedEventIds: state.resolvedEventIds ?? new Set<string>(),
@@ -390,10 +383,19 @@ export function planOverworldLocalJobCompletion(
       eventOptionIdFor: (eventId: string) =>
         state.journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
     };
-    if (!localJobSceneRequirementsMet(scene, conditionState)) {
-      throw new Error(
-        `${job.title} is unavailable because its world-state requirements are not met.`,
-      );
+    // Shared with the listing's blocked reason (session_local_view.ts) so the two
+    // surfaces cannot describe the same unmet gate two different ways.
+    const chronologyBlockedReason = localJobSceneChronologyBlockedReason(
+      scene,
+      job.title,
+      conditionState,
+      {
+        questTitle: (questId) => state.questsById?.get(questId)?.title ?? questId,
+        eventTitle: (eventId) => state.eventsById?.get(eventId)?.title ?? eventId,
+      },
+    );
+    if (chronologyBlockedReason) {
+      throw new Error(chronologyBlockedReason);
     }
     if (!state.optionId) {
       // Every scene-level gate above already passed, so each id named here is

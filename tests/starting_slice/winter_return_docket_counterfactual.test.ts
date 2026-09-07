@@ -245,6 +245,51 @@ describe("Winter Return Docket", () => {
     ).toEqual(session.compactView().service_offers);
   });
 
+  it("names the docket's own unmet quest and event prerequisites on both the listing and the rejection (bug_0625)", () => {
+    // Reproduces the six real sessions' exact state: POI scouted, contact talked — both
+    // satisfied by the Albany opening itself, since civic_core is the starting area — with
+    // Wolf-Winter incomplete and the charter-backlog event unresolved.
+    const { session } = preparedForWolf(null);
+    moveToArea(session, CIVIC_AREA);
+    const questBlockedReason = `Complete quest "The Wolf-Winter" before working Rowan's Winter Return Docket.`;
+    expect(session.snapshot().discoveredJobIds).toContain(JOB_ID);
+    expect(session.view().jobs.map((job) => job.id)).not.toContain(JOB_ID);
+    expect(session.view().jobLeads).toEqual([
+      { id: JOB_ID, title: "Rowan's Winter Return Docket", blockedReason: questBlockedReason },
+    ]);
+    // The listing and the rejection are asserted byte-equal, not just both truthy: they come
+    // from one shared helper (local_job_scene.ts) so they cannot drift into describing the
+    // same gate two different ways.
+    expect(() => session.workLocalJob(JOB_ID)).toThrow(questBlockedReason);
+    let rejectionMessage = "";
+    try {
+      session.workLocalJob(JOB_ID);
+    } catch (error) {
+      rejectionMessage = (error as Error).message;
+    }
+    expect(rejectionMessage).toBe(session.view().jobLeads[0]!.blockedReason);
+
+    const api = createToolApi({ root: process.cwd() });
+    const compactRestored = api.restore_overworld_session({
+      compact_context: true,
+      snapshot: session.snapshot(),
+    });
+    expect(compactRestored.context.job_leads).toEqual([
+      [JOB_ID, "Rowan's Winter Return Docket", questBlockedReason],
+    ]);
+
+    // Once Wolf-Winter is complete but the charter-backlog event was never resolved, the
+    // remaining scene-level gate is named too — the event by title, not its engine id.
+    const eventBlockedReason = `Resolve event "Albany Civic Center: charter backlog" before working Rowan's Winter Return Docket.`;
+    const questDone = returnedToCivic(null);
+    expect(questDone.snapshot().completedQuestIds).toContain("wolf_winter");
+    expect(questDone.snapshot().resolvedEventIds).not.toContain(EVENT_ID);
+    expect(questDone.view().jobLeads).toEqual([
+      { id: JOB_ID, title: "Rowan's Winter Return Docket", blockedReason: eventBlockedReason },
+    ]);
+    expect(() => questDone.workLocalJob(JOB_ID)).toThrow(eventBlockedReason);
+  });
+
   it("exposes the authored event choice itself through MCP and the human UI action", () => {
     const session = preparedForWolf(null).session;
     moveToArea(session, CIVIC_AREA);

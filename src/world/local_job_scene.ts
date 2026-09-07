@@ -439,3 +439,51 @@ export function describeUnmetLocalJobSceneOptionGates(
   }
   return gates.size > 0 ? [...gates].sort().join("; ") : null;
 }
+
+/** Resolves a quest or event id to the player-facing title named in a chronology gate. */
+export type LocalJobSceneChronologyTitles = Readonly<{
+  questTitle: (questId: string) => string;
+  eventTitle: (eventId: string) => string;
+}>;
+
+/**
+ * Player-facing reason a DISCOVERED job's own SCENE-level chronology gate is unmet, naming
+ * the blocking quest or event by TITLE, or null once every scene-level gate is met. The
+ * listing hint and the execution rejection both call this so they cannot describe the same
+ * gate two different ways. Deliberately scoped to `localJobSceneRequirementsMet`'s own
+ * checks (quests, events, world facts) — it says nothing about per-option gates, which are
+ * `describeUnmetLocalJobSceneOptionGates`'s job.
+ */
+export function localJobSceneChronologyBlockedReason(
+  scene: LocalJobScene,
+  jobTitle: string,
+  state: Pick<
+    LocalJobSceneConditionState,
+    "completedQuestIds" | "resolvedEventIds" | "worldFactIds"
+  >,
+  titles: LocalJobSceneChronologyTitles,
+): string | null {
+  const parsed = parseLocalJobScene(scene);
+  const missingQuestId = parsed.requires_completed_quests.find(
+    (questId) => !state.completedQuestIds.has(questId),
+  );
+  if (missingQuestId) {
+    return `Complete quest "${titles.questTitle(missingQuestId)}" before working ${jobTitle}.`;
+  }
+  const missingEventId = (parsed.requires_resolved_events ?? []).find(
+    (eventId) => !state.resolvedEventIds.has(eventId),
+  );
+  if (missingEventId) {
+    return `Resolve event "${titles.eventTitle(missingEventId)}" before working ${jobTitle}.`;
+  }
+  if (
+    !matchesWorldFacts(
+      parsed.requires_all_world_facts,
+      parsed.forbids_any_world_facts,
+      state.worldFactIds,
+    )
+  ) {
+    return `${jobTitle} is unavailable because its world-state requirements are not met.`;
+  }
+  return null;
+}

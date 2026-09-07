@@ -2767,6 +2767,8 @@ export class OverworldSession {
       ),
       campaignCharacter: this.characterState,
       journalEntries: this.journalEntriesById,
+      questsById: this.questsById,
+      eventsById: this.localEventsById,
     };
   }
 
@@ -3653,6 +3655,8 @@ export class OverworldSession {
           this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
         ),
         campaignCharacter: this.characterState,
+        questsById: this.questsById,
+        eventsById: this.localEventsById,
         journalEntriesById: this.journalEntriesById,
         regionRenown: this.regionRenown,
         currentTownName: current.name,

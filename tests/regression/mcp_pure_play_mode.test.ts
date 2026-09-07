@@ -764,7 +764,10 @@ describe("MCP pure play mode", () => {
         const selectedRoleText = textResult(selectedRoleCall);
         const selectedRole = textPayload(selectedRoleCall);
         expect(selectedRoleCall.isError).not.toBe(true);
-        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBe(5_523);
+        // 5_523 -> 5_683 (bug_0625): civic_core's POI/contact are the opening's own, so by
+        // this point Rowan's Winter Return Docket is already discovered with an unmet
+        // scene-level quest gate, and job_leads now names it instead of leaving it silent.
+        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBe(5_683);
         expect(Buffer.byteLength(selectedRoleText, "utf8")).toBeLessThanOrEqual(6_400);
         expect((selectedRole.result as { consequence?: string }).consequence).toContain(
           "In Wolf-Winter, Defense starts at 4 instead of 3.",
@@ -811,7 +814,8 @@ describe("MCP pure play mode", () => {
         expect(selectedDispatchText).not.toContain("optional Station support remains");
         // bug_0614: the exposed-ridge route summary grew when it stopped claiming cattle
         // alarm starts at 1 (it doesn't; descending raises it to 1).
-        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(7_533);
+        // 7_533 -> 7_693 (bug_0625): same job_leads addition as the selected-role receipt above.
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(7_693);
         expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBeLessThanOrEqual(9_250);
         expect(selectedDispatchText).not.toMatch(/\b(?:DEF|DRIVE|FORTIFY)\b/gu);
         expect(selectedDispatchText).not.toMatch(/\bWorks\b/gu);
