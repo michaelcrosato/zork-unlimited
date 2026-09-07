@@ -1,0 +1,56 @@
+id: bug_0620
+title: A discovered job/event scene rejects a no-option call without ever naming its legal option ids
+reported_by: intake 56b3d1a6260af50c (Terra 100-player fleet, build f9b5c73d, 3 independent S2 reports)
+severity: S2
+
+symptom: >
+  After a fresh start, scouting Albany Civic Center exposed Rowan's Winter Return Docket
+  as a discovered job with its exact job id. The natural call to work_overworld_session_job
+  using that id was rejected with "Choose one option for Rowan's Winter Return Docket.",
+  but nothing the player had seen so far named an option id, and the rejection itself did
+  not name one either. The authored scene has legal options at that point (job_choices /
+  session.view().jobChoices already compute them correctly) — they were simply never
+  surfaced at the one moment a caller who skipped that lookup needed them: the rejection.
+  The identical shape exists on the event-resolution path (resolve_overworld_session_event),
+  which threw the same bare "Choose one option for <title>." with no ids.
+
+cause: >
+  planOverworldLocalJobCompletion (src/world/session_local_actions.ts) and
+  planOverworldEventResolution (src/world/session_event_resolution.ts) both throw a bare
+  "Choose one option for <title>." when optionId is missing, without calling the
+  already-available availableLocalJobSceneOptions / availableLocalEventSceneOptions
+  helpers that session_local_view.ts and compact_view.ts use to compute job_choices /
+  event_choices for exactly this purpose. The job path also ran this check BEFORE the
+  scout/talk/quest/event scene-level gates, so even enumerating ids at the old call site
+  could have named options that were not yet actually workable.
+
+reproduction: >
+  tests/starting_slice/winter_return_docket_counterfactual.test.ts drives a full Albany
+  opening through Wolf-Winter's return to the civic docket (returnedToCivic) and calls
+  session.workLocalJob(JOB_ID) with no option once the job's options are legal; before
+  this fix the thrown message was only "Choose one option for Rowan's Winter Return
+  Docket." with no id named. The same file's earlier event-scene test calls
+  session.resolveEvent(EVENT_ID) with no option after investigating it; before this fix
+  that message was only "Choose one option for Albany Civic Center: charter backlog."
+
+fix: >
+  Both throw sites now compute the currently-legal options via the existing
+  availableLocalJobSceneOptions / availableLocalEventSceneOptions helpers and name their
+  ids in the message ("Choose one option for <title>: id_a, id_b."), or say plainly that
+  no option is legal yet if the list is empty. In the job path, the scout/talk/quest/event
+  scene-level gates (and the shared conditionState they already built later in the
+  function) were reordered to run BEFORE the no-option check, so every id the rejection
+  names is immediately workable rather than a guess that still needs a separate
+  scout/talk/quest/event error on retry. The event path needed no reordering: its
+  no-option check already ran after assertOverworldEventResolutionReady and
+  localEventSceneRequirementsMet.
+
+production:
+  - src/world/session_local_actions.ts
+  - src/world/session_event_resolution.ts
+regression:
+  - tests/starting_slice/winter_return_docket_counterfactual.test.ts
+verification:
+  - Extended the existing Winter Return Docket counterfactual to assert both rejections
+    now name their exact legal option id(s).
+  - typecheck, lint, format, and the touched starting_slice/unit suites are green.

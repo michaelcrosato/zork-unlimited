@@ -237,7 +237,7 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
     expect(session.view().rememberedJobs.map((job) => job.id)).not.toContain(JOB_ID);
     expect(session.view().jobChoices).not.toContainEqual([JOB_ID, PROTECT_SHIFT]);
     expect(() => session.workLocalJob(JOB_ID, PROTECT_SHIFT)).toThrow(
-      /Complete quest "wolf_winter"/i,
+      /Complete quest "The Wolf-Winter"/i,
     );
 
     moveToArea(session, wolf.area);

@@ -75,6 +75,7 @@
     "loop:rotate-state": "tsx scripts/rotate-loop-state.ts",
     "loop:verify-playtest": "tsx scripts/verify-cycle-playtest.ts",
     "loop:seal-feedback": "tsx scripts/seal-feedback-acceptance.ts",
+    "loop:bar": "tsx scripts/cycle-bar.ts",
     "loop:failures": "tsx scripts/loop-failure-ledger.ts",
     "loop:status": "bash scripts/loop-status.sh",
     "loop:stop": "bash scripts/loop-stop.sh",

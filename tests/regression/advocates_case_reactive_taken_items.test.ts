@@ -181,11 +181,10 @@ describe("advocates_case rooms react to taken documents", () => {
     const taken = act(records, "take_prior_convictions");
     expect(narrations(taken.events)).toBe("You take the certified precedent packet.");
     expect(taken.state.inventory).toContain("prior_convictions");
-    expect(taken.state.flags).toEqual(records.flags);
-    expect(desc(taken.state)).toContain(
-      "A certified precedent packet was kept here. TAKE certified precedent packet if it is here, or retrieve that packet if needed",
-    );
-    expect(desc(taken.state)).toContain("master conviction ledger stays on its shelf");
+    expect(taken.state.flags["priors_taken"]).toBe(true);
+    expect(desc(taken.state)).toContain("You took the certified precedent packet");
+    expect(desc(taken.state)).toContain("master conviction ledger remains here");
+    expect(desc(taken.state)).not.toContain("A certified precedent packet was kept here");
     expect(commandFor(taken.state, "read_prior_convictions")).toBe(
       "read certified precedent packet",
     );
@@ -218,6 +217,27 @@ describe("advocates_case rooms react to taken documents", () => {
     expect(desc(s)).not.toMatch(
       /(?:packet|ledger) is (?:still )?(?:with you|in your hands)|you (?:carry|hold) (?:the )?(?:packet|ledger)/i,
     );
+    expect(buildRpgObservation(index, s).visible_objects).toContainEqual({
+      id: "prior_convictions",
+      name: "certified precedent packet",
+    });
+    expect(commandFor(s, "take_prior_convictions")).toBe("take certified precedent packet");
+    expect(lookNarration(s)).toBe(desc(s));
+  });
+
+  it("keeps the master ledger shelved after the precedent packet is dropped unread", () => {
+    const s = play(initStateForRpgPack(index, 59), [
+      "go_west",
+      "take_prior_convictions",
+      "drop_prior_convictions",
+    ]);
+
+    expect(s.inventory).not.toContain("prior_convictions");
+    expect(s.flags["priors_taken"]).toBe(true);
+    expect(s.flags["priors_read"]).toBeUndefined();
+    expect(desc(s)).toContain("You took the certified precedent packet");
+    expect(desc(s)).toContain("master conviction ledger remains here");
+    expect(desc(s)).not.toContain("A certified precedent packet was kept here");
     expect(buildRpgObservation(index, s).visible_objects).toContainEqual({
       id: "prior_convictions",
       name: "certified precedent packet",

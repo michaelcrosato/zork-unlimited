@@ -78,6 +78,12 @@ AI_AGENT=claude ./loop.sh                   # dev loop on Claude Code
 PLAYTEST_COHORT="codex:8" ./playtest-loop.sh
 ```
 
+`PLAYTEST_NEW_BUILD_ONLY=1` makes the playtest loop wait, after its pause, for the upstream
+tip to change before it starts the next wave (`PLAYTEST_NEW_BUILD_POLL_SECONDS` sets how
+often it looks; after `PLAYTEST_NEW_BUILD_MAX_WAIT_SECONDS` it replays the current build
+once rather than staying silent), so a lane feeding a dev loop plays each landed build
+instead of one build to exhaustion.
+
 ### Vendor privilege is now derived, not declared
 
 **No vendor is named anywhere in the gate.** Whether a provider may produce a
@@ -315,6 +321,29 @@ Promotion ladder — only the top two rungs cross into the dev loop's queue:
 An `accumulating` ticket stays visible in `qa/tickets/` but never reaches the queue.
 Handing the dev loop a pile of single-report opinions is exactly what the corroboration
 rule exists to prevent.
+
+**The cost of that rule, and the way out.** `corroborated` needs two distinct LINEAGES or
+reference tier — so a cohort running one model can report the same defect twenty times and
+stay at `accumulating` forever. That is not a bug in the ladder: twenty reports from one
+lineage are one opinion repeated, not twenty witnesses. But it does mean a real, reproducible
+defect can sit unreachable while a single-vendor fleet is all the operator can afford, which
+is exactly what happened on this branch — a two-session S2 blocker, among roughly $200 of
+evidence, invisible to the loop.
+
+`verified` is the way out, and it is the top rung for a reason: something with no opinion
+reproduced it. The dev loop's cycle prompt therefore lists a bounded set of **unverified
+leads** — accumulating BUG tickets with two or more reports, never `experience` ones, since how
+the game reads can only be settled by more players. A worker may take a lead ONLY by first
+reproducing it deterministically, with a regression test or a crawler probe, and records that
+with:
+
+```bash
+npm run qa:triage -- --verified <ticket_id> --verified-by tests/regression/<the test>.ts
+```
+
+which stamps `verified_by` on the ticket. The stamp is durable — triage carries it forward by
+identity — so the promotion outlives the run that made it and ordinary cycle-start triage
+carries the ticket into the queue from then on. A lead nobody can reproduce stays a lead.
 
 ### Staleness
 

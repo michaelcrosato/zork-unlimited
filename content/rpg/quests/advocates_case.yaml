@@ -140,6 +140,11 @@ rooms:
           You have read the certified precedent packet: three discharged impounds,
           including two signed by Oswin. The master conviction ledger remains here.
           Go east to Marta's Stall.
+      - when: [{ has_flag: priors_taken }]
+        text: >
+          You took the certified precedent packet. Retrieve the packet if needed, then
+          READ certified precedent packet only while that evidence remains unfinished.
+          The master conviction ledger remains here. Go east to Marta's Stall.
     objects: [prior_convictions]
     exits:
       - { direction: east, to: market_stall }
@@ -299,6 +304,8 @@ objects:
           You have read the certified precedent packet. It records three discharged
           impounds under charter exemptions, including two filed by Oswin.
     takeable: true
+    take_effects:
+      - set_flag: priors_taken
     read_text: >
       The packet records three district rulings from 1683, 1689, and 1691. Each
       ruling discharged an impound because a registered charter exemption was

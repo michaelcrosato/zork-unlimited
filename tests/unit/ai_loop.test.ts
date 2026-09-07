@@ -13,8 +13,17 @@ import {
   playtestTargetSummary,
   playtestTarget,
   playtestTargetMetadata,
+  FOCUSED_CHECKS_CONTRACT,
+  formatLeadsSection,
+  HEADLESS_TURN_CONTRACT,
+  PROMPT_QUEUE_LIMIT,
+  selectPromptQueue,
+  selectUnverifiedLeads,
+  UNVERIFIED_LEADS_LIMIT,
   shouldRunUltraplan,
 } from "../../src/ai-loop.js";
+import type { Submission } from "../../src/intake/submission.js";
+import type { QaTicket } from "../../src/qa/ticket.js";
 import {
   OVERWORLD_PLAYTEST_TARGET,
   SATURATION_FLOOR,
@@ -263,6 +272,252 @@ function expectContiguousSteps(prompt: string, first: number): void {
   expect(numbers).toEqual(numbers.map((_value, index) => first + index));
 }
 
+describe("both prompts state the headless single-turn contract", () => {
+  const standard = (): string => {
+    const top = candidate("engine", "src/core/engine.ts");
+    return buildPrompt({ a: assessment(top), top, commitEnabled: true });
+  };
+  const ultraplan = (): string =>
+    buildUltraplanPrompt({
+      a: saturatedAssessment(null),
+      currentPlanRecord: "ai-runs/x/current-plan.md",
+      commitEnabled: true,
+    });
+
+  it("tells the worker it has exactly one turn and nothing resumes it", () => {
+    // A worker backgrounded its checks and ended its turn expecting a wakeup that a
+    // headless run never delivers; 950 s of work was reverted and the CLI still reported
+    // success. A host can unset whatever auto-backgrounds long commands, but a host
+    // defends one machine and dev-agents.json invites any vendor on any machine.
+    for (const prompt of [standard(), ultraplan()]) {
+      expect(prompt).toContain("ONE non-interactive turn");
+      expect(prompt).toContain("FOREGROUND");
+      expect(prompt).toContain("ending the turn to come back later ends the CYCLE");
+      expect(prompt).toContain("provisional commit must already EXIST before you finish");
+    }
+  });
+
+  it("warns that the final gate counts UNTRACKED paths, naming the ones the cycle writes", () => {
+    // The cycle's own triage step writes qa/tickets/*.json — tracked in git on purpose —
+    // as new untracked files after the cycle started. require_final_ledger_only counts
+    // untracked paths, so leaving one reverts an otherwise green cycle at the last gate.
+    for (const prompt of [standard(), ultraplan()]) {
+      expect(prompt).toContain("UNTRACKED");
+      expect(prompt).toContain("qa/tickets");
+      expect(prompt).toContain("intake/queue");
+    }
+    // And the commit-mode step no longer understates that gate as tracked-only.
+    expect(standard()).toContain("untracked paths included, not just tracked ones");
+    expect(standard()).not.toContain("must be the only tracked change after the provisional");
+  });
+
+  it("forbids running the driver's own bar inside the turn", () => {
+    // A worker ran health:fast three times in one turn — roughly 17 minutes each under
+    // load — and hit its 60-minute budget without landing anything. Each run re-proved the
+    // bar loop.sh runs immediately afterwards on the same tree, so it bought no safety.
+    for (const prompt of [standard(), ultraplan()]) {
+      expect(prompt).toContain("Run FOCUSED checks only");
+      expect(prompt).toContain("npm run health:fast");
+      expect(prompt).toContain("Do NOT run");
+      expect(prompt).toContain("loop.sh runs the bar itself");
+    }
+  });
+
+  it("uses ONE contract for both prompts so they cannot drift apart", () => {
+    // Two hand-maintained copies of a safety contract is how one of them goes stale.
+    for (const line of [...HEADLESS_TURN_CONTRACT, ...FOCUSED_CHECKS_CONTRACT]) {
+      expect(standard()).toContain(line);
+      expect(ultraplan()).toContain(line);
+    }
+    expect(HEADLESS_TURN_CONTRACT.length).toBeGreaterThan(0);
+  });
+});
+
+describe("buildPrompt surfaces unverified leads without trusting them", () => {
+  /** `reportCount` is its own knob so a case can vary it without restating the whole
+   *  evidence block — a partial `evidence` would not satisfy TicketEvidence and a cast
+   *  around that gap would hide the very field this section filters on. */
+  const ticket = (
+    over: Partial<Omit<QaTicket, "evidence">> & { ticket_id: string; reportCount?: number },
+  ): QaTicket => {
+    const { reportCount = 2, ...rest } = over;
+    return {
+      schema_version: 2,
+      title: `lead ${over.ticket_id}`,
+      kind: "bug",
+      severity: "S2",
+      status: "open",
+      promotion: "accumulating",
+      location: "albany_city",
+      excerpts: [],
+      priority: 1,
+      evidence: {
+        report_count: reportCount,
+        families: ["claude"],
+        providers: ["claude_code"],
+        tiers: ["volume"],
+        has_runner_enforced_report: true,
+        session_ids: ["s1"],
+        first_seen_build: "a".repeat(40),
+        last_seen_build: "a".repeat(40),
+        first_seen_at: "2026-09-01T00:00:00.000Z",
+        last_seen_at: "2026-09-01T00:00:00.000Z",
+      },
+      ...rest,
+    } as QaTicket;
+  };
+
+  const promptWith = (leads: readonly QaTicket[]): string => {
+    const top = candidate("engine", "src/core/engine.ts");
+    return buildPrompt({ a: assessment(top), top, commitEnabled: true, leads });
+  };
+
+  it("lists an accumulating bug that two reports hit, and demands reproduction first", () => {
+    // The rule this encodes: one lineage reporting a thing twenty times is one opinion
+    // repeated, not two witnesses — so a lead is shown as a LEAD, never as work.
+    const prompt = promptWith([
+      ticket({ ticket_id: "a".repeat(16), title: "docket has no options" }),
+    ]);
+    expect(prompt).toContain("docket has no options");
+    expect(prompt).toContain("REPRODUCE BEFORE YOU FIX");
+    expect(prompt).toContain("npm run qa:triage -- --verified");
+    expect(prompt).toContain("--verified-by");
+    // And the honest exit when it cannot be reproduced.
+    expect(prompt).toContain("not a defect you may fix on faith");
+  });
+
+  it("excludes experience tickets, single reports, and anything already promoted", () => {
+    // An experience judgement cannot be settled by a test, so offering one here would invite
+    // exactly the faith-based fix the section exists to prevent.
+    expect(
+      selectUnverifiedLeads([
+        ticket({ ticket_id: "b".repeat(16), kind: "experience" }),
+        ticket({ ticket_id: "c".repeat(16), reportCount: 1 }),
+        ticket({ ticket_id: "d".repeat(16), promotion: "corroborated" }),
+        ticket({ ticket_id: "e".repeat(16), promotion: "verified" }),
+        ticket({ ticket_id: "f".repeat(16), status: "wont_fix" }),
+        ticket({ ticket_id: "0".repeat(16), superseded_by: ["1".repeat(16)] }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("caps the listing so one noisy bucket cannot flood the prompt", () => {
+    const many = Array.from({ length: UNVERIFIED_LEADS_LIMIT + 4 }, (_unused, index) =>
+      ticket({ ticket_id: `${index}`.padStart(16, "a"), priority: index }),
+    );
+    expect(selectUnverifiedLeads(many)).toHaveLength(UNVERIFIED_LEADS_LIMIT);
+  });
+
+  it("says nothing at all when there is no lead to show", () => {
+    // Silence is right here, unlike the queue: an empty bucket is not a state the worker
+    // has to reason about, and a permanent empty heading is noise in every prompt.
+    expect(formatLeadsSection([])).toEqual([]);
+    expect(promptWith([])).not.toContain("Unverified leads");
+  });
+});
+
+describe("buildPrompt carries the intake queue", () => {
+  const NOW = new Date("2026-09-05T21:00:00.000Z");
+  const submission = (over: Partial<Submission> & { id: string }): Submission =>
+    ({
+      title: `work ${over.id}`,
+      priority: "P2",
+      source: "playtest",
+      kind: "bug",
+      status: "open",
+      created_at: "2026-09-01T00:00:00.000Z",
+      evidence: { summary: "", refs: [], lineages: [], observations: 1 },
+      ...over,
+    }) as Submission;
+
+  const promptFor = (queue: readonly Submission[]): string => {
+    const top = candidate("engine", "src/core/engine.ts");
+    return buildPrompt({ a: assessment(top), top, queue });
+  };
+
+  it("names the open queue ahead of the assessor's ranking, with the claim commands", () => {
+    // The defect this closes: the worker is a fresh process reading only STDIN, so a queue
+    // printed to the cycle log reaches nobody. Order matters as much as presence — the
+    // charter puts somebody's actual request ahead of a candidate the assessor synthesized.
+    const prompt = promptFor([
+      submission({ id: "b".repeat(16), priority: "P2", title: "split the overworld JSON" }),
+      submission({ id: "a".repeat(16), priority: "P1", title: "cattle alarm stays 0" }),
+    ]);
+
+    expect(prompt).toContain("cattle alarm stays 0");
+    expect(prompt).toContain("a".repeat(16));
+    expect(prompt).toContain("npm run work -- --claim <id>");
+    expect(prompt).toContain("npm run work -- --done <id>");
+    // --done writes intake/queue/, so it must precede the freeze or the ledger-only gate trips.
+    expect(prompt).toContain("BEFORE the provisional commit");
+    expect(prompt.indexOf("intake queue")).toBeLessThan(prompt.indexOf("The assessor's"));
+    // Priority decides the order, not file order or the order the caller happened to pass.
+    expect(prompt.indexOf("cattle alarm stays 0")).toBeLessThan(
+      prompt.indexOf("split the overworld JSON"),
+    );
+  });
+
+  it("keeps the selection marker honest for off-list queue work", () => {
+    // A queue item is not an assessor candidate, so claiming its id would make the sealed
+    // acceptance marker assert a candidate the cycle never implemented.
+    expect(promptFor([submission({ id: "c".repeat(16) })])).toContain(
+      "leave `selected_recommendation_id` null",
+    );
+  });
+
+  it("hides work another lane holds, and shows it again once the lease expires", () => {
+    const held = submission({
+      id: "d".repeat(16),
+      status: "in_progress",
+      claimed_by: "some-other-lane",
+      claimed_at: "2026-09-05T20:00:00.000Z",
+      title: "held by a live lane",
+    });
+    const expired = { ...held, claimed_at: "2026-09-01T00:00:00.000Z" };
+
+    // Two lanes building the same item is the exact waste claims exist to stop...
+    expect(selectPromptQueue([held], { identity: "dev-opus-lane", now: NOW }).shown).toEqual([]);
+    // ...but a crashed lane must not hold work hostage past its lease.
+    expect(
+      selectPromptQueue([expired], { identity: "dev-opus-lane", now: NOW }).shown,
+    ).toHaveLength(1);
+    // Our own claim is ours to keep working.
+    expect(
+      selectPromptQueue([{ ...held, claimed_by: "dev-opus-lane" }], {
+        identity: "dev-opus-lane",
+        now: NOW,
+      }).shown,
+    ).toHaveLength(1);
+  });
+
+  it("drops resolved and superseded items", () => {
+    // Supersession sets status "declined"; done/stale are equally not work.
+    const closed = (["done", "declined", "stale"] as const).map((status, index) =>
+      submission({ id: `${index}`.repeat(16), status }),
+    );
+    expect(selectPromptQueue(closed, { identity: "dev-opus-lane", now: NOW }).available).toBe(0);
+    expect(promptFor(closed)).toContain("normal state, not a stall");
+  });
+
+  it("caps the listing and points at the CLI for the rest", () => {
+    const queue = Array.from({ length: PROMPT_QUEUE_LIMIT + 5 }, (_unused, index) =>
+      submission({ id: `${index}`.padStart(16, "0"), title: `queued item ${index}` }),
+    );
+    const prompt = promptFor(queue);
+
+    expect(prompt).toContain(`queued item ${PROMPT_QUEUE_LIMIT - 1}`);
+    expect(prompt).not.toContain(`queued item ${PROMPT_QUEUE_LIMIT}`);
+    expect(prompt).toContain("5 more");
+  });
+
+  it("says an empty queue is normal instead of staying silent about it", () => {
+    // Silence reads as "nothing was checked". The charter is explicit that empty is normal.
+    const prompt = promptFor([]);
+    expect(prompt).toContain("normal state, not a stall");
+    expect(prompt).not.toContain("--claim");
+  });
+});
+
 describe("buildPrompt drops the blind-playtest mandate", () => {
   it.each([
     ["content_fix", "cold_forge"],
@@ -355,10 +610,28 @@ describe("buildPrompt drops the blind-playtest mandate", () => {
     expectContiguousSteps(prompt, 1);
     const improve = prompt.indexOf("## STEP 1 — Make ONE improvement");
     const provisional = prompt.indexOf("PROVISIONAL commit");
-    const ledger = prompt.indexOf("AI_LOOP_STATE.md must be the only tracked change");
+    // Re-pointed, not relaxed: the ledger step is now stated in terms of the gate that
+    // actually runs, which counts untracked paths too. The ORDER it pins is unchanged.
+    const ledger = prompt.indexOf(
+      "After the provisional commit, AI_LOOP_STATE.md must be the only thing left",
+    );
     expect(improve).toBeGreaterThanOrEqual(0);
     expect(provisional).toBeGreaterThan(improve);
     expect(ledger).toBeGreaterThan(provisional);
+    // bug: a worker read STEP 3's old "Do not commit it" as "never commit the ledger",
+    // committed ten correct src/world files with NO AI_LOOP_STATE.md, and lost the whole
+    // cycle to the attestation gate. STEP 2 now states the requirement positively and
+    // hands the worker the SAME command loop.sh runs, so the turn cannot end red on a
+    // check the worker could have run itself. Pin both halves.
+    expect(prompt).toContain("The provisional commit MUST INCLUDE AI_LOOP_STATE.md");
+    expect(prompt).toContain(
+      "npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json",
+    );
+    expect(prompt).toContain("Never end the turn on");
+    // STEP 3 still withholds the COMPLETION, and must not be re-readable as withholding
+    // the file: the words that caused the loss are gone.
+    expect(prompt).toContain("Leave THIS COMPLETION uncommitted");
+    expect(prompt).not.toContain("Do not commit it.");
     expect(prompt).toContain("Never push");
     expect(prompt).toContain("npm run feedback:status");
     expect(prompt).toContain("only when status says ready");

@@ -132,12 +132,41 @@ function addRoadStrain(session: OverworldSession): void {
 }
 
 describe("SS-F04 — Albany ally commitment counterfactual", () => {
-  it("offers all three honest contracts across every background/source/preparation state under one neutral oath", () => {
+  /**
+   * The shape guards for the enumeration below, kept as their own case so the split cannot
+   * quietly become vacuous: if the world ever ships fewer backgrounds, sources or
+   * preparations, this fails loudly instead of the cross-product silently shrinking.
+   */
+  it("enumerates the whole opening state space", () => {
     expect(REGISTRATION.profiles).toHaveLength(4);
     expect(LEAD.options).toHaveLength(3);
     expect(PREPARATION.profiles).toHaveLength(3);
+  });
 
-    for (const background of REGISTRATION.profiles) {
+  /**
+   * One case PER BACKGROUND, not one case for all four.
+   *
+   * The cross-product is 4 backgrounds x 3 sources x 3 preparations x 3 contracts = 108
+   * full openings walked to the ally prompt, and as a single case it measured 46.1 s of
+   * this file's 54.8 s on an idle box — 77% of the standard lane's 60 s per-test budget
+   * spent in one `it`. A budget with 14 s of headroom is not a budget: the case timed out
+   * whenever the suite ran it beside anything else, which is always. On 2026-09-05 it
+   * reddened `health:fast` and then a full `health`, and the second failure discarded a
+   * 69-minute dev-loop cycle whose own change it could not even observe.
+   *
+   * Splitting per background gives each case the default budget (~11.5 s measured) and
+   * localizes a failure to one background. NOTHING about the coverage changes: the inner
+   * cross-product, the walks, and every assertion are exactly as they were — only the `it`
+   * they run under. The remaining duplication is real but deliberate: the option loop
+   * re-walks an identical prefix three times per (background, source, preparation),
+   * because each contract has to be chosen from a pristine pre-choice session, and
+   * rehydrating one from a snapshot instead would make this proof rest on
+   * `OverworldSession.restore` being behaviourally identical to a fresh walk — an
+   * assumption a campaign proof should not be smuggling in.
+   */
+  it.each(REGISTRATION.profiles)(
+    "offers all three honest contracts from $id across every source/preparation state under one neutral oath",
+    (background) => {
       for (const source of LEAD.options) {
         for (const preparation of PREPARATION.profiles) {
           for (const optionId of [ACCEPT, RELAY, SOLO]) {
@@ -193,8 +222,8 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
           }
         }
       }
-    }
-  });
+    },
+  );
 
   it("keeps direct departure solo, while a pending June offer must be resolved", () => {
     const direct = reachAlly();

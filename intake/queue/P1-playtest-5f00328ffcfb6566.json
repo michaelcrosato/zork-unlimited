@@ -6,7 +6,9 @@
   "source": "playtest",
   "kind": "bug",
   "priority": "P1",
-  "status": "open",
+  "status": "done",
+  "claimed_by": "dev-opus-lane",
+  "claimed_at": "2026-09-05T23:20:09.973Z",
   "labels": [
     "lane:content"
   ],
@@ -25,7 +27,7 @@
     "observations": 41
   },
   "created_at": "2026-08-31T07:35:30.145Z",
-  "updated_at": "2026-08-31T16:35:36.103Z",
+  "updated_at": "2026-09-06T04:35:26.269Z",
   "external": null,
   "mirrors": [
     {
@@ -35,5 +37,6 @@
       "url": "https://linear.app/michael-crosato/issue/MIC-41/5f00328ffcfb6566-hayden-cade-return-filing-stays-listed-with-no",
       "synced_status": "open"
     }
-  ]
+  ],
+  "resolved_by": "dev-opus-lane"
 }

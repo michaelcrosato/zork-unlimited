@@ -5,10 +5,11 @@ import { completedCycleCount, totalCycleCount } from "./loop_state.js";
 import { score, type ImprovementCandidate } from "./assessment_model.js";
 
 /**
- * How many completed improvement cycles AI_LOOP_STATE.md records. Recent cycles are
- * "### Cycle result" entries; older token-heavy entries may be folded into the tiny
- * historical_cycle_count marker. This stays a PURE function of repo state while letting
- * the live loop memory remain small.
+ * How many completed improvement cycles AI_LOOP_STATE.md records. Cycles are either
+ * legacy "### Cycle result" entries or current "## AFK Cycle" scaffolds completed in
+ * place; older token-heavy entries may be folded into the tiny historical_cycle_count
+ * marker. This stays a PURE function of repo state while letting the live loop memory
+ * remain small.
  */
 export function generatedEvalSeedBase(loopStateText: string): number {
   return completedCycleCount(loopStateText);

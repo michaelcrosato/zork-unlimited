@@ -63,11 +63,31 @@ function buildHistory(): string[] {
   }
 }
 
+/** Every value given for a repeatable flag, so `--verified a --verified b` takes both. */
+function allArgs(flag: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < process.argv.length; i += 1) {
+    if (process.argv[i] === flag && process.argv[i + 1] !== undefined)
+      out.push(process.argv[i + 1]!);
+  }
+  return out;
+}
+
 function main(): void {
   const store = argValue("--store", DEFAULT_SESSION_STORE);
   const ticketDir = argValue("--tickets", DEFAULT_TICKET_DIR);
   const queueDir = argValue("--queue", DEFAULT_QUEUE_DIR);
   const dryRun = process.argv.includes("--dry-run");
+  // The `verified` rung existed and had no way to be set: triagePlaytestCorpus has always
+  // accepted verifiedTicketIds, and nothing ever passed any. That left promotion to
+  // reference-tier or two independent families, so a single-lineage fleet could corroborate
+  // a defect twenty times over and never move it out of `accumulating`. Reproduction is the
+  // other honest route to confidence, and this is how a cycle records having done it.
+  const verifiedTicketIds = allArgs("--verified");
+  const verifiedBy = argValue("--verified-by", "");
+  if (verifiedTicketIds.length > 0 && verifiedBy === "") {
+    throw new Error("--verified requires --verified-by <what reproduced it>");
+  }
 
   const { entries, unreadable } = listPlaytestSessions(store);
   for (const bad of unreadable) console.error(`! unreadable session ${bad.dir}: ${bad.reason}`);
@@ -104,6 +124,8 @@ function main(): void {
     locationIndex: buildLocationIndex(REPO_ROOT),
     buildHistory: buildHistory(),
     existingTickets: existing,
+    verifiedTicketIds,
+    ...(verifiedBy !== "" ? { verifiedBy } : {}),
   });
 
   const { stats } = result;

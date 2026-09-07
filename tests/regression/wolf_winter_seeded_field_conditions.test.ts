@@ -406,6 +406,10 @@ describe("Wolf-Winter seeded field conditions", () => {
     expect(lure.inventory).toContain("winter_feed_sack");
 
     let ridgeLure = fresh("opening_condition_steady_scent_channel");
+    // bug_0614: the overworld exposed-ridge road only claims the descent raises cattle
+    // alarm to 1, not that it starts there. A fresh state, before any exposed-ridge
+    // action, must still read the quest's own vars_init of 0.
+    expect(ridgeLure.vars.cattle_alarm).toBe(0);
     ridgeLure = {
       ...ridgeLure,
       flags: { ...ridgeLure.flags, approach_exposed_ridge: true },
@@ -1044,7 +1048,7 @@ describe("Wolf-Winter seeded field conditions", () => {
       (option) => option.id === "albany:wolf_approach_sheltered_stockway",
     );
     expect(ridge?.preview).toBe(
-      "Cost: 30 minutes, 1 supply, and 25 fatigue. Cattle alarm starts at 1. You can see the byre and weather clearly. This road does not choose a field plan.",
+      "Cost: 30 minutes, 1 supply, and 25 fatigue. Descending raises cattle alarm to 1. You can see the byre and weather clearly. This road does not choose a field plan.",
     );
     expect(stockway?.preview).toBe(
       "Cost: 75 minutes, 2 supplies, and 10 fatigue. Cattle alarm starts at 0. Hedges hide the byre and weather. This road does not choose a field plan.",

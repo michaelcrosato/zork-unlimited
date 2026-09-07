@@ -24,7 +24,7 @@ const SOURCE_PATH = "content/rpg/quests/wolf_winter.yaml";
 // bug_0604 makes June's BACK close the conversation directly. Keep the exact
 // outgoing pack as the save-mismatch witness for this deliberate content change.
 const PREDECESSOR_SOURCE_HASH = "e91d4b8e575a8000e0741d363e8364ec18b6d794cd6cc89d6c380989a92823fa";
-const SOURCE_HASH = "5df094221f64d819829b5218135d0c904917fbe3e7c4cfa396a1a0c74a2c3a2e";
+const SOURCE_HASH = "eb102078db66e69bca3d150bd773f6b4d139b41fd86134b1c08285a0870c9c8b";
 const PALING_NORTH_GUIDANCE =
   "North is blocked. Complete the currently listed yearling or outer-seal action. During LURE, go south, west, and up, then CAST Cade's winter-feed sack THROUGH low wolf-hatch.";
 const loaded = loadRpgSourceFile(SOURCE_PATH);

@@ -6,7 +6,9 @@
   "source": "playtest",
   "kind": "bug",
   "priority": "P2",
-  "status": "open",
+  "status": "done",
+  "claimed_by": "dev-opus-lane",
+  "claimed_at": "2026-09-06T19:40:29.564Z",
   "labels": [],
   "area": "src/mcp/server.ts",
   "evidence": {
@@ -20,7 +22,7 @@
     "observations": 1
   },
   "created_at": "2026-08-29T00:28:29.254Z",
-  "updated_at": "2026-08-31T16:36:34.522Z",
+  "updated_at": "2026-09-06T20:00:29.673Z",
   "external": null,
   "mirrors": [
     {
@@ -30,5 +32,6 @@
       "url": "https://linear.app/michael-crosato/issue/MIC-28/61d3b9dec4cb09fd-inspect-takes-option-id-but-choose-takes-choice-so",
       "synced_status": "open"
     }
-  ]
+  ],
+  "resolved_by": "dev-opus-lane"
 }

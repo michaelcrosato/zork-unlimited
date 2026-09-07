@@ -74,7 +74,20 @@ describe("clustering", () => {
     expect(summarize(clusterIssues(shuffled))).toEqual(summarize(clusterIssues(items)));
   });
 
-  it("different unmapped raw texts never cluster together even at the same 'kind'", () => {
+  /**
+   * Unmapped locations share one bucket, so two players who never named a resolvable
+   * place can still corroborate each other. This replaces a test that pinned the
+   * opposite rule ("different unmapped raw texts never cluster together"), which was
+   * protecting against over-merging at a price that turned out to be higher: pass 2
+   * never merges across locationKeys, so putting the player's exact wording in the key
+   * meant an unmapped finding could only ever corroborate with a character-identical
+   * report. The findings least able to name a location became the findings least able
+   * to earn promotion.
+   *
+   * The protection did not disappear, it moved to where it belongs — the content tests,
+   * pinned by the second case below.
+   */
+  it("unmapped reports of one defect reach each other despite different raw wording", () => {
     const unmapped: CanonicalLocation = {
       kind: "unmapped",
       questId: null,
@@ -83,12 +96,50 @@ describe("clustering", () => {
       sceneId: null,
       raw: ["somewhere vaguely damp"],
     };
-    const a = issue("the lever would not budge", { location: unmapped });
+    const a = issue("the lever would not budge", { location: unmapped, ref: "s1" });
     const b = issue("the lever would not budge", {
       location: { ...unmapped, raw: ["a completely different unmapped place"] },
+      ref: "s2",
     });
     const clusters = clusterIssues([a, b]);
-    expect(clusters).toHaveLength(2);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]!.issues.map((i) => i.ref).sort()).toEqual(["s1", "s2"]);
+  });
+
+  it("unmapped reports of DIFFERENT problems still stay apart", () => {
+    // The bucket only makes them eligible to be compared. Content still decides, and
+    // nothing about the severity band or token tests was relaxed to get the merge above.
+    const unmapped: CanonicalLocation = {
+      kind: "unmapped",
+      questId: null,
+      region: null,
+      node: null,
+      sceneId: null,
+      raw: ["somewhere vaguely damp"],
+    };
+    const a = issue("the lever would not budge", { location: unmapped, ref: "s1" });
+    const b = issue("the merchant charged me twice for one lantern", {
+      location: { ...unmapped, raw: ["a completely different unmapped place"] },
+      ref: "s2",
+    });
+    expect(clusterIssues([a, b])).toHaveLength(2);
+  });
+
+  it("an unmapped cluster never absorbs a report that resolved to a real place", () => {
+    const unmapped: CanonicalLocation = {
+      kind: "unmapped",
+      questId: null,
+      region: null,
+      node: null,
+      sceneId: null,
+      raw: ["somewhere vaguely damp"],
+    };
+    const a = issue("the lever would not budge", { location: unmapped, ref: "s1" });
+    const b = issue("the lever would not budge", {
+      location: { ...loc, node: "troy_city" },
+      ref: "s2",
+    });
+    expect(clusterIssues([a, b])).toHaveLength(2);
   });
 
   it("empty input yields no clusters", () => {
@@ -231,5 +282,71 @@ describe("merging independently-authored reports of one defect", () => {
     // example rather than to a separation that actually exists.
     expect(Math.max(...different)).toBeLessThan(JACCARD_MERGE_THRESHOLD);
     expect(Math.min(...same)).toBeGreaterThan(JACCARD_MERGE_THRESHOLD);
+  });
+});
+
+/**
+ * `global` and `unmapped` are separate buckets on purpose, and neither may absorb a report
+ * that resolved to a real place. Three keys, three meanings: this text named several
+ * recognisable places, this text named nothing recognisable, this text named one place.
+ */
+describe("the global bucket keeps to itself", () => {
+  const global: CanonicalLocation = {
+    kind: "global",
+    questId: null,
+    region: null,
+    node: null,
+    sceneId: null,
+    raw: ["quest structure across Wolf-Winter and The Factor's Mark"],
+  };
+
+  it("merges two cross-cutting reports of the same pattern", () => {
+    const a = issue("every quest repeats the same three beat template", {
+      location: global,
+      ref: "s1",
+    });
+    const b = issue("every quest repeats the same three beat template", {
+      location: { ...global, raw: ["all six side quests, Gallowmere through Cold Forge"] },
+      ref: "s2",
+    });
+    const clusters = clusterIssues([a, b]);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]!.issues.map((i) => i.ref).sort()).toEqual(["s1", "s2"]);
+  });
+
+  it("never absorbs a report that resolved to a real place", () => {
+    // The must-not-merge direction. Identical words, one about the whole game and one
+    // about a single quest, stay two pieces of work — otherwise a design complaint about
+    // pacing would swallow a defect report from one room.
+    const a = issue("every quest repeats the same three beat template", {
+      location: global,
+      ref: "s1",
+    });
+    const b = issue("every quest repeats the same three beat template", {
+      location: { ...loc, node: "troy_city" },
+      ref: "s2",
+    });
+    expect(clusterIssues([a, b])).toHaveLength(2);
+  });
+
+  it("never absorbs an unmapped report either", () => {
+    // "Named several places" and "named nothing" are opposite findings about the text, and
+    // pooling them would let a report that pointed nowhere corroborate one about the game.
+    const a = issue("every quest repeats the same three beat template", {
+      location: global,
+      ref: "s1",
+    });
+    const b = issue("every quest repeats the same three beat template", {
+      location: {
+        kind: "unmapped",
+        questId: null,
+        region: null,
+        node: null,
+        sceneId: null,
+        raw: ["somewhere I did not note"],
+      },
+      ref: "s2",
+    });
+    expect(clusterIssues([a, b])).toHaveLength(2);
   });
 });

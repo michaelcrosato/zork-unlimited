@@ -361,8 +361,11 @@ describe("MCP server registration", () => {
 
     // The game-native passage action, optional quest approach, and exact authored
     // job option add bounded schema blocks; retain a tight ceiling around them.
-    expect(overworldSchemaSource.length).toBe(9194);
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(9250);
+    // +540 on 2026-09-06: choose_overworld_session_story gained a full-mode-only
+    // option_id alias for choice, so the obvious inspect-then-choose sequence no
+    // longer fails on an argument-name mismatch (queue 61d3b9dec4cb09fd).
+    expect(overworldSchemaSource.length).toBe(9_734);
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(9_800);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");

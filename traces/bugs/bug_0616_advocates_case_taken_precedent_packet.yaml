@@ -1,0 +1,32 @@
+id: bug_0616
+pack: advocates_case_v1
+title: "guild records room still placed the taken precedent packet on its shelf"
+severity: S1
+scene: guild_records
+reported_by: src/afk/stale_reactive_audit.ts (assessor cycle 2026-09-05)
+
+symptom: >
+  After taking the certified precedent packet from the Guild Records Room, LOOK
+  still said the packet was kept there and told the player to TAKE it — even
+  though it was already in inventory and unread. The only room variant reacted
+  to `priors_read`, so the take-before-read state fell back to the stale base
+  prose. The sibling documents in this same quest (the charter roll and the
+  town register) were already fixed for this exact gap by bug_0349; the
+  precedent packet was the one document bug_0349 missed.
+
+root_cause: >
+  `prior_convictions` carried no `take_effects`, so taking it left no durable
+  fact a room variant could read. `guild_records` only had a `priors_read`
+  variant, so a player who took the packet without immediately reading it (or
+  who dropped it unread) saw the room describe a packet that was no longer
+  there.
+
+fix: >
+  Taking the certified precedent packet now sets `priors_taken`. The Guild
+  Records Room has a `priors_taken` variant (ordered after the existing
+  `priors_read` variant, so a read packet keeps its more informative text)
+  that keeps the shelf state honest without claiming the packet is still
+  there. Score, exits, the confrontation check, and every other quest surface
+  are unchanged.
+
+tests: tests/regression/advocates_case_reactive_taken_items.test.ts

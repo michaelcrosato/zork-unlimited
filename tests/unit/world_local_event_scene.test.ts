@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   availableLocalEventSceneOptions,
+  describeUnmetLocalEventSceneOptionGates,
   LocalEventSceneSchema,
   localEventSceneLegalTuples,
   localEventSceneOptionRequirementsMet,
@@ -132,6 +133,42 @@ describe("strict authored local-event scenes", () => {
     expect(localEventSceneOptionRequirementsMet(synthetic.options[1]!, withFact)).toBe(false);
     expect(localEventSceneLegalTuples(synthetic)).toEqual([]);
     expect(localEventSceneLegalTuples(CHARTER_SCENE)).toHaveLength(2);
+  });
+
+  it("names only the still-reachable gate when no option is legal yet (bug_0624)", () => {
+    const synthetic: LocalEventScene = {
+      ...structuredClone(CHARTER_SCENE),
+      requires_completed_quests: undefined,
+      forbids_completed_quests: undefined,
+      forbids_completed_jobs: undefined,
+      options: [
+        {
+          ...structuredClone(CHARTER_SCENE.options[0]!),
+          requires_all_world_facts: ["fact:x", "fact:z"],
+          forbids_any_world_facts: ["fact:y"],
+        },
+        {
+          ...structuredClone(CHARTER_SCENE.options[1]!),
+          requires_all_world_facts: ["fact:y", "fact:w"],
+        },
+      ],
+    };
+    expect(describeUnmetLocalEventSceneOptionGates(synthetic, { worldFactIds: new Set() })).toBe(
+      'world fact "fact:w"; world fact "fact:x"; world fact "fact:y"; world fact "fact:z"',
+    );
+    // "fact:y" forecloses the first option (it forbids fact:y) — the second option's
+    // still-missing "fact:w" must be the only gate named, not the dead option's facts.
+    expect(
+      availableLocalEventSceneOptions(synthetic, {
+        completedQuestIds: new Set(),
+        worldFactIds: new Set(["fact:y"]),
+      }),
+    ).toEqual([]);
+    expect(
+      describeUnmetLocalEventSceneOptionGates(synthetic, {
+        worldFactIds: new Set(["fact:y"]),
+      }),
+    ).toBe('world fact "fact:w"');
   });
 
   it("redacts unavailable option presentation and reward fields from the active full view", () => {

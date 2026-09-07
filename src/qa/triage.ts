@@ -24,7 +24,13 @@
  * that just because new evidence arrived.
  */
 import { canonicalize } from "../core/hash.js";
-import { clusterIssues, type IssueCluster, type IssueRecord } from "../feedback/cluster.js";
+import {
+  GLOBAL_LOCATION_KEY,
+  UNMAPPED_LOCATION_KEY,
+  clusterIssues,
+  type IssueCluster,
+  type IssueRecord,
+} from "../feedback/cluster.js";
 import { scoreCluster } from "../feedback/rank.js";
 import { canonicalizeLocation, type LocationIndex } from "../feedback/normalize.js";
 import type { CanonicalLocation } from "../feedback/schema.js";
@@ -73,6 +79,11 @@ export type TriageInput = {
    * maintainer's repro). These promote straight to `verified`.
    */
   verifiedTicketIds?: readonly string[];
+  /**
+   * What reproduced those ids, recorded onto the ticket so the promotion outlives this run.
+   * Without it a `--verified` stamp would promote once and evaporate at the next triage.
+   */
+  verifiedBy?: string;
 };
 
 /**
@@ -135,8 +146,24 @@ function issueKey(ref: string, text: string): string {
   return `${ref}\u0000${text}`;
 }
 
-/** Stable, human-readable location label for a ticket. */
+/**
+ * Stable, human-readable location label for a ticket.
+ *
+ * An unmapped location answers with the bucket word, never with `raw[0]`. That raw string
+ * is one player's sentence — "Stuck job with no legal option ever exposed (Rowan's Winter
+ * Return Docket)" — and while it served as the label it was also hashed into the ticket
+ * id, so every rephrasing of one defect minted a separate ticket and split its own
+ * evidence. The sentence is not lost: `clusterExcerpts` keeps it, which is where a
+ * description belongs.
+ */
 function locationLabel(location: CanonicalLocation): string {
+  if (location.kind === "unmapped") return UNMAPPED_LOCATION_KEY;
+  if (location.kind === "global") return GLOBAL_LOCATION_KEY;
+  // `raw[0]` stays the last resort for MAPPED kinds. `legacyRegionReplacements` rebuilds a
+  // predecessor by nulling the region on an overworld location, and some of those fall all
+  // the way through to the raw text; removing the fallback here silently stopped the v1
+  // migration reproducing any of those ids, which reads exactly like a migration with
+  // nothing left to do.
   return (
     location.sceneId ??
     location.questId ??
@@ -173,7 +200,15 @@ function clusterIdentity(cluster: IssueCluster, confusionKeys: ReadonlySet<strin
 }
 
 function clusterExcerpts(cluster: IssueCluster): string[] {
-  return [...new Set(cluster.issues.map((issue) => issue.text))].slice(0, 5);
+  const reported = cluster.issues.map((issue) => issue.text);
+  // An unmapped cluster's `where` no longer survives in the location label, and it is
+  // often the only pointer to the place the player actually meant. It leads, because a
+  // reader scanning the bucket wants the location before the complaint.
+  const where =
+    cluster.location.kind === "unmapped" || cluster.location.kind === "global"
+      ? cluster.location.raw
+      : [];
+  return [...new Set([...where, ...reported])].slice(0, 5);
 }
 
 function clusterEvidence(
@@ -405,9 +440,6 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
     const { kind, location, id } = clusterIdentity(cluster, confusionKeys);
     const evidence = clusterEvidence(cluster, sessionById, currentBuild);
 
-    const isVerified = verified.has(id);
-    const promotion = derivePromotion(evidence, { verified: isVerified });
-
     const candidates = predecessors.get(id) ?? [];
     const solePredecessor =
       candidates.length === 1 && replacementLinks.get(candidates[0]!.ticket_id)?.length === 1
@@ -415,6 +447,15 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
         : undefined;
     const sameIdentity = existing.get(id);
     const prior = sameIdentity ?? solePredecessor;
+    // A lead proved once stays proved. `verified_by` is carried forward by identity, so the
+    // rung survives every later triage without the operator re-passing a flag — which is the
+    // whole difference between a promotion and a one-run override. A fresh stamp wins over a
+    // carried one so a re-verification can name the newer proof.
+    const verifiedBy = verified.has(id)
+      ? (input.verifiedBy ?? "operator reproduction")
+      : prior?.verified_by;
+    const isVerified = verifiedBy !== undefined;
+    const promotion = derivePromotion(evidence, { verified: isVerified });
     // Preserve workflow state a human or the dev loop set. Re-triage owns the
     // evidence and the promotion rung; it does not own whether someone is already
     // working on this or has decided not to.
@@ -438,6 +479,7 @@ export function triagePlaytestCorpus(input: TriageInput): TriageResult {
       evidence,
       priority: scoreCluster(cluster),
       ...(prior?.notes !== undefined ? { notes: prior.notes } : {}),
+      ...(verifiedBy !== undefined ? { verified_by: verifiedBy } : {}),
       ...(sameIdentity?.superseded_by ? { superseded_by: sameIdentity.superseded_by } : {}),
     });
   }

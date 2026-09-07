@@ -56,6 +56,7 @@ import {
 import { PURE_PLAYER_TOOLS } from "../../src/mcp/server.js";
 
 const {
+  CLAUDE_MCP_SERVER_NAME,
   CLAUDE_MCP_TOOL_PREFIX,
   auditClaudeInitEvent,
   auditClaudeToolCalls,
@@ -229,10 +230,24 @@ describe("claude_code earns runner_enforced from a reader that exists", () => {
     });
     expect(executable).toBe("claude");
 
-    // 1. `--permission-mode plan` REFUSES state-mutating tools, so every session under
-    //    the old entry would have died on its first `step_action`.
-    expect(argv[argv.indexOf("--permission-mode") + 1]).toBe("bypassPermissions");
+    // 1. Permission is ONE explicit grant, not a mode. `--permission-mode plan` REFUSES
+    //    state-mutating tools, so every session under the original entry would have died
+    //    on its first `step_action`; the blanket bypass mode that replaced it was the
+    //    opposite error — more privilege than a player holding no built-in tools can use,
+    //    and refused outright by the client when the process is root, which is how a whole
+    //    live cohort once died six seconds after launch with nothing recorded. So the
+    //    launch asks for no permission mode at all and grants exactly one thing.
+    const allowRule = argv[argv.indexOf("--allowedTools") + 1];
+    expect(allowRule).toBe(`mcp__${CLAUDE_MCP_SERVER_NAME}`);
+    expect(argv).not.toContain("--permission-mode");
     expect(argv).not.toContain("plan");
+    //    That grant names the ONE server blind-tester/run.sh writes into the config it
+    //    hands over. The registry cannot interpolate the name (PlaytestLaunchSchema
+    //    substitutes only {MODEL}, {CWD} and {MCP_CONFIG}), so the two are pinned together
+    //    here: a rename on one side alone leaves the rule covering nothing, and every game
+    //    tool is then denied silently, mid-wave.
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    expect(runner).toContain(`"${CLAUDE_MCP_SERVER_NAME}": {`);
     // 2. `--add-dir` grants filesystem access a blind player must never have.
     expect(argv).not.toContain("--add-dir");
 
