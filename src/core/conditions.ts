@@ -80,7 +80,12 @@ export type Condition =
   | { any_of: Condition[] }
   | { none_of: Condition[] };
 
-/** Evaluate one condition node against state. Pure, total, no throws. */
+/**
+ * Evaluate one condition node against state. Pure, total, no throws.
+ *
+ * Performance note: Direct imperative `for` loops avoid array method closure allocation
+ * (`.every()`, `.some()`) and iterator overhead during deep search / condition evaluation loops.
+ */
 export function evalCondition(cond: Condition, state: GameState): boolean {
   if ("has_flag" in cond) return state.flags[cond.has_flag] === true;
   if ("not_flag" in cond) return state.flags[cond.not_flag] !== true;
@@ -97,9 +102,27 @@ export function evalCondition(cond: Condition, state: GameState): boolean {
   if ("var_eq" in cond) return readVar(state.vars, cond.var_eq.name) === cond.var_eq.value;
   if ("quest_stage" in cond)
     return state.questStage[cond.quest_stage.quest] === cond.quest_stage.stage;
-  if ("all_of" in cond) return cond.all_of.every((c) => evalCondition(c, state));
-  if ("any_of" in cond) return cond.any_of.some((c) => evalCondition(c, state));
-  if ("none_of" in cond) return !cond.none_of.some((c) => evalCondition(c, state));
+  if ("all_of" in cond) {
+    for (let i = 0; i < cond.all_of.length; i++) {
+      const child = cond.all_of[i];
+      if (child !== undefined && !evalCondition(child, state)) return false;
+    }
+    return true;
+  }
+  if ("any_of" in cond) {
+    for (let i = 0; i < cond.any_of.length; i++) {
+      const child = cond.any_of[i];
+      if (child !== undefined && evalCondition(child, state)) return true;
+    }
+    return false;
+  }
+  if ("none_of" in cond) {
+    for (let i = 0; i < cond.none_of.length; i++) {
+      const child = cond.none_of[i];
+      if (child !== undefined && evalCondition(child, state)) return false;
+    }
+    return true;
+  }
   // Unreachable for schema-valid content; exhaustive by construction.
   const _exhaustive: never = cond;
   return Boolean(_exhaustive);
@@ -107,5 +130,9 @@ export function evalCondition(cond: Condition, state: GameState): boolean {
 
 /** All conditions must hold (empty list ⇒ true). */
 export function evalConditions(conds: Condition[], state: GameState): boolean {
-  return conds.every((c) => evalCondition(c, state));
+  for (let i = 0; i < conds.length; i++) {
+    const cond = conds[i];
+    if (cond !== undefined && !evalCondition(cond, state)) return false;
+  }
+  return true;
 }
