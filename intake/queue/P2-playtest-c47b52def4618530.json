@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "c47b52def4618530",
+  "title": "A job with several unmet gates names only one per attempt, so each fix costs another failed call",
+  "body": "## What happens\n\nA job with more than one unmet prerequisite refuses on the first one it finds, says nothing about the\nrest, and repeats with the next one after the player fixes it. Observed verbatim on seed\n`1788728013` (build `b2a18856`), three consecutive calls with **identical arguments** to Hayden's\nCade Return Packet:\n\n    work_overworld_session_job(job_id=albany_city__transport_hub__job,\n                               option_id=dispatch_pasture_search)\n      -> \"Scout the required point of interest before working Hayden's Cade Return Packet.\"\n\n    (player scouts the POI, calls again, same arguments)\n      -> \"Talk to the required contact before working Hayden's Cade Return Packet.\"\n\n    (player talks to the contact, calls again, same arguments)\n      -> ok: true\n\nThree attempts, two avoidable. The player then filed it, unprompted, as S1:\n\n> \"Job rejects one missing prerequisite at a time (scout POI, then talk contact) instead of listing\n> all unmet requirements together.\" — seed `1788728013`\n\n## Second observation, cheaper to fix and worth folding in\n\nThe refusal names the KIND of gate but not WHICH instance: \"the required point of interest\", \"the\nrequired contact\". The player has to work out which POI and which contact. Naming them costs nothing\nextra at the point the message is built, since the gate check already knows what it is testing.\n\n## Why P2, not P1\n\nNobody is blocked — this player recovered on its own in three calls, and the message is good enough\nto make each step obvious. Compare the pre-bug_0624 behaviour, where a reasonless refusal made six\nconsecutive sessions abandon the docket permanently after one attempt. This is the difference between\n\"I cannot proceed\" and \"that took three tries\", so it is a polish item on a fix that already works.\n\n## Acceptance\n\n1. A refusal lists **every** unmet gate at once, in the order the player would satisfy them, in\n   player terms rather than engine terms.\n2. The parity helper introduced by bug_0624 is the **single source** of that text — the listing and\n   the refusal must not be able to disagree about what is unmet, which is the failure mode that made\n   the original docket silent while the refusal was explicit.\n3. A regression drives the packet with two gates unmet and pins the COMBINED text, so a future change\n   that reverts to one-at-a-time fails the suite rather than being noticed by a player months later.\n4. Ideally the same regression covers the \"which instance\" half: the message names the specific POI\n   and contact, not just their kind.\n\n## Evidence\n\n- Retained client transcript\n  `ai-runs/playtest/runs/claude_code_seed1788728013_default.claude-session.jsonl`; the three calls\n  above are reproducible from it in order, with their exact arguments and responses.\n- The same session's exit interview carries the player's own S1 wording quoted above.\n- Corpus context: bug_0624's refusal is verified working in the wild — seed `1788729013` completed\n  the Rowan docket after being refused with `Complete quest \"wolf_winter\" before working Rowan's\n  Winter Return Docket.`, the first docket completion in 51 sessions.",
+  "source": "playtest",
+  "kind": "bug",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "src/world/session_local_actions.ts",
+  "evidence": {
+    "summary": "bug_0624's refusal works, and this is the follow-up it exposed: the helper names ONE unmet prerequisite per attempt and says nothing about the rest, so a multi-gate job is discovered one failed call at a time. Observed verbatim on seed 1788728013 (build b2a18856): three consecutive calls with identical arguments to the Cade Return Packet, each naming a different gate. Acceptance also requires naming WHICH instance is unmet, not just the kind of gate.",
+    "refs": [
+      "commit:b2a18856",
+      "traces/bugs/bug_0624_job_event_empty_option_gate_unnamed.yaml"
+    ],
+    "lineages": [
+      "claude"
+    ],
+    "observations": 1
+  },
+  "created_at": "2026-09-07T02:16:25.677Z",
+  "updated_at": "2026-09-07T02:16:25.677Z",
+  "external": null
+}
