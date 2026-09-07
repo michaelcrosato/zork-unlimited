@@ -242,6 +242,31 @@ export function availableLocalEventSceneOptions(
 }
 
 /**
+ * Player-facing reasons at least one option could still become legal, for the moment
+ * every option is currently blocked. An option already foreclosed by a currently-true
+ * forbidden world fact is excluded rather than offered as an actionable step. Returns
+ * null when every option is foreclosed, which the caller should treat as having
+ * nothing actionable to report.
+ */
+export function describeUnmetLocalEventSceneOptionGates(
+  scene: LocalEventScene,
+  state: Pick<LocalEventSceneConditionState, "worldFactIds">,
+): string | null {
+  const parsed = parseLocalEventScene(scene);
+  const worldFactIds = state.worldFactIds ?? new Set<string>();
+  const gates = new Set<string>();
+  for (const option of parsed.options) {
+    if ((option.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId))) {
+      continue;
+    }
+    for (const factId of option.requires_all_world_facts ?? []) {
+      if (!worldFactIds.has(factId)) gates.add(`world fact "${factId}"`);
+    }
+  }
+  return gates.size > 0 ? [...gates].sort().join("; ") : null;
+}
+
+/**
  * Canonical player-facing choices in authored order, with their exact executable terms.
  * Conditional options fail closed when no live condition state is supplied.
  */

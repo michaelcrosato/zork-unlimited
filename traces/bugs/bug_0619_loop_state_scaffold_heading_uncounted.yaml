@@ -1,0 +1,49 @@
+id: bug_0619
+title: AI_LOOP_STATE.md scaffold heading silently stopped counting completed cycles
+reported_by: audit finding 83bfaf74a0b8a3c3, confirmed by reading the live AI_LOOP_STATE.md 2026-09-06
+severity: S2
+
+symptom: >
+  src/afk/loop_state.ts's countCycleEntries/completedCycleCount/totalCycleCount all
+  matched only the legacy heading `/^### Cycle result/gm`. Since the 2026-08-29 two-loop
+  migration, src/ai-loop.ts's formatLoopStateAppend instead writes each new cycle's
+  scaffold as `## AFK Cycle <stamp>`, and the current protocol (docs/afk_loop.md) has the
+  agent complete that same heading in place rather than renaming/prepending a
+  "### Cycle result" entry. Every cycle landed since the migration was therefore invisible
+  to the counter: completedCycleCount/totalCycleCount silently undercounted, and
+  generatedEvalSeedBase (src/afk/generated_eval.ts, consumed by assessor.ts to window the
+  deterministic generated-RPG-pack check) drifted from the true cycle count with no error.
+
+cause: >
+  The heading text and level formatLoopStateAppend emits changed during the two-loop
+  migration; the CYCLE_ENTRY regex and the loop_state.ts docstring describing "a cycle
+  scaffold sits below the rich history until its final result is prepended" were never
+  updated to match, so the counter kept matching a heading form nothing emits anymore.
+
+reproduction:
+  - Append a cycle via formatLoopStateAppend (or read the live AI_LOOP_STATE.md, which
+    already carries two such "## AFK Cycle" entries as of this fix).
+  - completedCycleCount(text) before this fix does not include it; totalCycleCount(root)
+    undercounts by one per such cycle.
+
+fix: >
+  Added countScaffoldEntries (matches "## AFK Cycle "), and completedCycleCount/
+  totalCycleCount now add it alongside the legacy count. countCycleEntries itself (what
+  rotateLoopState keys off) deliberately stays legacy-only: its single-cut slice assumes
+  the kept region is prepend-ordered (newest first), which holds for the "### Cycle
+  result" section but not for the append-ordered scaffold tail, so folding scaffolds into
+  the same cut would archive the newest cycle first instead of the oldest. Rotating
+  scaffolds correctly (and reclaiming the token-economy goal this subsystem exists for)
+  needs its own pass and is left as a follow-up, not attempted here.
+
+production:
+  - src/afk/loop_state.ts
+  - src/afk/generated_eval.ts
+regression:
+  - tests/regression/loop_state_rotation.test.ts
+  - tests/unit/generated_eval.test.ts
+verification:
+  - New regression cases assert completedCycleCount/generatedEvalSeedBase count a "## AFK
+    Cycle" scaffold alongside "### Cycle result" entries, and that countCycleEntries plus
+    rotateLoopState still key only on the legacy heading (unaffected, no over-rotation).
+  - typecheck, lint, format, and the touched unit/regression suites are green.

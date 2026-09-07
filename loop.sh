@@ -26,10 +26,14 @@
 #   AI_LOOP_COMMIT=1                 provisional + final-ledger commits [0 = evidence-only]
 #   AI_LOOP_PUSH=1                   push after commit [0]; see the push note below
 #   AI_LOOP_MAX_CYCLES=N             stop after N cycles [unbounded]
+#   AI_LOOP_STOP_FILE=<path>         touch this file to stop cleanly at the next cycle
+#                                    boundary; cleared at startup [ai-runs/loop.stop]
 #   AI_LOOP_DELAY_SECONDS=N          pause between cycles [10]
 #   AI_AGENT_CMD="..."               explicit full agent command (overrides the registry)
 #   AI_CODEX_SANDBOX=...             sandbox for the codex entry only [workspace-write]
 #   AI_AGENT_TIMEOUT_SECONDS=N       hang-kill budget per agent turn [2400]
+#   AI_LOOP_FULL_HEALTH=1            force the FULL health bar even when the cycle's
+#                                    diff does not require it [0 = read it off the diff]
 #   AI_LOOP_MAX_CONSECUTIVE_FAILURES / AI_LOOP_MAX_TOTAL_FAILURES   breakers [5 / 15]
 #   AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES=N   retained durable failure records [100]
 #   AI_LOOP_ALLOW_DIRTY=1            allow risky dirty commit-mode start; never waives clean evidence [0]
@@ -64,6 +68,33 @@ if [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] && [[ -n "$(git status --porcelain)"
   echo "Commit or stash first, or set AI_LOOP_ALLOW_DIRTY=1 to accept the risk."
   exit 1
 fi
+
+# ── Graceful stop (AI_LOOP_STOP_FILE) ────────────────────────────────────────────
+# Landing a repo change while an UNBOUNDED loop runs used to mean one of two bad
+# options: catch the inter-cycle sleep, which is ten seconds by default, or kill a
+# cycle mid-flight and throw away a worker turn that had already cost real money.
+# Neither is a boundary. A file the operator can touch at any moment is one: the loop
+# finishes what it is doing, pushes it, and exits 0 at the next safe point, so "stop
+# after this cycle" costs nothing and loses nothing.
+#
+# It is checked twice. Before a cycle begins, so a stop never starts work it would
+# throw away; and again after a cycle returns — which is after its push, the last
+# thing run_cycle does — so a landed cycle stops immediately instead of racing the
+# delay. Both are outside run_cycle on purpose: a stop is an operator decision about
+# the SCHEDULE, and must never be able to fail a cycle or alter its gates.
+#
+# The file is CLEARED at startup rather than honoured. One left behind by an earlier
+# run would otherwise stop the next launch before it did anything, which looks exactly
+# like a loop that failed to start — the most confusing possible failure for a knob
+# whose whole job is to make stopping predictable.
+STOP_FILE="${AI_LOOP_STOP_FILE:-ai-runs/loop.stop}"
+stop_requested() {
+  [[ -e "$STOP_FILE" ]]
+}
+
+clear_stop_request() {
+  rm -f -- "$STOP_FILE" 2>/dev/null || true
+}
 
 # ── Project-scoped PID files (so orchestrator tooling tracks THIS loop only) ──────
 # With several projects running identical-looking `./loop.sh` / headless-agent processes,
@@ -144,6 +175,7 @@ fi
 trap cleanup_pid_records EXIT
 trap 'on_loop_signal 130' INT
 trap 'on_loop_signal 143' TERM
+clear_stop_request
 
 # The worker-recording shell below inherits these helpers before it execs the real
 # agent. exec preserves its pid and start time, so the record stays valid for the
@@ -419,12 +451,49 @@ require_final_ledger_only() {
     git diff --cached --name-only
     git ls-files --others --exclude-standard
   } | LC_ALL=C sort -u)"
-  if [[ "$changed" != "AI_LOOP_STATE.md" ]]; then
+  # A CLEAN tree passes too, and this is not a loosening. What the gate exists to stop is a
+  # cycle quietly growing a SECOND change after it verified, and nothing at all cannot be a
+  # second change. A worker may legitimately have put the completed ledger entry inside its
+  # own provisional commit — an early ledger, not a missing one — and rejecting that cost a
+  # real cycle: a green run was reverted with "got: (none)", which is the gate refusing a
+  # tree because it was too clean.
+  if [[ -n "$changed" && "$changed" != "AI_LOOP_STATE.md" ]]; then
     echo "Expected AI_LOOP_STATE.md to be the only post-play tracked change; got:"
-    [[ -n "$changed" ]] && echo "$changed" || echo "(none)"
+    echo "$changed"
     return 1
   fi
-  echo "✓ post-play changes are ledger-only"
+  if [[ -z "$changed" ]]; then
+    echo "✓ post-play tree is clean (the ledger entry was frozen in the provisional commit)"
+  else
+    echo "✓ post-play changes are ledger-only"
+  fi
+}
+
+# Which post-change bar THIS cycle has to clear. `npm run ship` already reads that off
+# the diff for a landing (scripts/ship.ts): the whole-state-space census proofs import
+# only CENSUS_PROOF_SOURCE_SCOPES, so a change confined outside them cannot move a census
+# verdict, while a change touching one gets the full bar because there the proofs ARE the
+# ground truth. Running the full bar on EVERY cycle spent the large majority of a docs or
+# tooling cycle's wall clock re-proving packs the cycle never touched. This asks the same
+# helper the same question, so the loop and the landing path cannot drift apart.
+#
+# It fails safe in exactly one direction. A nonzero exit, an unreadable ref, an empty
+# answer, or any word other than `fast` selects the FULL bar, and AI_LOOP_FULL_HEALTH=1
+# forces it outright. Being wrong the other way lands an engine or content regression that
+# only a nightly census proof would catch.
+select_health_bar() {
+  local start_ref="$1" verdict
+  if [[ "${AI_LOOP_FULL_HEALTH:-0}" == "1" ]]; then
+    printf 'health\n'
+    return 0
+  fi
+  verdict="$(npm run --silent loop:bar -- --against "$start_ref" 2>/dev/null | tr -d '[:space:]')" ||
+    verdict=""
+  if [[ "$verdict" == "fast" ]]; then
+    printf 'health:fast\n'
+  else
+    printf 'health\n'
+  fi
 }
 
 safe_commit_if_enabled() {
@@ -436,11 +505,23 @@ safe_commit_if_enabled() {
   if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]]; then
     return 0
   fi
-  local meta="ai-runs/latest-cycle.json" current_ref
+  local meta="ai-runs/latest-cycle.json" current_ref ledger_already_frozen=0
   current_ref="$(git rev-parse HEAD)" || return 1
+  # Whether the ledger entry was already frozen in the provisional commit, checked BEFORE the
+  # seal runs. It decides how to read an empty stage afterwards: with an early ledger, a seal
+  # that adds nothing is the normal outcome; without one, it means the ledger never got
+  # written and failing is right. Collapsing the two would hide a genuinely missing ledger.
+  if git diff --quiet && git diff --cached --quiet; then ledger_already_frozen=1; fi
   npm run --silent loop:seal-feedback -- --meta "$meta" --expected-commit "$current_ref" --start-ref "$cycle_failure_start_ref" || return 1
   git add -- AI_LOOP_STATE.md
-  git diff --cached --quiet && { echo "No final ledger change to commit."; return 1; }
+  if git diff --cached --quiet; then
+    if [[ "$ledger_already_frozen" == "1" ]]; then
+      echo "Ledger was already frozen in the provisional commit and the seal added nothing further; no second commit needed."
+      return 0
+    fi
+    echo "No final ledger change to commit."
+    return 1
+  fi
   git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Autonomous dev cycle: record verified change}"
 }
 
@@ -604,6 +685,17 @@ run_cycle() {
     _reject_cycle "provisional-commit" "required provisional implementation commit is absent or invalid"
     return 1
   }
+  # Fail fast on the seal's OWN precondition. A provisional commit whose ledger entry
+  # carries no actual-selection attestation is already dead — loop:seal-feedback will
+  # refuse it at the end of the cycle no matter how green the gates are — and one such
+  # cycle spent seventy minutes proving a full bar (4771 tests) before being thrown away
+  # at the last step. Asking the seal itself, in --check-attestation mode, rather than
+  # re-parsing the marker here: a check that drifts from the gate it stands in for is
+  # worse than none, because it would fail cycles the seal would have accepted.
+  npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json || {
+    _reject_cycle "attestation" "provisional commit carries no actual-selection attestation; the seal would reject it"
+    return 1
+  }
   # The agent has now completed the current ledger entry. Rotate at this boundary,
   # after evidence-only baseline play and before integrity runs, so both modes keep
   # exactly the configured live history without mutating an evidence-only baseline.
@@ -617,11 +709,16 @@ run_cycle() {
     _reject_cycle "crawl-post" "post-change crawl:smoke failed"
     return 1
   }
-  # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
-  # check too). A red check ⇒ no commit this cycle.
-  npm run health || {
-    echo "health failed — reverting cycle scratch, skipping commit"
-    _reject_cycle "health" "npm run health failed"
+  # Trust, but verify: the health bar is a BLOCKING gate (it runs the static
+  # verifier-integrity check too). A red check ⇒ no commit this cycle. WHICH health
+  # script runs is not a flag — select_health_bar reads it off this cycle's own diff,
+  # exactly as `npm run ship` does for a landing, and defaults to the full bar.
+  local health_script
+  health_script="$(select_health_bar "$start_ref")"
+  echo "post-change bar: npm run $health_script"
+  npm run "$health_script" || {
+    echo "$health_script failed — reverting cycle scratch, skipping commit"
+    _reject_cycle "health" "npm run $health_script failed"
     return 1
   }
   # Don't route around the verifier. A content cycle that re-pins a hash ALONGSIDE a
@@ -689,6 +786,10 @@ max_fails="${AI_LOOP_MAX_CONSECUTIVE_FAILURES:-5}"
 max_fails_total="${AI_LOOP_MAX_TOTAL_FAILURES:-15}"
 delay="${AI_LOOP_DELAY_SECONDS:-10}"
 while true; do
+  if stop_requested; then
+    echo "Graceful stop requested ($STOP_FILE) — exiting before cycle $((count + 1)) begins."
+    break
+  fi
   if run_cycle; then
     fails=0
     echo "✓ cycle $((count + 1)) complete."
@@ -722,6 +823,10 @@ while true; do
     fi
   fi
   count=$((count + 1))
+  if stop_requested; then
+    echo "Graceful stop requested ($STOP_FILE) — cycle $count is finished and pushed; exiting."
+    break
+  fi
   if [[ "$once" == "1" ]]; then
     break
   fi

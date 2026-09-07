@@ -610,3 +610,188 @@ describe("playtest-loop.sh cohort preflight", () => {
     expect(rows.get("isolation_reason")).toBe(derived.reason);
   });
 });
+
+/**
+ * `PLAYTEST_NEW_BUILD_ONLY` — the loop's between-wave wait for a NEW build.
+ *
+ * A fixed `PLAYTEST_DELAY_SECONDS` is a guess about how fast the dev loop lands changes,
+ * and it is wrong in both directions: too short and the corpus fills with repeat sessions
+ * on a build nobody changed, too long and a freshly pushed build sits unplayed. The knob
+ * waits for the EVENT instead, and uses time only as the failsafe.
+ *
+ * Exercised exactly the way the cohort preflight above is: the real `await_new_build` text
+ * is cut out of the shipped file and run under `bash -s`, with the two things that touch
+ * the world — `git` and `sleep` — replaced by stubs. Running playtest-loop.sh itself is not
+ * an option; one step past this it dispatches a live, paid cohort.
+ *
+ * The failure worth guarding against is not a crash. It is a loop that waits forever
+ * because the dev side went quiet: from outside, that is indistinguishable from a healthy
+ * idle loop, while QA silently produces nothing. Hence the ceiling, and hence a test on it.
+ *
+ * The stubs count their calls through a FILE rather than a shell variable, because the
+ * function reads the tip with `$(git rev-parse '@{u}')` — a command substitution, whose
+ * subshell throws away any variable the stub increments. A counter that silently stays 0
+ * would make every assertion below vacuously pass.
+ */
+describe("playtest-loop.sh new-build gate", () => {
+  const AWAIT_FN = loopSection("await_new_build() {", "\nwave=0");
+
+  /**
+   * `tips` is what `git rev-parse '@{u}'` answers on successive looks; the last entry
+   * repeats forever, which is how "the dev loop went quiet" is expressed.
+   */
+  function runAwait(options: {
+    only?: string;
+    tips: string[];
+    played: string;
+    hasUpstream?: string;
+    poll?: string;
+    maxWait?: string;
+  }): { status: number | null; output: string; looks: number; sleeps: number } {
+    const dir = mkdtempSync(join(tmpdir(), "af-newbuild-"));
+    const looksFile = join(dir, "looks");
+    const sleepsFile = join(dir, "sleeps");
+    const script = [
+      "set -uo pipefail",
+      `NEW_BUILD_ONLY=${shellQuote(options.only ?? "1")}`,
+      `NEW_BUILD_POLL=${shellQuote(options.poll ?? "60")}`,
+      `NEW_BUILD_MAX_WAIT=${shellQuote(options.maxWait ?? "600")}`,
+      `LAST_WAVE_BUILD=${shellQuote(options.played)}`,
+      `HAS_UPSTREAM=${shellQuote(options.hasUpstream ?? "1")}`,
+      `LOOKS_FILE=${shellQuote(looksFile)}`,
+      `SLEEPS_FILE=${shellQuote(sleepsFile)}`,
+      `TIPS=(${options.tips.map(shellQuote).join(" ")})`,
+      // Created up front so a run that never looks still leaves a readable zero.
+      ': > "$LOOKS_FILE"',
+      ': > "$SLEEPS_FILE"',
+      // The one seam that touches the repository. Every command the function may issue is
+      // answered explicitly, and anything else is a hard error rather than a silent 0 — an
+      // unrecognised git call answered "fine" is how a stub starts certifying a function
+      // that no longer does what the test claims.
+      "git() {",
+      '  case "$*" in',
+      '    "rev-parse --abbrev-ref --symbolic-full-name @{u}") [ "$HAS_UPSTREAM" = 1 ] || return 1 ;;',
+      '    "fetch --quiet origin") return 0 ;;',
+      '    "rev-parse @{u}")',
+      '      printf "x\\n" >> "$LOOKS_FILE"',
+      '      local index=$(( $(wc -l < "$LOOKS_FILE") - 1 ))',
+      "      (( index >= ${#TIPS[@]} )) && index=$(( ${#TIPS[@]} - 1 ))",
+      '      printf "%s\\n" "${TIPS[$index]}" ;;',
+      '    "reset --quiet --hard @{u}") return 0 ;;',
+      '    "rev-parse --short HEAD") printf "shorthead\\n" ;;',
+      '    *) printf "unexpected git call: %s\\n" "$*" >&2; return 2 ;;',
+      "  esac",
+      "}",
+      'sleep() { printf "x\\n" >> "$SLEEPS_FILE"; }',
+      AWAIT_FN,
+      "await_new_build",
+    ].join("\n");
+    const result = spawnSync("bash", ["-s"], {
+      cwd: ROOT,
+      input: script,
+      encoding: "utf8",
+      timeout: 120_000,
+    });
+    const count = (file: string): number =>
+      readFileSync(file, "utf8").split("\n").filter(Boolean).length;
+    try {
+      return {
+        status: result.status,
+        output: `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`,
+        looks: count(looksFile),
+        sleeps: count(sleepsFile),
+      };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("is off by default, and then touches the repository not at all", () => {
+    // Not merely "returns 0": the default path must not fetch, look, or sleep. An opt-in
+    // knob that still runs its machinery is one that can still change the timing of every
+    // wave for operators who never asked for it.
+    const result = runAwait({ only: "0", tips: ["deadbeef"], played: "deadbeef" });
+    expect(result.status, result.output).toBe(0);
+    expect(result.looks).toBe(0);
+    expect(result.sleeps).toBe(0);
+    expect(result.output).not.toContain("new build");
+  });
+
+  it("starts the next wave as soon as the tip differs from the build last played", () => {
+    const result = runAwait({ tips: ["1111111111"], played: "0000000000" });
+    expect(result.status, result.output).toBe(0);
+    expect(result.output).toContain("new build shorthead after 0s");
+    expect(result.looks).toBe(1);
+    expect(result.sleeps).toBe(0);
+  });
+
+  it("keeps looking while the tip is still the build it already played", () => {
+    // Nothing pushed for two polls, then a landing.
+    const result = runAwait({
+      tips: ["0000000000", "0000000000", "2222222222"],
+      played: "0000000000",
+      poll: "30",
+    });
+    expect(result.status, result.output).toBe(0);
+    expect(result.output).toContain("new build shorthead after 60s");
+    expect(result.looks).toBe(3);
+    expect(result.sleeps).toBe(2);
+  });
+
+  it("gives up at the ceiling and replays rather than waiting forever", () => {
+    // The dev loop is down. A QA loop that blocks here produces nothing while looking
+    // perfectly healthy, so the ceiling turns silence into a repeat session and a line
+    // saying why.
+    const result = runAwait({
+      tips: ["0000000000"],
+      played: "0000000000",
+      poll: "60",
+      maxWait: "300",
+    });
+    expect(result.status, result.output).toBe(0);
+    expect(result.output).toContain("no new build after 300s");
+    expect(result.output).toContain("replaying shorthead");
+    expect(result.looks).toBe(5);
+    expect(result.sleeps).toBe(5);
+  });
+
+  it("says so out loud when the checkout tracks no upstream, instead of ignoring the knob", () => {
+    // Refusing would strand an operator whose only mistake was setting a knob on a
+    // detached mirror. Playing on is right; doing it silently is how someone concludes the
+    // feature is broken.
+    const result = runAwait({ tips: ["1111111111"], played: "0000000000", hasUpstream: "0" });
+    expect(result.status, result.output).toBe(0);
+    expect(result.output).toContain("tracks no upstream");
+    expect(result.looks).toBe(0);
+  });
+
+  it("measures new against the build the wave PLAYED, not the tip when it last looked", () => {
+    // If the dev loop pushed WHILE the wave was running, that push is already unplayed work
+    // and the next wave should start on it immediately. Comparing against the tip observed
+    // at the end of the wave would swallow exactly that build.
+    const result = runAwait({ tips: ["3333333333"], played: "0000000000" });
+    expect(result.looks).toBe(1);
+    expect(result.sleeps).toBe(0);
+    expect(result.output).toContain("new build");
+  });
+
+  it("refuses a poll interval that is not a positive number of seconds", () => {
+    // `sleep soon` would fail every poll and spin the ceiling out at full speed; a 0 would
+    // busy-loop against the remote. Both are worth refusing at startup, by name.
+    const knobs = loopSection(
+      'NEW_BUILD_ONLY="${PLAYTEST_NEW_BUILD_ONLY:-0}"',
+      "# The exact commit",
+    );
+    for (const bad of ["soon", "0", "-5"]) {
+      const result = spawnSync("bash", ["-s"], {
+        cwd: ROOT,
+        input: `set -uo pipefail\nexport PLAYTEST_NEW_BUILD_ONLY=1 PLAYTEST_NEW_BUILD_POLL_SECONDS=${bad}\n${knobs}`,
+        encoding: "utf8",
+        timeout: 120_000,
+      });
+      const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+      expect(result.status, output).toBe(2);
+      expect(output).toContain("PLAYTEST_NEW_BUILD_POLL_SECONDS");
+    }
+  });
+});

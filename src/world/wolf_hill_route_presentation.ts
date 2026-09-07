@@ -18,7 +18,7 @@ const EXPOSED_RIDGE_OPTION_ID = "albany:wolf_approach_exposed_ridge";
 const SHELTERED_STOCKWAY_OPTION_ID = "albany:wolf_approach_sheltered_stockway";
 const ROUTE_SUMMARIES = Object.freeze({
   exposedRidge:
-    "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Cattle alarm starts at 1, but you can see the byre and weather clearly. This road chooses no field plan.",
+    "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Descending raises cattle alarm to 1, but you can see the byre and weather clearly. This road chooses no field plan.",
   shelteredStockway:
     "Sheltered Stockway — 75 minutes, 2 supplies, +10 fatigue. Cattle alarm starts at 0, but hedges hide the byre and weather. This road chooses no field plan.",
 });

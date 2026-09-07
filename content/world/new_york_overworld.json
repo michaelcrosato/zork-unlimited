@@ -48852,8 +48852,8 @@
             "id": "albany:wolf_approach_exposed_ridge",
             "title": "Take the Exposed Ridge",
             "summary": "Reach Cade quickly with a clear view, but arrive more tired and alarm the cattle.",
-            "preview": "Cost: 30 minutes, 1 supply, and 25 fatigue. Cattle alarm starts at 1. You can see the byre and weather clearly. This road does not choose a field plan.",
-            "consequence": "You spend 30 minutes, 1 supply, and 25 fatigue. Cattle alarm starts at 1, and you can see the byre and weather clearly.",
+            "preview": "Cost: 30 minutes, 1 supply, and 25 fatigue. Descending raises cattle alarm to 1. You can see the byre and weather clearly. This road does not choose a field plan.",
+            "consequence": "You spend 30 minutes, 1 supply, and 25 fatigue. Descending raises cattle alarm to 1, and you can see the byre and weather clearly.",
             "return_summary": "You reached Cade quickly by the exposed ridge. You saw the full byre, but the cattle saw you and became alarmed.",
             "terms": {
               "minutes": 30,

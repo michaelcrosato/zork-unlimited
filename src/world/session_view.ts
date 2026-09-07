@@ -12,6 +12,7 @@ import {
 import { compareTownByPopulationThenName, sortedNumberRecord } from "./session_collections.js";
 import { timeLabel } from "./session_journal_codec.js";
 import type { OverworldQuestView } from "./session_local_discovery.js";
+import type { OverworldSessionLocalJobLead } from "./session_local_view.js";
 import {
   cloneOverworldRegionalArcProgress,
   type OverworldRegionalArcProgress,
@@ -82,6 +83,7 @@ export type OverworldView = {
   jobChoices: OverworldCompactJobChoice[];
   rememberedJobs: OverworldLocalJob[];
   hiddenJobCount: number;
+  jobLeads: OverworldSessionLocalJobLead[];
   sites: OverworldExplorationSite[];
   hiddenSiteCount: number;
   quests: OverworldQuestView[];
@@ -147,6 +149,7 @@ export type OverworldSessionViewState = {
   jobChoices?: readonly OverworldCompactJobChoice[];
   rememberedJobs: readonly OverworldLocalJob[];
   hiddenJobCount: number;
+  jobLeads: readonly OverworldSessionLocalJobLead[];
   sites: readonly OverworldExplorationSite[];
   hiddenSiteCount: number;
   quests: readonly OverworldQuestView[];
@@ -226,6 +229,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     jobChoices: (state.jobChoices ?? []).map(([jobId, optionId]) => [jobId, optionId]),
     rememberedJobs: [...state.rememberedJobs],
     hiddenJobCount: state.hiddenJobCount,
+    jobLeads: [...state.jobLeads],
     sites: [...state.sites],
     hiddenSiteCount: state.hiddenSiteCount,
     quests: [...state.quests],

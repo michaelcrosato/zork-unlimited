@@ -16,6 +16,27 @@ An empty bucket is normal. It means the fleet has not yet corroborated anything
 new, and the dev loop proceeds on the assessor's own candidates — it never stalls
 waiting for QA.
 
+## Promotion, and the single-lineage trap
+
+A ticket reaches the dev loop's queue at `corroborated` (two distinct lineages, or reference
+tier) or `verified` (something with no opinion reproduced it). `report_count` is recorded but
+deliberately does NOT promote: twenty reports from one model lineage are one opinion repeated.
+
+That leaves a real gap when a cohort runs one vendor, and the answer is reproduction rather
+than a weaker threshold. The cycle prompt surfaces accumulating BUG tickets with two or more
+reports as **unverified leads**; a worker may act on one only after reproducing it
+deterministically, and records that with
+
+```bash
+npm run qa:triage -- --verified <ticket_id> --verified-by tests/regression/<the test>.ts
+```
+
+which writes `verified_by` onto the ticket file. Triage carries that field forward by
+identity, so the promotion is durable rather than a one-run override, and it also exempts the
+ticket from staleness — a proved defect should not age out for want of fresh reports.
+`experience` tickets are never offered as leads: how the game reads is not a thing a test can
+settle.
+
 ## Retention
 
 The bucket is bounded, and this is the one place that says how.

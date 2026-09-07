@@ -1,0 +1,30 @@
+id: bug_0615
+pack: falconers_ransom_v1
+title: "gate lodge still placed the taken gate log on the counter"
+severity: S1
+scene: gate_lodge
+reported_by: src/afk/stale_reactive_audit.ts (assessor cycle 2026-09-05)
+
+symptom: >
+  After taking the gate log from the Gate Lodge, LOOK still said the log was
+  kept on the counter and told the player to TAKE it — even though it was
+  already in inventory and unread. The only room variant reacted to
+  `log_read`, so the take-before-read state fell back to the stale base
+  prose. The sibling document in this same quest (the hidden bill in the
+  Guest Chambers) was already fixed for this exact gap by bug_0351; the gate
+  log was the one document bug_0351 missed.
+
+root_cause: >
+  `gate_log` carried no `take_effects`, so taking it left no durable fact a
+  room variant could read. `gate_lodge` only had a `log_read` variant, so a
+  player who took the log without immediately reading it (or who dropped it
+  unread) saw the room describe a log that was no longer there.
+
+fix: >
+  Taking the gate log now sets `log_taken`. The Gate Lodge has a `log_taken`
+  variant (ordered after the existing `log_read` variant, so a read log keeps
+  its more informative text) that keeps the counter state honest without
+  claiming the log is still there. Score, exits, the confrontation check, and
+  every other quest surface are unchanged.
+
+tests: tests/regression/falconers_ransom_reactive_taken_items.test.ts

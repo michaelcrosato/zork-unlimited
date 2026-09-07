@@ -1,0 +1,51 @@
+id: bug_0621
+title: Re-resolving an already-resolved event scene without an option still hides the legal ids
+reported_by: ultraplan re-aim 2026-09-06 (loop/strategy dimension, following bug_0620's own recorded next step)
+severity: S2
+
+symptom: >
+  After a player resolved Albany Civic Center's charter-backlog event with a valid
+  option, a later call to resolve_overworld_session_event for the same event with no
+  option (a caller re-deriving the id from event_choices, or retrying without one) was
+  rejected with the bare "Choose one option for Albany Civic Center: charter backlog.",
+  naming no ids — exactly the class of rejection bug_0620 fixed everywhere else. The
+  event path's OWN "not yet resolved" branch four lines below already lists ids for the
+  identical scene via availableLocalEventSceneOptions; this "already resolved" branch
+  never got the same treatment.
+
+cause: >
+  planOverworldEventResolution (src/world/session_event_resolution.ts) has two
+  "scene exists but sceneOption is missing" branches: one inside the
+  `state.resolvedEventIds.has(event.id)` / already-resolved short-circuit (previously a
+  bare throw), and one on the normal first-resolution path (already fixed by bug_0620,
+  which lists ids via availableLocalEventSceneOptions). bug_0620's fix and its regression
+  only exercised the first-resolution path; the already-resolved branch was left with its
+  original bare message. The sibling job path in session_local_actions.ts has no
+  equivalent gap because bug_0620 reordered ITS gate checks so the single ids-listing
+  throw fires before the "already completed" check can be reached at all.
+
+reproduction: >
+  tests/starting_slice/winter_return_docket_counterfactual.test.ts's first test resolves
+  EVENT_ID with PUBLIC, then (before this fix) called session.resolveEvent(EVENT_ID) with
+  no option and got only "Choose one option for Albany Civic Center: charter backlog."
+  with no ids named.
+
+fix: >
+  The already-resolved branch now computes availableIds via the same
+  availableLocalEventSceneOptions(scene, { completedQuestIds, completedJobIds,
+  worldFactIds: campaignWorldFactIds }) call already used one branch down, and names them
+  in the message (or says plainly that no option is legal yet, when the list is empty) —
+  identical phrasing to the already-fixed branch, applied to the one throw site bug_0620
+  didn't reach. No reordering was needed: the branch already ran after all relevant scene
+  state was established.
+
+production:
+  - src/world/session_event_resolution.ts
+regression:
+  - tests/starting_slice/winter_return_docket_counterfactual.test.ts
+verification:
+  - Extended the existing Winter Return Docket counterfactual with a red-before/
+    green-after assertion that re-resolving the event with no option after it was
+    already resolved now names its exact legal ids.
+  - typecheck, lint, format, and the touched starting_slice suite are green.
+  - verify:bug-traces green with this artifact registered.

@@ -76,7 +76,12 @@ export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
 // exact, durable read-only reveal while keeping legal Wolf-Winter roads first.
 // v49: Station board V6 makes that reveal relevance-first by naming only the
 // still-open kit, wagon, and rider categories before any support comparison.
-export const OVERWORLD_COMPACT_VIEW_VERSION = 50 as const;
+// v51: adds job_leads. A discovered job whose own SCENE-level chronology gate (a quest or
+// event prerequisite) is unmet previously vanished into `hidden`'s job count with no reason
+// given; job_leads names it and the blocking quest/event by title (bug_0625, queue
+// 834b4d2f60f7915c). The option-level case (scene met, zero options legal) is unchanged and
+// stays silently inside `hidden`. No existing field's shape changed.
+export const OVERWORLD_COMPACT_VIEW_VERSION = 51 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -111,6 +116,11 @@ export type OverworldCompactEventLead = readonly [
   nextPrerequisite: string,
 ];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
+export type OverworldCompactJobLead = readonly [
+  jobId: string,
+  title: string,
+  blockedReason: string,
+];
 export type OverworldCompactJobSceneOption = readonly [
   optionId: string,
   title: string,
@@ -426,6 +436,7 @@ export type OverworldCompactView = {
   jobs?: OverworldCompactRef[];
   job_scenes?: OverworldCompactJobScene[];
   job_choices?: OverworldCompactJobChoice[];
+  job_leads?: OverworldCompactJobLead[];
   remembered_jobs?: OverworldCompactJobLeadRef[];
   sites?: OverworldCompactRef[];
   quests?: OverworldCompactQuestRef[];
@@ -513,6 +524,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "[[job_id,scene_id,prompt,required_poi_id,required_contact_id,[required_quest_id],[[option_id,title,minutes,renown,preview,consequence]]],...] authored jobs. Complete the listed setup before choosing.",
   job_choices:
     "[[job_id, option_id], ...] currently legal authored job choices; call work_overworld_session_job with these exact ids",
+  job_leads:
+    "[[job_id,title,blocked_reason],...] discovered jobs here with a scouted POI and talked contact but an unmet quest/event prerequisite; blocked_reason names it. Not workable yet — no scene or options are disclosed.",
   remembered_jobs:
     "[[job_id, title, area_id], ...] discovered unfinished jobs in other known areas; walk to area_id via area_routes before work_overworld_session_job",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
@@ -588,6 +601,26 @@ export function compactOverworldJobLeadRef(value: {
   area: string;
 }): OverworldCompactJobLeadRef {
   return [value.id, compactOverworldTitle(value.title), value.area];
+}
+
+/**
+ * Compact a discovered, not-yet-workable job's blocked reason. The reason itself is already
+ * computed upstream (session_local_view.ts), from the one helper the execution rejection also
+ * calls, so this is a plain positional mapping rather than its own state-derived logic.
+ */
+export function compactOverworldJobLeads(
+  values: readonly { id: string; title: string; blockedReason: string }[],
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+): OverworldCompactJobLead[] {
+  const leads: OverworldCompactJobLead[] = [];
+  for (const value of values.slice(0, limit)) {
+    leads.push([
+      value.id,
+      compactOverworldTitle(value.title),
+      compactText(value.blockedReason, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+    ]);
+  }
+  return leads;
 }
 
 /**
@@ -756,7 +789,7 @@ export function compactOverworldBlockedEventLeads(
     );
     const investigated = context.journalEntryIds.has(`investigate:${event.id}`);
     const nextPrerequisite = context.gameplayActionsPaused
-      ? "No authored choice is currently available in this journey state."
+      ? "A pending journey decision must be resolved first. This lead returns once play resumes."
       : !scoutedPoi
         ? `Required first: scout ${context.poiTitlesById.get(scene.required_poi_id) ?? scene.required_poi_id}.`
         : !talkedContact
@@ -1547,6 +1580,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
     ]);
   }
   if (view.job_choices) clone.job_choices = cloneTupleList(view.job_choices);
+  if (view.job_leads) clone.job_leads = cloneTupleList(view.job_leads);
   if (view.remembered_jobs) clone.remembered_jobs = cloneTupleList(view.remembered_jobs);
   if (view.sites) clone.sites = cloneTupleList(view.sites);
   if (view.quests) {
@@ -1623,6 +1657,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const jobChoices = compactOverworldJobChoices(
     view.jobChoices.filter(([jobId]) => visibleJobIds.has(jobId)),
   );
+  const jobLeads = compactOverworldJobLeads(view.jobLeads);
   const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const questStarts = compactOverworldQuestStarts(view.questStarts);
@@ -1746,6 +1781,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(jobs.length > 0 ? { jobs } : {}),
     ...(jobScenes.length > 0 ? { job_scenes: jobScenes } : {}),
     ...(jobChoices.length > 0 ? { job_choices: jobChoices } : {}),
+    ...(jobLeads.length > 0 ? { job_leads: jobLeads } : {}),
     ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),

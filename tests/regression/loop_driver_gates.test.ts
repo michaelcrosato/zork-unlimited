@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { classifyCycleBar } from "../../scripts/cycle-bar.js";
 
 const REPO_ROOT = process.cwd();
 const loopText = readFileSync("loop.sh", "utf8");
@@ -100,7 +101,10 @@ describe("loop.sh verification gates", () => {
       'require_provisional_commit "$start_ref"',
       "npm run --silent loop:rotate-state",
       "npm run crawl:smoke",
-      "npm run health",
+      // The bar is chosen off the cycle's diff and only then run, so both steps are
+      // pinned in order: a selector that ran after the bar would decide nothing.
+      'select_health_bar "$start_ref"',
+      'npm run "$health_script"',
       'npm run verify:integrity -- --against "$start_ref"',
       "require_final_ledger_only",
       "safe_commit_if_enabled",
@@ -115,12 +119,36 @@ describe("loop.sh verification gates", () => {
     }
   });
 
+  it("rejects an unattested provisional commit immediately, not after the bar", () => {
+    // A provisional commit whose ledger entry carries no actual-selection marker is dead
+    // the moment it exists: loop:seal-feedback refuses it at the END of the cycle whatever
+    // the gates said. One such cycle spent seventy minutes proving a full bar green — 4771
+    // tests — and was discarded at the last step. The check therefore has to sit right
+    // after the commit and BEFORE anything expensive.
+    const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    const provisional = runCycle.indexOf('require_provisional_commit "$start_ref"');
+    const attestation = runCycle.indexOf("--check-attestation", provisional);
+    const rotate = runCycle.indexOf("loop:rotate-state", attestation);
+    const bar = runCycle.indexOf('npm run "$health_script"', attestation);
+
+    expect(provisional).toBeGreaterThanOrEqual(0);
+    expect(attestation).toBeGreaterThan(provisional);
+    // Before the rotation, the post-crawl and the bar — everything the wasted cycle paid for.
+    expect(rotate).toBeGreaterThan(attestation);
+    expect(bar).toBeGreaterThan(attestation);
+    expect(runCycle).toContain('_reject_cycle "attestation"');
+    // It asks the SEAL rather than re-parsing the marker in bash: a check that drifts from
+    // the gate it stands in for would fail cycles the seal would have accepted.
+    expect(runCycle).toContain("loop:seal-feedback -- --check-attestation");
+    expect(runCycle).not.toMatch(/feedback_cycle_selection[^\n]*grep/u);
+  });
+
   it("rotates completed loop state in both modes before post-change verification", () => {
     const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
     const provisional = runCycle.indexOf('require_provisional_commit "$start_ref"');
     const rotation = runCycle.indexOf("npm run --silent loop:rotate-state", provisional);
     const postCrawl = runCycle.indexOf("npm run crawl:smoke", rotation);
-    const health = runCycle.indexOf("npm run health", rotation);
+    const health = runCycle.indexOf('npm run "$health_script"', rotation);
     const rotationBlock = runCycle.slice(rotation, postCrawl);
     const scripts = (
       JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")) as {
@@ -137,6 +165,56 @@ describe("loop.sh verification gates", () => {
     );
     expect(runCycle.slice(provisional, rotation)).not.toContain("AI_LOOP_COMMIT");
     expect(scripts["loop:rotate-state"]).toBe("tsx scripts/rotate-loop-state.ts");
+  });
+
+  it("accepts a clean tree as well as a ledger-only one, and still refuses a second change", () => {
+    // The gate exists to stop a cycle quietly growing a SECOND change after it verified.
+    // Nothing at all cannot be a second change — but the gate rejected it anyway, and a
+    // green cycle was reverted with "got: (none)" because its worker had frozen the
+    // completed ledger inside its own provisional commit. An early ledger, not a missing one.
+    const gate = `${sectionBetween("require_final_ledger_only() {", "\n}\n\n# Which post-change bar")}\n}`;
+    const ask = (setup?: (root: string) => void): { status: number | null; output: string } =>
+      runGateHarness(gate, { AI_LOOP_COMMIT: "1" }, "require_final_ledger_only", (root) => {
+        spawnSync("git", ["init", "-q"], { cwd: root });
+        spawnSync("git", ["config", "user.email", "t@t"], { cwd: root });
+        spawnSync("git", ["config", "user.name", "t"], { cwd: root });
+        writeFileSync(join(root, "AI_LOOP_STATE.md"), "seed\n");
+        spawnSync("git", ["add", "-A"], { cwd: root });
+        spawnSync("git", ["commit", "-qm", "seed"], { cwd: root });
+        setup?.(root);
+      });
+
+    const clean = ask();
+    expect(clean.status, clean.output).toBe(0);
+    expect(clean.output).toContain("frozen in the provisional commit");
+
+    const ledgerOnlyChange = ask((root) => {
+      writeFileSync(join(root, "AI_LOOP_STATE.md"), "seed\nentry\n");
+    });
+    expect(ledgerOnlyChange.status, ledgerOnlyChange.output).toBe(0);
+    expect(ledgerOnlyChange.output).toContain("ledger-only");
+
+    // The thing it must still refuse: any OTHER change, with or without the ledger.
+    const secondChange = ask((root) => {
+      writeFileSync(join(root, "src.ts"), "grown after verification\n");
+    });
+    expect(secondChange.status).not.toBe(0);
+    expect(secondChange.output).toContain("src.ts");
+  });
+
+  it("does not demand a second commit when the ledger was already frozen", () => {
+    // The other half of the same bug: with the ledger committed early the seal has nothing
+    // left to write, and failing "No final ledger change to commit" would lose the cycle at
+    // the very last step. That tolerance is scoped — it applies ONLY when the tree was
+    // already clean before the seal ran, so a genuinely missing ledger still fails.
+    const commit = sectionBetween("safe_commit_if_enabled() {", "\n}\n\nreport_qa_bucket()");
+    const frozenAt = commit.indexOf("ledger_already_frozen=1");
+    const seal = commit.indexOf("loop:seal-feedback");
+    expect(frozenAt).toBeGreaterThanOrEqual(0);
+    // Checked BEFORE the seal runs; reading it afterwards would always see a clean tree.
+    expect(seal).toBeGreaterThan(frozenAt);
+    expect(commit).toContain("no second commit needed");
+    expect(commit).toContain("No final ledger change to commit.");
   });
 
   it("safe_commit_if_enabled is inert unless AI_LOOP_COMMIT=1", () => {
@@ -328,7 +406,9 @@ describe("loop.sh provisional/final commit contracts", () => {
   )}\n}`;
   const ledgerOnly = `${sectionBetween(
     "require_final_ledger_only() {",
-    "\n}\n\nsafe_commit_if_enabled()",
+    // select_health_bar now sits between these two functions, so the old end anchor cut a
+    // section three times the intended size. Anchor on what actually follows the gate.
+    "\n}\n\n# Which post-change bar",
   )}\n}`;
   it("requires an advancing local commit in commit-enabled mode", () => {
     const missing = runGateHarness(
@@ -495,9 +575,21 @@ describe("the dev loop does not gate on a playtest", () => {
   });
 
   it("keeps the mechanical gates as the whole bar", () => {
-    expect(driver).toContain("crawl:smoke");
-    expect(driver).toContain("npm run health");
-    expect(driver).toContain("verify:integrity");
+    // Assert against the EXECUTABLE driver, not its prose. `npm run health` does still
+    // occur in loop.sh — but only inside a comment recounting an old wedged-loop
+    // incident, so a toContain over the whole file would keep passing even if the gate
+    // itself were deleted. A comment is exactly where a pin goes quietly vacuous.
+    const code = driver.replace(/^\s*#.*$/gmu, "");
+    expect(code).toContain("crawl:smoke");
+    // The bar is still blocking; WHICH health script runs is read off the cycle's diff
+    // (select_health_bar, below), the same way `npm run ship` chooses a landing's bar.
+    expect(code).toContain("select_health_bar");
+    expect(code).toContain('npm run "$health_script"');
+    // Those two are the selector's ONLY possible answers, so "the bar" cannot quietly
+    // become some third, weaker script.
+    expect(code).toContain("printf 'health\\n'");
+    expect(code).toContain("printf 'health:fast\\n'");
+    expect(code).toContain("verify:integrity");
   });
 
   it("still rejects a cycle whose outer gates go red", () => {
@@ -520,5 +612,146 @@ describe("the dev loop does not gate on a playtest", () => {
     const commit = `${sectionBetween("safe_commit_if_enabled() {", "\n}\n")}\n}`;
     expect(commit).toContain("loop:seal-feedback");
     expect(commit).not.toMatch(/playtest\.(?:md|run\.json|evidence\.jsonl)/u);
+  });
+});
+
+/**
+ * The driver runs the full `health` on every cycle, and the six whole-state-space census
+ * proofs inside it are the large majority of that wall clock — so a docs or tooling cycle
+ * spent most of its hour re-proving packs it never touched. `npm run ship` had already
+ * solved this for landings by reading the bar off the diff; these lock the loop doing the
+ * same thing, and — far more importantly — locking WHICH WAY it errs when it cannot tell.
+ */
+describe("loop.sh graceful stop", () => {
+  const stopKnob = `${sectionBetween(
+    'STOP_FILE="${AI_LOOP_STOP_FILE:-ai-runs/loop.stop}"',
+    "\n}\n\nclear_stop_request",
+  )}\n}`;
+
+  const ask = (env: Record<string, string> = {}, setup?: (root: string) => void): string =>
+    runGateHarness(
+      stopKnob,
+      env,
+      "if stop_requested; then echo STOP; else echo GO; fi",
+      setup,
+    ).output.trim();
+
+  it("stops only when the file is actually there", () => {
+    expect(ask()).toBe("GO");
+    expect(
+      ask({}, (root) => {
+        mkdirSync(join(root, "ai-runs"), { recursive: true });
+        writeFileSync(join(root, "ai-runs", "loop.stop"), "");
+      }),
+    ).toBe("STOP");
+  });
+
+  it("honours an operator-chosen path", () => {
+    expect(
+      ask({ AI_LOOP_STOP_FILE: "halt-here" }, (root) => {
+        // The default path must NOT be what stops it when another was named.
+        mkdirSync(join(root, "ai-runs"), { recursive: true });
+        writeFileSync(join(root, "ai-runs", "loop.stop"), "");
+      }),
+    ).toBe("GO");
+    expect(
+      ask({ AI_LOOP_STOP_FILE: "halt-here" }, (root) => {
+        writeFileSync(join(root, "halt-here"), "");
+      }),
+    ).toBe("STOP");
+  });
+
+  it("clears a stale stop file at startup instead of obeying it", () => {
+    // A file left by an earlier run would otherwise stop the next launch before it did
+    // anything — which reads as a loop that failed to start, the worst failure for a
+    // knob whose whole job is to make stopping predictable.
+    const startup = loopText.indexOf(
+      "\nclear_stop_request\n",
+      loopText.indexOf("trap cleanup_pid_records EXIT"),
+    );
+    const scheduler = loopText.indexOf("while true; do");
+    expect(startup).toBeGreaterThanOrEqual(0);
+    expect(scheduler).toBeGreaterThan(startup);
+  });
+
+  it("asks before a cycle starts and again after it has pushed", () => {
+    const scheduler = loopText.slice(loopText.indexOf("while true; do"));
+    const before = scheduler.indexOf("stop_requested");
+    const runCycle = scheduler.indexOf("if run_cycle; then");
+    const after = scheduler.indexOf("stop_requested", runCycle);
+    const sleeps = scheduler.indexOf('sleep "$delay"');
+
+    expect(before).toBeGreaterThanOrEqual(0);
+    expect(runCycle).toBeGreaterThan(before);
+    // The second check is after the cycle returns — i.e. after its push, the last thing
+    // run_cycle does — so a landed cycle stops at once instead of racing the delay.
+    expect(after).toBeGreaterThan(runCycle);
+    expect(sleeps).toBeGreaterThan(after);
+    // A stop is a decision about the SCHEDULE: it must never sit inside run_cycle, where
+    // it could fail a cycle or alter a gate.
+    const cycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    expect(cycle).not.toContain("stop_requested");
+  });
+});
+
+describe("loop.sh post-change bar selection", () => {
+  const selectBar = `${sectionBetween("select_health_bar() {", "\n}\n\nsafe_commit_if_enabled()")}\n}`;
+
+  /** The selector shells out to `npm run loop:bar`; stubbing npm controls its answer. */
+  function selectWith(npmStub: string, env: Record<string, string> = {}): string {
+    return runGateHarness(
+      `${npmStub}\n${selectBar}`,
+      env,
+      "select_health_bar 1111111111111111111111111111111111111111",
+    ).output.trim();
+  }
+
+  it("takes the fast bar only when the cycle's diff is out of census reach", () => {
+    expect(selectWith("npm() { printf 'fast\\n'; }")).toBe("health:fast");
+    expect(selectWith("npm() { printf 'full\\n'; }")).toBe("health");
+    // Whitespace and a stray CR must not read as an unrecognised answer and cost the
+    // cycle its whole point.
+    expect(selectWith("npm() { printf ' fast \\r\\n'; }")).toBe("health:fast");
+  });
+
+  it("defaults to the FULL bar whenever the classification is uncertain", () => {
+    // Wrong in this direction costs one cycle some wall clock. Wrong in the other lands an
+    // engine or content regression that only a nightly census proof would catch, on a
+    // branch where that nightly proof may never run.
+    expect(selectWith("npm() { return 1; }")).toBe("health");
+    expect(selectWith("npm() { printf 'boom\\n' >&2; return 3; }")).toBe("health");
+    expect(selectWith("npm() { printf 'maybe\\n'; }")).toBe("health");
+    expect(selectWith("npm() { printf ''; }")).toBe("health");
+    expect(selectWith("npm() { printf 'fast full\\n'; }")).toBe("health");
+  });
+
+  it("lets AI_LOOP_FULL_HEALTH=1 force the full bar over any verdict", () => {
+    expect(selectWith("npm() { printf 'fast\\n'; }", { AI_LOOP_FULL_HEALTH: "1" })).toBe("health");
+  });
+
+  it("weighs BOTH halves of a cycle's diff", () => {
+    // A cycle's change is split across the provisional commit (`<start-ref>..HEAD`) and
+    // whatever is still in the tree at gate time (the rotated ledger, at minimum).
+    expect(classifyCycleBar(" M AI_LOOP_STATE.md\0", "docs/afk_loop.md\nloop.sh\n")).toBe("fast");
+    expect(classifyCycleBar(" M AI_LOOP_STATE.md\0", "src/rpg/runner.ts\n")).toBe("full");
+    // An untracked pack the agent authored is part of the change even before it is added.
+    expect(classifyCycleBar("?? content/rpg/quests/new.yaml\0", "")).toBe("full");
+    // A rename OUT of census reach counts as the delete AND the add, or moving an engine
+    // file to scripts/ would read as a plain tooling edit.
+    expect(classifyCycleBar("R  scripts/engine.ts\0src/core/engine.ts\0", "")).toBe("full");
+    expect(classifyCycleBar("", "")).toBe("fast");
+  });
+
+  it("wires the selector into run_cycle ahead of the bar it chooses", () => {
+    const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    const chosen = runCycle.indexOf('select_health_bar "$start_ref"');
+    const ran = runCycle.indexOf('npm run "$health_script"');
+    const integrity = runCycle.indexOf("verify:integrity");
+
+    expect(chosen).toBeGreaterThanOrEqual(0);
+    expect(ran).toBeGreaterThan(chosen);
+    expect(integrity).toBeGreaterThan(ran);
+    // The bar is still blocking: a red one reverts the cycle rather than committing.
+    expect(runCycle).toContain('_reject_cycle "health"');
   });
 });

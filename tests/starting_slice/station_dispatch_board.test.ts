@@ -217,7 +217,7 @@ describe("Station dispatch board", () => {
     );
     expect(compactRouteSummaries).toEqual(routeOnlySummaries);
     expect(routeOnlySummaries).toEqual([
-      "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Cattle alarm starts at 1, but you can see the byre and weather clearly. This road chooses no field plan.",
+      "Exposed Ridge — 30 minutes, 1 supply, +25 fatigue. Descending raises cattle alarm to 1, but you can see the byre and weather clearly. This road chooses no field plan.",
       "Sheltered Stockway — 75 minutes, 2 supplies, +10 fatigue. Cattle alarm starts at 0, but hedges hide the byre and weather. This road chooses no field plan.",
     ]);
     for (let index = 0; index < fullRouteSummaries.length; index += 1) {
@@ -256,7 +256,9 @@ describe("Station dispatch board", () => {
       pureCatalogBytes +
       stationContextBytes +
       Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
-    expect(firstStationAggregate).toBe(38_202);
+    // bug_0614: the exposed-ridge route summary grew 11 bytes when it stopped claiming
+    // cattle alarm starts at 1 (it doesn't; descending raises it to 1).
+    expect(firstStationAggregate).toBe(38_213);
     expect(firstStationAggregate).toBeLessThanOrEqual(38_495);
 
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });

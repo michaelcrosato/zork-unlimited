@@ -124,6 +124,10 @@ describe("compact legends", () => {
       // and the two positional `explanation.*` tuples. No positional schema changed,
       // so v50 still decodes exactly as before; only definitions were added.
       50: "1aa9defdcc42f3410b0205f0163b42852c7db25a8c8fc0b5457247db04dffcf1",
+      // v51 adds job_leads: a discovered, POI-scouted, contact-talked job whose own
+      // SCENE-level quest/event prerequisite is unmet now names it by title instead of
+      // vanishing into `hidden`'s job count (bug_0625). No existing field's shape changed.
+      51: "45c87bd0a920361c6b811a9aa1bd383e48c58efd02087947c898bbec318d4322",
     } as const;
     const signature = createHash("sha256")
       .update(
@@ -134,7 +138,7 @@ describe("compact legends", () => {
       )
       .digest("hex");
 
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(50);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(51);
     expect(signature).toBe(expectedSignatureByVersion[OVERWORLD_COMPACT_VIEW_VERSION]);
   });
 
@@ -182,6 +186,14 @@ describe("compact legends", () => {
     );
     expect(OVERWORLD_COMPACT_LEGEND.hidden).toContain("no legal options currently available");
     expect(OVERWORLD_COMPACT_LEGEND.hidden).not.toContain("counts still undiscovered");
+
+    // job_leads names the SCENE-level subset of `hidden`'s job count — a discovered,
+    // scouted, talked-to job whose own quest/event prerequisite is unmet — so it is not
+    // silently unexplained; the option-level subset stays inside `hidden` alone.
+    expect(OVERWORLD_COMPACT_LEGEND.job_leads).toContain("scouted POI and talked contact");
+    expect(OVERWORLD_COMPACT_LEGEND.job_leads).toContain("unmet quest/event prerequisite");
+    expect(OVERWORLD_COMPACT_LEGEND.job_leads).toContain("blocked_reason names it");
+    expect(OVERWORLD_COMPACT_LEGEND.job_leads).toContain("Not workable yet");
 
     expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads).toContain(
       "do not create, replace, or activate a journey objective",

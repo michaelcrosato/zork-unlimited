@@ -134,6 +134,14 @@ export const QaTicketSchema = z
     /** Ranking score at last triage. Higher is more urgent. */
     priority: z.number().nonnegative(),
     notes: z.string().optional(),
+    /**
+     * What reproduced this ticket DETERMINISTICALLY — a regression test path or a crawler
+     * probe. Its presence is what earns the `verified` rung, and it is durable: triage
+     * carries it forward by identity, so a lead proved once stays proved without anyone
+     * re-passing a flag on every later run. Optional, so every ticket file written before
+     * this field keeps parsing.
+     */
+    verified_by: z.string().min(1).optional(),
     /** Corrected identities replacing this ticket; its authored history stays here. */
     superseded_by: z
       .array(z.string().regex(/^[0-9a-f]{16}$/))

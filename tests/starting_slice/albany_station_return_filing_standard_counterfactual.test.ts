@@ -223,6 +223,45 @@ describe("Albany Station return filing standard", () => {
     ]);
   });
 
+  it("gives the filing lead an accurate reason while the post-Wolf-Winter journey decisions are pending (bug_0617)", () => {
+    const PAUSED_LEAD_HINT =
+      "A pending journey decision must be resolved first. This lead returns once play resumes.";
+    const session = openedAlbany();
+    const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");
+    if (!wolf) throw new Error("The Albany opening must expose Wolf-Winter.");
+    moveToArea(session, wolf.area);
+    session.scoutPoi(STATION_POI);
+    session.talkToCharacter(STATION_CONTACT);
+    session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway");
+    session.completeQuest(wolf.id, {
+      endingId: "ending_held",
+      endingTitle: "The Byre Held",
+      death: false,
+    });
+
+    // The completed goal leaves a Continue/End decision pending before the dawn-wagon
+    // story choice, so gameplay (and therefore investigation) is paused here even
+    // though the lead's own scout/talk prerequisites are already satisfied.
+    expect(session.compactView().service_actions).toBeUndefined();
+    expect(session.compactView().event_leads).toContainEqual([
+      EVENT,
+      "Choose an administrative filing method for Cade's return.",
+      PAUSED_LEAD_HINT,
+    ]);
+
+    session.chooseJourney("continue");
+    expect(session.compactView().service_actions).toBeUndefined();
+    expect(session.compactView().event_leads?.find(([id]) => id === EVENT)?.[2]).toBe(
+      PAUSED_LEAD_HINT,
+    );
+
+    session.chooseJourneyStory("send_wardens_north");
+    expect(session.compactView().service_actions).toBeDefined();
+    expect(session.compactView().event_leads?.find(([id]) => id === EVENT)?.[2]).toBe(
+      "Required first: investigate this event.",
+    );
+  });
+
   it("gives both standards equal immediate terms", () => {
     const event = WORLD.local_events.find((candidate) => candidate.id === EVENT);
     expect(event?.authored_scene?.options.map((option) => [option.id, option.terms])).toEqual([

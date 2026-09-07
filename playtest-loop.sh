@@ -26,6 +26,11 @@
 #   PLAYTEST_TRIAGE=1                        re-triage after each wave [1]
 #   PLAYTEST_PUBLISH=0                       push the corpus after each wave [0]
 #   PLAYTEST_DELAY_SECONDS=N                 pause between waves [30]
+#   PLAYTEST_NEW_BUILD_ONLY=1                after the pause, wait for the upstream tip to
+#                                            CHANGE before the next wave [0]
+#   PLAYTEST_NEW_BUILD_POLL_SECONDS=N        how often to look while waiting [60]
+#   PLAYTEST_NEW_BUILD_MAX_WAIT_SECONDS=N    give up waiting and replay the current build
+#                                            after this long [3600]
 #   PLAYTEST_MAX_WAVES=N                     stop after N waves [unbounded]
 #   PLAYTEST_STORE=<dir>                     session corpus [ai-runs/playtest/sessions]
 #                                            Point several QA worktrees at ONE absolute
@@ -71,6 +76,41 @@ DELAY="${PLAYTEST_DELAY_SECONDS:-30}"
 SEED_BASE="${PLAYTEST_SEED_BASE:-$(date +%s)}"
 STORE="${PLAYTEST_STORE:-ai-runs/playtest/sessions}"
 export PLAYTEST_STORE="$STORE"
+
+# Play each build a couple of times instead of playing one build to exhaustion.
+#
+# WHY THIS IS NOT JUST A LONGER DELAY. A fixed pause is a guess about how fast the dev loop
+# lands changes, and it is wrong in both directions: too short and the corpus fills with
+# repeat sessions on a build nobody changed, too long and a freshly pushed build sits
+# unplayed. What the playtest lane actually wants is an EVENT — a new build — so this waits
+# for the event and uses time only as the failsafe. The delay above still applies first, so
+# this cannot dispatch faster than the operator's pacing floor.
+#
+# MAX WAIT EXISTS SO A DEV OUTAGE DOES NOT SILENCE QA. If the dev loop stops pushing, an
+# unbounded wait would turn this loop into a process that is running and producing nothing,
+# which looks identical to a healthy idle loop from the outside. After the ceiling it
+# replays the current build and says so, because a repeat session on a known build is worth
+# more than no evidence at all.
+NEW_BUILD_ONLY="${PLAYTEST_NEW_BUILD_ONLY:-0}"
+NEW_BUILD_POLL="${PLAYTEST_NEW_BUILD_POLL_SECONDS:-60}"
+NEW_BUILD_MAX_WAIT="${PLAYTEST_NEW_BUILD_MAX_WAIT_SECONDS:-3600}"
+if [[ "$NEW_BUILD_ONLY" == "1" ]]; then
+  case "$NEW_BUILD_POLL" in
+    ''|*[!0-9]*|0)
+      echo "PLAYTEST_NEW_BUILD_POLL_SECONDS requires a positive whole number of seconds." >&2
+      exit 2 ;;
+  esac
+  case "$NEW_BUILD_MAX_WAIT" in
+    ''|*[!0-9]*|0)
+      echo "PLAYTEST_NEW_BUILD_MAX_WAIT_SECONDS requires a positive whole number of seconds." >&2
+      exit 2 ;;
+  esac
+fi
+
+# The exact commit the last wave PLAYED, which is what "new build" is measured against —
+# not the tip at the moment we look, because the dev loop may have pushed while the wave
+# was still running and that push is already unplayed work.
+LAST_WAVE_BUILD=""
 
 # PLAYTEST_MOCK=1 is a zero-token WIRING CHECK, not a playtest.
 #
@@ -304,6 +344,7 @@ run_wave() {
   local wave="$1" index=0 pids=()
   local build
   build="$(git rev-parse --short HEAD)"
+  LAST_WAVE_BUILD="$(git rev-parse HEAD)"
   echo "── wave $wave on build $build ──────────────────────────────────"
 
   IFS=',' read -ra groups <<< "$COHORT"
@@ -337,6 +378,32 @@ run_wave() {
   fi
 }
 
+# Block until the upstream tip differs from the build the last wave played. A no-op unless
+# PLAYTEST_NEW_BUILD_ONLY=1, so the default path below is byte-for-byte the old behaviour.
+await_new_build() {
+  [[ "$NEW_BUILD_ONLY" == "1" ]] || return 0
+  if ! git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    # Refusing here would strand an operator whose only mistake was setting a knob on a
+    # detached mirror; playing on is the safe reading, but it must be said out loud,
+    # because silently ignoring the knob is how someone concludes the feature is broken.
+    echo "  PLAYTEST_NEW_BUILD_ONLY=1, but this checkout tracks no upstream — playing the current build."
+    return 0
+  fi
+  local waited=0 tip
+  while (( waited < NEW_BUILD_MAX_WAIT )); do
+    git fetch --quiet origin || true
+    tip="$(git rev-parse '@{u}' 2>/dev/null || true)"
+    if [[ -n "$tip" && "$tip" != "$LAST_WAVE_BUILD" ]]; then
+      git reset --quiet --hard '@{u}' || true
+      echo "  new build $(git rev-parse --short HEAD) after ${waited}s; starting the next wave"
+      return 0
+    fi
+    sleep "$NEW_BUILD_POLL"
+    waited=$((waited + NEW_BUILD_POLL))
+  done
+  echo "  no new build after ${waited}s (PLAYTEST_NEW_BUILD_MAX_WAIT_SECONDS); replaying $(git rev-parse --short HEAD)"
+}
+
 wave=0
 while true; do
   wave=$((wave + 1))
@@ -354,4 +421,5 @@ while true; do
       echo "  could not refresh the build; continuing on the current checkout"
   fi
   sleep "$DELAY"
+  await_new_build
 done

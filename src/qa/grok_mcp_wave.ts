@@ -56,6 +56,16 @@ export type GrokMcpProjectConfigInput = {
   trackedWorktreeClean: boolean;
 };
 
+/**
+ * npm argv for handing the wave's own store to `qa:triage` once play finishes — the same
+ * post-wave step `playtest-loop.sh` already runs after every wave (see `run_wave` there),
+ * which the Grok wave lacked entirely: sessions were saved but nothing folded them into
+ * `qa/tickets`/`intake/queue` without a human running this by hand (bug_0622).
+ */
+export function grokWaveTriageArgs(store: string): string[] {
+  return ["run", "--silent", "qa:triage", "--", "--store", store];
+}
+
 function argValue(argv: string[], flag: string): string | null {
   const index = argv.indexOf(flag);
   if (index === -1) return null;

@@ -23,6 +23,7 @@ import { parseRunEvidenceJsonl, type PureBlindRunSidecar } from "../src/blind/ru
 import {
   GROK_MCP_WAVE_COUNT,
   grokMcpProjectConfig,
+  grokWaveTriageArgs,
   parseGrokMcpWaveArgs,
   parseGrokStreamingOutput,
   type GrokMcpWavePlan,
@@ -330,6 +331,25 @@ async function runPool(
   return rows.filter((row): row is ManifestRow => row !== undefined);
 }
 
+/**
+ * Hand the wave off to `qa:triage` against its own store, mirroring the post-wave step
+ * `playtest-loop.sh` already runs after every wave. Best-effort: a failed handoff must
+ * not swallow the wave's own outcome, and the operator gets the exact command to run by
+ * hand either way rather than the wave exiting silently with sessions nobody triaged.
+ */
+function handOffToTriage(store: string): void {
+  const args = grokWaveTriageArgs(store);
+  process.stderr.write(`  triage: npm ${args.join(" ")}\n`);
+  try {
+    execFileSync("npm", args, { cwd: REPO_ROOT, stdio: "inherit" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(
+      `  triage failed (${message}); sessions are saved — run manually: npm ${args.join(" ")}\n`,
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const plan = parseGrokMcpWaveArgs(process.argv.slice(2));
   const payload = {
@@ -360,6 +380,7 @@ async function main(): Promise<void> {
   const manifestPath = resolve(REPO_ROOT, plan.manifest);
   mkdirSync(dirname(manifestPath), { recursive: true });
   const rows = await runPool(plan, buildCommit, manifestPath);
+  handOffToTriage(plan.store);
   const incomplete = rows.filter((row) => row.outcome !== "completed" || !row.extractOk);
   if (incomplete.length > 0) {
     throw new Error(
