@@ -28,6 +28,32 @@ const CodexModelUsageSchema = z
   })
   .strict();
 
+/**
+ * The envelope `blind-tester/claude-session.mjs envelope` emits, which is that lane's
+ * equivalent of the Codex envelope below: a completed, audited single-session turn whose
+ * `result` is the report text. It is a different SHAPE — no `type`/`subtype`, no
+ * `terminal_reason`, no per-model usage split — because it is built from a stream-json
+ * result event rather than a Codex rollout, and pretending otherwise by widening the
+ * Codex schema would let a half-populated envelope of either vendor satisfy the other's
+ * checks. Two schemas, each strict about its own producer.
+ */
+const PrimaryClaudeEnvelopeSchema = z
+  .object({
+    schema_version: z.literal(1),
+    provider: z.literal("claude_code"),
+    transport_contract: z.string().min(1),
+    model: z.string().min(1),
+    session_id: z.string().uuid(),
+    is_error: z.literal(false),
+    duration_ms: z.number().int().nonnegative().safe().nullable(),
+    num_turns: z.number().int().positive().safe().nullable(),
+    total_cost_usd: z.number().nonnegative().nullable(),
+    usage: z.record(z.unknown()).nullable(),
+    result: z.string(),
+    capture: z.record(z.unknown()),
+  })
+  .strict();
+
 const PrimaryCodexEnvelopeSchema = z
   .object({
     type: z.literal("result"),
@@ -58,7 +84,7 @@ export const PureReceiptBindingMetadataSchema = z
     binding_kind: z.literal("server_exit_receipt"),
     binding_count: z.literal(1),
     render_version: z.literal(1),
-    provider: z.literal("codex"),
+    provider: z.enum(["codex", "claude_code"]),
     provider_session_id: z.string().uuid(),
     requested_model: z.string().min(1),
     run_seed: z.number().int().safe(),
@@ -92,6 +118,12 @@ export interface PureReceiptBindingInput {
   primaryEnvelopeBytes: Uint8Array;
   runEvidenceBytes: Uint8Array;
   reportBytes: Uint8Array;
+  /**
+   * Replay-only escape hatch for `receipt_mismatch`, set by
+   * `reproducePureCodexReceiptBinding` from stored metadata and by nothing else. A live
+   * run must never pass it: see the gate in `bindPureCodexReceipt`.
+   */
+  allowHistoricalMismatch?: boolean;
 }
 
 export type PureReceiptBindingResult =
@@ -393,6 +425,52 @@ function parseCodexEnvelope(
   return { ok: true, envelope };
 }
 
+/** Providers whose envelope this module can authenticate well enough to bind against. */
+const BINDABLE_PROVIDERS = new Set(["codex", "claude_code"]);
+
+function parseClaudeEnvelope(
+  text: string,
+  requestedModel: string,
+): { ok: true; sessionId: string; result: string } | { ok: false; reason: string } {
+  const raw = parseJsonRejectingDuplicateKeys(text, "primary claude_code envelope");
+  if (!raw.ok) return raw;
+  const parsed = PrimaryClaudeEnvelopeSchema.safeParse(raw.value);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return {
+      ok: false,
+      reason: `primary claude_code envelope is not a completed audited turn: ${issue?.path.join(".") ?? "?"} — ${issue?.message ?? "schema mismatch"}`,
+    };
+  }
+  // The capture reader already refused the run if the transcript's recorded model differed
+  // from the requested one; this re-checks the envelope's own claim so the binder never
+  // trusts a field it did not verify itself.
+  if (parsed.data.model !== requestedModel) {
+    return { ok: false, reason: "primary claude_code envelope requested a different model" };
+  }
+  return { ok: true, sessionId: parsed.data.session_id, result: parsed.data.result };
+}
+
+/**
+ * Authenticate whichever provider's envelope this run produced.
+ *
+ * Each provider's envelope is checked against ITS OWN strict schema — the vendor gate that
+ * used to live in `bindPureCodexReceipt` was never really about Codex, it was about the
+ * binder having only one envelope shape it could authenticate. Everything downstream of
+ * this function is already vendor-neutral: the repair value comes from server-authored run
+ * evidence, and the bound report must satisfy the unchanged verifier.
+ */
+function parsePrimaryEnvelope(
+  text: string,
+  provider: string,
+  requestedModel: string,
+): { ok: true; sessionId: string; result: string } | { ok: false; reason: string } {
+  if (provider === "claude_code") return parseClaudeEnvelope(text, requestedModel);
+  const codex = parseCodexEnvelope(text, requestedModel);
+  if (!codex.ok) return codex;
+  return { ok: true, sessionId: codex.envelope.session_id, result: codex.envelope.result };
+}
+
 function classifyReceiptFailure(reason: string): "receipt_invalid" | "receipt_mismatch" | null {
   if (reason.startsWith("exit interview invalid: journey_exit_receipt")) {
     return "receipt_invalid";
@@ -424,13 +502,16 @@ export function bindPureCodexReceipt(input: PureReceiptBindingInput): PureReceip
   if (input.playMode !== "pure") {
     return { ok: false, reason: "receipt binding is available only for pure live runs" };
   }
-  if (input.provider !== "codex") {
-    return { ok: false, reason: "receipt binding is available only for Codex runs" };
+  if (!BINDABLE_PROVIDERS.has(input.provider)) {
+    return {
+      ok: false,
+      reason: `receipt binding has no authenticated envelope shape for provider "${input.provider}"`,
+    };
   }
   if (input.agentExitStatus !== 0) {
     return {
       ok: false,
-      reason: `receipt binding requires a normally exited Codex run (exit ${input.agentExitStatus})`,
+      reason: `receipt binding requires a normally exited provider run (exit ${input.agentExitStatus})`,
     };
   }
   if (input.verifierExitStatus === 0) {
@@ -440,7 +521,7 @@ export function bindPureCodexReceipt(input: PureReceiptBindingInput): PureReceip
     return { ok: false, reason: "receipt binding is allowed only on attempt zero" };
   }
 
-  const envelopeText = exactUtf8(input.primaryEnvelopeBytes, "primary Codex envelope");
+  const envelopeText = exactUtf8(input.primaryEnvelopeBytes, "primary provider envelope");
   if (!envelopeText.ok) return envelopeText;
   const evidenceText = exactUtf8(input.runEvidenceBytes, "run evidence");
   if (!evidenceText.ok) return evidenceText;
@@ -467,12 +548,12 @@ export function bindPureCodexReceipt(input: PureReceiptBindingInput): PureReceip
     return { ok: false, reason: "run evidence cleanliness does not match the runner launch" };
   }
 
-  const envelope = parseCodexEnvelope(envelopeText.text, input.requestedModel);
+  const envelope = parsePrimaryEnvelope(envelopeText.text, input.provider, input.requestedModel);
   if (!envelope.ok) return envelope;
-  if (envelope.envelope.result !== reportText.text) {
+  if (envelope.result !== reportText.text) {
     return {
       ok: false,
-      reason: "primary Codex envelope result does not exactly match report bytes",
+      reason: "primary provider envelope result does not exactly match report bytes",
     };
   }
 
@@ -488,6 +569,21 @@ export function bindPureCodexReceipt(input: PureReceiptBindingInput): PureReceip
     return {
       ok: false,
       reason: `verifier failure is not receipt-only: ${initialVerification.reason}`,
+    };
+  }
+  // A receipt that is WELL-FORMED but disagrees with the server is not a transcription
+  // slip, it is a player reporting a journey it did not take. Binding would silently
+  // overwrite it with the server's receipt and the run would pass as though the player had
+  // reported accurately — so this class is refused outright.
+  //
+  // `allowHistoricalMismatch` exists only so already-sealed evidence stays REPRODUCIBLE:
+  // `reproducePureCodexReceiptBinding` replays a stored binding and must be able to rebuild
+  // one minted before this rule. It never opens the door for a new run, because only stored
+  // metadata that already records `receipt_mismatch` can set it.
+  if (initialFailure === "receipt_mismatch" && input.allowHistoricalMismatch !== true) {
+    return {
+      ok: false,
+      reason: "receipt binding refuses a well-formed receipt that contradicts server run evidence",
     };
   }
 
@@ -546,8 +642,8 @@ export function bindPureCodexReceipt(input: PureReceiptBindingInput): PureReceip
       binding_kind: "server_exit_receipt",
       binding_count: 1,
       render_version: 1,
-      provider: "codex",
-      provider_session_id: envelope.envelope.session_id,
+      provider: input.provider as PureReceiptBindingMetadata["provider"],
+      provider_session_id: envelope.sessionId,
       requested_model: input.requestedModel,
       run_seed: evidence.sidecar.run_seed,
       build: evidence.sidecar.build,
@@ -573,7 +669,7 @@ export function reproducePureCodexReceiptBinding(
   const metadata = PureReceiptBindingMetadataSchema.safeParse(input.metadata);
   if (!metadata.success) return { ok: false, reason: "receipt binding metadata is invalid" };
   if (sha256(input.primaryEnvelopeBytes) !== metadata.data.primary_envelope_sha256) {
-    return { ok: false, reason: "primary Codex envelope changed after receipt binding" };
+    return { ok: false, reason: "primary provider envelope changed after receipt binding" };
   }
   if (sha256(input.originalReportBytes) !== metadata.data.original_report_sha256) {
     return { ok: false, reason: "original report changed after receipt binding" };
@@ -584,10 +680,14 @@ export function reproducePureCodexReceiptBinding(
 
   const reproduced = bindPureCodexReceipt({
     playMode: "pure",
-    provider: "codex",
+    provider: metadata.data.provider,
     agentExitStatus: 0,
     verifierExitStatus: 1,
     attempt: 0,
+    // Replaying stored evidence, not minting new: a binding sealed before the mismatch
+    // rule must still rebuild byte-for-byte, or every historical artifact carrying one
+    // becomes unverifiable the day the rule lands.
+    allowHistoricalMismatch: metadata.data.initial_failure === "receipt_mismatch",
     requestedModel: metadata.data.requested_model,
     expectedRunSeed: metadata.data.run_seed,
     expectedGitCommit: metadata.data.build.git_commit,

@@ -1696,3 +1696,44 @@ strategies, outcomes, Station V6, Continue/End, and Gallowmere remain unchanged.
 Response shrink is a no-growth witness, not the reason for the copy or evidence
 of clarity, enjoyment, continuation, certification, causal, or human-quality
 lift.
+
+### Ultraplan re-aim — 2026-09-06 (HEAD = b12e57fc; next move = event re-request option ids)
+
+**Assessor saturation is the trigger, not the direction.** `npm run ai:loop` returns
+only the 0.5-floor maintenance rotation (`playtest-dawn_beacon`); per the standing
+ruling above, that is never a license to inflate a breadth ceiling.
+
+**Confirmed CLOSED or already-covered this cycle (do not re-nominate):**
+
+- **Engine TODO/FIXME debt:** `src/afk/assessor.ts`'s own scanner (lines ~681-698)
+  reports zero markers in `src/`. Nothing open here.
+- **Replay divergence, atomic terminal writes, RPG terminal-state coherence:** all
+  remain closed exactly as recorded in the 2026-08-11 entries above; re-verified by
+  file:line, not re-litigated.
+- **Multi-line tautology (`TAUTOLOGY_RE` dotall gap):** still open but still correctly
+  deferred (S-effort, narrow risk — real test code never splits an assertion across
+  lines). Not promoted this cycle.
+- **The job-path "already completed, re-called without an option" case:**
+  ALREADY fixed by bug_0620's reordering in `src/world/session_local_actions.ts` — the
+  ids-listing check now runs before the "already completed" gate, so that path never had
+  a leftover bare-message branch. Confirmed by reading the current file; not a fresh gap.
+
+**Gap confirmed OPEN — the one thing bug_0620 didn't reach:**
+`src/world/session_event_resolution.ts:235` (`planOverworldEventResolution`, inside the
+`state.resolvedEventIds.has(event.id)` / `if (existing)` block) still throws a bare
+`` `Choose one option for ${event.title}.` `` with no ids when an already-resolved event
+is re-called without a matching option — unlike the same function's own "not yet
+resolved" branch four lines away (269-272), which already lists ids via
+`availableLocalEventSceneOptions`. This is exactly the item the immediately preceding
+cycle's `AI_LOOP_STATE.md` entry named as its deferred next step.
+
+**Chosen move — bug_0621: name the legal option ids in the event path's remaining bare
+rejection.** Reuse the existing `availableLocalEventSceneOptions` helper call at the
+one remaining throw site so it matches the phrasing already used one branch down.
+S-effort, zero-FP, one file's one branch plus its regression — the "keep one agent"
+case, not a fan-out. Full plan: `ai-runs/2026-09-06T09-16-39-619Z/current-plan.md`.
+Regression artifact: `traces/bugs/bug_0621_event_rerequest_hides_option_ids.yaml`.
+
+**Next after bug_0621:** no further leftover branch of this shape is known; the next
+ultraplan should re-run the same four-dimension sweep fresh rather than assume another
+one is waiting.

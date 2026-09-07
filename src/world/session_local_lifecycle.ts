@@ -15,6 +15,7 @@ import type {
   OverworldLocalJob,
   OverworldNode,
   OverworldPoi,
+  OverworldQuest,
 } from "./overworld.js";
 import {
   recordOverworldSessionLocalAction,
@@ -93,6 +94,8 @@ export type OverworldSessionLocalJobPlanState = {
   campaignWorldFactIds?: ReadonlySet<string> | undefined;
   campaignStoryChoiceKeys?: ReadonlySet<string> | undefined;
   campaignCharacter?: CampaignCharacterState | undefined;
+  questsById?: ReadonlyMap<string, Pick<OverworldQuest, "title">> | undefined;
+  eventsById?: ReadonlyMap<string, Pick<OverworldLocalEvent, "title">> | undefined;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 

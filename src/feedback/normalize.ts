@@ -102,6 +102,21 @@ const UNMAPPED_TEMPLATE: LocationTemplate = {
   sceneId: null,
 };
 
+/**
+ * A report about the game rather than about a place.
+ *
+ * Distinct from `unmapped`, which means "this text named nothing I recognise". `global`
+ * means the opposite problem: the text named SEVERAL things I recognise, because the
+ * player was citing examples of a pattern rather than pointing at one location.
+ */
+const GLOBAL_TEMPLATE: LocationTemplate = {
+  kind: "global",
+  questId: null,
+  region: null,
+  node: null,
+  sceneId: null,
+};
+
 function tokenize(lowerText: string): string[] {
   return lowerText.split(/[^a-z0-9]+/).filter((token) => token.length > 0);
 }
@@ -370,6 +385,84 @@ function uniqueLocations(locations: readonly LocationTemplate[]): LocationTempla
  * distinct candidate location falls through to the next step, and running
  * out of steps yields `unmapped` with `raw` preserved.
  */
+/**
+ * Whether `raw` names two or more DIFFERENT known places at non-overlapping positions.
+ *
+ * Both qualifiers carry weight. "Different" excludes a name that is merely a fragment of
+ * another name — the reason `preferLongestMatches` exists — and "non-overlapping" is what
+ * separates "The Cold Forge and The Breaking Weir" (two places, two spans) from a single
+ * title that happens to contain a shorter title inside it (one place, one span).
+ *
+ * Deliberately NOT a threshold on how many names appear: two is already a pattern being
+ * illustrated, and asking for three would file the commonest shape of this report — "X
+ * through Y" — under one of its own examples.
+ *
+ * KNOWN BLIND SPOT, kept rather than papered over. The fuzzy arm inherits rung 3's
+ * `contentTokens.length >= 2` bar, so a place whose whole name is one content word cannot
+ * be counted unless the player spells it exactly as indexed. A real corpus report — "Overall
+ * regional quest chain (Gallowmere through Dawn Beacon)" — therefore still resolves to
+ * `dawn_beacon` alone, because "the gallowmere" is one content token. Lowering that bar
+ * would let an ordinary English word that happens to be a place name drag genuinely
+ * location-specific reports into `global`, which is the OVER-merge direction and the one
+ * that hides defects. Under-merging leaves a finding as a singleton, which is the failure
+ * we already have and can see.
+ */
+/**
+ * Coarser than `locationTemplateKey`: a scene and the quest containing it are ONE place.
+ *
+ * Counting template rows instead would read "The Gallowmere — specifically the Gallowmere
+ * hollow" as two places and call a single-location report global, which is the over-merge
+ * direction. What makes a report cross-cutting is naming places that are not each other,
+ * not naming one place at two zoom levels.
+ */
+function placeKey(location: LocationTemplate): string {
+  return location.questId ?? location.node ?? location.region ?? location.kind;
+}
+
+function citesSeveralPlaces(raw: string, idx: LocationIndex): boolean {
+  const normalizedRaw = normalizePhrase(raw);
+  if (normalizedRaw.length === 0) return false;
+  const rawTokens = tokenize(normalizedRaw);
+  const contentTokens = stripStopwords(rawTokens);
+  const hits: { key: string; span: PhraseSpan }[] = [];
+  for (const candidate of idx.names) {
+    // Exact first, then rung 3's fuzzy content-token match. Both are needed, and the
+    // second is the one that earns its keep: the index stores titles WITH their article
+    // ("the wolf winter"), while players write "Wolf-Winter", so an exact-only count sees
+    // one place in "Wolf-Winter through The Factor's Mark" and files a finding about every
+    // quest under whichever example the player happened to capitalise.
+    let span: PhraseSpan | undefined;
+    if (matchesAtTokenBoundary(normalizedRaw, candidate.phrase)) {
+      span = contiguousSpans(rawTokens, candidate.phraseTokens)[0];
+    }
+    if (span === undefined && candidate.contentTokens.length >= 2) {
+      span = contiguousSpans(contentTokens, candidate.contentTokens)[0];
+    }
+    if (span === undefined) continue;
+    hits.push({ key: placeKey(candidate.location), span });
+  }
+  if (hits.length < 2) return false;
+  // Earliest span first, longest first on a tie, so a containing title is considered
+  // before the shorter one it swallows and the shorter one is then rejected as
+  // overlapping rather than counted as a second place.
+  //
+  // Exact and fuzzy spans index different token arrays (raw tokens vs stopword-stripped
+  // ones), so the overlap test is approximate across the two arms. It is deliberately the
+  // CONSERVATIVE approximation: a false overlap suppresses a second place and leaves the
+  // report where it already was, while the alternative would invent one.
+  hits.sort((a, b) => a.span.start - b.span.start || b.span.end - a.span.end);
+  const takenKeys = new Set<string>();
+  const takenSpans: PhraseSpan[] = [];
+  for (const hit of hits) {
+    if (takenKeys.has(hit.key)) continue;
+    if (takenSpans.some((span) => hit.span.start < span.end && span.start < hit.span.end)) continue;
+    takenKeys.add(hit.key);
+    takenSpans.push(hit.span);
+    if (takenKeys.size >= 2) return true;
+  }
+  return false;
+}
+
 export function canonicalizeLocation(raw: string, idx: LocationIndex): CanonicalLocation {
   const finalize = (location: LocationTemplate): CanonicalLocation => ({
     ...location,
@@ -427,6 +520,24 @@ export function canonicalizeLocation(raw: string, idx: LocationIndex): Canonical
       if (embeddedCandidates.length === 1) return finalize(embeddedCandidates[0]!);
     }
   }
+
+  // Scope rung: a `where` that cites SEVERAL known places is not a location, it is a
+  // pattern illustrated by examples — "quest structure, Wolf-Winter through The Factor's
+  // Mark", "Gallowmere through Dawn Beacon". Those belong together as one finding about
+  // the game, and they must not be filed under whichever example happened to win.
+  //
+  // This rung has to run BEFORE rungs 2-3 because `preferLongestMatches` is what destroys
+  // the evidence: given two quests named in one sentence it keeps the longer match and
+  // returns a single confident candidate, so by the time rung 2 answers, "named two
+  // quests" is indistinguishable from "named one". Measured on real reports — the two
+  // corpus reports of identical quest skeletons resolved to `factors_mark` and
+  // `dawn_beacon`, two different single quests, and so could never corroborate each other
+  // however many players agreed.
+  //
+  // It runs AFTER the id rungs above deliberately: an exact machine id is a caller
+  // pointing at one place on purpose, and no count of incidental prose names should
+  // override it.
+  if (citesSeveralPlaces(raw, idx)) return finalize(GLOBAL_TEMPLATE);
 
   const normalizedRaw = normalizePhrase(raw);
   if (normalizedRaw.length > 0) {

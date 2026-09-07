@@ -198,7 +198,7 @@ describe("Cade Return Packet", () => {
     expect(prepared.session.snapshot().discoveredJobIds).toContain(JOB);
     expect(prepared.session.view().jobs.map((job) => job.id)).not.toContain(JOB);
     expect(() => prepared.session.workLocalJob(JOB, PALING)).toThrow(
-      /Complete quest "wolf_winter"/i,
+      /Complete quest "The Wolf-Winter"/i,
     );
 
     for (const endingId of Object.keys(OUTCOMES) as OutcomeId[]) {

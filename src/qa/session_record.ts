@@ -200,6 +200,23 @@ const PlaytestSessionBodyObject = z
     journey_receipt: JourneyExitReceiptSchema.nullable(),
     /** Why a non-`completed` run ended as it did. Kept so failures stay diagnosable. */
     failure_note: z.string().min(1).nullable(),
+    /**
+     * Set when the runner had to substitute the server's exit receipt for the player's.
+     *
+     * A repaired session is still honest evidence — the substituted value is server-authored
+     * and the unchanged verifier had to accept the result — but it is NOT the same thing as a
+     * player who transcribed its own receipt correctly, and an evidence reader deserves to
+     * see the difference rather than infer it. Optional so every record written before this
+     * field existed stays readable.
+     */
+    receipt_repair: z
+      .object({
+        replaced_field: z.string().min(1),
+        count: z.number().int().positive(),
+        initial_failure: z.string().min(1),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

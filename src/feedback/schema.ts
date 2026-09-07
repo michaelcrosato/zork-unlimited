@@ -23,7 +23,7 @@ export const FeedbackSourceSchema = z.enum(["crawler", "fleet"]);
 
 export const CanonicalLocationSchema = z
   .object({
-    kind: z.enum(["quest", "overworld", "unmapped"]),
+    kind: z.enum(["quest", "overworld", "global", "unmapped"]),
     questId: z.string().nullable(),
     region: z.string().nullable(),
     node: z.string().nullable(),

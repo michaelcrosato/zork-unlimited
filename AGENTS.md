@@ -104,9 +104,19 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    intentionally eligible for a later compile. `loop.sh` does not invoke the compiler.
    Crawler findings require explicit `--in` until crawler artifacts gain an equivalent
    tracked acceptance receipt; the mandatory pre/post crawl gates remain unchanged.
-7. **Outer gates** — `npm run crawl:smoke` again, then `npm run health`, and
+7. **Outer gates** — `npm run crawl:smoke` again, then the health bar, and
    integrity drift against the cycle-start ref. That is the whole bar. A new crawl
    finding is YOUR regression; any red gate resets the provisional commit.
+   Which health bar is not a flag: `loop.sh` reads it off the cycle's own diff — the
+   provisional commit plus the working tree — through the same
+   `CENSUS_PROOF_SOURCE_SCOPES` list `npm run ship` uses, so a cycle out of the census
+   proofs' reach runs `health:fast` and a cycle touching the engine, a validator, the
+   world, or a shipped pack runs the full `npm run health`. Anything uncertain (an
+   unreadable ref, a failed classifier, an unrecognised answer) takes the full bar, and
+   `AI_LOOP_FULL_HEALTH=1` forces it. The cost is the same one the fast lane already
+   carries: a regression only a census proof catches waits for the nightly
+   `deep-audit.yml` census — which covers `main`, not a lane branch, so a long-running
+   lane needs its own periodic `npm run test:exhaustive`.
 8. **Finalize** — after every gate is green, the driver seals any provisional
    feedback manifest into the machine-owned acceptance marker in `AI_LOOP_STATE.md`,
    then commits that ledger-only update. Optional push happens only afterward, and

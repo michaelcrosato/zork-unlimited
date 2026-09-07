@@ -37,6 +37,10 @@ import {
 } from "./afk/assessor.js";
 import { rotateLoopState } from "./afk/loop_state.js";
 import { formatFeedbackCycleSelectionMarker } from "./feedback/acceptance.js";
+import { claimLeaseHours, readQueue, resolveClaimIdentity } from "./intake/queue.js";
+import { compareTickets, type QaTicket } from "./qa/ticket.js";
+import { readTickets } from "./qa/ticket_store.js";
+import { compareSubmissions, isOpenWork, type Submission } from "./intake/submission.js";
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
 // When the deterministic assessor runs dry (isSaturated), a cycle re-aims the
@@ -194,7 +198,13 @@ function main(): void {
 
   const prompt = ultraplan
     ? buildUltraplanPrompt({ a, currentPlanRecord: currentPlanRecord!, commitEnabled })
-    : buildPrompt({ a, top, commitEnabled });
+    : buildPrompt({
+        a,
+        top,
+        commitEnabled,
+        queue: readQueue().submissions,
+        leads: readTickets().tickets,
+      });
 
   // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
   // quest authoring) both need more than the lean routine default; loop.sh reads this
@@ -263,12 +273,229 @@ export function formatRecommendationConsoleLine(a: Assessment): string {
   return "  • no strategic recommendation (the assessor produced no candidate)";
 }
 
+/** How many queued items the prompt names before deferring to `npm run work -- --list`. */
+export const PROMPT_QUEUE_LIMIT = 12;
+
+/**
+ * A LIVE claim by a different lane — the one reason an open item is not this cycle's to take.
+ *
+ * The lease rules mirror `claimSubmission` exactly, including the awkward case: a claim with
+ * no timestamp cannot prove freshness, so it counts as expired rather than as a hold. Being
+ * stricter here than the claim path would advertise work the worker is then refused, and being
+ * looser would advertise work another lane is actively building.
+ */
+function heldByAnotherLane(
+  submission: Submission,
+  identity: string,
+  leaseHours: number,
+  now: Date,
+): boolean {
+  if (submission.status !== "in_progress") return false;
+  if (!submission.claimed_by || submission.claimed_by === identity) return false;
+  if (!submission.claimed_at) return false;
+  return (now.getTime() - Date.parse(submission.claimed_at)) / 3_600_000 < leaseHours;
+}
+
+/**
+ * The slice of the queue this cycle should actually be offered.
+ *
+ * Sorted here rather than trusted from the caller: `compareSubmissions` is the queue's own
+ * order — priority first, then weight of evidence, then age — and the prompt must not invent
+ * a second one. Declined and done items (which is what supersession produces) are already
+ * outside `isOpenWork`.
+ */
+export function selectPromptQueue(
+  submissions: readonly Submission[],
+  options: { identity?: string; leaseHours?: number; now?: Date; limit?: number } = {},
+): { shown: Submission[]; available: number } {
+  const identity = options.identity ?? resolveClaimIdentity();
+  const leaseHours = options.leaseHours ?? claimLeaseHours();
+  const now = options.now ?? new Date();
+  const available = submissions
+    .filter((submission) => isOpenWork(submission))
+    .filter((submission) => !heldByAnotherLane(submission, identity, leaseHours, now))
+    .sort(compareSubmissions);
+  return {
+    shown: available.slice(0, options.limit ?? PROMPT_QUEUE_LIMIT),
+    available: available.length,
+  };
+}
+
+/**
+ * The intake queue, IN THE PROMPT.
+ *
+ * `loop.sh` has always printed the queue at cycle start, but it prints it to the cycle LOG —
+ * and the worker is a fresh headless process whose entire world is this string on STDIN. So
+ * the charter's first step ("read the intake queue first ... claim it with
+ * `npm run work -- --claim <id>`") was something no worker could act on: dozens of open
+ * submissions, several corroborated by many independent playtest observations, were invisible
+ * to the one agent whose job is to work them, and every cycle fell to the assessor's
+ * synthesized maintenance candidates by default rather than by judgement.
+ *
+ * An empty queue is stated rather than omitted. Silence reads as "nothing was checked", while
+ * the charter is explicit that an empty queue is a normal state and not a stall.
+ */
+export function formatQueueSection(shown: readonly Submission[], available: number): string[] {
+  if (available === 0)
+    return [
+      "## The intake queue (`npm run work -- --list`)",
+      "Empty right now, or entirely claimed by another lane — a normal state, not a stall.",
+      "The assessor's own candidates carry this cycle.",
+    ];
+  const remainder = available - shown.length;
+  return [
+    "## The intake queue — CONSIDER THIS FIRST (`npm run work -- --list`)",
+    `${available} open submission(s) not held by another lane, highest priority first (weight`,
+    "of evidence breaks ties). A queued item is somebody's actual request, and a verified or",
+    "corroborated playtest item is the strongest evidence this repo has — stronger than any",
+    "candidate the deterministic assessor can synthesize, because a real player hit it.",
+    "",
+    ...shown.map((s) => `  ${s.priority} ${s.source}/${s.kind} ${s.id} — ${s.title}`),
+    ...(remainder > 0 ? [`  … ${remainder} more; \`npm run work -- --list\` shows them all.`] : []),
+    "",
+    "PREFER the highest-ranked item you can both finish AND verify in this ONE cycle against",
+    "the bar. An item you cannot finish is worth less this cycle than an assessor candidate you",
+    "can. Taking one:",
+    "  `npm run work -- --claim <id>`   before you start",
+    "  `npm run work -- --done <id>`    when the change is complete, BEFORE the provisional commit",
+    "Both write tracked files under intake/queue/, so they have to ride that commit — afterwards",
+    "AI_LOOP_STATE.md is the only tracked change the driver still allows.",
+    "Queue work is normally OFF-LIST: leave `selected_recommendation_id` null unless you really",
+    "implemented the assessor candidate of that id. If you pass over the queue for an assessor",
+    "candidate, say why in AI_LOOP_STATE.md.",
+  ];
+}
+
+/**
+ * How this agent is actually run, stated in the prompt because it is a property of the
+ * LOOP rather than of any vendor.
+ *
+ * Every one of these lines is a failure that happened rather than one that might. A cycle
+ * worker put its checks in the background and ended its turn "to resume when the
+ * background test run completes or the scheduled wakeup fires" — 950 s and $3.59 reverted,
+ * and the CLI reported success, so only the driver's provisional-commit check caught it. A
+ * host can defend against that (unset whatever makes long commands auto-background), but a
+ * host defends one machine; `dev-agents.json` invites any vendor on any machine, and the
+ * prompt is the only place the contract reaches all of them.
+ *
+ * The untracked clause is the same shape of trap from the other end: the cycle's own
+ * triage step writes qa/tickets/*.json, which are tracked in git on purpose
+ * (qa/tickets/README.md), as NEW untracked files after the cycle has already started —
+ * and require_final_ledger_only counts untracked paths, not just tracked ones. A worker
+ * that reads "only tracked change" literally leaves them behind and loses a green cycle at
+ * the very last gate.
+ */
+export const HEADLESS_TURN_CONTRACT: readonly string[] = [
+  "- You get ONE non-interactive turn, and nothing resumes you: no scheduled wakeup, no",
+  "  follow-up message, nobody to answer a question. Run every command in the FOREGROUND",
+  "  and wait for it. A backgrounded check is a check whose result you will never see, and",
+  "  ending the turn to come back later ends the CYCLE.",
+  "- The provisional commit must already EXIST before you finish. loop.sh looks for it the",
+  "  moment you exit and reverts the entire cycle when it is absent, however much the turn",
+  "  accomplished.",
+  "- That commit must absorb everything this cycle produced, including files that are still",
+  "  UNTRACKED — new tests and traces, and the intake/queue and qa/tickets entries written",
+  "  by the cycle's own claim and triage steps. The final gate counts untracked paths too,",
+  "  so one leftover qa/tickets/*.json reverts a cycle that was otherwise green.",
+];
+
+/**
+ * What "focused checks" means, stated because a worker guessed generously and lost a cycle.
+ *
+ * Measured on cycle 2026-09-06T02-27-19-129Z: the worker ran `npm run health:fast` THREE
+ * times inside its own turn, at roughly 17 minutes each under load, and reached its
+ * 60-minute budget without finishing. Every one of those runs re-proved the exact bar the
+ * driver runs immediately afterwards, on the same tree, so the cycle paid for its gate four
+ * times and landed nothing.
+ *
+ * The instinct is a good one pointed at the wrong target — the worker was trying to be sure
+ * before freezing. But the driver's bar is the gate, and a red bar reverts the cycle whether
+ * or not the worker saw it coming, so a self-run bar buys no safety at all. It only spends
+ * the turn. What genuinely helps is narrow: the tests that cover what was touched, and
+ * lint/format on the touched files, which catch the mistakes a worker can actually fix
+ * inside its turn.
+ */
+export const FOCUSED_CHECKS_CONTRACT: readonly string[] = [
+  "- Run FOCUSED checks only: the test files covering what you touched, plus lint and format",
+  "  on those files. Do NOT run `npm run health`, `npm run health:fast`, `npm test`, or the",
+  "  whole suite inside your turn. loop.sh runs the bar itself right after your provisional",
+  "  commit, on this same tree, and reverts the cycle if it is red — so running it yourself",
+  "  proves nothing the cycle does not already prove, and a turn that spends its budget",
+  "  re-proving the gate is a turn that lands nothing.",
+];
+
+/** How many unverified leads the prompt names before deferring to the bucket itself. */
+export const UNVERIFIED_LEADS_LIMIT = 6;
+
+/**
+ * The leads a cycle is allowed to see but not to trust.
+ *
+ * `derivePromotion` only reaches `corroborated` on reference-tier evidence or two independent
+ * model families, so a single-lineage fleet can report the same defect twenty times and never
+ * move it off `accumulating` — and `isActionable` then keeps it out of the queue entirely. That
+ * is the correct rule for CONFIDENCE and the wrong outcome for a real defect nobody can see: on
+ * this branch it left a two-session S2 blocker, and roughly $200 of corroborated evidence,
+ * invisible to the loop.
+ *
+ * Reproduction is the other honest route to confidence, so these are surfaced as LEADS rather
+ * than as work: a worker may take one only by first reproducing it deterministically, which is
+ * what promotes it. BUG tickets only — an `experience` judgement about how the game reads cannot
+ * be settled by a test, only by more players, so putting one here would invite exactly the
+ * faith-based "fix" this section exists to prevent.
+ */
+export function selectUnverifiedLeads(
+  tickets: readonly QaTicket[],
+  limit: number = UNVERIFIED_LEADS_LIMIT,
+): QaTicket[] {
+  return tickets
+    .filter(
+      (ticket) =>
+        ticket.kind === "bug" &&
+        ticket.promotion === "accumulating" &&
+        ticket.superseded_by === undefined &&
+        (ticket.status === "open" || ticket.status === "in_progress") &&
+        ticket.evidence.report_count >= 2,
+    )
+    .sort(compareTickets)
+    .slice(0, limit);
+}
+
+export function formatLeadsSection(leads: readonly QaTicket[]): string[] {
+  if (leads.length === 0) return [];
+  return [
+    "",
+    "## Unverified leads (qa/tickets) — REPRODUCE BEFORE YOU FIX",
+    `${leads.length} accumulating BUG ticket(s) that more than one report has hit and that`,
+    "nothing has reproduced yet. They are NOT corroborated: one model lineage reporting the same",
+    "thing many times is one opinion repeated, not two independent witnesses, which is why volume",
+    "alone never promotes them. Experience tickets are excluded — how the game READS can only be",
+    "settled by more players, never by a test.",
+    "",
+    ...leads.map(
+      (lead) =>
+        `  ${lead.severity} ${lead.ticket_id} — ${lead.title} ` +
+        `(${lead.evidence.report_count} reports, ${lead.evidence.families.length} lineage(s), ${lead.location})`,
+    ),
+    "",
+    "You may take a lead ONLY by first reproducing it deterministically — a regression test or a",
+    "crawler probe that fails on the current build for the reason the ticket gives. That",
+    "reproduction is what turns a lead into evidence, so record it BEFORE the provisional commit:",
+    "  `npm run qa:triage -- --verified <ticket_id> --verified-by tests/regression/<your test>.ts`",
+    "which stamps the ticket, promotes it to verified, and lets ordinary cycle-start triage carry",
+    "it into the intake queue from then on. If you CANNOT reproduce it, say so in AI_LOOP_STATE.md",
+    "and leave it — an unreproduced lead is not a defect you may fix on faith.",
+  ];
+}
+
 export function buildPrompt(ctx: {
   a: Assessment;
   top: ImprovementCandidate | null;
   commitEnabled?: boolean;
+  queue?: readonly Submission[];
+  leads?: readonly QaTicket[];
 }): string {
-  const { a, commitEnabled = false } = ctx;
+  const { a, commitEnabled = false, queue = [], leads = [] } = ctx;
+  const { shown: queueShown, available: queueAvailable } = selectPromptQueue(queue);
   const top = a.top;
   const recommendationKind = assessmentRecommendationKind(a);
   const ranked = a.candidates
@@ -352,14 +579,29 @@ export function buildPrompt(ctx: {
         "- In one or two lines, judge whether the change raises player-facing quality or",
         "  closes a real defect. If it is busywork, replace it with the higher-value move.",
         "- Run the focused tests/validation appropriate to the change. loop.sh runs the",
-        "  post-crawl, full health, and integrity-drift gates after you return.",
+        "  post-crawl, health (fast or full — loop.sh reads that off your diff), and",
+        "  integrity-drift gates after you return.",
         "- Commit every tracked implementation change locally as a PROVISIONAL commit.",
         "  Never push. The outer loop will hard-reset this commit if any later gate fails.",
-        "- Before that commit, set `selected_recommendation_id` in this cycle's",
-        "  `feedback_cycle_selection` marker to the exact candidate id you implemented;",
-        "  leave it null only for an off-list choice. Never change it after the freeze.",
-        "- Do not finalize the current AI_LOOP_STATE.md scaffold yet. Include it in the",
-        "  provisional commit, then complete that same entry once the gates have run.",
+        "- REQUIRED before that commit, and checked the moment you exit: set",
+        "  `selected_recommendation_id` in this cycle's `feedback_cycle_selection` marker",
+        "  to the exact candidate id you implemented,",
+        "  or to null for queue-driven or off-list work. Never change it after the freeze.",
+        "  This is a hard precondition, not bookkeeping. The seal REFUSES a provisional",
+        "  commit whose ledger entry has no actual-selection marker, so a cycle that skips",
+        "  it is discarded however green its bar was — one such cycle threw away seventy",
+        "  minutes of passing tests. loop.sh now checks it immediately after your commit.",
+        "- The provisional commit MUST INCLUDE AI_LOOP_STATE.md, carrying the frozen",
+        "  `feedback_cycle_selection` marker. Commit the scaffold as it stands; you finish",
+        "  its prose in STEP 3, after the gates. This is not optional and not bookkeeping:",
+        "  the attestation lives inside that file, so a provisional commit that does not",
+        "  contain AI_LOOP_STATE.md is rejected within seconds and the whole cycle is",
+        '  discarded — a worker that read STEP 3 as "never commit the ledger" lost 290',
+        "  turns and 44 minutes of finished, correct work exactly this way.",
+        "- VERIFY IT YOURSELF before you end the turn, using the same check loop.sh runs:",
+        "  `npm run --silent loop:seal-feedback -- --check-attestation --meta ai-runs/latest-cycle.json`",
+        "  If it fails, amend the provisional commit until it passes. Never end the turn on",
+        "  a red attestation check.",
         "",
         "## STEP 3 — Compile only at the real threshold, then finish the ledger",
         "",
@@ -368,9 +610,12 @@ export function buildPrompt(ctx: {
         "  self-critique, evidence, and next focus.",
         "- Keep the frozen `feedback_cycle_selection` marker unchanged; the post-gate seal",
         "  removes it after using the committed actual-selection attestation.",
-        "- AI_LOOP_STATE.md must be the only tracked change after the provisional commit.",
-        "  Do not commit it. loop.sh now runs the outer gates and makes the final ledger-only",
-        "  commit; only after that may its separately enabled push step run.",
+        "- After the provisional commit, AI_LOOP_STATE.md must be the only thing left in",
+        "  `git status --porcelain` at all — untracked paths included, not just tracked ones.",
+        "  Leave THIS COMPLETION uncommitted. The file is already inside your STEP 2 commit;",
+        "  what stays uncommitted is only the later edit finishing its prose. Do not make a",
+        "  second commit for it: loop.sh runs the outer gates and makes the final",
+        "  ledger-only commit; only after that may its separately enabled push step run.",
       ]
     : [
         "## STEP 1 — Make ONE uncommitted improvement",
@@ -398,11 +643,16 @@ export function buildPrompt(ctx: {
     ...cycleCharge,
     "do not route around the verifier.",
     "",
+    ...formatQueueSection(queueShown, queueAvailable),
+    ...formatLeadsSection(selectUnverifiedLeads(leads)),
+    "",
     ...assessorSection,
     "",
     ...workflow,
     "",
     "## Hard constraints",
+    ...HEADLESS_TURN_CONTRACT,
+    ...FOCUSED_CHECKS_CONTRACT,
     "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
     "- Keep the game playable; prefer a small, verified change over a broad rewrite.",
     "- `npm run health` must pass in loop.sh before anything is retained or pushed.",
@@ -488,12 +738,18 @@ export function buildUltraplanPrompt(ctx: {
     ? [
         "## STEP 4 — Run focused checks and create the LOCAL provisional commit",
         "- Self-critique the move, then run its focused tests/validation. The outer loop",
-        "  runs post-crawl, full health, and integrity drift after you return.",
+        "  runs post-crawl, health (fast or full — read off your diff), and integrity",
+        "  drift after you return.",
         "- Commit every tracked implementation/decision-log change locally as a PROVISIONAL",
         "  commit. Include the unfinished AI_LOOP_STATE.md scaffold. Never push.",
-        "- Before that commit, set `selected_recommendation_id` in this cycle's",
-        "  `feedback_cycle_selection` marker to the exact candidate id you implemented;",
-        "  leave it null only for the ultraplan's off-list choice. Freeze it with the revision.",
+        "- REQUIRED before that commit, and checked the moment you exit: set",
+        "  `selected_recommendation_id` in this cycle's `feedback_cycle_selection` marker",
+        "  to the exact candidate id you implemented,",
+        "  or to null for the ultraplan's off-list choice. Freeze it with the revision.",
+        "  This is a hard precondition, not bookkeeping. The seal REFUSES a provisional",
+        "  commit whose ledger entry has no actual-selection marker, so a cycle that skips",
+        "  it is discarded however green its bar was — one such cycle threw away seventy",
+        "  minutes of passing tests. loop.sh now checks it immediately after your commit.",
         "",
         "## STEP 5 — Compile only at the real threshold, then finish the ledger",
         "- Run `npm run feedback:status`; compile only when it reports ready (including a",
@@ -569,6 +825,8 @@ export function buildUltraplanPrompt(ctx: {
     ...finish,
     "",
     "## Hard constraints",
+    ...HEADLESS_TURN_CONTRACT,
+    ...FOCUSED_CHECKS_CONTRACT,
     "- Do not commit ai-runs/, node_modules/, dist/, coverage/, saves/*.json.",
     "- ONE focused structural change; keep the game playable and the bar green.",
     "- `npm run health` and verify:integrity must pass in loop.sh; never weaken a check.",

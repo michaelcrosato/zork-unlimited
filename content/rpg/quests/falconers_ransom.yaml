@@ -124,6 +124,10 @@ rooms:
           You read Aldric's entry in the gate log. It shows he brought no equipment
           for keeping a falcon. If the ownership dispute is unresolved, go east to the
           Hawk-Yard and PRESENT bill of sale against falcon's jesses. The Hawk-Yard is east.
+      - when: [{ has_flag: log_taken }]
+        text: >
+          You took the gate log. Retrieve the log if needed, then READ gate log for
+          Aldric's entry, evidence, and +3 cunning. The Hawk-Yard is east.
     objects: [gate_log]
     exits:
       - { direction: east, to: hawk_yard }
@@ -300,6 +304,8 @@ objects:
           perch, gauntlet, hood, or feed. He could not have kept a stray falcon for
           three days.
     takeable: true
+    take_effects:
+      - set_flag: log_taken
     read_text: >
       Aldric arrived three days ago with a horse, two bags, and an empty hawk-bag.
       He brought no cadge, perch, gauntlet, hood, or feed. He lacked the equipment

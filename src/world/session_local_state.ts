@@ -48,6 +48,9 @@ export type MutableOverworldSessionLocalState = {
   campaignStoryChoiceKeys?: ReadonlySet<string>;
   campaignCharacter?: CampaignCharacterState;
   journalEntries?: ReadonlyMap<string, import("./session_snapshot.js").OverworldJournalEntry>;
+  /** Title lookups for job leads' chronology-gate text; ids are shown when absent. */
+  questsById?: ReadonlyMap<string, Pick<OverworldQuest, "title">>;
+  eventsById?: ReadonlyMap<string, Pick<OverworldLocalEvent, "title">>;
 };
 
 export type OverworldSessionAreaContent = {
@@ -194,6 +197,8 @@ export function buildOverworldSessionCurrentLocalView(
       : {}),
     ...(state.campaignCharacter ? { campaignCharacter: state.campaignCharacter } : {}),
     ...(state.journalEntries ? { journalEntries: state.journalEntries } : {}),
+    ...(state.questsById ? { questsById: state.questsById } : {}),
+    ...(state.eventsById ? { eventsById: state.eventsById } : {}),
   });
 }
 

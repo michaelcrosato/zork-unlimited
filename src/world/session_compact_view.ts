@@ -17,6 +17,7 @@ import {
   compactOverworldLabel,
   compactOverworldJobLeadRefs,
   compactOverworldJobChoices,
+  compactOverworldJobLeads,
   compactOverworldJobScenes,
   compactOverworldMovementTruncated,
   compactOverworldQuestRefs,
@@ -54,6 +55,7 @@ import {
 } from "./session_compact_ids.js";
 import { sortedNumberMap, sortedStringSet } from "./session_collections.js";
 import type { OverworldQuestView } from "./session_local_discovery.js";
+import type { OverworldSessionLocalJobLead } from "./session_local_view.js";
 import type { OverworldSessionRoutePlan } from "./session_routes.js";
 import type {
   OverworldJournalEntry,
@@ -112,6 +114,7 @@ export type OverworldSessionCompactViewState = {
   jobs: readonly OverworldLocalJob[];
   jobChoices?: readonly OverworldCompactJobChoice[];
   rememberedJobs: readonly OverworldLocalJob[];
+  jobLeads: readonly OverworldSessionLocalJobLead[];
   sites: readonly OverworldExplorationSite[];
   quests: readonly OverworldQuestView[];
   questStarts: readonly OverworldCompactQuestStart[];
@@ -144,6 +147,7 @@ export function buildOverworldSessionCompactView(
   const jobChoices = compactOverworldJobChoices(
     (state.jobChoices ?? []).filter(([jobId]) => visibleJobIds.has(jobId)),
   );
+  const jobLeads = compactOverworldJobLeads(state.jobLeads);
   const rememberedJobs = compactOverworldJobLeadRefs(state.rememberedJobs);
   const sites = compactOverworldTitleRefs(state.sites);
   const questStarts = compactOverworldQuestStarts(state.questStarts);
@@ -308,6 +312,7 @@ export function buildOverworldSessionCompactView(
     ...(jobs.length > 0 ? { jobs } : {}),
     ...(jobScenes.length > 0 ? { job_scenes: jobScenes } : {}),
     ...(jobChoices.length > 0 ? { job_choices: jobChoices } : {}),
+    ...(jobLeads.length > 0 ? { job_leads: jobLeads } : {}),
     ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),

@@ -1,0 +1,80 @@
+id: bug_0624
+title: The "no authored option is legal yet" rejection named no gate, for both job and event scenes
+reported_by: intake/queue audit/bug eca7893d8b0be480 (Rowan's Winter Return Docket)
+severity: S2
+
+symptom: >
+  When every authored option of a local-job or local-event scene was currently blocked
+  (scene-level chronology satisfied, but no single option's own requirements were met),
+  planOverworldLocalJobCompletion and planOverworldEventResolution rejected with a bare
+  "Choose one option for X, but no authored option is legal yet in this journey." —
+  naming no prerequisite at all. This is the empty-list sibling of the case bug_0620 and
+  bug_0621 already fixed (where AT LEAST ONE option is legal, so its id can be named):
+  here nothing is legal yet, so there was no id to fall back to, and the message said
+  nothing else.
+
+cause: >
+  availableLocalJobSceneOptions / availableLocalEventSceneOptions correctly compute the
+  empty set, but neither local_job_scene.ts nor local_event_scene.ts had any function to
+  explain WHY every option failed. The three call sites (session_local_actions.ts's job
+  path, and session_event_resolution.ts's two structurally-identical event branches)
+  discarded the option-level requirement data at the exact point of refusal, matching
+  the queue ticket's own diagnosis of bug_0617/bug_0618's class: a blocked-lead path that
+  knows the failing condition and throws it away.
+
+  Investigation note: the queue ticket's own worked example (Rowan's Winter Return
+  Docket, requires_completed_quests: [wolf_winter] plus requires_resolved_events at
+  scene level) turns out to be UNREACHABLE for this exact message on the current build —
+  the scene-level requires_completed_quests/requires_resolved_events checks in
+  session_local_actions.ts (added by earlier bug_0617/bug_0620 work) already throw a
+  specific "Complete quest / Resolve event" message before the option-level branch is
+  ever reached, and tests/starting_slice/winter_return_docket_counterfactual.test.ts's
+  own exhaustive 32-combination proof confirms every reachable non-death post-scene
+  state leaves exactly one option legal. Confirmed empirically (scripted replay of the
+  event-resolved-but-Wolf-Winter-incomplete state) before touching any code. The
+  generic empty-option branch itself is real, current, and reachable for other/future
+  scenes with option-only gates (an option-local requires_event_options not mirrored at
+  scene level, a story-choice-gated option, or a character-conditioned option) — this
+  fix targets that generic branch and its shared class, not a docket-specific repro.
+
+reproduction: >
+  New unit coverage in tests/unit/world_local_job_scene_conditions.test.ts and
+  tests/unit/world_local_event_scene.test.ts constructs synthetic scenes where scene-
+  level gates pass but every option is currently blocked, and asserts the prior
+  behavior (a message with no reason) against the fixed one (naming the specific unmet
+  gate(s)).
+
+fix: >
+  Added describeUnmetLocalJobSceneOptionGates (local_job_scene.ts) and
+  describeUnmetLocalEventSceneOptionGates (local_event_scene.ts): given a scene and the
+  current condition state, each names every option-level requirement still unmet by an
+  option that is not already permanently foreclosed. An option is foreclosed only when
+  a one-time authored decision it depends on was already made a contradictory way (its
+  required event was resolved with a different option, or a fact/story-choice it
+  forbids is already true) — foreclosed options are excluded rather than named, so the
+  message never tells a player to do something no longer possible (e.g. "resolve this
+  event" when they already resolved it the other way). session_local_actions.ts's job
+  path and both matching branches in session_event_resolution.ts now call the new
+  helper when the available-options list is empty, falling back to the original bare
+  message only if the helper itself finds nothing to say (every option foreclosed).
+  session_event_resolution.ts's two near-identical branches were also consolidated
+  into one noLegalEventOptionError helper while touching this code.
+
+production:
+  - src/world/local_job_scene.ts
+  - src/world/local_event_scene.ts
+  - src/world/session_local_actions.ts
+  - src/world/session_event_resolution.ts
+regression:
+  - tests/unit/world_local_job_scene_conditions.test.ts
+  - tests/unit/world_local_event_scene.test.ts
+verification:
+  - New unit tests cover the job-scene event-option/world-fact case (naming only the
+    reachable branch's gate and excluding the branch already foreclosed by the resolved
+    event) and the event-scene world-fact case (naming only the still-reachable
+    option's missing fact once a forbidding fact has foreclosed the sibling option).
+  - typecheck, lint, and format are clean on the five touched files.
+  - Full starting_slice and unit suites touching job/event completion planning are
+    green (209 tests across 14 files), including the pre-existing exhaustive Winter
+    Return Docket counterfactual proof.
+  - verify:bug-traces green with this artifact registered.

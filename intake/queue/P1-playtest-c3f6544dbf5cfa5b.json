@@ -6,7 +6,9 @@
   "source": "playtest",
   "kind": "bug",
   "priority": "P1",
-  "status": "open",
+  "status": "done",
+  "claimed_by": "dev-opus-lane",
+  "claimed_at": "2026-09-06T04:08:06.176Z",
   "labels": [
     "lane:content"
   ],
@@ -25,7 +27,7 @@
     "observations": 34
   },
   "created_at": "2026-08-31T02:14:25.353Z",
-  "updated_at": "2026-08-31T16:35:36.106Z",
+  "updated_at": "2026-09-06T04:08:17.360Z",
   "external": null,
   "mirrors": [
     {
@@ -35,5 +37,6 @@
       "url": "https://linear.app/michael-crosato/issue/MIC-34/c3f6544dbf5cfa5b-store-shed-up-blocked-with-yearling-combat-copy",
       "synced_status": "open"
     }
-  ]
+  ],
+  "resolved_by": "dev-opus-lane"
 }

@@ -17,6 +17,7 @@ import {
   rotateLoopState,
   totalCycleCount,
   countCycleEntries,
+  countScaffoldEntries,
   historicalCycleCount,
   completedCycleCount,
   ROTATE_KEEP,
@@ -59,7 +60,19 @@ describe("AI_LOOP_STATE rotation (token efficiency)", () => {
     writeFileSync(join(root, LOOP_STATE_FILE), makeLog(ROTATE_KEEP));
     expect(rotateLoopState(root)).toBe(0);
     expect(existsSync(join(root, LOOP_ARCHIVE_FILE))).toBe(false);
-    expect(totalCycleCount(root)).toBe(ROTATE_KEEP);
+    // ROTATE_KEEP rich entries plus the live "## AFK Cycle" scaffold tail (bug_0619).
+    expect(totalCycleCount(root)).toBe(ROTATE_KEEP + 1);
+  });
+
+  it("counts a live '## AFK Cycle' scaffold toward the total without rotating it (bug_0619)", () => {
+    writeFileSync(join(root, LOOP_STATE_FILE), makeLog(ROTATE_KEEP));
+    const live = readFileSync(join(root, LOOP_STATE_FILE), "utf8");
+    expect(countCycleEntries(live)).toBe(ROTATE_KEEP);
+    expect(countScaffoldEntries(live)).toBe(1);
+    // rotateLoopState still keys only on legacy "### Cycle result" entries: the
+    // append-ordered scaffold tail is not (yet) prepend-ordered, so folding it into
+    // the same cut would archive the newest cycle first. See the loop_state.ts docstring.
+    expect(rotateLoopState(root)).toBe(0);
   });
 
   it("trims to the keep window, archives the rest, and preserves the total count", () => {
@@ -204,11 +217,36 @@ describe("completedCycleCount", () => {
     expect(completedCycleCount(text)).toBe(42);
   });
 
+  it("counts '## AFK Cycle' scaffolds completed in place alongside rich entries (bug_0619)", () => {
+    const text = `# AI Loop State\n\n### Cycle result 1\n\n## AFK Cycle 2026-01-02T03-04-05-006Z\n- Assess: done.\n`;
+    expect(completedCycleCount(text)).toBe(2);
+  });
+
+  it("adds the historical marker to a mix of rich entries and scaffolds", () => {
+    const text = `# AI Loop State\n\n<!-- historical_cycle_count: 5 -->\n\n### Cycle result 1\n\n## AFK Cycle 2026-01-02T03-04-05-006Z\n- pending.\n`;
+    expect(completedCycleCount(text)).toBe(7);
+  });
+
   it("works with empty string", () => {
     expect(completedCycleCount("")).toBe(0);
   });
 
   it("works with garbage text", () => {
     expect(completedCycleCount("just some random text without markers")).toBe(0);
+  });
+});
+
+describe("countScaffoldEntries", () => {
+  it("counts '## AFK Cycle' scaffold headings and ignores legacy rich entries", () => {
+    const text =
+      "# AI Loop State\n\n### Cycle result — legacy\n\n" +
+      "## AFK Cycle 2026-01-02T03-04-05-006Z\n- pending.\n\n" +
+      "## AFK Cycle 2026-01-03T00-00-00-000Z\n- pending.\n";
+    expect(countScaffoldEntries(text)).toBe(2);
+    expect(countCycleEntries(text)).toBe(1);
+  });
+
+  it("does not match a bare '## AFK Cycle' mention without the scaffold's own heading form", () => {
+    expect(countScaffoldEntries("- see the AFK Cycle above for detail\n")).toBe(0);
   });
 });

@@ -75,8 +75,10 @@ loop.sh  (outer driver — orchestration + the bar)
 ├─ 5. VERIFY        the bar, all blocking (a red gate reverts the cycle's scratch
 │                    to the pre-cycle ref, skips the commit, and the outer loop
 │                    continues under circuit breakers — see Failure handling):
-│       npm run health            (verify:integrity + typecheck + lint +
-│                                  format:check + tests + ui:typecheck + validate)
+│       npm run health / health:fast   (verify:integrity + typecheck + lint +
+│                                  format:check + tests + ui:typecheck + validate;
+│                                  which one is read off the cycle's diff — see
+│                                  "Which health bar" below)
 │       verify:integrity --against <pre-cycle ref>   (don't route around the verifier:
 │                                                      hard-block only on weakening —
 │                                                      deleted/disabled tests, dropped
@@ -96,6 +98,23 @@ loop.sh  (outer driver — orchestration + the bar)
        main is always rejected (the required 'verify' check can't have run yet) —
        land loop commits via a scratch branch/PR and leave AI_LOOP_PUSH=0.
 ```
+
+**Which health bar.** The bar is blocking either way, but not every cycle needs the
+full one, and the driver does not decide by hand. `select_health_bar` asks
+`npm run loop:bar` (`scripts/cycle-bar.ts`), which classifies the cycle's whole diff —
+the provisional commit _and_ whatever is still in the working tree — against
+`CENSUS_PROOF_SOURCE_SCOPES`, the same list `npm run ship` reads for a landing. Nothing
+in the census proofs' reach ⇒ `npm run health:fast`; one path inside it ⇒ the full
+`npm run health`. Every uncertain case resolves to the full bar: an unreadable ref, a
+failed helper, an empty answer, or any verdict the driver does not recognise, and
+`AI_LOOP_FULL_HEALTH=1` forces it outright. This is worth doing because the six census
+proofs are the large majority of a cycle's wall clock (~79 minutes of CI body time
+together), so a docs or tooling cycle used to spend most of its hour re-proving packs it
+never touched. The trade is the one the fast lane already states out loud: a regression
+only a census proof catches is not caught by that cycle. On `main` the nightly
+`deep-audit.yml` census is the backstop; **on a lane branch it is not**, so run
+`npm run test:exhaustive` against the branch head periodically and after any cycle that
+touched the engine or content.
 
 **Failure handling.** loop.sh refuses to start on a dirty tree (AI_LOOP_ALLOW_DIRTY=1
 overrides commit-mode startup only, accepting the risk below). Each cycle snapshots
@@ -130,7 +149,11 @@ compile, until `loop:seal-feedback` promotes its exact digest into the tracked
 `AI_LOOP_STATE.md` marker after every outer gate. The same seal consumes a feedback
 recommendation only when the provisional commit's actual-selection attestation names
 it (the assessor's offered recommendation is not authority) and queues the just-tested
-pure report for a later cohort. This one-cycle lag prevents that canonical cycle
+pure report for a later cohort. `loop.sh` also checks that attestation seconds after the
+provisional commit (`npm run --silent loop:seal-feedback -- --check-attestation --meta
+ai-runs/latest-cycle.json`), so a worker that leaves `AI_LOOP_STATE.md` out of its commit
+fails before the bar runs rather than after it; the generated prompt hands the worker the
+same command to run before it ends its turn. This one-cycle lag prevents that canonical cycle
 bundle from entering after a failed, reset, or uncommitted build and does not depend
 on Git ancestry, so squash merges preserve identity. Fully verified fleet/legacy/smoke
 ledger reports retain their existing local-ledger admission path. Ordinary explicit
@@ -293,7 +316,51 @@ loop does not inspect local credential files or choose a fallback provider —
 to hang-kill a stuck turn, `AI_LOOP_MAX_CONSECUTIVE_FAILURES` / `AI_LOOP_MAX_TOTAL_FAILURES`
 for the circuit breakers, and `AI_LOOP_ALLOW_VERIFIER_EDITS=1` to acknowledge a
 deliberate verifier change. `AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES` bounds retained
-failure records (default 100).
+failure records (default 100). `AI_LOOP_STOP_FILE` (default `ai-runs/loop.stop`) is the
+graceful stop: touch it and the loop finishes the cycle in flight, pushes it if pushing is
+enabled, and exits at the next safe point (it is checked before a cycle starts and again
+after one returns, never inside a cycle), so landing a change on a running lane no longer
+means catching the inter-cycle sleep or killing a paid worker turn. A leftover stop file is
+cleared at startup rather than honoured.
+
+The generated cycle prompt carries the intake queue (with its claim and close commands and
+a live-lease filter) and two standing contracts for headless workers: `HEADLESS_TURN_CONTRACT`
+(one non-interactive turn; the provisional commit must exist before the turn ends and must
+absorb any untracked `intake/queue` or `qa/tickets` output the cycle-start triage produced)
+and `FOCUSED_CHECKS_CONTRACT` (run only the checks for what you touched; the driver runs the
+bar off the diff after the provisional commit).
+
+### A hardened `claude` launcher for unattended runs
+
+The registry's bare `claude -p` entry satisfies the contract, but a multi-day unattended
+run showed what else a headless worker needs, and `agents/claude-headless-worker.sh`
+packages it as an `AI_AGENT_CMD` (`AI_AGENT=claude AI_AGENT_CMD=agents/claude-headless-worker.sh ./loop.sh`):
+
+- **One turn, stated outright.** A `claude -p` run is a single non-interactive turn; nothing
+  resumes it. The launcher appends that contract to the system prompt (never background a
+  command, never schedule, do not stop before the provisional commit exists, run only
+  focused checks because the driver runs the bar) and disallows the scheduling, subagent,
+  messaging, and worktree tool families, so the worker cannot "end its turn expecting a
+  wake-up" — the way the first lost cycles went.
+- **Explicit permissions.** A tool allowlist (`--allowedTools`) under `acceptEdits` instead
+  of a blanket permission bypass, which the CLI refuses for a root process anyway.
+- **A clean process.** `env -i` with only PATH, HOME, the proxy/CA settings, and the loop's
+  own `AI_*` knobs; a fresh `--session-id` with `--no-session-persistence`, so the worker
+  never writes into an operator's transcript and the CLI's session registry cannot fail a
+  finished run at its last step ("Session ID already in use" killed two green cycles).
+- **Telemetry and a cap.** `--max-budget-usd` (default 25) ends a runaway turn nonzero, which
+  fails and reverts the cycle; the streamed JSON record lands under `ai-runs/dev-agent/`
+  and a one-line `dev-agent summary: {...}` (turns, seconds, cost, tokens, denials) goes to
+  the cycle log.
+- **A stop that stops.** The agent runs in its own process group; on TERM (the driver's
+  timeout path or a manual stop) the launcher TERMs then KILLs the group inside the
+  driver's `--kill-after` budget. Without this a claude child survived the wrapper's death
+  and kept editing the checkout for 18 minutes after the cycle was recorded as failed.
+
+Knobs: `DEV_AGENT_MODEL` (default `claude-sonnet-5`), `DEV_AGENT_EFFORT` (default `max`),
+`DEV_AGENT_MAX_BUDGET_USD`, `DEV_AGENT_RUN_DIR`, and `DEV_AGENT_CONTROL_FILE`, a KEY=value
+file re-read at every launch so an operator can retune between cycles without restarting
+`loop.sh`.
 
 ## Honest limits
 

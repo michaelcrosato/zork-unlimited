@@ -50,6 +50,14 @@ describe("generated_eval pure seed wrappers", () => {
       ).toBe(8);
     });
 
+    it("counts '## AFK Cycle' scaffolds completed in place, not just legacy '### Cycle result' (bug_0619)", () => {
+      expect(
+        generatedEvalSeedBase(
+          "### Cycle result — one\n\n## AFK Cycle 2026-01-02T03-04-05-006Z\n- Assess: done.\n",
+        ),
+      ).toBe(2);
+    });
+
     it("counts cycle results correctly when interspersed with other markdown headers and text", () => {
       const markdown = `
 # AI Loop State
@@ -97,6 +105,14 @@ Details about cycle 2.
         "### Cycle result — old\n### Cycle result — older\n",
       );
       expect(generatedEvalSeedBaseFromDisk(root)).toBe(11);
+    });
+
+    it("reads a live '## AFK Cycle' scaffold alongside historical + rich counts (bug_0619)", () => {
+      writeFileSync(
+        join(root, LOOP_STATE_FILE),
+        "<!-- historical_cycle_count: 10 -->\n\n### Cycle result — one\n\n## AFK Cycle 2026-01-02T03-04-05-006Z\n- pending.\n",
+      );
+      expect(generatedEvalSeedBaseFromDisk(root)).toBe(12);
     });
 
     it("combines the live log and the archive when no historical marker is present", () => {

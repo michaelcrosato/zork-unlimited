@@ -87,4 +87,41 @@ describe("falconers_ransom guest chambers react to the taken bill", () => {
     expect(desc(s)).not.toContain("What you needed is in your hands");
     expect(lookNarration(s)).toBe(desc(s));
   });
+
+  it("removes the gate-log counter prose after the gate log is taken", () => {
+    const s = play(initStateForRpgPack(index, 67), ["go_west", "take_gate_log"]);
+
+    expect(s.inventory).toContain("gate_log");
+    expect(s.flags["log_taken"]).toBe(true);
+    expect(desc(s)).toContain("You took the gate log");
+    expect(desc(s)).not.toContain("The gate log was kept on the counter");
+    expect(lookNarration(s)).toBe(desc(s));
+  });
+
+  it("keeps the counter bare after the gate log is dropped unread", () => {
+    const s = play(initStateForRpgPack(index, 67), ["go_west", "take_gate_log", "drop_gate_log"]);
+
+    expect(s.inventory).not.toContain("gate_log");
+    expect(s.flags["log_taken"]).toBe(true);
+    expect(s.flags["log_read"]).toBeUndefined();
+    expect(desc(s)).toContain("You took the gate log");
+    expect(desc(s)).not.toContain("The gate log was kept on the counter");
+    expect(lookNarration(s)).toBe(desc(s));
+  });
+
+  it("does not claim the log is still in hand after it is read and dropped", () => {
+    const s = play(initStateForRpgPack(index, 67), [
+      "go_west",
+      "take_gate_log",
+      "read_gate_log",
+      "drop_gate_log",
+    ]);
+
+    expect(s.inventory).not.toContain("gate_log");
+    expect(s.flags["log_taken"]).toBe(true);
+    expect(s.flags["log_read"]).toBe(true);
+    expect(desc(s)).toContain("You read Aldric's entry in the gate log");
+    expect(desc(s)).not.toContain("The gate log was kept on the counter");
+    expect(lookNarration(s)).toBe(desc(s));
+  });
 });

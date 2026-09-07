@@ -175,8 +175,8 @@ rooms:
         text: >
           DESCEND exposed ridge last mile to reach Cade's yard with June Pike. This route makes
           the smoke, wolf breath, and crosswind visible, which can help the first LURE LAY check
-          unless Cade identifies a stronger field condition. The cattle saw you and June
-          and are pressing the slats.
+          unless Cade identifies a stronger field condition. Descending puts you and June in the
+          herd's sightline and raises cattle alarm by 1.
       - when:
           - { has_flag: approach_exposed_ridge }
           - { not_flag: approach_sheltered_stockway }
@@ -185,8 +185,8 @@ rooms:
         text: >
           DESCEND exposed ridge last mile to reach Cade's yard. This route makes the smoke,
           wolf breath, and crosswind visible, which can help the first LURE LAY check unless
-          Cade identifies a stronger field condition. The cattle saw you and are pressing
-          the slats.
+          Cade identifies a stronger field condition. Descending puts you in the herd's
+          sightline and raises cattle alarm by 1.
       - when:
           - { has_flag: approach_sheltered_stockway }
           - { not_flag: approach_exposed_ridge }
@@ -607,6 +607,12 @@ rooms:
           - { not_flag: flank_wolf_down }
           - { not_flag: flank_redirected }
         locked_msg: "Up is blocked. Complete the currently listed yearling action. Then cross with a split-rail guard, Jamie's certified crawlboard route, or Cade's LURE route. A sound braced rail cannot be carried."
+        locked_msg_variants:
+          - when:
+              - { has_flag: strategy_lure_committed }
+              - { not_flag: yearling_down }
+              - { not_flag: yearling_redirected }
+            text: "Up is blocked. Go east to the Byre-Yard, then north to the Broken Paling and LAY downwind feed line WITH Cade's winter-feed sack. Then return here to cross with Cade's LURE route."
 
   - id: fodder_loft
     name: "The Fodder-Loft"

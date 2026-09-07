@@ -198,20 +198,57 @@ const WOLF_WINTER_CERTIFICATE: TransferCertificate = {
  * Advancing either hash is an explicit certification review, never an incidental
  * consequence of editing Wolf-Winter or the deterministic relabel oracle.
  */
-// Advanced for bug_0604 after explicit seeded-opening transfer review. Compiled
-// predecessor/current packs differ only in June's keep_cattle_terms prompt and its
-// goto/end fields. The action now closes instead of visiting a second BACK screen;
-// all dialogue node ordinals and consequential effects remain unchanged. This edge
-// has no conditions or opening-dependent behavior. Removing one navigation step
-// moves later seeded dice coordinates, but the certificate's best/worst-roll bracket
-// and all opening-specific dependencies are unchanged: 22 mechanical and 49
-// presentation reads, with the whole-pack hash as the only diagnostic before renewal.
+// Advanced for bug_0618 after explicit seeded-opening transfer review, superseding the
+// bug_0614 renewal recorded below. The compiled predecessor and current packs differ only
+// by a `locked_msg_variants` entry on the store_shed "up" exit: during a committed LURE
+// with the yearling neither down nor redirected, the block now names the LAY step the
+// player must actually perform instead of citing a "currently listed yearling action"
+// that is listed nowhere. The base `locked_msg` is untouched, so every other approach
+// keeps the message it had.
+//
+// This renewal is the one that most needed the mechanical check rather than an eye, because
+// the edit ADDS a `when` clause and so is not prose in the narrow sense. Two facts settle
+// it. First, `locked_msg_variants` is consumed at exactly one site — reactiveText() in
+// src/rpg/model.ts, the same selector object descriptions use — so it can only choose which
+// string is shown for an exit that is already locked; it cannot gate an exit, mutate state,
+// or consume a seeded die, and src/rpg/schema.ts requires the base `locked_msg` to remain.
+// Second, the certificate itself reported the whole-pack hash as its SOLE diagnostic on both
+// the pack and the relabeled twin, with mechanicalReads 22 and presentationReads 49 both
+// unchanged — every certified surface (the seeded-opening flag list, the pack id, every
+// opening-condition signature, every ordinary failure signature) matched.
+//
+// Previous renewal, kept for the audit trail: advanced for bug_0614 after explicit
+// seeded-opening transfer review, superseding the
+// bug_0604 renewal recorded below. The compiled predecessor and current packs differ
+// only in the `text` of two steading_yard room-description variants: the exposed-ridge
+// prose said "The cattle saw you ... and are pressing the slats" before any action had
+// raised cattle_alarm, which `vars_init` sets to 0 on every road. Both variants keep
+// their `when` clauses, and no condition, effect, action id, object, var, score or
+// authored ordering moves — the edit is player-facing prose only.
+//
+// The review is mechanical rather than by eye: with the previous pins in place the
+// certificate reported the whole-pack hash as its SOLE diagnostic, on both the pack and
+// the relabeled twin, while mechanicalReads stayed at 22. Every other certified surface —
+// the seeded-opening flag list, the pack id, every opening-condition signature and every
+// ordinary failure signature — matched unchanged. A prose-only edit cannot move a seeded
+// dice coordinate, so unlike the bug_0604 renewal this one does not even shift the
+// best/worst-roll bracket.
+//
+// Previous renewal, kept for the audit trail: advanced for bug_0604 after explicit
+// seeded-opening transfer review. Compiled predecessor/current packs differed only in
+// June's keep_cattle_terms prompt and its goto/end fields. The action closed instead of
+// visiting a second BACK screen; all dialogue node ordinals and consequential effects
+// remained unchanged. That edge has no conditions or opening-dependent behavior. Removing
+// one navigation step moved later seeded dice coordinates, but the certificate's
+// best/worst-roll bracket and all opening-specific dependencies were unchanged: 22
+// mechanical and 49 presentation reads, with the whole-pack hash as the only diagnostic
+// before renewal.
 const CERTIFIED_WOLF_WINTER_PACK_HASH =
-  "5df094221f64d819829b5218135d0c904917fbe3e7c4cfa396a1a0c74a2c3a2e";
+  "eb102078db66e69bca3d150bd773f6b4d139b41fd86134b1c08285a0870c9c8b";
 // Same review for the deterministic twin: its dialogue edge is renamed by the
 // existing bijection, with every seeded-opening dependency preserved.
 const CERTIFIED_WOLF_WINTER_RELABELED_PACK_HASH =
-  "93de63e5b7ddd8eceb1d1c385239d3a5d806bb17c0b223ca75031a8a4c882d98";
+  "47b2e09eaa456004f0aa6fbb4eef9e89351f9c952e06f10d2a5970b3803e55d6";
 
 const pathText = (path: readonly PathPart[]): string =>
   path

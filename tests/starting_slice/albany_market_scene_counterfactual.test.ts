@@ -116,7 +116,7 @@ describe("Depth Contract #11 — Jamie Tanner's Market policy and disputed crate
     expect(() => session.investigateEvent(EVENT)).toThrow(
       /Complete wolf_winter before choosing this event option/i,
     );
-    expect(() => session.workLocalJob(JOB, HOLD_FAST)).toThrow(/Complete quest "wolf_winter"/i);
+    expect(() => session.workLocalJob(JOB, HOLD_FAST)).toThrow(/Complete quest "The Wolf-Winter"/i);
 
     const returned = returnedToMarket();
     expect(returned.snapshot().completedQuestIds).toContain("wolf_winter");

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "a7a8daf881c8b163",
+  "title": "loop.sh treats a wrapper exit as proof the agent is gone, and orphans its process group",
+  "body": "## What happened\n\nAt 2026-09-07T00:15Z a dev-loop worker was stopped. `loop.sh` reported, correctly as far as it\ncould see:\n\n    Terminated\n    Agent exited nonzero (status 143) — failing this cycle.\n    ✗ cycle 2 made no committed progress (2/5 consecutive, 2/15 total).\n    Graceful stop requested (ai-runs/loop.stop) — cycle 2 is finished and pushed; exiting.\n\nThe loop then exited. **The agent did not.** The `claude` child (pid 27275, PGID 27260) ignored\nSIGTERM, was reparented to init, and kept running with `--permission-mode acceptEdits` in the\nPRIMARY checkout for **18 minutes 48 seconds** after the driver had declared the cycle failed and\ngone away. It wrote two tracked source files while nothing was supervising it:\n\n    src/world/local_job_scene.ts    00:30:17.951\n    src/world/session_local_view.ts 00:30:38.767\n\nA `SIGKILL` to the pid plus `pkill -9 -P` cleared it; the checkout was reverted with\n`git checkout --` and the stray work preserved outside the repo.\n\n## Why this is a driver defect, not an operator mistake\n\n`loop.sh` waits on the agent command (`dev-agent.sh`), not on its process group. A wrapper's exit\nstatus is therefore **not** evidence that the agent is gone — the wrapper can exit 143 while its\ngrandchild runs on. That inference is baked into the driver in two places:\n\n1. the hang-kill path (`AI_AGENT_TIMEOUT_SECONDS`, default 2400), which is the automatic case and\n   fires with no human watching;\n2. the graceful-stop path, which then exits the loop entirely, releasing the single-writer guard\n   in `ai-runs/loop.pid` while a writer is still alive.\n\nBoth end with `loop.sh` believing the checkout has no writer while an editing agent holds it. That\nbreaks the one-writer-per-checkout invariant `docs/parallel_lanes.md` depends on, and it breaks it\nprecisely when the driver is least observed.\n\nNothing was corrupted this time, and the margin says why it was luck rather than design: the\nconcurrent `health:fast` finished at **00:30:00.315** and the orphan's first write landed at\n**00:30:17.951** — a **17.6 second** margin. Had the agent woken seventeen seconds earlier, a\ngreen bar would have covered a tree containing unreviewed edits, and the only reason that would\nhave been caught is that the commit used explicit `git add` paths.\n\n## The fix\n\n`loop.sh` should treat the agent as a process GROUP for its whole lifecycle:\n\n- run the agent command in its own process group, and record that pgid alongside the pid in\n  `ai-runs/agent.pid`;\n- in the timeout path, signal the GROUP (`kill -TERM -<pgid>`), then poll and escalate to\n  `kill -KILL -<pgid>` within the existing kill-after budget;\n- before declaring a cycle over — and especially before exiting on the stop file and releasing\n  `ai-runs/loop.pid` — verify the group is actually empty, and say so loudly if it is not.\n\nThe companion launcher `dev-agent.sh` was hardened separately (agent under `setsid` in its own\ngroup, TERM-then-KILL escalation on trap, verified to end a TERM-ignoring agent in 6s inside the\n30s kill-after budget). That covers a stop routed through the launcher. It does NOT cover\n`loop.sh`'s own timeout path, which is the automatic one, so the driver half is still open — and a\ndriver that only kills its own child is only as safe as whatever launcher it happens to be\nconfigured with.\n\n## Acceptance\n\n1. A bash-harness regression in `tests/regression/loop_driver_gates.test.ts` drives the timeout\n   path against a stub agent that spawns a TERM-ignoring grandchild, and proves the grandchild is\n   dead before the driver reports the cycle result.\n2. A second case proves the stop-file path does not remove `ai-runs/loop.pid` while any member of\n   the agent's process group is still alive.\n3. `ai-runs/agent.pid` records the pgid, so a manual stop can target the group without inferring\n   it from `/proc`.\n4. No change to the kill-after budget or to any bar.\n\n## Provenance\n\nObserved and contained by the dev-loop manager; pids, timestamps and the 17.6s margin above are\nfrom the live incident, not reconstructed. The lane rule adopted in response — signal the group,\nverify via `/proc`, escalate to SIGKILL, never trust a wrapper's exit status — is a workaround for\nthis defect, not a substitute for it.",
+  "source": "audit",
+  "kind": "bug",
+  "priority": "P2",
+  "status": "open",
+  "labels": [],
+  "area": "loop.sh",
+  "evidence": {
+    "summary": "A worker's claude child ignored SIGTERM, outlived the driver by 18m48s, and edited the primary checkout after loop.sh had declared the cycle failed and released the single-writer guard. The driver waits on the agent command, never on its process group.",
+    "refs": [
+      "commit:2a9d6817"
+    ],
+    "lineages": [
+      "claude"
+    ],
+    "observations": 1
+  },
+  "created_at": "2026-09-07T00:49:02.568Z",
+  "updated_at": "2026-09-07T00:49:02.568Z",
+  "external": null
+}

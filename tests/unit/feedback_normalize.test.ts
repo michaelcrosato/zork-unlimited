@@ -240,10 +240,17 @@ describe("rungs 2-3 — longest match wins between rival names", () => {
   it("refuses to force a pick when the shorter name is also mentioned on its own", () => {
     // The rule drops redundancy, never rivalry: it is judged per OCCURRENCE, so a raw
     // that names the shorter place somewhere the longer name does not cover keeps both
-    // candidates and falls through to unmapped, exactly as before.
-    expect(c("I went from Hempstead town to North Hempstead town and both stalled")).toMatchObject({
-      kind: "unmapped",
-    });
+    // candidates rather than picking one.
+    //
+    // The ANSWER changed when the global scope rung landed, and for the better. This used
+    // to fall through to `unmapped`, which says "nothing here was recognisable" about a
+    // sentence that recognisably names two towns and reports that BOTH stalled. It is a
+    // report about more than one place, so it now keys to `global` and can corroborate
+    // other multi-place reports instead of sitting alone under its own wording. What
+    // still must not happen — forcing a pick between the two towns — still does not.
+    const both = c("I went from Hempstead town to North Hempstead town and both stalled");
+    expect(both).toMatchObject({ kind: "global" });
+    expect(both.node).toBeNull();
   });
 
   it("leaves two equally long rival names ambiguous", () => {
@@ -280,5 +287,51 @@ describe("matchesAtTokenBoundary (rung-2 substring guard)", () => {
   it("matches a multi-token phrase only when contiguous at token boundaries", () => {
     expect(matchesAtTokenBoundary("the store shed had nothing in it", "store shed")).toBe(true);
     expect(matchesAtTokenBoundary("restore shed the old habit", "store shed")).toBe(false);
+  });
+});
+
+/**
+ * The `global` scope rung: a `where` that cites SEVERAL known places is a pattern
+ * illustrated by examples, not a location.
+ *
+ * This is a third failure mode, distinct from the two already fixed. `unmapped` means the
+ * text named nothing recognisable; `global` means it named several recognisable things.
+ * Before this rung, the commonest shape of a cross-cutting report — "X through Y" — was
+ * filed under whichever example `preferLongestMatches` happened to keep, so two players
+ * reporting one pattern about the whole game produced two singletons at two different
+ * quests and could never corroborate however many agreed.
+ */
+describe("global scope: reports about the game rather than a place", () => {
+  it("keys a where that cites two quests to the global bucket", () => {
+    // Verbatim from the corpus. It used to resolve to `factors_mark` — the second quest
+    // named — because the longest match wins and the first quest's article was missing.
+    expect(c("General quest structure, Wolf-Winter through The Factor's Mark").kind).toBe("global");
+    expect(
+      c("Quest structure across The Tanner's Fever / The Breaking Weir / The Advocate's Case").kind,
+    ).toBe("global");
+  });
+
+  it("leaves a where that cites ONE place exactly where it was", () => {
+    // The must-not-merge direction. A report about one town stays that town's problem, and
+    // mentioning a job title inside it changes nothing.
+    const albany = c("Albany Civic Center: 'Rowan's Winter Return Docket' job");
+    expect(albany.kind).toBe("overworld");
+    expect(albany.node).toBe("albany_city");
+    const scene = c("steading_yard");
+    expect(scene.kind).toBe("quest");
+    expect(scene.sceneId).toBe("steading_yard");
+  });
+
+  it("does not turn an unrecognisable where into a global one", () => {
+    // `global` is not a synonym for "we could not tell". Text that names nothing keeps its
+    // own bucket, because a report that pointed nowhere must never corroborate a report
+    // about the whole game.
+    expect(c("somewhere vaguely damp, I did not note where").kind).toBe("unmapped");
+  });
+
+  it("does not fire on a single place named twice", () => {
+    // Two mentions of one quest is one place, not a pattern. The distinct-location test is
+    // what separates this from a naive "two name matches" count.
+    expect(c("The Gallowmere — specifically the Gallowmere hollow").kind).not.toBe("global");
   });
 });

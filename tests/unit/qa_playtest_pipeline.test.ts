@@ -43,11 +43,18 @@ import {
   GROK_MCP_WAVE_PROMPT,
   GROK_MCP_WAVE_SURFACE,
   grokMcpProjectConfig,
+  grokWaveTriageArgs,
   parseGrokMcpWaveArgs,
   parseGrokStreamingOutput,
 } from "../../src/qa/grok_mcp_wave.js";
 import { extractExitInterview, isPureExitInterviewV2 } from "../../src/blind/exit_interview.js";
-import { derivePromotion, isActionable, ticketId, type QaTicket } from "../../src/qa/ticket.js";
+import {
+  derivePromotion,
+  isActionable,
+  QaTicketSchema,
+  ticketId,
+  type QaTicket,
+} from "../../src/qa/ticket.js";
 import { readTickets, writeTickets } from "../../src/qa/ticket_store.js";
 import { triagePlaytestCorpus } from "../../src/qa/triage.js";
 import { submissionsFromTickets } from "../../src/qa/ticket_submission.js";
@@ -706,7 +713,10 @@ describe("end to end: a corroborated finding reaches the dev loop's queue", () =
     },
   ];
 
-  function triageCorpus(reporters: readonly (typeof REPORTERS)[number][]) {
+  function triageCorpus(
+    reporters: readonly (typeof REPORTERS)[number][],
+    extra: Partial<Parameters<typeof triagePlaytestCorpus>[0]> = {},
+  ) {
     const store = tempDir();
     for (const r of reporters) {
       writePlaytestSession(store, sealPlaytestSession(reporter(r)), transcript);
@@ -717,8 +727,44 @@ describe("end to end: a corroborated finding reaches the dev loop's queue", () =
       sessions: entries.map((entry) => entry.record),
       locationIndex: buildLocationIndex(process.cwd()),
       buildHistory: ["a".repeat(40)],
+      ...extra,
     });
   }
+
+  it("cannot promote a single lineage on volume alone, however many reports it files", () => {
+    // The gap this whole route exists to close: promotion needs reference tier or two
+    // independent families, so a Sonnet-only fleet corroborating a real defect over and over
+    // stays at `accumulating` and never becomes actionable work.
+    const oneLineage = REPORTERS.filter((r) => r.model.id.startsWith("claude"));
+    const ticket = triageCorpus(oneLineage).tickets[0]!;
+    expect(ticket.evidence.families).toEqual(["claude"]);
+    expect(ticket.promotion).toBe("accumulating");
+    expect(isActionable(ticket)).toBe(false);
+  });
+
+  it("a reproduction promotes it, and the promotion OUTLIVES the run that recorded it", () => {
+    const oneLineage = REPORTERS.filter((r) => r.model.id.startsWith("claude"));
+    const id = triageCorpus(oneLineage).tickets[0]!.ticket_id;
+
+    const stamped = triageCorpus(oneLineage, {
+      verifiedTicketIds: [id],
+      verifiedBy: "tests/regression/rowan_docket_options.test.ts",
+    }).tickets[0]!;
+    expect(stamped.promotion).toBe("verified");
+    expect(stamped.verified_by).toBe("tests/regression/rowan_docket_options.test.ts");
+    expect(isActionable(stamped)).toBe(true);
+
+    // The point of the durable field: a later triage with NO flag must keep the rung. A
+    // promotion that evaporated on the next run would be an override, not evidence.
+    const later = triageCorpus(oneLineage, { existingTickets: [stamped] }).tickets[0]!;
+    expect(later.promotion).toBe("verified");
+    expect(later.verified_by).toBe("tests/regression/rowan_docket_options.test.ts");
+
+    // And it round-trips through the strict schema rather than being dropped on read.
+    expect(QaTicketSchema.parse(JSON.parse(JSON.stringify(later))).verified_by).toBe(
+      "tests/regression/rowan_docket_options.test.ts",
+    );
+  });
 
   it("merges three wordings of one defect into a single ticket", () => {
     const { tickets, stats } = triageCorpus(REPORTERS);
@@ -979,6 +1025,24 @@ describe("grok MCP wave request", () => {
     );
     expect(driver).toContain('requestedOutcome: "failed"');
     expect(driver).toContain("savePlaytestReport({");
+  });
+
+  it("hands the wave off to qa:triage against its own store once play finishes (bug_0622)", () => {
+    // Unlike playtest-loop.sh's `run_wave` (which always re-triages after a wave), the
+    // Grok wave used to stop at the manifest: sessions were saved but nothing folded them
+    // into qa/tickets or intake/queue without an operator running qa:triage by hand.
+    expect(grokWaveTriageArgs("ai-runs/playtest/grok-store")).toEqual([
+      "run",
+      "--silent",
+      "qa:triage",
+      "--",
+      "--store",
+      "ai-runs/playtest/grok-store",
+    ]);
+    const driver = readFileSync(join(process.cwd(), "bin", "playtest-grok-wave.ts"), "utf8");
+    expect(driver).toMatch(
+      /const rows = await runPool\([\s\S]*?handOffToTriage\(plan\.store\)[\s\S]*?const incomplete = /u,
+    );
   });
 
   it("builds a private pure MCP server config with exact run provenance", () => {
@@ -1245,5 +1309,214 @@ describe("retiring aged-out tickets so the bucket stays bounded", () => {
     expect(again.stats.retired).toBe(0);
     expect(again.tickets.map((t) => t.ticket_id)).toEqual(ids);
     expect(again.tickets.every((t) => t.status === "open")).toBe(true);
+  });
+});
+
+/**
+ * Unmapped findings: one bucket, and content still decides.
+ *
+ * A player's `where` that resolves to no known place used to become the ticket's location
+ * AND part of its id, so one defect described in two people's words became two tickets of
+ * one report each, neither able to corroborate the other — the shape audit item
+ * dcaefa368898e77c records. They now share the `unmapped` bucket; the severity band and
+ * token tests are untouched, so the bucket only makes them ELIGIBLE to be compared.
+ */
+describe("unmapped findings cluster on content, not on phrasing", () => {
+  const transcript = "line one\nline two\n";
+
+  function ticketsFor(interviews: readonly PlaytestSessionBody["exit_interview"][]) {
+    const store = tempDir();
+    interviews.forEach((interview, index) => {
+      writePlaytestSession(
+        store,
+        sealPlaytestSession(body({ exit_interview: interview, run_seed: 900 + index })),
+        transcript,
+      );
+    });
+    return triagePlaytestCorpus({
+      sessions: listPlaytestSessions(store).entries.map((entry) => entry.record),
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+    }).tickets;
+  }
+
+  /** A `where` string that deliberately resolves to nothing. */
+  const NOWHERE_A = "the tutorial's closing summary screen, wherever that lives";
+  const NOWHERE_B = "somewhere in the opening tutorial text, no idea what it is called";
+
+  it("MUST MERGE: a bug and a confusion of the same band and tokens become one ticket", () => {
+    // The must-merge case, and the tutorial finding that prompted it: one player filed the
+    // same complaint in both lists. Both unmapped, an S1 bug (the interview's own "minor"
+    // rung) against the S1 confusion rung so the severity BAND matches, and the same
+    // leading tokens so the fingerprint matches. `clusterKind` takes the stronger reading.
+    //
+    // The bug's note deliberately differs from the confusion by its tail. Making the two
+    // strings character-identical instead trips a documented collision in `issueKey`
+    // (ref + text), which files the bug as its own confusion and reads the merged cluster
+    // as `experience` — a real behaviour, but not the one under test here.
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: ["tutorial says gallowmere is the final optional chapter"],
+        bugs: [
+          {
+            where: NOWHERE_A,
+            severity: "S1" as const,
+            note: "tutorial says gallowmere is the final optional chapter, yet a third opened",
+          },
+        ],
+      },
+    ]);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.kind).toBe("bug");
+    expect(tickets[0]!.location).toBe("unmapped");
+    expect(tickets[0]!.evidence.report_count).toBe(2);
+  });
+
+  it("keeps the player's `where` in the excerpts once it is no longer the label", () => {
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: NOWHERE_A,
+            severity: "S1" as const,
+            note: "the closing summary omits the score",
+          },
+        ],
+      },
+    ]);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.location).toBe("unmapped");
+    // Leads, because a reader scanning the bucket wants the place before the complaint.
+    expect(tickets[0]!.excerpts[0]).toBe(NOWHERE_A);
+    expect(tickets[0]!.excerpts).toContain("the closing summary omits the score");
+  });
+
+  it("MUST NOT MERGE: same bucket, different fingerprint stays two tickets", () => {
+    // The guard. Nothing about the content tests was loosened to get the merge above, so
+    // two unrelated unresolved problems remain two pieces of work.
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: NOWHERE_A,
+            severity: "S1" as const,
+            note: "the closing summary omits the score",
+          },
+          {
+            where: NOWHERE_B,
+            severity: "S1" as const,
+            note: "a merchant charged me twice for one lantern",
+          },
+        ],
+      },
+    ]);
+    expect(tickets).toHaveLength(2);
+    expect(new Set(tickets.map((ticket) => ticket.ticket_id)).size).toBe(2);
+  });
+
+  it("two players who phrase one unmapped defect differently now corroborate", () => {
+    // The behaviour dcaefa368898e77c is about: before the bucket, these were two tickets
+    // of one report each and neither could ever reach a promotion rung.
+    const confusion = "tutorial framed gallowmere as the final chapter but more followed";
+    const tickets = ticketsFor([
+      { ...INTERVIEW, confusions: [confusion], bugs: [] },
+      { ...INTERVIEW, confusions: [confusion], bugs: [] },
+    ]);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.evidence.report_count).toBe(2);
+    expect(tickets[0]!.evidence.session_ids).toHaveLength(2);
+  });
+});
+
+/**
+ * End to end: two players reporting one pattern about the whole game now reach each other.
+ *
+ * The wording here is taken from the live corpus. Before the global scope rung these two
+ * resolved to `factors_mark` and `unmapped` — two different buckets, two singletons,
+ * neither able to corroborate the other no matter how many players agreed. Cross-cutting
+ * findings (pacing, repetition, difficulty curve, tone) all have this shape, and they are
+ * the findings a mature playtest corpus should be best at surfacing.
+ */
+describe("cross-cutting findings corroborate each other", () => {
+  const transcript = "line one\nline two\n";
+
+  function ticketsFor(interviews: readonly PlaytestSessionBody["exit_interview"][]) {
+    const store = tempDir();
+    interviews.forEach((interview, index) => {
+      writePlaytestSession(
+        store,
+        sealPlaytestSession(body({ exit_interview: interview, run_seed: 700 + index })),
+        transcript,
+      );
+    });
+    return triagePlaytestCorpus({
+      sessions: listPlaytestSessions(store).entries.map((entry) => entry.record),
+      locationIndex: buildLocationIndex(process.cwd()),
+      buildHistory: ["a".repeat(40)],
+    }).tickets;
+  }
+
+  const SAME_COMPLAINT =
+    "every quest runs the same skeleton: gather optional bonuses, one linear gauntlet, one final choice";
+
+  it("MUST MERGE: two multi-quest reports of one pattern become one ticket", () => {
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: "General quest structure, Wolf-Winter through The Factor's Mark",
+            severity: "S1" as const,
+            note: SAME_COMPLAINT,
+          },
+        ],
+      },
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: "Quest structure across The Tanner's Fever / The Breaking Weir / The Cold Forge",
+            severity: "S1" as const,
+            note: SAME_COMPLAINT,
+          },
+        ],
+      },
+    ]);
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]!.location).toBe("global");
+    expect(tickets[0]!.evidence.report_count).toBe(2);
+    expect(tickets[0]!.evidence.session_ids).toHaveLength(2);
+    // The `where` each player wrote survives, since it is no longer the label.
+    expect(tickets[0]!.excerpts.join(" ")).toContain("Wolf-Winter");
+  });
+
+  it("MUST NOT MERGE: the same complaint about ONE quest stays its own ticket", () => {
+    const tickets = ticketsFor([
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [
+          {
+            where: "General quest structure, Wolf-Winter through The Factor's Mark",
+            severity: "S1" as const,
+            note: SAME_COMPLAINT,
+          },
+        ],
+      },
+      {
+        ...INTERVIEW,
+        confusions: [],
+        bugs: [{ where: "steading_yard", severity: "S1" as const, note: SAME_COMPLAINT }],
+      },
+    ]);
+    expect(tickets).toHaveLength(2);
+    expect(tickets.map((t) => t.location).sort()).toEqual(["global", "steading_yard"]);
   });
 });
