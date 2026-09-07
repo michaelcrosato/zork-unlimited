@@ -493,10 +493,20 @@ describe("--check-attestation, the seal's precondition on its own", () => {
    * one such cycle proved 4771 tests green over seventy minutes and was discarded at the
    * last step. loop.sh now asks this same precondition immediately after the commit.
    */
+  /**
+   * Spawn the checkout's OWN tsx, never `npx`. The point of this helper is to run the
+   * script with `cwd` set to the cycle's temp root — outside the repo — and from there
+   * `npx tsx` finds no local binary and consults the registry on EVERY call. That is a
+   * network round trip inside a unit test: measured at ~70s from a temp cwd against ~1s
+   * from the repo, which silently blew the 60s budget and failed the bar on a change that
+   * touched nothing near it. Resolving the binary by path keeps the cwd honest and the
+   * test hermetic.
+   */
+  const TSX_BIN = join(REPO_ROOT, "node_modules", ".bin", "tsx");
   const check = (root: string): { status: number | null; output: string } => {
     const result = spawnSync(
-      "npx",
-      ["tsx", join(REPO_ROOT, "scripts", "seal-feedback-acceptance.ts"), "--check-attestation"],
+      TSX_BIN,
+      [join(REPO_ROOT, "scripts", "seal-feedback-acceptance.ts"), "--check-attestation"],
       { cwd: root, encoding: "utf8" },
     );
     return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
