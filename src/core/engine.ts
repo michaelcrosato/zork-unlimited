@@ -96,12 +96,7 @@ export function actionEquals(a: EngineAction, b: EngineAction): boolean {
       const valA = a[k];
       const valB = b[k];
       if (valA === valB) continue;
-      if (
-        typeof valA === "object" &&
-        valA !== null &&
-        typeof valB === "object" &&
-        valB !== null
-      ) {
+      if (typeof valA === "object" && valA !== null && typeof valB === "object" && valB !== null) {
         if (!actionEquals(valA as EngineAction, valB as EngineAction)) {
           match = false;
           break;
