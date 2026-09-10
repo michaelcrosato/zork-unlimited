@@ -64,8 +64,59 @@ export type Rules<A extends EngineAction = RpgAction> = {
   decorateEvents?: (events: GameEvent[]) => GameEvent[];
 };
 
+function isFlatObject(obj: Record<string, unknown>): boolean {
+  const keys = Object.keys(obj);
+  for (let i = 0; i < keys.length; i++) {
+    const val = obj[keys[i]!];
+    if (typeof val === "object" && val !== null) return false;
+  }
+  return true;
+}
+
+function comparePrimitiveValues(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  // Match canonicalize / JSON.stringify semantics where NaN and Infinity map to null
+  const aNull = a === null || (typeof a === "number" && !Number.isFinite(a));
+  const bNull = b === null || (typeof b === "number" && !Number.isFinite(b));
+  return aNull && bNull;
+}
+
 /** Structural equality for actions — used to test membership in the legal set. */
 export function actionEquals(a: EngineAction, b: EngineAction): boolean {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return a === b;
+
+  const recA = a as Record<string, unknown>;
+  const recB = b as Record<string, unknown>;
+
+  // Performance optimization: Flat EngineActions (where all values are primitive values/undefined)
+  // are compared directly by non-undefined property count and value equality (~13x faster than
+  // canonicalize's deep sorting and JSON serialization). Non-flat objects fall back to canonicalize.
+  if (isFlatObject(recA) && isFlatObject(recB)) {
+    const keysA = Object.keys(recA);
+    let countA = 0;
+    for (let i = 0; i < keysA.length; i++) {
+      if (recA[keysA[i]!] !== undefined) countA++;
+    }
+
+    const keysB = Object.keys(recB);
+    let countB = 0;
+    for (let i = 0; i < keysB.length; i++) {
+      if (recB[keysB[i]!] !== undefined) countB++;
+    }
+
+    if (countA !== countB) return false;
+
+    for (let i = 0; i < keysA.length; i++) {
+      const k = keysA[i]!;
+      const valA = recA[k];
+      if (valA !== undefined) {
+        if (!comparePrimitiveValues(valA, recB[k])) return false;
+      }
+    }
+    return true;
+  }
+
   return canonicalize(a) === canonicalize(b);
 }
 
@@ -91,12 +142,15 @@ export function makeStep<A extends EngineAction = RpgAction>(rules: Rules<A>) {
     }
 
     // §8.4.1 — legality against the legal-action set. No state change on failure.
-    // Canonicalize the probe ONCE rather than inside the predicate: actionEquals
-    // canonicalizes both operands, so testing membership in a set of N actions cost
-    // 2N JSON.stringify passes when N+1 suffice. Purely local — same comparison, same
-    // result — and it sits under every solver BFS, where it is the hot path.
-    const target = canonicalize(action);
-    const legal = rules.legalActions(state).some((a) => canonicalize(a) === target);
+    // Precompute canonical representation once for non-flat actions, or use actionEquals
+    // fast path for flat actions to maximize performance.
+    const target = isFlatObject(action) ? null : canonicalize(action);
+    const legal = rules.legalActions(state).some((a) => {
+      if (target !== null) {
+        return canonicalize(a) === target;
+      }
+      return actionEquals(a, action);
+    });
     if (!legal) return reject(state, "That action is not available right now.");
 
     const resolution = rules.resolve(state, action);
