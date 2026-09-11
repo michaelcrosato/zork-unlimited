@@ -23,23 +23,36 @@ export function canonicalize(value: unknown): string {
  * serialization, because a hash that depends on how a Map is flattened is a new
  * contract and no engine state carries one on purpose.
  */
-const REJECTED_OBJECT_KINDS: ReadonlyArray<readonly [string, (value: object) => boolean]> = [
-  ["Map", (value) => value instanceof Map],
-  ["Set", (value) => value instanceof Set],
-  ["WeakMap", (value) => value instanceof WeakMap],
-  ["WeakSet", (value) => value instanceof WeakSet],
-  ["Date", (value) => value instanceof Date],
-  ["RegExp", (value) => value instanceof RegExp],
-];
-
 function rejectedObjectKind(value: object): string | null {
-  for (const [name, test] of REJECTED_OBJECT_KINDS) if (test(value)) return name;
+  // Optimization: standard plain objects `{}` and null-prototype objects have
+  // `value.constructor === Object` or `value.constructor === undefined`.
+  // Checking this first avoids iterating and evaluating `instanceof` checks for 99%+ of object nodes.
+  const ctor = value.constructor;
+  if (ctor === Object || ctor === undefined) return null;
+  if (value instanceof Map) return "Map";
+  if (value instanceof Set) return "Set";
+  if (value instanceof WeakMap) return "WeakMap";
+  if (value instanceof WeakSet) return "WeakSet";
+  if (value instanceof Date) return "Date";
+  if (value instanceof RegExp) return "RegExp";
   return null;
 }
 
 function sortDeep(value: unknown, path = "$"): unknown {
   if (Array.isArray(value)) {
-    return value.map((item, index) => sortDeep(item, `${path}[${index}]`));
+    // Optimization: avoid re-allocating array unless an element child actually changes during sortDeep
+    let copy: unknown[] | null = null;
+    for (let i = 0; i < value.length; i++) {
+      const item = value[i];
+      const sorted = sortDeep(item, `${path}[${i}]`);
+      if (copy) {
+        copy[i] = sorted;
+      } else if (sorted !== item) {
+        copy = value.slice(0, i);
+        copy[i] = sorted;
+      }
+    }
+    return copy ?? value;
   }
   if (value !== null && typeof value === "object") {
     const kind = rejectedObjectKind(value);
@@ -49,6 +62,22 @@ function sortDeep(value: unknown, path = "$"): unknown {
       );
     }
     const obj = value as Record<string, unknown>;
+    const keys = Object.keys(obj);
+
+    // Optimization: only run .sort() if there are at least 2 keys and they are out of order
+    if (keys.length > 1) {
+      let sorted = true;
+      for (let i = 1; i < keys.length; i++) {
+        const prev = keys[i - 1]!;
+        const curr = keys[i]!;
+        if (prev > curr) {
+          sorted = false;
+          break;
+        }
+      }
+      if (!sorted) keys.sort();
+    }
+
     // A NULL-PROTOTYPE accumulator so a key literally named "__proto__" is stored as
     // an own data property. With a normal `{}`, `out["__proto__"] = v` hits Object's
     // `__proto__` SETTER: a primitive v is silently dropped, and an object v re-points
@@ -60,7 +89,7 @@ function sortDeep(value: unknown, path = "$"): unknown {
     // enumerable property — the load-integrity threat model, cf. bug_0190). Normal states
     // carry no such key, so every existing hash is byte-identical.
     const out = Object.create(null) as Record<string, unknown>;
-    for (const key of Object.keys(obj).sort()) {
+    for (const key of keys) {
       out[key] = sortDeep(obj[key], path === "$" ? key : `${path}.${key}`);
     }
     return out;
