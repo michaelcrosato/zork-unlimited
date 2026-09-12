@@ -139,9 +139,11 @@ export function buildRpgObservation(
     }
   }
 
+  const actionOptions = opts.availableActions ?? enumerateRpgActions(index, state);
+
   const availableActions: RpgObservation["available_actions"] = [];
   if (opts.includeAvailableActions !== false) {
-    for (const option of opts.availableActions ?? enumerateRpgActions(index, state)) {
+    for (const option of actionOptions) {
       availableActions.push({
         id: option.id,
         command: option.command,
@@ -161,7 +163,8 @@ export function buildRpgObservation(
   }
 
   const blockedActions: RpgObservation["blocked_actions"] = [];
-  for (const option of enumerateRpgBlockedActions(index, state)) {
+  // Pass the already computed legal action options to prevent re-enumerating base actions
+  for (const option of enumerateRpgBlockedActions(index, state, actionOptions)) {
     blockedActions.push({ id: option.id, command: option.command, reason: option.reason });
   }
   const pressureTracks = resolveRpgPressureTracks(index.pack.pressure_tracks, state);

@@ -821,14 +821,21 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
  * Enumerate authored USE affordances that are visible and structurally possible,
  * but whose gameplay conditions do not currently hold. This is a derived display
  * projection only: blocked rows are never mixed into the executable legal set.
+ *
+ * Performance optimization: Accepts an optional pre-computed `legalActions` array
+ * to avoid re-evaluating `enumerateRpgBaseActions` when already computed during
+ * observation building. Also evaluates cheap state condition checks prior to string
+ * projection and object visibility lookups.
  */
 export function enumerateRpgBlockedActions(
   index: RpgModelIndex,
   state: GameState,
+  legalActions?: readonly RpgActionOption[],
 ): RpgBlockedActionOption[] {
   if (state.ended) return [];
 
-  const legalIds = new Set(enumerateRpgBaseActions(index, state).map((option) => option.id));
+  const legalSet = legalActions ?? enumerateRpgBaseActions(index, state);
+  const legalIds = new Set(legalSet.map((option) => option.id));
   const emitted = new Set<string>();
   const out: RpgBlockedActionOption[] = [];
 
@@ -836,10 +843,13 @@ export function enumerateRpgBlockedActions(
     for (const interaction of object.interactions) {
       const hint = interaction.blocked_hint;
       if (!hint) continue;
-      const projection = projectUseAction(index, state, interaction);
-      if (!projection || !structurallyPresentUse(index, state, interaction, projection)) continue;
+      // Fast path: evaluate cheap state conditions first before doing string formatting
+      // or object visibility lookups.
       if (!evalConditions(hint.visible_when, state)) continue;
       if (evalConditions(interaction.conditions, state)) continue;
+
+      const projection = projectUseAction(index, state, interaction);
+      if (!projection || !structurallyPresentUse(index, state, interaction, projection)) continue;
       if (legalIds.has(projection.id) || emitted.has(projection.id)) continue;
 
       emitted.add(projection.id);
